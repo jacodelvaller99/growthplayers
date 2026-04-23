@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Lifeflow",
+    "slug": "lifeflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "lifeflow",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#01191D"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.growthplayers.lifeflow",
+      "infoPlist": {
+        "UIUserInterfaceStyle": "Dark"
+      }
+    },
+    "android": {
+      "package": "com.growthplayers.lifeflow",
+      "adaptiveIcon": {
+        "backgroundColor": "#01191D"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font"
+    ]
+  }
+}
