@@ -1,61 +1,44 @@
 /**
- * GROWTH PLAYERS — Paleta de Colores
- * Sistema de diseño premium con mint accent on rich black
+ * POLARIS GROWTH INSTITUTE — Brand System
+ * Quiet Luxury. Negro editorial. Dorado soberano.
  */
 
 export const Colors = {
-  // Primarios - Growth Players Brand
-  mint: '#AEFEF0',
-  mintDark: '#0D2B30',
-  richBlack: '#01191D',
+    // ── FONDOS ────────────────────────────────────────
+    bg: '#0A0A0A',           // Negro profundo
+    surface: '#141414',      // Superficie base
+    surface2: '#1C1C1C',     // Superficie elevada
+    charcoal: '#2A2A2A',     // Cards sobre negro
 
-  // Variantes Mint
-  mintLight: 'rgba(174, 254, 240, 0.15)',
-  mintMid: 'rgba(174, 254, 240, 0.30)',
-  mintBorder: 'rgba(174, 254, 240, 0.20)',
-  mintBorderActive: 'rgba(174, 254, 240, 0.40)',
+    // ── DORADO POLARIS ────────────────────────────────
+    gold: '#EDBA01',         // Dorado soberano
+    goldDim: 'rgba(237,186,1,0.10)',
+    goldBorder: 'rgba(237,186,1,0.20)',
+    goldFaint: 'rgba(237,186,1,0.35)',
 
-  // Fondos
-  background: '#01191D',
-  surface: '#021F26',
-  surfaceAlt: '#032A31',
-  surfaceElevated: '#043B44',
+    // ── TEXTO ─────────────────────────────────────────
+    text: '#F5F5F5',         // Blanco cálido
+    textSecondary: '#C0C0C0',
+    textMuted: '#8A8A8A',    // Gris medio
+    textFaint: 'rgba(255,255,255,0.25)',
 
-  // Textos
-  text: '#FFFFFF',
-  textSecondary: '#B0C4BB',
-  textMuted: 'rgba(174, 254, 240, 0.30)',
-  textFaint: 'rgba(174, 254, 240, 0.15)',
-  textInverse: '#01191D',
+    // ── BORDES ────────────────────────────────────────
+    border: 'rgba(255,255,255,0.08)',
+    borderStrong: 'rgba(255,255,255,0.16)',
 
-  // Estados
-  success: '#10b981',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  info: '#3b82f6',
+    // ── ESTADOS ───────────────────────────────────────
+    success: '#22C55E',
+    warning: '#F59E0B',
+    error: '#FF4444',
 
-  // Pilares (Rueda de la Vida)
-  pillar: {
-    fe: '#7c3aed',
-    finanzas: '#059669',
-    salud: '#dc2626',
-    familia: '#f97316',
-    mente: '#06b6d4',
-    negocio: '#8b5cf6',
-    impacto: '#0ea5e9',
-    legado: '#64748b',
-  },
-
-  // Transiciones
-  transparent: 'transparent',
-  alpha: (color: string, alpha: number) => {
-    // Convierte #RRGGBB a rgba(r, g, b, a)
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  },
-} as const;
-
-export type ColorKey = keyof typeof Colors;
+    // ── COMPATIBILIDAD (aliases para código existente) ─
+    mint: '#EDBA01',
+    mintDark: '#141414',
+    richBlack: '#0A0A0A',
+    background: '#0A0A0A',
+    mintLight: 'rgba(237,186,1,0.10)',
+    mintMid: 'rgba(237,186,1,0.20)',
+    mintBorder: 'rgba(237,186,1,0.20)',
+    mintBorderActive: 'rgba(237,186,1,0.40)',
+    textInverse: '#0A0A0A',
+};
