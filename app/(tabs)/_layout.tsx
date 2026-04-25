@@ -31,8 +31,8 @@ const TabButton = ({
   isFocused,
   onPress,
   onLongPress,
-  activeColor = '#AEFEF0',
-  inactiveColor = 'rgba(174, 254, 240, 0.4)',
+  activeColor = '#EDBA01',
+  inactiveColor = 'rgba(237,186,1,0.35)',
 }: any) => {
   const scale = useSharedValue(1);
 
@@ -97,10 +97,10 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   const { programType } = useProgramStore();
   const isPolaris = programType === 'polaris';
   const tabColors = {
-    bg:       isPolaris ? '#1A1A1A' : '#0D2B30',
-    active:   isPolaris ? '#EDBA01' : '#AEFEF0',
-    inactive: isPolaris ? 'rgba(237,186,1,0.30)' : 'rgba(174, 254, 240, 0.4)',
-    border:   isPolaris ? 'rgba(237,186,1,0.08)' : 'rgba(174, 254, 240, 0.08)',
+    bg:       isPolaris ? '#141414' : '#141414',
+    active:   isPolaris ? '#EDBA01' : '#EDBA01',
+    inactive: isPolaris ? 'rgba(237,186,1,0.35)' : 'rgba(237,186,1,0.35)',
+    border:   isPolaris ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.08)',
   };
 
   return (
@@ -174,9 +174,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: '#0D2B30',
+    backgroundColor: '#141414',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(174, 254, 240, 0.08)',
+    borderTopColor: 'rgba(255,255,255,0.08)',
     height: Platform.OS === 'ios' ? 70 : 60,
     paddingBottom: Platform.OS === 'ios' ? 16 : 6,
     justifyContent: 'space-around',
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     top: -1,
     height: 2,
     width: '70%',
-    backgroundColor: '#AEFEF0',
+    backgroundColor: '#EDBA01',
     borderRadius: 1,
   },
 });

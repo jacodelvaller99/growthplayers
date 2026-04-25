@@ -5,10 +5,10 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useProgramStore } from '../../store/programStore'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30', surface2: '#0F3640',
-  mint: '#AEFEF0', mintBorder: 'rgba(174,254,240,0.20)',
+  bg: '#0A0A0A', surface: '#141414', surface2: '#1C1C1C',
+  mint: '#EDBA01', mintBorder: 'rgba(237,186,1,0.20)',
   gold: '#EDBA01', goldBorder: 'rgba(237,186,1,0.40)',
-  text: '#FFFFFF', textMuted: '#86C6B3',
+  text: '#FFFFFF', textMuted: '#C0C0C0',
 }
 
 export default function OnboardingProgram() {

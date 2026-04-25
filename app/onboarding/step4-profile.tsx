@@ -7,15 +7,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePolarisStore } from '../../store';
 
 const BRAND = {
-  bg: '#01191D',
-  surface: '#0D2B30',
-  mint: '#AEFEF0',
-  mintLight: 'rgba(174, 254, 240, 0.05)',
-  mintBorder: 'rgba(174, 254, 240, 0.15)',
-  border: 'rgba(174, 254, 240, 0.15)',
-  textPrimary: '#AEFEF0',
-  textMuted: 'rgba(174, 254, 240, 0.5)',
-  textLight: 'rgba(174, 254, 240, 0.3)',
+  bg: '#0A0A0A',
+  surface: '#141414',
+  mint: '#EDBA01',
+  mintLight: 'rgba(237,186,1,0.06)',
+  mintBorder: 'rgba(237,186,1,0.12)',
+  border: 'rgba(237,186,1,0.12)',
+  textPrimary: '#EDBA01',
+  textMuted: 'rgba(237,186,1,0.45)',
+  textLight: 'rgba(237,186,1,0.30)',
 };
 
 interface ArchetypeInfo {
@@ -259,7 +259,7 @@ export default function Step4Profile() {
                     position: 'absolute',
                     width: '100%',
                     height: 10,
-                    backgroundColor: i % 2 === 0 ? BRAND.mint : 'rgba(1, 25, 29, 0.5)',
+                    backgroundColor: i % 2 === 0 ? BRAND.mint : 'rgba(10, 10, 10, 0.5)',
                   }}
                 />
               ))}

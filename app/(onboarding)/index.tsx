@@ -7,8 +7,8 @@ import { useAuthStore } from '../../store'
 import { getProfile } from '../../lib/database'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30', mint: '#AEFEF0',
-  gold: '#EDBA01', text: '#FFFFFF', textMuted: '#86C6B3',
+  bg: '#0A0A0A', surface: '#141414', mint: '#EDBA01',
+  gold: '#EDBA01', text: '#FFFFFF', textMuted: '#C0C0C0',
 }
 
 function PolarisStarSvg({ size = 80 }: { size?: number }) {

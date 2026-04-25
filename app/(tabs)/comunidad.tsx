@@ -4,10 +4,10 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 import Svg, { Circle, Path } from 'react-native-svg'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30',
-  mint: '#AEFEF0', mintFaint: 'rgba(174,254,240,0.40)',
-  text: '#FFFFFF', textMuted: '#86C6B3',
-  divider: 'rgba(174,254,240,0.08)',
+  bg: '#0A0A0A', surface: '#141414',
+  mint: '#EDBA01', mintFaint: 'rgba(237,186,1,0.35)',
+  text: '#FFFFFF', textMuted: '#C0C0C0',
+  divider: 'rgba(255,255,255,0.08)',
 }
 
 function CompassSvg({ size = 72 }: { size?: number }) {
@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
     color: C.textMuted, textAlign: 'center', lineHeight: 22,
   },
   badge: {
-    backgroundColor: 'rgba(174,254,240,0.08)',
-    borderWidth: 1, borderColor: 'rgba(174,254,240,0.20)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(237,186,1,0.20)',
     borderRadius: 999, paddingHorizontal: 20, paddingVertical: 8,
   },
   badgeText: {

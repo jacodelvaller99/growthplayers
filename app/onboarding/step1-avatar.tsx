@@ -7,15 +7,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../store';
 
 const BRAND = {
-  bg: '#01191D',
-  surface: '#0D2B30',
-  mint: '#AEFEF0',
-  border: 'rgba(174, 254, 240, 0.15)',
+  bg: '#0A0A0A',
+  surface: '#141414',
+  mint: '#EDBA01',
+  border: 'rgba(237,186,1,0.12)',
   error: 'rgba(239, 68, 68, 0.3)',
   errorBorder: 'rgba(239, 68, 68, 0.6)',
-  textPrimary: '#AEFEF0',
-  textMuted: 'rgba(174, 254, 240, 0.5)',
-  textLight: 'rgba(174, 254, 240, 0.3)',
+  textPrimary: '#EDBA01',
+  textMuted: 'rgba(237,186,1,0.45)',
+  textLight: 'rgba(237,186,1,0.30)',
 };
 
 export default function Step1Avatar() {

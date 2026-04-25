@@ -6,10 +6,10 @@ import { useAuthStore } from '../../store'
 import { upsertProfile } from '../../lib/database'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30', surface2: '#0F3640',
-  mint: '#AEFEF0', mintBorder: 'rgba(174,254,240,0.20)',
-  mintFaint: 'rgba(174,254,240,0.40)',
-  text: '#FFFFFF', textMuted: '#86C6B3',
+  bg: '#0A0A0A', surface: '#141414', surface2: '#1C1C1C',
+  mint: '#EDBA01', mintBorder: 'rgba(237,186,1,0.20)',
+  mintFaint: 'rgba(237,186,1,0.35)',
+  text: '#FFFFFF', textMuted: '#C0C0C0',
 }
 
 export default function OnboardingNorte() {
@@ -47,7 +47,7 @@ export default function OnboardingNorte() {
               multiline
               numberOfLines={4}
               placeholder="Ej: Construir una empresa que libere a mi familia y demuestre que la excelencia es alcanzable..."
-              placeholderTextColor="rgba(174,254,240,0.25)"
+              placeholderTextColor="rgba(237,186,1,0.25)"
               value={norte}
               onChangeText={setNorte}
               textAlignVertical="top"
@@ -115,6 +115,6 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.4 },
   btnText: {
     fontFamily: 'SpaceGrotesk_700Bold', fontSize: 14,
-    color: '#01191D', letterSpacing: 1.5,
+    color: '#0A0A0A', letterSpacing: 1.5,
   },
 })

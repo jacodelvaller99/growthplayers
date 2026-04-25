@@ -9,12 +9,12 @@ import { useProfile } from '../../hooks/useProfile'
 import { useProgramStore } from '../../store/programStore'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30', surface2: '#0F3640',
-  mint: '#AEFEF0', mintMuted: 'rgba(174,254,240,0.12)',
-  mintBorder: 'rgba(174,254,240,0.20)', mintFaint: 'rgba(174,254,240,0.40)',
+  bg: '#0A0A0A', surface: '#141414', surface2: '#1C1C1C',
+  mint: '#EDBA01', mintMuted: 'rgba(237,186,1,0.10)',
+  mintBorder: 'rgba(237,186,1,0.20)', mintFaint: 'rgba(237,186,1,0.35)',
   gold: '#EDBA01', goldMuted: 'rgba(237,186,1,0.12)', goldBorder: 'rgba(237,186,1,0.20)',
-  text: '#FFFFFF', textMuted: '#86C6B3',
-  divider: 'rgba(174,254,240,0.08)',
+  text: '#FFFFFF', textMuted: '#C0C0C0',
+  divider: 'rgba(255,255,255,0.08)',
 }
 
 const PILARES = [

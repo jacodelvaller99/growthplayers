@@ -5,12 +5,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const BRAND = {
-  bg: '#01191D',
-  surface: '#0D2B30',
-  mint: '#AEFEF0',
-  border: 'rgba(174, 254, 240, 0.15)',
-  textPrimary: '#AEFEF0',
-  textMuted: 'rgba(174, 254, 240, 0.5)',
+  bg: '#0A0A0A',
+  surface: '#141414',
+  mint: '#EDBA01',
+  border: 'rgba(237,186,1,0.12)',
+  textPrimary: '#EDBA01',
+  textMuted: 'rgba(237,186,1,0.45)',
 };
 
 export default function UpgradeScreen() {

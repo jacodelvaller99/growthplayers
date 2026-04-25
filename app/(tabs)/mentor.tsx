@@ -16,12 +16,12 @@ import { useProfile } from '../../hooks/useProfile'
 import { streamMentorResponse, getChatMessages } from '../../lib/mentor'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30', surface2: '#0F3640',
-  mint: '#AEFEF0', mintMuted: 'rgba(174,254,240,0.12)',
-  mintBorder: 'rgba(174,254,240,0.20)', mintFaint: 'rgba(174,254,240,0.40)',
+  bg: '#0A0A0A', surface: '#141414', surface2: '#1C1C1C',
+  mint: '#EDBA01', mintMuted: 'rgba(237,186,1,0.10)',
+  mintBorder: 'rgba(237,186,1,0.20)', mintFaint: 'rgba(237,186,1,0.35)',
   gold: '#EDBA01', goldMuted: 'rgba(237,186,1,0.12)', goldBorder: 'rgba(237,186,1,0.20)',
-  text: '#FFFFFF', textMuted: '#86C6B3', textFaint: 'rgba(174,254,240,0.40)',
-  divider: 'rgba(174,254,240,0.08)',
+  text: '#FFFFFF', textMuted: '#C0C0C0', textFaint: 'rgba(237,186,1,0.35)',
+  divider: 'rgba(255,255,255,0.08)',
 }
 
 const AnimatedDot = ({ delay }: { delay: number }) => {
@@ -215,7 +215,7 @@ export default function MentorScreen() {
           onPress={handleSend}
           disabled={!inputText.trim() || isStreaming}
         >
-          <MaterialCommunityIcons name="arrow-up" size={20} color="#01191D" />
+          <MaterialCommunityIcons name="arrow-up" size={20} color="#0A0A0A" />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '85%', padding: 12, borderRadius: 14 },
   bubbleMentor: {
     backgroundColor: C.surface, borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(174,254,240,0.12)',
+    borderWidth: 1, borderColor: 'rgba(237,186,1,0.10)',
     borderBottomLeftRadius: 4,
   },
   bubbleUser: {
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   input: {
-    flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: 'rgba(174,254,240,0.12)',
+    flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: 'rgba(237,186,1,0.10)',
     borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12,
     fontFamily: 'SpaceGrotesk_400Regular', fontSize: 14, color: C.text,
     maxHeight: 100,

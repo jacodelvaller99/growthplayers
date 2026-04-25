@@ -9,11 +9,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useCheckin } from '../hooks/useCheckin'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30', surface2: '#0F3640',
-  mint: '#AEFEF0', mintBorder: 'rgba(174,254,240,0.20)',
-  mintFaint: 'rgba(174,254,240,0.40)',
-  text: '#FFFFFF', textMuted: '#86C6B3',
-  divider: 'rgba(174,254,240,0.08)',
+  bg: '#0A0A0A', surface: '#141414', surface2: '#1C1C1C',
+  mint: '#EDBA01', mintBorder: 'rgba(237,186,1,0.20)',
+  mintFaint: 'rgba(237,186,1,0.35)',
+  text: '#FFFFFF', textMuted: '#C0C0C0',
+  divider: 'rgba(255,255,255,0.08)',
 }
 
 const OPTIONS = [
@@ -119,7 +119,7 @@ export default function CheckinScreen() {
             value={intention}
             onChangeText={setIntention}
             placeholder="¿Qué es lo más importante que harás hoy?"
-            placeholderTextColor="rgba(174,254,240,0.25)"
+            placeholderTextColor="rgba(237,186,1,0.25)"
             multiline
             numberOfLines={3}
             textAlignVertical="top"
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1, borderColor: 'transparent', marginHorizontal: 2,
   },
   scaleBtnActive: {
-    backgroundColor: 'rgba(174,254,240,0.10)', borderColor: C.mintBorder,
+    backgroundColor: 'rgba(237,186,1,0.08)', borderColor: C.mintBorder,
   },
   scaleEmoji: { fontSize: 22 },
   scaleTxt: {
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginTop: 8,
   },
   submitBtnText: {
-    fontFamily: 'SpaceGrotesk_700Bold', fontSize: 15, color: '#01191D', letterSpacing: 1.5,
+    fontFamily: 'SpaceGrotesk_700Bold', fontSize: 15, color: '#0A0A0A', letterSpacing: 1.5,
   },
   container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   doneWrap: { alignItems: 'center', gap: 12, paddingHorizontal: 40 },

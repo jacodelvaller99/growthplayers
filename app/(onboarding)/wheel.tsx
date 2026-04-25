@@ -8,9 +8,9 @@ import { useProgramStore } from '../../store/programStore'
 import { upsertProfile, upsertAllPilares } from '../../lib/database'
 
 const C = {
-  bg: '#01191D', surface: '#0D2B30',
-  mint: '#AEFEF0', mintBorder: 'rgba(174,254,240,0.20)',
-  text: '#FFFFFF', textMuted: '#86C6B3',
+  bg: '#0A0A0A', surface: '#141414',
+  mint: '#EDBA01', mintBorder: 'rgba(237,186,1,0.20)',
+  text: '#FFFFFF', textMuted: '#C0C0C0',
 }
 
 const PILARES = [
@@ -148,6 +148,6 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.5 },
   btnText: {
     fontFamily: 'SpaceGrotesk_700Bold', fontSize: 14,
-    color: '#01191D', letterSpacing: 1.5,
+    color: '#0A0A0A', letterSpacing: 1.5,
   },
 })
