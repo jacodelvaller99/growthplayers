@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, {
@@ -93,7 +93,10 @@ export default function LoginScreen() {
   if (!mounted) return null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: BRAND.bg }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, backgroundColor: BRAND.bg }}
+    >
       {/* Background Glow */}
       <View
         style={{
@@ -446,6 +449,6 @@ export default function LoginScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

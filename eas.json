@@ -2,22 +2,28 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": { "simulator": true }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": { "autoIncrement": true },
+      "android": { "autoIncrement": true }
     },
     "production": {
-      "distribution": "store"
+      "distribution": "store",
+      "ios": { "autoIncrement": true },
+      "android": { "autoIncrement": true }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "YOUR_APP_ID"
+        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID"
       },
       "android": {
-        "serviceAccountKeyPath": "./android-key.json"
+        "serviceAccountKeyPath": "./android-key.json",
+        "track": "production"
       }
     }
   }

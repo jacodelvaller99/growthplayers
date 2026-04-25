@@ -10,6 +10,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { useProgramStore, getModulesForProgram, type ProgramModule } from '../../store/programStore'
 import { PolarisTokens, GrowthPlayersTokens } from '../../components/design/tokens'
@@ -115,7 +116,7 @@ export default function AcademiaScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: T.bg }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: T.bg }]}>
       <View style={[styles.header, { borderBottomColor: T.border }]}>
         <Text style={[styles.headerLabel, { color: T.accent }]}>
           {programType === 'polaris' ? 'PROGRAMA POLARIS' : 'GROWTH PLAYERS'}
@@ -129,7 +130,7 @@ export default function AcademiaScreen() {
         data={modules}
         keyExtractor={(item) => item.id}
         renderItem={renderModule}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: 80 }]}
         showsVerticalScrollIndicator={false}
       />
 
@@ -200,7 +201,7 @@ export default function AcademiaScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </SafeAreaView>
   )
 }
 

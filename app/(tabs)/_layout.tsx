@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -24,7 +25,7 @@ const TAB_ROUTES = [
   { name: 'comunidad', label: 'COMUNIDAD', icon: 'account-group' },
 ];
 
-const TabButton = ({
+const TabButton = React.memo(function TabButton({
   options,
   label,
   icon,
@@ -33,7 +34,7 @@ const TabButton = ({
   onLongPress,
   activeColor = '#EDBA01',
   inactiveColor = 'rgba(237,186,1,0.35)',
-}: any) => {
+}: any) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -91,11 +92,14 @@ const TabButton = ({
       )}
     </Pressable>
   );
-};
+});
 
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const { programType } = useProgramStore();
+  const insets = useSafeAreaInsets();
   const isPolaris = programType === 'polaris';
+  // Height adapts to home indicator (iPhone X+) and Android nav bar
+  const tabHeight = 48 + insets.bottom;
   const tabColors = {
     bg:       isPolaris ? '#141414' : '#141414',
     active:   isPolaris ? '#EDBA01' : '#EDBA01',
@@ -104,7 +108,12 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   };
 
   return (
-    <View style={[styles.tabBar, { backgroundColor: tabColors.bg, borderTopColor: tabColors.border }]}>
+    <View style={[styles.tabBar, {
+      backgroundColor: tabColors.bg,
+      borderTopColor: tabColors.border,
+      height: tabHeight,
+      paddingBottom: insets.bottom,
+    }]}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
@@ -177,9 +186,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#141414',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
-    height: Platform.OS === 'ios' ? 70 : 60,
-    paddingBottom: Platform.OS === 'ios' ? 16 : 6,
     justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingTop: 6,
     zIndex: 999,
     elevation: 4,
   },

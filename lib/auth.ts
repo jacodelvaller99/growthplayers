@@ -1,8 +1,34 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// Admin credentials (hardcoded for initial setup)
-const ADMIN_EMAIL = 'jacodelvalle@gmail.com';
-const ADMIN_PASSWORD = '1233192770Jac@';
+// ─── Secure Storage Helpers ───────────────────────────────────────────────────
+// expo-secure-store uses Keychain (iOS) / Keystore (Android).
+// On web it falls back to localStorage (no native secure enclave available).
+async function secureSet(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, value);
+    return;
+  }
+  const SecureStore = await import('expo-secure-store');
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function secureGet(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return AsyncStorage.getItem(key);
+  }
+  const SecureStore = await import('expo-secure-store');
+  return SecureStore.getItemAsync(key);
+}
+
+async function secureDelete(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key);
+    return;
+  }
+  const SecureStore = await import('expo-secure-store');
+  await SecureStore.deleteItemAsync(key);
+}
 
 export interface User {
   id: string;
@@ -20,15 +46,14 @@ export interface AuthState {
 }
 
 /**
- * Hash password (nunca almacenar en texto plano)
- * Usa base64 encoding para ofuscación básica
+ * Hash password (ofuscación básica — nunca almacenar en texto plano)
  */
 function hashPassword(password: string): string {
   return btoa(`salt_lifeflow_${password}_salt`);
 }
 
 /**
- * Generar JWT simple (sin dependencias externas)
+ * Generar token de sesión simple
  */
 function generateToken(): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -36,44 +61,22 @@ function generateToken(): string {
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 días
   }));
-  const signature = 'signature'; // En producción, sign properly
+  const signature = btoa(`lifeflow_${Date.now()}`);
   return `${header}.${payload}.${signature}`;
 }
 
 /**
  * Login con email y contraseña
+ * NOTA: Este sistema local solo se usa como fallback dev.
+ * En producción, la auth va por Supabase (lib/supabase.ts).
  */
-export async function loginUser(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+export async function loginUser(
+  email: string,
+  password: string
+): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
-    // Validar formato
     if (!email || !password) {
       return { success: false, error: 'Email y contraseña requeridos' };
-    }
-
-    // Verificar si es el admin
-    if (email === ADMIN_EMAIL) {
-      const hashedPassword = hashPassword(password);
-      const hashedAdminPassword = hashPassword(ADMIN_PASSWORD);
-
-      if (hashedPassword !== hashedAdminPassword) {
-        return { success: false, error: 'Credenciales inválidas' };
-      }
-
-      // Admin login exitoso
-      const user: User = {
-        id: 'admin_001',
-        email: ADMIN_EMAIL,
-        nombre: 'Jaco del Valle',
-        isAdmin: true,
-        token: generateToken(),
-        createdAt: Date.now(),
-      };
-
-      // Guardar en AsyncStorage
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      await AsyncStorage.setItem('token', user.token);
-
-      return { success: true, user };
     }
 
     // Verificar si el usuario existe en la BD local
@@ -86,19 +89,19 @@ export async function loginUser(email: string, password: string): Promise<{ succ
     }
 
     // Verificar contraseña
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = hashPassword(password);
     if (existingUser.hashedPassword !== hashedPassword) {
       return { success: false, error: 'Credenciales inválidas' };
     }
 
-    // Login exitoso
     const user: User = {
       ...existingUser,
       token: generateToken(),
     };
 
-    await AsyncStorage.setItem('user', JSON.stringify(user));
-    await AsyncStorage.setItem('token', user.token);
+    // Guardar sesión en SecureStore (Keychain/Keystore)
+    await secureSet('session_user', JSON.stringify(user));
+    await secureSet('session_token', user.token);
 
     return { success: true, user };
   } catch (e) {
@@ -124,7 +127,6 @@ export async function signupUser(
       return { success: false, error: 'La contraseña debe tener mínimo 8 caracteres' };
     }
 
-    // Verificar que no exista
     const usersJson = await AsyncStorage.getItem('users');
     const users = usersJson ? JSON.parse(usersJson) : [];
 
@@ -132,7 +134,6 @@ export async function signupUser(
       return { success: false, error: 'El email ya está registrado' };
     }
 
-    // Crear usuario
     const hashedPassword = hashPassword(password);
     const newUser: User = {
       id: `user_${Date.now()}`,
@@ -143,15 +144,13 @@ export async function signupUser(
       createdAt: Date.now(),
     };
 
-    // Guardar en lista de usuarios
-    users.push({
-      ...newUser,
-      hashedPassword, // Solo guardar en la BD, no en sesión
-    });
-
+    // Lista de usuarios en AsyncStorage (non-sensitive — no tokens, no passwords in plaintext)
+    users.push({ ...newUser, hashedPassword });
     await AsyncStorage.setItem('users', JSON.stringify(users));
-    await AsyncStorage.setItem('user', JSON.stringify(newUser));
-    await AsyncStorage.setItem('token', newUser.token);
+
+    // Sesión activa en SecureStore
+    await secureSet('session_user', JSON.stringify(newUser));
+    await secureSet('session_token', newUser.token);
 
     return { success: true, user: newUser };
   } catch (e) {
@@ -161,29 +160,26 @@ export async function signupUser(
 }
 
 /**
- * Logout
+ * Logout — limpia SecureStore
  */
 export async function logoutUser(): Promise<void> {
   try {
-    await AsyncStorage.removeItem('user');
-    await AsyncStorage.removeItem('token');
+    await secureDelete('session_user');
+    await secureDelete('session_token');
   } catch (e) {
     console.error('Logout error:', e);
   }
 }
 
 /**
- * Restaurar sesión (verificar si hay token válido)
+ * Restaurar sesión desde SecureStore
  */
 export async function restoreSession(): Promise<User | null> {
   try {
-    const userJson = await AsyncStorage.getItem('user');
+    const userJson = await secureGet('session_user');
     if (!userJson) return null;
 
     const user: User = JSON.parse(userJson);
-
-    // En producción, verificar token en servidor
-    // Por ahora, asumimos que si existe en AsyncStorage, es válido
     return user;
   } catch (e) {
     console.error('Restore session error:', e);
@@ -192,13 +188,11 @@ export async function restoreSession(): Promise<User | null> {
 }
 
 /**
- * Verificar si token es válido (básico)
+ * Verificar si token es válido
  */
 export async function isTokenValid(token: string): Promise<boolean> {
   try {
-    // En producción, validar contra servidor
-    // Por ahora, verificar que exista en AsyncStorage
-    const storedToken = await AsyncStorage.getItem('token');
+    const storedToken = await secureGet('session_token');
     return storedToken === token;
   } catch {
     return false;

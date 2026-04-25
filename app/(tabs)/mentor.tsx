@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   View, Text, TextInput, FlatList, Pressable,
   KeyboardAvoidingView, Platform, StyleSheet,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
 import Animated, {
   FadeIn, useSharedValue, withRepeat, withTiming,
@@ -51,6 +52,7 @@ interface MsgBubble {
 export default function MentorScreen() {
   const { session } = useAuthStore()
   const { profile } = useProfile()
+  const insets = useSafeAreaInsets()
   const { programType, currentModuleId, streak, totalDays, archetypeId } = useProgramStore()
   const { messages: storeMessages, addMessage, updateMessageContent, setLoading, clearChat } = useChatStore()
 
@@ -82,7 +84,7 @@ export default function MentorScreen() {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
   }
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     const text = inputText.trim()
     if (!text || isStreaming) return
     const userId = session?.user?.id
@@ -130,7 +132,8 @@ export default function MentorScreen() {
       )
       setIsStreaming(false)
     }
-  }
+  }, [inputText, isStreaming, session?.user?.id, profile, programType, archetypeId,
+      currentModule, streak, totalDays, localMessages])
 
   const renderMessage = ({ item }: { item: MsgBubble }) => {
     const isUser = item.role === 'user'
@@ -155,7 +158,7 @@ export default function MentorScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.headerTitle}>MENTOR</Text>
           <Text style={styles.headerSub}>
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14,
+    paddingHorizontal: 20, paddingBottom: 14,
     borderBottomWidth: 1, borderBottomColor: C.divider,
   },
   headerTitle: {

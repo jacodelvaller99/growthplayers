@@ -9,20 +9,35 @@
     "scheme": "lifeflow",
     "newArchEnabled": true,
     "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#0A0A0A"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.growthplayers.lifeflow",
       "infoPlist": {
-        "UIUserInterfaceStyle": "Dark"
+        "UIUserInterfaceStyle": "Dark",
+        "NSCameraUsageDescription": "Lifeflow necesita acceso a la cámara para personalizar tu foto de perfil.",
+        "NSPhotoLibraryUsageDescription": "Lifeflow necesita acceso a tus fotos para personalizar tu perfil.",
+        "NSFaceIDUsageDescription": "Lifeflow usa Face ID para proteger tu sesión.",
+        "NSUserTrackingUsageDescription": "Lifeflow no rastrea tu actividad fuera de la app.",
+        "NSHealthShareUsageDescription": "Lifeflow usa tus datos de salud para el módulo de biometría.",
+        "NSHealthUpdateUsageDescription": "Lifeflow guarda tus métricas de bienestar en HealthKit."
       }
     },
     "android": {
       "package": "com.growthplayers.lifeflow",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A0A"
       },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
       "edgeToEdgeEnabled": true
     },
     "web": {
@@ -33,7 +48,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#EDBA01",
+          "sounds": []
+        }
+      ]
     ]
   }
 }
