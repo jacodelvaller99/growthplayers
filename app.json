@@ -9,7 +9,7 @@
     "scheme": "lifeflow",
     "newArchEnabled": true,
     "splash": {
-      "backgroundColor": "#01191D"
+      "backgroundColor": "#0A0A0A"
     },
     "ios": {
       "supportsTablet": false,
@@ -21,7 +21,7 @@
     "android": {
       "package": "com.growthplayers.lifeflow",
       "adaptiveIcon": {
-        "backgroundColor": "#01191D"
+        "backgroundColor": "#0A0A0A"
       },
       "edgeToEdgeEnabled": true
     },
