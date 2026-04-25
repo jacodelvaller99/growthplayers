@@ -252,6 +252,35 @@ export const GrowthPlayersTokens = {
   divider:       'rgba(174,254,240,0.08)',
 } as const
 
+/**
+ * EDITORIAL DESIGN TOKENS — Unified across all screens
+ * Smoky black foundation · Philippine gold accents · Quiet luxury
+ */
+export const Editorial = {
+  // Backgrounds
+  bg:           '#0A0A0A',
+  surface:      '#111111',
+  surface2:     '#181818',
+  surfaceRaise: '#1E1E1E',
+
+  // Gold (brand color)
+  gold:        '#EDBA01',
+  goldMid:     'rgba(237,186,1,0.14)',
+  goldBorder:  'rgba(237,186,1,0.22)',
+  goldDim:     'rgba(237,186,1,0.45)',
+  goldFaint:   'rgba(237,186,1,0.07)',
+
+  // Text
+  text:        '#FFFFFF',
+  textMid:     '#888888',
+  textDim:     '#555555',
+
+  // System
+  divider:     'rgba(255,255,255,0.07)',
+  error:       '#EF4444',
+  success:     '#22C55E',
+} as const
+
 export type ProgramType = 'polaris' | 'growth_players'
 
 export const getProgramTokens = (p: ProgramType) =>

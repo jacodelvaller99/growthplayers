@@ -41,4 +41,21 @@ export const Colors = {
     mintBorder: 'rgba(237,186,1,0.20)',
     mintBorderActive: 'rgba(237,186,1,0.40)',
     textInverse: '#0A0A0A',
+
+    // ── EXTENDED ALIASES (legacy compat) ─────────────
+    surfaceAlt:      '#1C1C1C',     // alias → surface2
+    surfaceElevated: '#1C1C1C',     // alias → surface2
+    transparent:     'transparent', // explicit transparent
+
+    // Pillar color map (rueda de la vida)
+    pillar: {
+        fe:       '#7C3AED',
+        finanzas: '#059669',
+        salud:    '#DC2626',
+        familia:  '#F97316',
+        mente:    '#06B6D4',
+        negocio:  '#8B5CF6',
+        impacto:  '#0EA5E9',
+        legado:   '#64748B',
+    },
 };

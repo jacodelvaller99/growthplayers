@@ -1,60 +1,147 @@
 import React, { useState, useCallback } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, SafeAreaView, RefreshControl } from 'react-native'
+import {
+  View, Text, ScrollView, Pressable, StyleSheet,
+  Platform, RefreshControl, Dimensions,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
+import Animated, {
+  FadeIn, FadeInDown, FadeInUp,
+  useSharedValue, useAnimatedStyle, withTiming, withSpring,
+} from 'react-native-reanimated'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useProgramStore, getModulesForProgram } from '../../store/programStore'
 import { useProfile } from '../../hooks/useProfile'
 import { useCheckin } from '../../hooks/useCheckin'
 
-const C = {
-  bg: '#0A0A0A', surface: '#141414', surface2: '#1C1C1C',
-  mint: '#EDBA01', mintMuted: 'rgba(237,186,1,0.10)',
-  mintBorder: 'rgba(237,186,1,0.20)', mintFaint: 'rgba(237,186,1,0.35)',
-  gold: '#EDBA01', goldMuted: 'rgba(237,186,1,0.12)', goldBorder: 'rgba(237,186,1,0.20)',
-  text: '#FFFFFF', textMuted: '#C0C0C0', textFaint: 'rgba(237,186,1,0.35)',
-  divider: 'rgba(255,255,255,0.08)',
+const { width: SCREEN_W } = Dimensions.get('window')
+
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+const T = {
+  bg:           '#0A0A0A',
+  surface:      '#111111',
+  surface2:     '#181818',
+  surfaceRaise: '#1E1E1E',
+  gold:         '#EDBA01',
+  goldMid:      'rgba(237,186,1,0.18)',
+  goldBorder:   'rgba(237,186,1,0.22)',
+  goldFaint:    'rgba(237,186,1,0.08)',
+  goldGlow:     'rgba(237,186,1,0.06)',
+  text:         '#FFFFFF',
+  textMid:      '#A8A8A8',
+  textDim:      '#666666',
+  divider:      'rgba(255,255,255,0.07)',
+  danger:       '#EF4444',
+  success:      '#22C55E',
 }
 
-const PILAR_COLORS: Record<string, string> = {
-  fe: '#7c3aed', finanzas: '#059669', salud: '#dc2626', familia: '#f97316',
-  mente: '#06b6d4', negocio: '#8b5cf6', impacto: '#0ea5e9', legado: '#64748b',
-}
-const PILAR_LABELS: Record<string, string> = {
-  fe: 'Fe', finanzas: 'Finanzas', salud: 'Salud', familia: 'Familia',
-  mente: 'Mente', negocio: 'Negocio', impacto: 'Impacto', legado: 'Legado',
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'BUENOS DÍAS'
+  if (h < 18) return 'BUENAS TARDES'
+  return 'BUENAS NOCHES'
 }
 
-const SkeletonBar = ({ width = '60%', height = 16 }: { width?: string | number, height?: number }) => (
-  <View style={{
-    height, borderRadius: 6,
-    backgroundColor: C.surface2,
-    width: width as any,
-    opacity: 0.7,
-  }} />
+function firstName(fullName?: string | null) {
+  return (fullName ?? '').split(' ')[0]?.toUpperCase() || 'LÍDER'
+}
+
+function initials(fullName?: string | null) {
+  return (fullName ?? 'U').split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
+}
+
+// ─── Mini sparkline bars (streak visualization) ───────────────────────────────
+const MiniBarChart = ({ value, max = 30 }: { value: number; max?: number }) => {
+  const bars = 7
+  const fill = Math.ceil((value / max) * bars)
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 20 }}>
+      {Array.from({ length: bars }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            width: 4,
+            borderRadius: 2,
+            height: 4 + (i / (bars - 1)) * 14,
+            backgroundColor: i < fill ? T.gold : T.surface2,
+            opacity: i < fill ? 1 : 0.4,
+          }}
+        />
+      ))}
+    </View>
+  )
+}
+
+// ─── Mini trend line (sovereignty score) ─────────────────────────────────────
+const TrendLine = ({ score = 0 }: { score: number }) => {
+  const pct = Math.min(Math.max(score / 100, 0), 1)
+  const filled = Math.round(pct * 12)
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1.5, height: 14 }}>
+      {Array.from({ length: 12 }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            width: 3, height: i < filled ? 10 + (i % 3 === 0 ? 3 : 0) : 4,
+            borderRadius: 1.5,
+            backgroundColor: i < filled ? T.gold : T.surfaceRaise,
+            opacity: i < filled ? 0.7 + (i / 12) * 0.3 : 0.3,
+          }}
+        />
+      ))}
+    </View>
+  )
+}
+
+// ─── Skeleton shimmer ─────────────────────────────────────────────────────────
+const Skel = ({ w = '60%', h = 14 }: { w?: string | number; h?: number }) => (
+  <View style={{ height: h, width: w as any, backgroundColor: T.surface2, borderRadius: 4, opacity: 0.5 }} />
 )
 
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
+interface KpiCardProps {
+  label: string
+  value: string | number
+  sub?: string
+  icon: string
+  chart?: React.ReactNode
+  onPress?: () => void
+  highlight?: boolean
+}
+const KpiCard = ({ label, value, sub, icon, chart, onPress, highlight }: KpiCardProps) => (
+  <Pressable
+    onPress={onPress}
+    style={({ pressed }) => [
+      styles.kpiCard,
+      highlight && styles.kpiCardHighlight,
+      pressed && { opacity: 0.85 },
+    ]}
+  >
+    <View style={styles.kpiTop}>
+      <Text style={styles.kpiLabel}>{label}</Text>
+      <MaterialCommunityIcons name={icon as any} size={15} color={T.gold} style={{ opacity: 0.6 }} />
+    </View>
+    <Text style={styles.kpiValue}>{value}</Text>
+    {chart && <View style={{ marginTop: 8 }}>{chart}</View>}
+    {sub && <Text style={styles.kpiSub}>{sub}</Text>}
+  </Pressable>
+)
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function ComandoScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { programType, currentModuleId, streak } = useProgramStore()
   const { profile, pilares, sovereigntyScore, isLoading, reload: reloadProfile } = useProfile()
   const { hasCheckedIn, reload: reloadCheckin } = useCheckin()
   const [refreshing, setRefreshing] = useState(false)
 
   const modules = getModulesForProgram(programType)
-  const currentModule = modules.find((m) => m.id === currentModuleId) ?? modules[0]
+  const currentModule = modules.find(m => m.id === currentModuleId) ?? modules[0]
   const completedCount = modules.filter((_, i) => i < (parseInt(currentModuleId?.split('_')[1] ?? '1') - 1)).length
   const totalModules = modules.length
-  const moduleProgress = currentModuleId
-    ? Math.round((completedCount / totalModules) * 100)
-    : 0
-
-  const greeting = () => {
-    const h = new Date().getHours()
-    if (h < 12) return 'Buenos días'
-    if (h < 18) return 'Buenas tardes'
-    return 'Buenas noches'
-  }
+  const moduleProgress = currentModuleId ? Math.round((completedCount / totalModules) * 100) : 0
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -62,200 +149,322 @@ export default function ComandoScreen() {
     setRefreshing(false)
   }, [reloadProfile, reloadCheckin])
 
+  const headerPadding = insets.top + 12
+
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* HEADER */}
-      <View style={styles.header}>
+    <View style={styles.container}>
+      {/* ── HEADER ─────────────────────────────────────────────────── */}
+      <Animated.View
+        entering={FadeIn.duration(400)}
+        style={[styles.header, { paddingTop: headerPadding }]}
+      >
         <View>
-          <Text style={styles.logoTitle}>LIFEFLOW</Text>
-          <Text style={styles.logoSub}>× {programType === 'polaris' ? 'POLARIS' : 'GROWTH PLAYERS'}</Text>
+          <Text style={styles.logoMark}>LIFEFLOW</Text>
+          <Text style={styles.programBadge}>
+            {programType === 'polaris' ? '× POLARIS PROTOCOL™' : '× GROWTH PLAYERS™'}
+          </Text>
         </View>
-        <Pressable onPress={() => router.push('/(tabs)/avatar')} style={styles.avatarCircle}>
+        <Pressable
+          onPress={() => router.push('/(tabs)/avatar')}
+          style={styles.avatarBtn}
+          accessibilityLabel="Ir a perfil"
+        >
           <Text style={styles.avatarInitials}>
-            {(profile?.full_name ?? 'U').split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')}
+            {isLoading ? '…' : initials(profile?.full_name)}
           </Text>
         </Pressable>
-      </View>
+      </Animated.View>
 
+      {/* ── SCROLL CONTENT ─────────────────────────────────────────── */}
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.mint} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.gold} />
+        }
       >
-        {/* GREETING */}
-        <Animated.View entering={FadeInDown.delay(80).duration(500)} style={styles.greetingCard}>
-          <View style={{ flex: 1, gap: 6 }}>
-            {isLoading && profile === null ? (
-              <>
-                <SkeletonBar width="50%" height={22} />
-                <SkeletonBar width="70%" height={14} />
-              </>
-            ) : (
-              <>
-                <Text style={styles.greetingName}>{greeting()}, {profile?.full_name?.split(' ')[0] ?? 'Líder'}</Text>
-                <Text style={styles.greetingSub}>Día {profile?.total_days ?? 0} del Protocolo Soberano</Text>
-              </>
-            )}
-          </View>
-          {isLoading && profile === null ? (
-            <SkeletonBar width={52} height={52} />
+
+        {/* ── MASSIVE GREETING ───────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(60).duration(550)} style={styles.greetingBlock}>
+          <Text style={styles.greetingTime}>{greeting()},</Text>
+          {isLoading && !profile ? (
+            <Skel w="55%" h={48} />
           ) : (
-            <Text style={styles.greetingDeco}>{profile?.total_days ?? 0}</Text>
+            <Text style={styles.greetingName} numberOfLines={1} adjustsFontSizeToFit>
+              {firstName(profile?.full_name)}
+            </Text>
           )}
+          <Text style={styles.greetingDay}>
+            DÍA {profile?.total_days ?? 0} · PROTOCOLO SOBERANO
+          </Text>
         </Animated.View>
 
-        {/* STATS ROW */}
-        <Animated.View entering={FadeInDown.delay(160).duration(500)} style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statIcon}>🔥</Text>
-            <Text style={styles.statValue}>{streak}</Text>
-            <Text style={styles.statLabel}>días racha</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statIcon}>⚡</Text>
-            {isLoading && profile === null ? (
-              <SkeletonBar width={32} height={20} />
-            ) : (
-              <Text style={styles.statValue}>{sovereigntyScore}</Text>
-            )}
-            <Text style={styles.statLabel}>Soberanía</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statIcon, { color: C.mint }]}>✓</Text>
-            <Text style={styles.statValue}>{completedCount}/{totalModules}</Text>
-            <Text style={styles.statLabel}>Módulos</Text>
-          </View>
+        {/* ── DIVIDER ────────────────────────────────────────────── */}
+        <View style={styles.sectionDivider} />
+
+        {/* ── KPI GRID ───────────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.kpiGrid}>
+          {/* RACHA */}
+          <KpiCard
+            label="RACHA"
+            value={isLoading ? '—' : `${streak}`}
+            sub="días consecutivos"
+            icon="fire"
+            chart={<MiniBarChart value={streak} max={30} />}
+          />
+          {/* SOBERANÍA */}
+          <KpiCard
+            label="SOBERANÍA"
+            value={isLoading ? '—' : `${sovereigntyScore ?? 0}`}
+            sub="puntos"
+            icon="lightning-bolt"
+            chart={<TrendLine score={sovereigntyScore ?? 0} />}
+          />
+          {/* MÓDULO */}
+          <KpiCard
+            label="MÓDULO"
+            value={`${completedCount}/${totalModules}`}
+            sub={`${moduleProgress}% completado`}
+            icon="layers-triple-outline"
+            onPress={() => router.push('/(tabs)/academia')}
+          />
+          {/* CHECK-IN */}
+          <KpiCard
+            label="CHECK-IN"
+            value={hasCheckedIn ? '✓' : '—'}
+            sub={hasCheckedIn ? 'completado hoy' : 'pendiente'}
+            icon="checkbox-marked-circle-outline"
+            highlight={!hasCheckedIn}
+            onPress={() => router.push('/checkin')}
+          />
         </Animated.View>
 
-        {/* MÓDULO ACTIVO */}
+        {/* ── MÓDULO ACTIVO ──────────────────────────────────────── */}
         {currentModule && (
-          <Animated.View entering={FadeInDown.delay(240).duration(500)} style={styles.moduloCard}>
-            <View style={styles.moduloPill}>
-              <Text style={styles.moduloPillText}>MÓDULO ACTUAL</Text>
-            </View>
-            <View style={styles.moduloHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.moduloTitle}>{currentModule.title}</Text>
-                <Text style={styles.moduloSub}>{currentModule.subtitle}</Text>
+          <Animated.View entering={FadeInDown.delay(280).duration(500)}>
+            <Pressable
+              style={styles.moduleCard}
+              onPress={() => router.push('/(tabs)/academia')}
+            >
+              {/* accent line */}
+              <View style={styles.moduleAccentLine} />
+              <View style={styles.moduleInner}>
+                <View style={styles.moduleTopRow}>
+                  <Text style={styles.modulePill}>MÓDULO ACTIVO</Text>
+                  <MaterialCommunityIcons name="arrow-right" size={14} color={T.gold} style={{ opacity: 0.5 }} />
+                </View>
+                <Text style={styles.moduleTitle}>{currentModule.title}</Text>
+                <Text style={styles.moduleSub}>{currentModule.subtitle}</Text>
+                {/* progress track */}
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                  <Text style={styles.progressLabel}>Progreso</Text>
+                  <Text style={[styles.progressLabel, { color: T.gold }]}>{moduleProgress}%</Text>
+                </View>
               </View>
-              <MaterialCommunityIcons name="compass" size={24} color={C.gold} />
-            </View>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
-            </View>
-            <Text style={styles.progressLabel}>{moduleProgress}% completado</Text>
+            </Pressable>
           </Animated.View>
         )}
 
-        {/* ACCIONES */}
-        <Text style={styles.sectionLabel}>Acciones de hoy</Text>
-        <Animated.View entering={FadeInDown.delay(320).duration(500)} style={styles.actionsCol}>
-          <Pressable
-            style={[styles.btnPrimary, hasCheckedIn && styles.btnDone]}
-            onPress={() => router.push('/checkin')}
-          >
-            <Text style={styles.btnPrimaryIcon}>{hasCheckedIn ? '✓' : '☐'}</Text>
-            <Text style={styles.btnPrimaryText}>
-              {hasCheckedIn ? 'Check-in completado' : 'Registrar Check-in'}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.btnSecondary} onPress={() => router.push('/(tabs)/mentor')}>
-            <MaterialCommunityIcons name="brain" size={18} color={C.mint} />
-            <Text style={styles.btnSecondaryText}>Hablar con Mentor</Text>
-          </Pressable>
+        {/* ── MI NORTE ───────────────────────────────────────────── */}
+        {profile?.norte && (
+          <Animated.View entering={FadeInDown.delay(360).duration(500)}>
+            <Pressable
+              style={styles.norteCard}
+              onPress={() => router.push('/(tabs)/bitacora')}
+            >
+              <View style={styles.norteHeader}>
+                <MaterialCommunityIcons name="compass-rose" size={18} color={T.gold} />
+                <Text style={styles.norteLabel}>MI NORTE</Text>
+              </View>
+              <Text style={styles.norteText} numberOfLines={3}>{profile.norte}</Text>
+            </Pressable>
+          </Animated.View>
+        )}
+
+        {/* ── ACCIONES ───────────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(440).duration(500)} style={styles.actionsBlock}>
+          <Text style={styles.sectionLabel}>ACCIONES DE HOY</Text>
+          <View style={styles.actionsRow}>
+            <Pressable
+              style={[styles.actionBtn, hasCheckedIn ? styles.actionBtnDone : styles.actionBtnPrimary]}
+              onPress={() => router.push('/checkin')}
+            >
+              <MaterialCommunityIcons
+                name={hasCheckedIn ? 'check-circle' : 'circle-outline'}
+                size={20}
+                color={hasCheckedIn ? T.gold : T.bg}
+              />
+              <Text style={[styles.actionBtnText, hasCheckedIn && { color: T.gold }]}>
+                {hasCheckedIn ? 'CHECK-IN LISTO' : 'HACER CHECK-IN'}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.actionBtnSecondary}
+              onPress={() => router.push('/(tabs)/mentor')}
+            >
+              <MaterialCommunityIcons name="brain" size={20} color={T.gold} />
+              <Text style={[styles.actionBtnText, { color: T.gold }]}>MENTOR IA</Text>
+            </Pressable>
+          </View>
         </Animated.View>
 
-        {/* PILARES GRID */}
-        <Text style={styles.sectionLabel}>Rueda de la Vida</Text>
-        <Animated.View entering={FadeInDown.delay(400).duration(500)} style={styles.pilaresGrid}>
-          {Object.entries(PILAR_LABELS).map(([key, label]) => (
-            <View key={key} style={styles.pilarItem}>
-              <View style={[styles.pilarCircle, { backgroundColor: PILAR_COLORS[key] }]}>
-                <Text style={styles.pilarScore}>{(pilares as any)[key] ?? 5}</Text>
-              </View>
-              <Text style={styles.pilarLabel}>{label}</Text>
-            </View>
-          ))}
-        </Animated.View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  container: { flex: 1, backgroundColor: T.bg },
+
+  // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14,
-    borderBottomWidth: 1, borderBottomColor: C.divider,
+    paddingHorizontal: 22, paddingBottom: 16,
+    borderBottomWidth: 1, borderBottomColor: T.divider,
   },
-  logoTitle: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 18, color: C.mint },
-  logoSub: { fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 11, color: C.gold, letterSpacing: 1 },
-  avatarCircle: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: C.surface2, borderWidth: 1.5, borderColor: C.mintBorder,
+  logoMark: {
+    fontSize: 17, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.gold, letterSpacing: 3,
+  },
+  programBadge: {
+    fontSize: 10, fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: 'rgba(237,186,1,0.45)', letterSpacing: 1.5, marginTop: 1,
+  },
+  avatarBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: T.goldMid, borderWidth: 1.5, borderColor: T.goldBorder,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitials: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 13, color: C.mint },
-  scroll: { padding: 16, gap: 12, paddingBottom: 40 },
-  greetingCard: {
-    backgroundColor: C.surface, borderWidth: 1, borderColor: C.mintBorder,
-    borderRadius: 14, padding: 16, flexDirection: 'row',
-    justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden',
+  avatarInitials: { fontSize: 13, fontFamily: 'SpaceGrotesk_700Bold', color: T.gold },
+
+  // Scroll
+  scroll: { paddingHorizontal: 20, paddingTop: 28, gap: 20 },
+
+  // Greeting — editorial / massive
+  greetingBlock: { gap: 6 },
+  greetingTime: {
+    fontSize: 13, fontFamily: 'SpaceGrotesk_400Regular',
+    color: T.textMid, letterSpacing: 2, textTransform: 'uppercase',
   },
-  greetingName: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 22, color: C.text },
-  greetingSub: { fontFamily: 'SpaceGrotesk_400Regular', fontSize: 13, color: C.textMuted, marginTop: 4 },
-  greetingDeco: {
-    fontFamily: 'SpaceGrotesk_700Bold', fontSize: 52, color: C.mint,
-    opacity: 0.10, lineHeight: 56,
+  greetingName: {
+    fontSize: 48, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.text, lineHeight: 52, letterSpacing: -1,
   },
-  statsRow: { flexDirection: 'row', gap: 8 },
-  statCard: {
-    flex: 1, backgroundColor: C.surface, borderRadius: 10, padding: 12,
-    alignItems: 'flex-start', gap: 2,
+  greetingDay: {
+    fontSize: 10, fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: T.gold, letterSpacing: 2.5, textTransform: 'uppercase', marginTop: 4,
   },
-  statIcon: { fontSize: 16 },
-  statValue: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 20, color: C.mint },
-  statLabel: { fontFamily: 'SpaceGrotesk_400Regular', fontSize: 11, color: C.textMuted },
-  moduloCard: {
-    backgroundColor: C.surface, borderLeftWidth: 3, borderLeftColor: C.gold,
-    borderRadius: 14, padding: 16,
+
+  // Section divider
+  sectionDivider: {
+    height: 1, backgroundColor: T.divider, marginVertical: 4,
   },
-  moduloPill: {
-    backgroundColor: C.goldMuted, borderWidth: 1, borderColor: C.goldBorder,
-    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3,
-    alignSelf: 'flex-start', marginBottom: 8,
-  },
-  moduloPillText: { fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 10, color: C.gold, letterSpacing: 0.8, textTransform: 'uppercase' },
-  moduloHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 12 },
-  moduloTitle: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 18, color: C.text },
-  moduloSub: { fontFamily: 'SpaceGrotesk_400Regular', fontSize: 13, color: C.textMuted, marginTop: 2 },
-  progressTrack: { height: 4, backgroundColor: C.surface2, borderRadius: 999, overflow: 'hidden', marginBottom: 6 },
-  progressFill: { height: '100%', backgroundColor: C.gold, borderRadius: 999 },
-  progressLabel: { fontFamily: 'SpaceGrotesk_400Regular', fontSize: 11, color: C.textFaint, textAlign: 'right' },
   sectionLabel: {
-    fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 12, color: C.textFaint,
-    letterSpacing: 1.5, textTransform: 'uppercase',
+    fontSize: 10, fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: T.textDim, letterSpacing: 2.5, textTransform: 'uppercase',
+    marginBottom: 10,
   },
-  actionsCol: { gap: 8 },
-  btnPrimary: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    height: 52, backgroundColor: C.mint, borderRadius: 12,
+
+  // KPI Grid — 2×2
+  kpiGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
   },
-  btnDone: { backgroundColor: 'rgba(237,186,1,0.12)', borderWidth: 1, borderColor: C.mintBorder },
-  btnPrimaryIcon: { fontSize: 18, color: '#0A0A0A' },
-  btnPrimaryText: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 15, color: '#0A0A0A' },
-  btnSecondary: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    height: 52, borderWidth: 1, borderColor: C.mintBorder, borderRadius: 12,
+  kpiCard: {
+    width: (SCREEN_W - 20 * 2 - 10) / 2,
+    backgroundColor: T.surface, borderWidth: 1, borderColor: T.divider,
+    borderRadius: 14, padding: 14,
   },
-  btnSecondaryText: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 15, color: C.mint },
-  pilaresGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pilarItem: { width: '22%', alignItems: 'center', gap: 4 },
-  pilarCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center',
+  kpiCardHighlight: {
+    borderColor: T.goldBorder, backgroundColor: T.goldFaint,
   },
-  pilarScore: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 15, color: '#fff' },
-  pilarLabel: { fontFamily: 'SpaceGrotesk_400Regular', fontSize: 10, color: C.textMuted, textAlign: 'center' },
+  kpiTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8,
+  },
+  kpiLabel: {
+    fontSize: 9, fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: T.textDim, letterSpacing: 2, textTransform: 'uppercase',
+  },
+  kpiValue: {
+    fontSize: 30, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.text, lineHeight: 34,
+  },
+  kpiSub: {
+    fontSize: 10, fontFamily: 'SpaceGrotesk_400Regular',
+    color: T.textMid, marginTop: 4,
+  },
+
+  // Module card
+  moduleCard: {
+    backgroundColor: T.surface, borderRadius: 16, borderWidth: 1, borderColor: T.divider,
+    overflow: 'hidden',
+  },
+  moduleAccentLine: {
+    height: 3, backgroundColor: T.gold,
+    width: '100%',
+  },
+  moduleInner: { padding: 18, gap: 4 },
+  moduleTopRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8,
+  },
+  modulePill: {
+    fontSize: 9, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.gold, letterSpacing: 2.5, textTransform: 'uppercase',
+  },
+  moduleTitle: {
+    fontSize: 22, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.text, lineHeight: 28,
+  },
+  moduleSub: {
+    fontSize: 13, fontFamily: 'SpaceGrotesk_400Regular',
+    color: T.textMid, lineHeight: 19, marginBottom: 12,
+  },
+  progressTrack: {
+    height: 3, backgroundColor: T.surfaceRaise, borderRadius: 999, overflow: 'hidden',
+  },
+  progressFill: { height: '100%', backgroundColor: T.gold, borderRadius: 999 },
+  progressLabel: {
+    fontSize: 10, fontFamily: 'SpaceGrotesk_400Regular', color: T.textDim,
+  },
+
+  // Norte card
+  norteCard: {
+    backgroundColor: T.surface, borderRadius: 14, borderWidth: 1, borderColor: T.goldBorder,
+    padding: 18,
+  },
+  norteHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10,
+  },
+  norteLabel: {
+    fontSize: 9, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.gold, letterSpacing: 2.5, textTransform: 'uppercase',
+  },
+  norteText: {
+    fontSize: 14, fontFamily: 'SpaceGrotesk_400Regular',
+    color: T.text, lineHeight: 22, fontStyle: 'italic',
+  },
+
+  // Actions
+  actionsBlock: { gap: 0 },
+  actionsRow: { gap: 10 },
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, height: 54, borderRadius: 12,
+  },
+  actionBtnPrimary: { backgroundColor: T.gold },
+  actionBtnDone: {
+    backgroundColor: T.goldFaint, borderWidth: 1.5, borderColor: T.goldBorder,
+  },
+  actionBtnSecondary: {
+    backgroundColor: T.surface, borderWidth: 1.5, borderColor: T.goldBorder,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, height: 54, borderRadius: 12,
+  },
+  actionBtnText: {
+    fontSize: 13, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.bg, letterSpacing: 1.5,
+  },
 })

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
 import Animated, {
   FadeIn, useSharedValue, withRepeat, withTiming,
-  useAnimatedStyle, withSequence, withDelay,
+  useAnimatedStyle, withDelay,
 } from 'react-native-reanimated'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useChatStore } from '../../store/chatStore'
@@ -16,32 +16,41 @@ import { useAuthStore } from '../../store'
 import { useProfile } from '../../hooks/useProfile'
 import { streamMentorResponse, getChatMessages } from '../../lib/mentor'
 
-const C = {
-  bg: '#0A0A0A', surface: '#141414', surface2: '#1C1C1C',
-  mint: '#EDBA01', mintMuted: 'rgba(237,186,1,0.10)',
-  mintBorder: 'rgba(237,186,1,0.20)', mintFaint: 'rgba(237,186,1,0.35)',
-  gold: '#EDBA01', goldMuted: 'rgba(237,186,1,0.12)', goldBorder: 'rgba(237,186,1,0.20)',
-  text: '#FFFFFF', textMuted: '#C0C0C0', textFaint: 'rgba(237,186,1,0.35)',
-  divider: 'rgba(255,255,255,0.08)',
+// ─── Tokens ───────────────────────────────────────────────────────────────────
+const T = {
+  bg:          '#0A0A0A',
+  surface:     '#111111',
+  surface2:    '#181818',
+  gold:        '#EDBA01',
+  goldMid:     'rgba(237,186,1,0.14)',
+  goldBorder:  'rgba(237,186,1,0.20)',
+  goldDim:     'rgba(237,186,1,0.45)',
+  goldFaint:   'rgba(237,186,1,0.07)',
+  text:        '#FFFFFF',
+  textMid:     '#888888',
+  textDim:     'rgba(237,186,1,0.35)',
+  divider:     'rgba(255,255,255,0.07)',
 }
 
-const AnimatedDot = ({ delay }: { delay: number }) => {
-  const opacity = useSharedValue(0.3)
+// ─── Animated Loading Dots ────────────────────────────────────────────────────
+const Dot = ({ delay }: { delay: number }) => {
+  const opacity = useSharedValue(0.25)
   useEffect(() => {
-    opacity.value = withDelay(delay, withRepeat(withTiming(1, { duration: 400 }), -1, true))
+    opacity.value = withDelay(delay, withRepeat(withTiming(1, { duration: 380 }), -1, true))
   }, [])
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }))
-  return <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.mint }, style]} />
+  return <Animated.View style={[{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: T.gold }, style]} />
 }
 
 const LoadingDots = () => (
-  <View style={{ flexDirection: 'row', gap: 4, padding: 4 }}>
-    <AnimatedDot delay={0} />
-    <AnimatedDot delay={150} />
-    <AnimatedDot delay={300} />
+  <View style={{ flexDirection: 'row', gap: 5, padding: 4 }}>
+    <Dot delay={0} />
+    <Dot delay={140} />
+    <Dot delay={280} />
   </View>
 )
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface MsgBubble {
   id: string
   role: 'user' | 'assistant'
@@ -49,12 +58,13 @@ interface MsgBubble {
   isStreaming?: boolean
 }
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function MentorScreen() {
+  const insets = useSafeAreaInsets()
   const { session } = useAuthStore()
   const { profile } = useProfile()
-  const insets = useSafeAreaInsets()
   const { programType, currentModuleId, streak, totalDays, archetypeId } = useProgramStore()
-  const { messages: storeMessages, addMessage, updateMessageContent, setLoading, clearChat } = useChatStore()
+  const { clearChat } = useChatStore()
 
   const [inputText, setInputText] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -62,26 +72,21 @@ export default function MentorScreen() {
   const listRef = useRef<FlatList>(null)
 
   const modules = getModulesForProgram(programType)
-  const currentModule = modules.find((m) => m.id === currentModuleId) ?? modules[0]
+  const currentModule = modules.find(m => m.id === currentModuleId) ?? modules[0]
 
-  // Load chat history from Supabase on mount
+  // Load chat history
   useEffect(() => {
     const userId = session?.user?.id
     if (!userId) return
-    getChatMessages(userId, 50).then((rows) => {
+    getChatMessages(userId, 50).then(rows => {
       if (rows.length > 0) {
-        const msgs: MsgBubble[] = rows.map((r) => ({
-          id: r.id,
-          role: r.role,
-          content: r.content,
-        }))
-        setLocalMessages(msgs)
+        setLocalMessages(rows.map(r => ({ id: r.id, role: r.role, content: r.content })))
       }
     })
   }, [session?.user?.id])
 
   const scrollToEnd = () => {
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80)
   }
 
   const handleSend = useCallback(async () => {
@@ -98,10 +103,10 @@ export default function MentorScreen() {
     const assistantId = `a_${Date.now()}`
     const assistantMsg: MsgBubble = { id: assistantId, role: 'assistant', content: '', isStreaming: true }
 
-    setLocalMessages((prev) => [...prev, userMsg, assistantMsg])
+    setLocalMessages(prev => [...prev, userMsg, assistantMsg])
     scrollToEnd()
 
-    const history = localMessages.map((m) => ({ role: m.role, content: m.content }))
+    const history = localMessages.map(m => ({ role: m.role, content: m.content }))
 
     try {
       await streamMentorResponse(
@@ -120,28 +125,31 @@ export default function MentorScreen() {
         text,
         history,
         (chunk) => {
-          setLocalMessages((prev) =>
-            prev.map((m) => m.id === assistantId ? { ...m, content: m.content + chunk } : m)
+          setLocalMessages(prev =>
+            prev.map(m => m.id === assistantId ? { ...m, content: m.content + chunk } : m)
           )
           scrollToEnd()
         }
       )
     } finally {
-      setLocalMessages((prev) =>
-        prev.map((m) => m.id === assistantId ? { ...m, isStreaming: false } : m)
+      setLocalMessages(prev =>
+        prev.map(m => m.id === assistantId ? { ...m, isStreaming: false } : m)
       )
       setIsStreaming(false)
     }
   }, [inputText, isStreaming, session?.user?.id, profile, programType, archetypeId,
-      currentModule, streak, totalDays, localMessages])
+    currentModule, streak, totalDays, localMessages])
 
   const renderMessage = ({ item }: { item: MsgBubble }) => {
     const isUser = item.role === 'user'
     return (
-      <Animated.View entering={FadeIn.duration(300)} style={[styles.msgRow, isUser && styles.msgRowRight]}>
+      <Animated.View
+        entering={FadeIn.duration(280)}
+        style={[styles.msgRow, isUser && styles.msgRowRight]}
+      >
         {!isUser && (
           <View style={styles.mentorAvatar}>
-            <Text style={styles.mentorAvatarText}>★</Text>
+            <Text style={styles.mentorAvatarStar}>★</Text>
           </View>
         )}
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleMentor]}>
@@ -156,69 +164,77 @@ export default function MentorScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      {/* HEADER */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      {/* ── HEADER ─────────────────────────────────────────────────── */}
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <View>
+          <Text style={styles.headerEyebrow}>INTELIGENCIA ARTIFICIAL</Text>
           <Text style={styles.headerTitle}>MENTOR</Text>
-          <Text style={styles.headerSub}>
-            {programType === 'polaris' ? 'IA · Polaris Protocol' : 'IA · Growth Players'}
-          </Text>
         </View>
-        <Pressable onPress={clearChat} style={styles.newBtn}>
-          <Text style={styles.newBtnText}>Nueva</Text>
+        <Pressable
+          onPress={() => { clearChat(); setLocalMessages([]) }}
+          style={styles.newChatBtn}
+          accessibilityLabel="Nueva conversación"
+        >
+          <MaterialCommunityIcons name="plus" size={14} color={T.gold} />
+          <Text style={styles.newChatText}>NUEVO</Text>
         </Pressable>
       </View>
 
-      {/* MODULE CONTEXT */}
+      {/* ── CONTEXT PILL ───────────────────────────────────────────── */}
       {currentModule && (
-        <View style={styles.moduleCtx}>
-          <View style={styles.moduleDot} />
-          <Text style={styles.moduleCtxText}>
+        <View style={styles.contextPill}>
+          <View style={styles.contextDot} />
+          <Text style={styles.contextText} numberOfLines={1}>
             {currentModule.title} — {currentModule.subtitle}
           </Text>
         </View>
       )}
 
-      {/* CHAT */}
+      {/* ── MESSAGES ───────────────────────────────────────────────── */}
       <FlatList
         ref={listRef}
         data={localMessages}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={renderMessage}
-        contentContainerStyle={styles.chatContent}
+        contentContainerStyle={styles.chatList}
         onContentSizeChange={scrollToEnd}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyIcon}>★</Text>
-            <Text style={styles.emptyTitle}>Mentor listo</Text>
+            <Text style={styles.emptyTitle}>MENTOR LISTO</Text>
             <Text style={styles.emptySub}>
-              Escribe tu primera pregunta sobre {currentModule?.title ?? 'el módulo actual'}
+              Pregunta sobre {currentModule?.title ?? 'tu protocolo'}, tu norte, o cualquier bloqueo que enfrentes hoy.
             </Text>
           </View>
         }
       />
 
-      {/* INPUT */}
-      <View style={styles.inputBar}>
+      {/* ── INPUT BAR ──────────────────────────────────────────────── */}
+      <View style={[styles.inputBar, { paddingBottom: Platform.OS === 'ios' ? insets.bottom + 8 : 12 }]}>
         <TextInput
           style={styles.input}
           value={inputText}
           onChangeText={setInputText}
-          placeholder="Escribe tu respuesta..."
-          placeholderTextColor={C.textFaint}
+          placeholder="Escribe tu pregunta..."
+          placeholderTextColor={T.textDim}
           multiline
-          maxLength={500}
+          maxLength={600}
           editable={!isStreaming}
+          returnKeyType="send"
           onSubmitEditing={handleSend}
         />
         <Pressable
-          style={[styles.sendBtn, (!inputText.trim() || isStreaming) && { opacity: 0.4 }]}
+          style={[styles.sendBtn, (!inputText.trim() || isStreaming) && styles.sendBtnDisabled]}
           onPress={handleSend}
           disabled={!inputText.trim() || isStreaming}
+          accessibilityLabel="Enviar mensaje"
         >
-          <MaterialCommunityIcons name="arrow-up" size={20} color="#0A0A0A" />
+          <MaterialCommunityIcons name="arrow-up" size={18} color={T.bg} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -226,81 +242,96 @@ export default function MentorScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
+  container: { flex: 1, backgroundColor: T.bg },
+
+  // Header
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingBottom: 14,
-    borderBottomWidth: 1, borderBottomColor: C.divider,
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
+    paddingHorizontal: 22, paddingBottom: 16,
+    borderBottomWidth: 1, borderBottomColor: T.divider,
+  },
+  headerEyebrow: {
+    fontSize: 9, fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: T.goldDim, letterSpacing: 2.5, marginBottom: 4,
   },
   headerTitle: {
-    fontFamily: 'SpaceGrotesk_700Bold', fontSize: 18, color: C.text,
+    fontSize: 28, fontFamily: 'SpaceGrotesk_700Bold', color: T.text, letterSpacing: 0.5,
   },
-  headerSub: {
-    fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 13, color: C.gold,
+  newChatBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1.5, borderColor: T.goldBorder, borderRadius: 8,
   },
-  newBtn: {
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: C.mintBorder, borderRadius: 8,
+  newChatText: {
+    fontSize: 10, fontFamily: 'SpaceGrotesk_700Bold', color: T.gold, letterSpacing: 1.5,
   },
-  newBtnText: {
-    fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 12, color: C.mint,
-  },
-  moduleCtx: {
+
+  // Context pill
+  contextPill: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.goldMuted, borderWidth: 1, borderColor: C.goldBorder,
-    marginHorizontal: 16, marginTop: 10, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: T.goldFaint, borderBottomWidth: 1, borderBottomColor: T.goldBorder,
+    paddingHorizontal: 22, paddingVertical: 10,
   },
-  moduleDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.gold },
-  moduleCtxText: {
-    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 11, color: C.gold, flex: 1,
+  contextDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: T.gold },
+  contextText: {
+    flex: 1, fontSize: 11, fontFamily: 'SpaceGrotesk_400Regular', color: T.goldDim,
   },
-  chatContent: { padding: 16, gap: 12, flexGrow: 1 },
+
+  // Chat
+  chatList: { padding: 16, gap: 14, flexGrow: 1 },
   msgRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
   msgRowRight: { flexDirection: 'row-reverse' },
   mentorAvatar: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: C.goldMuted, borderWidth: 1.5, borderColor: C.goldBorder,
+    backgroundColor: T.goldMid, borderWidth: 1.5, borderColor: T.goldBorder,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  mentorAvatarText: { fontSize: 14, color: C.gold },
-  bubble: { maxWidth: '85%', padding: 12, borderRadius: 14 },
+  mentorAvatarStar: { fontSize: 12, color: T.gold },
+  bubble: { maxWidth: '84%', padding: 13, borderRadius: 16 },
   bubbleMentor: {
-    backgroundColor: C.surface, borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(237,186,1,0.10)',
+    backgroundColor: T.surface, borderWidth: 1, borderColor: 'rgba(237,186,1,0.10)',
     borderBottomLeftRadius: 4,
   },
   bubbleUser: {
-    backgroundColor: C.mintMuted,
-    borderWidth: 1, borderColor: C.mintBorder,
+    backgroundColor: T.goldFaint, borderWidth: 1.5, borderColor: T.goldBorder,
     borderBottomRightRadius: 4,
   },
   bubbleText: {
-    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 14,
-    color: C.text, lineHeight: 22,
+    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 14, color: T.text, lineHeight: 22,
   },
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 12 },
-  emptyIcon: { fontSize: 40, color: C.gold, opacity: 0.4 },
-  emptyTitle: { fontFamily: 'SpaceGrotesk_700Bold', fontSize: 16, color: C.textMuted },
+
+  // Empty
+  emptyWrap: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 72, gap: 14, paddingHorizontal: 40,
+  },
+  emptyIcon: { fontSize: 36, color: T.gold, opacity: 0.3 },
+  emptyTitle: {
+    fontSize: 12, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.textMid, letterSpacing: 3,
+  },
   emptySub: {
-    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 13, color: C.textFaint,
-    textAlign: 'center', paddingHorizontal: 32,
+    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 13, color: T.textDim,
+    textAlign: 'center', lineHeight: 20,
   },
+
+  // Input
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 10,
-    backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.divider,
-    paddingHorizontal: 16, paddingVertical: 10, paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+    backgroundColor: T.surface, borderTopWidth: 1, borderTopColor: T.divider,
+    paddingHorizontal: 16, paddingTop: 10,
     marginBottom: Platform.OS === 'web' ? 60 : 0,
-    zIndex: 10,
   },
   input: {
-    flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: 'rgba(237,186,1,0.10)',
-    borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12,
-    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 14, color: C.text,
-    maxHeight: 100,
+    flex: 1, backgroundColor: T.surface2,
+    borderWidth: 1.5, borderColor: 'rgba(237,186,1,0.12)',
+    borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11,
+    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 14, color: T.text,
+    maxHeight: 110,
   },
   sendBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: C.mint, alignItems: 'center', justifyContent: 'center',
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: T.gold, alignItems: 'center', justifyContent: 'center',
   },
+  sendBtnDisabled: { opacity: 0.35 },
 })

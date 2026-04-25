@@ -1,73 +1,124 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View, Text, TextInput, ScrollView, Pressable,
+  KeyboardAvoidingView, Platform, StyleSheet, Dimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, {
-  FadeIn,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
+  FadeIn, FadeInDown, FadeInUp,
+  useSharedValue, useAnimatedStyle, withTiming, withRepeat,
+  withSequence, Easing,
 } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { getProfile } from '../../lib/database';
 import { useAuthStore } from '../../store';
 
-const BRAND = {
-  bg: '#0A0A0A',
-  surface: '#141414',
-  mint: '#EDBA01',
-  border: 'rgba(237,186,1,0.12)',
-  borderActive: 'rgba(237,186,1,0.30)',
-  textPrimary: '#EDBA01',
-  textSecondary: 'rgba(237,186,1,0.55)',
-  textMuted: 'rgba(237,186,1,0.45)',
-  textLight: 'rgba(237,186,1,0.30)',
+const { width: W, height: H } = Dimensions.get('window');
+
+// ─── Design Tokens ──────────────────────────────────────────────────────────
+const T = {
+  bg:          '#080808',
+  surface:     '#111111',
+  surface2:    '#181818',
+  gold:        '#EDBA01',
+  goldMid:     'rgba(237,186,1,0.16)',
+  goldBorder:  'rgba(237,186,1,0.24)',
+  goldDim:     'rgba(237,186,1,0.45)',
+  goldFaint:   'rgba(237,186,1,0.07)',
+  text:        '#FFFFFF',
+  textMid:     '#888888',
+  textDim:     'rgba(237,186,1,0.38)',
+  error:       '#EF4444',
+  errorBg:     'rgba(239,68,68,0.08)',
 };
 
+// ─── Polaris Star SVG-like shape (drawn with Views) ─────────────────────────
+const PolarisIcon = () => (
+  <View style={star.wrap}>
+    {/* outer ring */}
+    <View style={star.ring} />
+    {/* cross arms */}
+    <View style={[star.arm, star.armV]} />
+    <View style={[star.arm, star.armH]} />
+    {/* center dot */}
+    <View style={star.center} />
+  </View>
+);
+
+const star = StyleSheet.create({
+  wrap: {
+    width: 52, height: 52,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    width: 44, height: 44, borderRadius: 22,
+    borderWidth: 1.5, borderColor: 'rgba(237,186,1,0.30)',
+  },
+  arm: {
+    position: 'absolute',
+    backgroundColor: '#EDBA01',
+    borderRadius: 2,
+  },
+  armV: { width: 2, height: 40 },
+  armH: { width: 40, height: 2 },
+  center: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#EDBA01',
+  },
+});
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [mounted, setMounted] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { setSession } = useAuthStore();
 
-  const glowOpacity = useSharedValue(0);
-
+  // ambient glow pulse
+  const glowOpacity = useSharedValue(0.06);
   useEffect(() => {
-    setMounted(true);
-    glowOpacity.value = withTiming(1, { duration: 1500 });
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.12, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.06, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1, false
+    );
   }, []);
 
-  const glowAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: glowOpacity.value,
-    };
-  });
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
 
   const handleLogin = async () => {
+    if (!email.trim() || !password) return;
     setIsLoading(true);
     setError('');
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
       if (authError) {
-        const isNetworkError = authError.message?.toLowerCase().includes('fetch') || authError.message?.toLowerCase().includes('network');
-        // DEV MODE: bypass when Supabase URL is still the placeholder (credentials not configured yet)
-        const isPlaceholderConfig = process.env.EXPO_PUBLIC_SUPABASE_URL?.includes('your-project');
-        if (isNetworkError && isPlaceholderConfig) {
+        const isNetworkError = authError.message?.toLowerCase().includes('fetch')
+          || authError.message?.toLowerCase().includes('network');
+        const isPlaceholder = process.env.EXPO_PUBLIC_SUPABASE_URL?.includes('your-project');
+
+        if (isNetworkError && isPlaceholder) {
           setSession({ user: { id: `dev-${Date.now()}`, email, user_metadata: {} }, access_token: 'dev-token' } as any);
           router.replace('/(tabs)/comando');
           return;
         }
         if (isNetworkError) {
-          setError('Sin conexión. Verifica tu internet y las credenciales en .env');
+          setError('Sin conexión. Verifica tu internet.');
         } else if (authError.message === 'Invalid login credentials') {
-          setError('Correo o contraseña incorrectos');
+          setError('Correo o contraseña incorrectos.');
         } else {
           setError(authError.message);
         }
@@ -83,372 +134,305 @@ export default function LoginScreen() {
           router.replace('/(tabs)/comando');
         }
       }
-    } catch (err: any) {
+    } catch {
       setError('Error al iniciar sesión. Intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!mounted) return null;
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !isLoading;
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1, backgroundColor: BRAND.bg }}
+      style={styles.root}
     >
-      {/* Background Glow */}
-      <View
-        style={{
-          position: 'absolute',
-          top: -300,
-          right: -300,
-          width: 700,
-          height: 700,
-          borderRadius: 350,
-          backgroundColor: BRAND.mint,
-          opacity: 0.08,
-          zIndex: 0,
-        }}
+      {/* Ambient gold glow — top right */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.glowBall, glowStyle]}
       />
 
       <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingTop: 60,
-          paddingBottom: 40,
-          zIndex: 1,
-          position: 'relative',
-        }}
-        scrollEnabled={false}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 32 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <Animated.View
-          entering={FadeIn.delay(150).duration(700)}
-          style={{ alignItems: 'center', marginBottom: 56 }}
-        >
-          {/* Double Chevrons Icon */}
-          <View style={{ marginBottom: 28 }}>
-            <MaterialCommunityIcons
-              name="chevron-up"
-              size={44}
-              color={BRAND.mint}
-              style={{ marginTop: -8 }}
-            />
-            <MaterialCommunityIcons
-              name="chevron-up"
-              size={44}
-              color={BRAND.mint}
-              style={{ marginTop: -16 }}
-            />
-          </View>
 
-          <Text
-            style={{
-              fontFamily: 'SpaceGrotesk_700Bold',
-              fontSize: 32,
-              color: BRAND.mint,
-              marginBottom: 12,
-              fontWeight: '700',
-              letterSpacing: 2,
-            }}
-          >
-            LIFEFLOW
-          </Text>
-
-          <View
-            style={{
-              height: 1.5,
-              width: 40,
-              backgroundColor: BRAND.mint,
-              marginBottom: 16,
-            }}
-          />
-
-          <Text
-            style={{
-              fontFamily: 'SpaceGrotesk_400Regular',
-              fontSize: 10,
-              letterSpacing: 3.5,
-              color: BRAND.textMuted,
-              fontWeight: '400',
-            }}
-          >
-            PROTOCOLO DE CRECIMIENTO
-          </Text>
+        {/* ── LOGO BLOCK ─────────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.duration(700)} style={styles.logoBlock}>
+          <PolarisIcon />
+          <Text style={styles.logoWord}>LIFEFLOW</Text>
+          <View style={styles.logoDivider} />
+          <Text style={styles.logoTagline}>LIDERA TU DÍA. DOMINA TU VIDA.</Text>
         </Animated.View>
 
-        {/* Form Card */}
-        <Animated.View
-          entering={FadeIn.delay(300).duration(700)}
-          style={{
-            borderWidth: 1,
-            borderColor: BRAND.border,
-            borderRadius: 16,
-            padding: 28,
-            backgroundColor: BRAND.surface,
-            marginBottom: 32,
-            shadowColor: BRAND.mint,
-            shadowOpacity: 0.08,
-            shadowRadius: 20,
-            shadowOffset: { width: 0, height: 8 },
-          }}
-        >
-          {/* Email Input */}
-          <View style={{ marginBottom: 24 }}>
-            <Text
-              style={{
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                fontSize: 10,
-                letterSpacing: 2,
-                color: emailFocused ? BRAND.mint : BRAND.textMuted,
-                marginBottom: 12,
-                fontWeight: '600',
-                textTransform: 'uppercase',
-              }}
-            >
-              Correo Electrónico
+        {/* ── FORM CARD ──────────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.card}>
+
+          {/* Title */}
+          <Text style={styles.formTitle}>ACCESO AL{'\n'}PROTOCOLO</Text>
+          <View style={styles.formTitleLine} />
+
+          {/* Email */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.fieldLabel, emailFocused && { color: T.gold }]}>
+              CORREO ELECTRÓNICO
             </Text>
             <TextInput
+              style={[styles.input, emailFocused && styles.inputFocused]}
               placeholder="tu@email.com"
-              placeholderTextColor={BRAND.textLight}
+              placeholderTextColor={T.textMid}
               value={email}
               onChangeText={setEmail}
               onFocus={() => setEmailFocused(true)}
               onBlur={() => setEmailFocused(false)}
-              editable={!isLoading}
-              style={{
-                backgroundColor: BRAND.bg,
-                borderWidth: 1.5,
-                borderColor: emailFocused ? BRAND.mint : BRAND.border,
-                borderRadius: 12,
-                height: 54,
-                paddingHorizontal: 18,
-                paddingVertical: 16,
-                color: BRAND.textPrimary,
-                fontFamily: 'SpaceGrotesk_400Regular',
-                fontSize: 15,
-                fontWeight: '400',
-              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-            />
-          </View>
-
-          {/* Password Input */}
-          <View style={{ marginBottom: 32 }}>
-            <Text
-              style={{
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                fontSize: 10,
-                letterSpacing: 2,
-                color: passwordFocused ? BRAND.mint : BRAND.textMuted,
-                marginBottom: 12,
-                fontWeight: '600',
-                textTransform: 'uppercase',
-              }}
-            >
-              Contraseña
-            </Text>
-            <TextInput
-              placeholder="••••••••"
-              placeholderTextColor={BRAND.textLight}
-              value={password}
-              onChangeText={setPassword}
-              onFocus={() => setPasswordFocused(true)}
-              onBlur={() => setPasswordFocused(false)}
+              autoComplete="email"
+              textContentType="emailAddress"
               editable={!isLoading}
-              secureTextEntry
-              style={{
-                backgroundColor: BRAND.bg,
-                borderWidth: 1.5,
-                borderColor: passwordFocused ? BRAND.mint : BRAND.border,
-                borderRadius: 12,
-                height: 54,
-                paddingHorizontal: 18,
-                paddingVertical: 16,
-                color: BRAND.textPrimary,
-                fontFamily: 'SpaceGrotesk_400Regular',
-                fontSize: 15,
-                fontWeight: '400',
-              }}
+              returnKeyType="next"
             />
           </View>
 
-          {/* Error Message */}
-          {error && (
-            <Animated.View
-              entering={FadeIn.duration(300)}
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                borderRadius: 8,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                marginBottom: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <Text style={{ fontSize: 16, color: '#ef4444' }}>⚠</Text>
-              <Text
-                style={{
-                  fontFamily: 'SpaceGrotesk_400Regular',
-                  fontSize: 13,
-                  color: '#ef4444',
-                  fontWeight: '400',
-                  flex: 1,
-                }}
+          {/* Password */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.fieldLabel, passFocused && { color: T.gold }]}>CONTRASEÑA</Text>
+            <View style={styles.passRow}>
+              <TextInput
+                style={[styles.input, styles.inputPass, passFocused && styles.inputFocused]}
+                placeholder="••••••••"
+                placeholderTextColor={T.textMid}
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setPassFocused(true)}
+                onBlur={() => setPassFocused(false)}
+                secureTextEntry={!showPass}
+                autoComplete="password"
+                textContentType="password"
+                editable={!isLoading}
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+              />
+              <Pressable
+                onPress={() => setShowPass(v => !v)}
+                style={styles.passToggle}
+                accessibilityLabel={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
-                {error}
-              </Text>
+                <MaterialCommunityIcons
+                  name={showPass ? 'eye-off-outline' : 'eye-outline'}
+                  size={18}
+                  color={T.textMid}
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Error */}
+          {!!error && (
+            <Animated.View entering={FadeIn.duration(250)} style={styles.errorBox}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={15} color={T.error} />
+              <Text style={styles.errorText}>{error}</Text>
             </Animated.View>
           )}
 
-          {/* Main CTA Button */}
+          {/* Primary CTA */}
           <Pressable
             onPress={handleLogin}
-            disabled={isLoading || !email || !password}
-            style={({ pressed }) => ({
-              backgroundColor: BRAND.mint,
-              borderRadius: 12,
-              height: 56,
-              justifyContent: 'center',
-              marginBottom: 24,
-              opacity: isLoading || !email || !password ? 0.45 : pressed ? 0.85 : 1,
-            })}
+            disabled={!canSubmit}
+            style={({ pressed }) => [
+              styles.ctaBtn,
+              !canSubmit && styles.ctaBtnDisabled,
+              pressed && canSubmit && styles.ctaBtnPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Ingresar al protocolo"
           >
-            <Text
-              style={{
-                fontFamily: 'SpaceGrotesk_700Bold',
-                fontSize: 15,
-                fontWeight: '700',
-                color: BRAND.bg,
-                textAlign: 'center',
-                letterSpacing: 1.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              {isLoading ? 'INGRESANDO...' : 'INGRESAR AL PROTOCOLO'}
-            </Text>
+            {isLoading ? (
+              <Text style={styles.ctaText}>INGRESANDO…</Text>
+            ) : (
+              <>
+                <Text style={styles.ctaText}>COMENZAR MI PROTOCOLO</Text>
+                <MaterialCommunityIcons name="arrow-right" size={18} color={T.bg} />
+              </>
+            )}
           </Pressable>
 
-          {/* Divider */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 24,
-            }}
-          >
-            <View style={{ flex: 1, height: 1, backgroundColor: BRAND.border }} />
-            <Text
-              style={{
-                color: BRAND.textMuted,
-                marginHorizontal: 14,
-                fontSize: 11,
-                fontFamily: 'SpaceGrotesk_400Regular',
-                fontWeight: '400',
-              }}
-            >
-              O
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: BRAND.border }} />
+          {/* OR divider */}
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>O</Text>
+            <View style={styles.orLine} />
           </View>
 
-          {/* OAuth Buttons */}
-          <View style={{ gap: 12 }}>
+          {/* OAuth buttons */}
+          <View style={{ gap: 10 }}>
             <Pressable
               onPress={() => console.log('Apple Sign In')}
-              style={({ pressed }) => ({
-                backgroundColor: BRAND.bg,
-                borderWidth: 1.5,
-                borderColor: BRAND.border,
-                borderRadius: 12,
-                height: 54,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              style={({ pressed }) => [styles.oauthBtn, pressed && { opacity: 0.7 }]}
             >
-              <Text style={{ fontSize: 18, marginRight: 10 }}>🍎</Text>
-              <Text
-                style={{
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
-                  fontSize: 13,
-                  color: BRAND.textPrimary,
-                  fontWeight: '600',
-                  letterSpacing: 0.5,
-                }}
-              >
-                Continuar con Apple
-              </Text>
+              <Text style={{ fontSize: 17, lineHeight: 20 }}>🍎</Text>
+              <Text style={styles.oauthText}>Continuar con Apple</Text>
             </Pressable>
 
             <Pressable
               onPress={() => console.log('Google Sign In')}
-              style={({ pressed }) => ({
-                backgroundColor: BRAND.bg,
-                borderWidth: 1.5,
-                borderColor: BRAND.border,
-                borderRadius: 12,
-                height: 54,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              style={({ pressed }) => [styles.oauthBtn, pressed && { opacity: 0.7 }]}
             >
-              <AntDesign name="google" size={18} color={BRAND.textPrimary} style={{ marginRight: 10 }} />
-              <Text
-                style={{
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
-                  fontSize: 13,
-                  color: BRAND.textPrimary,
-                  fontWeight: '600',
-                  letterSpacing: 0.5,
-                }}
-              >
-                Continuar con Google
-              </Text>
+              <AntDesign name="google" size={16} color={T.goldDim} />
+              <Text style={styles.oauthText}>Continuar con Google</Text>
             </Pressable>
           </View>
         </Animated.View>
 
-        {/* Register Link */}
-        <Animated.View
-          entering={FadeIn.delay(450).duration(700)}
-          style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}
-        >
-          <Text
-            style={{
-              fontFamily: 'SpaceGrotesk_400Regular',
-              fontSize: 13,
-              color: BRAND.textMuted,
-              fontWeight: '400',
-            }}
-          >
-            ¿No tienes cuenta?
-          </Text>
-          <Pressable onPress={() => router.push('/(auth)/register')}>
-            <Text
-              style={{
-                fontFamily: 'SpaceGrotesk_700Bold',
-                fontSize: 13,
-                color: BRAND.mint,
-                fontWeight: '700',
-                letterSpacing: 0.5,
-              }}
-            >
-              REGÍSTRATE
-            </Text>
+        {/* ── REGISTER LINK ──────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(400).duration(500)} style={styles.registerRow}>
+          <Text style={styles.registerMuted}>¿Sin cuenta?</Text>
+          <Pressable onPress={() => router.push('/(auth)/register')} hitSlop={10}>
+            <Text style={styles.registerLink}>REGÍSTRATE</Text>
           </Pressable>
         </Animated.View>
+
+        {/* ── BOTTOM WORDMARK ────────────────────────────────────── */}
+        <Animated.View entering={FadeIn.delay(600).duration(800)} style={styles.bottomMark}>
+          <Text style={styles.bottomMarkText}>POLARIS GROWTH INSTITUTE™</Text>
+        </Animated.View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: T.bg },
+
+  glowBall: {
+    position: 'absolute',
+    top: -H * 0.15,
+    right: -W * 0.3,
+    width: W * 0.9,
+    height: W * 0.9,
+    borderRadius: W * 0.45,
+    backgroundColor: T.gold,
+    pointerEvents: 'none',
+  },
+
+  scroll: {
+    paddingHorizontal: 24,
+    alignItems: 'stretch',
+    gap: 28,
+  },
+
+  // Logo
+  logoBlock: { alignItems: 'center', gap: 14 },
+  logoWord: {
+    fontSize: 38, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.gold, letterSpacing: 8,
+  },
+  logoDivider: { width: 32, height: 1.5, backgroundColor: T.gold, opacity: 0.5 },
+  logoTagline: {
+    fontSize: 10, fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: T.goldDim, letterSpacing: 3, textAlign: 'center',
+  },
+
+  // Card
+  card: {
+    backgroundColor: T.surface,
+    borderWidth: 1, borderColor: 'rgba(237,186,1,0.10)',
+    borderRadius: 20, padding: 26,
+    gap: 18,
+    shadowColor: T.gold, shadowOpacity: 0.05, shadowRadius: 24, shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  formTitle: {
+    fontSize: 28, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.text, lineHeight: 34, letterSpacing: 0.5,
+  },
+  formTitleLine: { width: 28, height: 2, backgroundColor: T.gold },
+
+  // Fields
+  fieldWrap: { gap: 8 },
+  fieldLabel: {
+    fontSize: 9, fontFamily: 'SpaceGrotesk_700Bold',
+    color: T.textMid, letterSpacing: 2.5, textTransform: 'uppercase',
+  },
+  input: {
+    backgroundColor: T.surface2,
+    borderWidth: 1.5, borderColor: 'rgba(237,186,1,0.10)',
+    borderRadius: 12, height: 54,
+    paddingHorizontal: 16,
+    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 15,
+    color: T.text,
+  },
+  inputFocused: { borderColor: T.goldBorder },
+  inputPass: { flex: 1, borderRightWidth: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 },
+  passRow: { flexDirection: 'row', alignItems: 'center' },
+  passToggle: {
+    height: 54, width: 48, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: T.surface2, borderWidth: 1.5, borderLeftWidth: 0,
+    borderColor: 'rgba(237,186,1,0.10)', borderTopRightRadius: 12, borderBottomRightRadius: 12,
+  },
+
+  // Error
+  errorBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: T.errorBg, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  errorText: {
+    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 13, color: T.error, flex: 1,
+  },
+
+  // CTA
+  ctaBtn: {
+    height: 56, borderRadius: 14,
+    backgroundColor: T.gold,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  ctaBtnDisabled: { opacity: 0.35 },
+  ctaBtnPressed: { opacity: 0.80 },
+  ctaText: {
+    fontFamily: 'SpaceGrotesk_700Bold', fontSize: 14,
+    color: T.bg, letterSpacing: 2,
+  },
+
+  // OR
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.07)' },
+  orText: {
+    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 11, color: T.textMid,
+  },
+
+  // OAuth
+  oauthBtn: {
+    height: 52, borderRadius: 12,
+    borderWidth: 1.5, borderColor: 'rgba(237,186,1,0.12)',
+    backgroundColor: T.surface2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  oauthText: {
+    fontFamily: 'SpaceGrotesk_600SemiBold', fontSize: 13, color: T.goldDim,
+  },
+
+  // Register
+  registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  registerMuted: {
+    fontFamily: 'SpaceGrotesk_400Regular', fontSize: 13, color: T.textMid,
+  },
+  registerLink: {
+    fontFamily: 'SpaceGrotesk_700Bold', fontSize: 13, color: T.gold, letterSpacing: 1,
+  },
+
+  // Bottom wordmark
+  bottomMark: { alignItems: 'center' },
+  bottomMarkText: {
+    fontSize: 9, fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: 'rgba(237,186,1,0.20)', letterSpacing: 3,
+  },
+});

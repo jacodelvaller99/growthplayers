@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -11,118 +11,102 @@ import Animated, {
   withSpring,
   withSequence,
   withTiming,
-  FadeInDown
 } from 'react-native-reanimated';
 import { useProgramStore } from '../../store/programStore';
 
+// 5 primary tabs only — clean, editorial
 const TAB_ROUTES = [
-  { name: 'comando',   label: 'COMANDO',   icon: 'home' },
-  { name: 'academia',  label: 'ACADEMIA',  icon: 'school-outline' },
-  { name: 'mentor',    label: 'MENTOR',    icon: 'brain' },
-  { name: 'bitacora',  label: 'BITÁCORA',  icon: 'book-open-variant' },
-  { name: 'avatar',    label: 'AVATAR',    icon: 'account-circle' },
-  { name: 'biometria', label: 'BIOMETRÍA', icon: 'heart-pulse' },
-  { name: 'comunidad', label: 'COMUNIDAD', icon: 'account-group' },
+  { name: 'comando',  label: 'DASHBOARD', icon: 'view-dashboard-outline' as const },
+  { name: 'academia', label: 'PROTOCOLO', icon: 'layers-outline' as const },
+  { name: 'mentor',   label: 'MENTOR',    icon: 'brain' as const },
+  { name: 'bitacora', label: 'NORTE',     icon: 'compass-outline' as const },
+  { name: 'avatar',   label: 'PERFIL',    icon: 'account-outline' as const },
 ];
 
+// Hidden routes — still accessible via push navigation, just not in the tab bar
+const HIDDEN_ROUTES = ['biometria', 'comunidad', 'roadmap'];
+
+const GOLD = '#EDBA01';
+const GOLD_DIM = 'rgba(237,186,1,0.28)';
+const BG = '#0A0A0A';
+const SURFACE = '#141414';
+const BORDER = 'rgba(255,255,255,0.07)';
+
 const TabButton = React.memo(function TabButton({
-  options,
   label,
   icon,
   isFocused,
   onPress,
   onLongPress,
-  activeColor = '#EDBA01',
-  inactiveColor = 'rgba(237,186,1,0.35)',
-}: any) {
+}: {
+  label: string;
+  icon: string;
+  isFocused: boolean;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  const handlePress = () => {
+    Haptics.selectionAsync();
+    scale.value = withSequence(
+      withTiming(0.88, { duration: 80 }),
+      withSpring(1, { damping: 10, mass: 0.6 })
+    );
+    onPress();
+  };
+
   return (
     <Pressable
-      onPress={(e) => {
-        Haptics.selectionAsync();
-        scale.value = withSequence(
-          withTiming(0.92, { duration: 100 }),
-          withSpring(1, { damping: 8, mass: 0.8 })
-        );
-        onPress(e);
-      }}
+      onPress={handlePress}
       onLongPress={onLongPress}
-      onPressIn={() => {
-        scale.value = withSpring(0.92, {
-          damping: 8,
-          mass: 0.8,
-          overshootClamping: false,
-        });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, {
-          damping: 8,
-          mass: 0.8,
-          overshootClamping: false,
-        });
-      }}
       style={styles.tabButton}
+      accessibilityRole="tab"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: isFocused }}
     >
       <Animated.View style={[styles.tabContent, animatedStyle]}>
+        {/* Gold active line at top */}
+        <View style={[styles.activeBar, isFocused && styles.activeBarOn]} />
+
         <MaterialCommunityIcons
           name={icon as any}
-          size={24}
-          color={isFocused ? activeColor : inactiveColor}
+          size={22}
+          color={isFocused ? GOLD : GOLD_DIM}
         />
-        <Text
-          style={[
-            styles.tabLabel,
-            { color: isFocused ? activeColor : inactiveColor }
-          ]}
-        >
+        <Text style={[styles.tabLabel, { color: isFocused ? GOLD : GOLD_DIM }]}>
           {label}
         </Text>
       </Animated.View>
-
-      {isFocused && (
-        <Animated.View
-          entering={FadeInDown.delay(50).duration(300).springify()}
-          style={[styles.activeIndicator, { backgroundColor: activeColor }]}
-        />
-      )}
     </Pressable>
   );
 });
 
 const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
-  const { programType } = useProgramStore();
   const insets = useSafeAreaInsets();
-  const isPolaris = programType === 'polaris';
-  // Height adapts to home indicator (iPhone X+) and Android nav bar
-  const tabHeight = 48 + insets.bottom;
-  const tabColors = {
-    bg:       isPolaris ? '#141414' : '#141414',
-    active:   isPolaris ? '#EDBA01' : '#EDBA01',
-    inactive: isPolaris ? 'rgba(237,186,1,0.35)' : 'rgba(237,186,1,0.35)',
-    border:   isPolaris ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.08)',
-  };
+
+  // Only render the 5 primary tabs
+  const visibleRoutes = state.routes.filter(r => !HIDDEN_ROUTES.includes(r.name));
 
   return (
-    <View style={[styles.tabBar, {
-      backgroundColor: tabColors.bg,
-      borderTopColor: tabColors.border,
-      height: tabHeight,
-      paddingBottom: insets.bottom,
-    }]}>
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const isFocused = state.index === index;
-
-        const tabInfo = TAB_ROUTES.find(t => t.name === route.name) || {
-          name: route.name,
-          label: route.name.toUpperCase(),
-          icon: 'circle',
-        };
+    <View
+      style={[
+        styles.tabBar,
+        {
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          height: 52 + (insets.bottom > 0 ? insets.bottom : 8),
+        },
+      ]}
+    >
+      {visibleRoutes.map((route) => {
+        const globalIndex = state.routes.findIndex(r => r.key === route.key);
+        const isFocused = state.index === globalIndex;
+        const tabInfo = TAB_ROUTES.find(t => t.name === route.name);
+        if (!tabInfo) return null;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -130,30 +114,23 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
             target: route.key,
             canPreventDefault: true,
           });
-
           if (!isFocused && !event.defaultPrevented) {
             navigation.navigate(route.name);
           }
         };
 
         const onLongPress = () => {
-          navigation.emit({
-            type: 'tabLongPress',
-            target: route.key,
-          });
+          navigation.emit({ type: 'tabLongPress', target: route.key });
         };
 
         return (
           <TabButton
             key={route.key}
-            options={options}
             label={tabInfo.label}
             icon={tabInfo.icon}
             isFocused={isFocused}
             onPress={onPress}
             onLongPress={onLongPress}
-            activeColor={tabColors.active}
-            inactiveColor={tabColors.inactive}
           />
         );
       })}
@@ -165,12 +142,19 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
+      screenOptions={{ headerShown: false }}
     >
+      {/* Visible tabs */}
       {TAB_ROUTES.map(tab => (
         <Tabs.Screen key={tab.name} name={tab.name} />
+      ))}
+      {/* Hidden tabs — still navigable */}
+      {HIDDEN_ROUTES.map(name => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{ href: null }}
+        />
       ))}
     </Tabs>
   );
@@ -183,38 +167,47 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: '#141414',
+    backgroundColor: SURFACE,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    justifyContent: 'space-around',
+    borderTopColor: BORDER,
     alignItems: 'flex-start',
-    paddingTop: 6,
+    paddingTop: 0,
     zIndex: 999,
-    elevation: 4,
+    elevation: 8,
+    // subtle gold shadow on iOS
+    shadowColor: GOLD,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -2 },
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-    minHeight: 44,
-    position: 'relative',
+    minHeight: 48,
   },
   tabContent: {
     alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 3,
+    width: '100%',
+  },
+  activeBar: {
+    position: 'absolute',
+    top: 0,
+    left: '20%',
+    right: '20%',
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: 'transparent',
+  },
+  activeBarOn: {
+    backgroundColor: GOLD,
   },
   tabLabel: {
-    fontSize: 9,
-    marginTop: 4,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: -1,
-    height: 2,
-    width: '70%',
-    backgroundColor: '#EDBA01',
-    borderRadius: 1,
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-condensed',
   },
 });
