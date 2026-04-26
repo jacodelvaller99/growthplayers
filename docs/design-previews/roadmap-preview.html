@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academia — Lifeflow × Polaris</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:           #01191D;
+    --surface:      #0D2B30;
+    --surface2:     #0F3640;
+    --mint:         #AEFEF0;
+    --mint-muted:   rgba(174,254,240,0.12);
+    --mint-border:  rgba(174,254,240,0.20);
+    --mint-faint:   rgba(174,254,240,0.40);
+    --text:         #FFFFFF;
+    --text-muted:   #86C6B3;
+    --text-faint:   rgba(174,254,240,0.40);
+    --amber:        #FFB547;
+    --divider:      rgba(174,254,240,0.08);
+    --border:       rgba(174,254,240,0.12);
+    --gold:         #EDBA01;
+    --gold-muted:   rgba(237,186,1,0.12);
+    --gold-border:  rgba(237,186,1,0.20);
+    --font-display: 'Outfit', sans-serif;
+    --font-body:    'Space Grotesk', sans-serif;
+  }
+
+  body {
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 32px 0;
+    font-family: var(--font-body);
+  }
+
+  .phone {
+    width: 375px;
+    min-height: 812px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .status-bar {
+    height: 44px;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    flex-shrink: 0;
+  }
+  .status-time { font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--text-faint); }
+  .status-icons { font-size: 13px; color: var(--text-faint); letter-spacing: 2px; }
+
+  /* HEADER */
+  .header {
+    background: var(--bg);
+    padding: 12px 20px 14px;
+    border-bottom: 1px solid var(--divider);
+    flex-shrink: 0;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .header-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .program-selector {
+    display: flex;
+    gap: 6px;
+  }
+  .prog-pill {
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .prog-pill.active {
+    background: var(--gold);
+    color: #0F0F0F;
+    border: none;
+  }
+  .prog-pill.inactive {
+    background: transparent;
+    border: 1px solid var(--gold-border);
+    color: var(--gold);
+  }
+
+  /* PROGRESS BANNER */
+  .progress-banner {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 16px;
+    margin: 16px;
+    flex-shrink: 0;
+  }
+  .banner-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .banner-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .progress-track-big {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-fill-mint {
+    height: 100%;
+    width: 40%;
+    background: var(--mint);
+    border-radius: 999px;
+  }
+
+  /* MÓDULOS LIST */
+  .modules-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: none;
+  }
+  .modules-list::-webkit-scrollbar { display: none; }
+
+  .module-card {
+    border-radius: 14px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* COMPLETADO */
+  .module-card.completed {
+    background: var(--surface);
+    border-left: 3px solid var(--mint);
+    opacity: 0.8;
+  }
+  /* ACTIVO */
+  .module-card.active {
+    background: var(--surface);
+    border-left: 3px solid var(--gold);
+    box-shadow: 0 0 20px rgba(237,186,1,0.06), inset 0 0 40px rgba(237,186,1,0.02);
+  }
+  /* BLOQUEADO */
+  .module-card.locked {
+    background: var(--surface);
+    border-left: 3px solid rgba(255,255,255,0.08);
+    opacity: 0.55;
+  }
+
+  .module-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .module-icon {
+    font-size: 18px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .module-info { flex: 1; }
+  .module-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .module-card.locked .module-title { color: var(--text-muted); }
+  .module-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .module-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+
+  /* BADGES */
+  .badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-completed { background: var(--mint-muted); color: var(--mint); }
+  .badge-active { background: var(--gold-muted); color: var(--gold); }
+  .badge-locked { background: rgba(255,255,255,0.05); color: var(--text-faint); }
+
+  .check-icon { font-size: 16px; color: var(--mint); }
+
+  /* PROGRESS MODULE */
+  .module-progress-wrap { margin-top: 10px; }
+  .module-progress-track {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .module-progress-fill {
+    height: 100%;
+    width: 65%;
+    background: var(--gold);
+    border-radius: 999px;
+  }
+  .btn-continue {
+    background: var(--gold);
+    color: #0F0F0F;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* ORDER NUMBER */
+  .module-order {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-weight: 500;
+    margin-right: 2px;
+  }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    height: 60px;
+    background: var(--bg);
+    border-top: 1px solid var(--divider);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 100%;
+    position: relative;
+    cursor: pointer;
+  }
+  .nav-tab.active::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 24px; height: 2px;
+    background: var(--mint);
+    border-radius: 0 0 2px 2px;
+  }
+  .nav-icon { font-size: 18px; }
+  .nav-tab.active .nav-icon { color: var(--mint); }
+  .nav-tab:not(.active) .nav-icon { color: var(--mint-faint); }
+  .nav-label { font-family: var(--font-body); font-size: 9px; font-weight: 500; }
+  .nav-tab.active .nav-label { color: var(--mint); }
+  .nav-tab:not(.active) .nav-label { color: var(--mint-faint); }
+
+  .safe-area-bottom { height: 34px; background: var(--bg); flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span class="status-time">10:45</span>
+    <span class="status-icons">▪▪▪</span>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-row">
+      <span class="header-title">ACADEMIA</span>
+      <div class="program-selector">
+        <div class="prog-pill active">POLARIS</div>
+        <div class="prog-pill inactive">GROWTH PLAYERS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS BANNER -->
+  <div class="progress-banner">
+    <div class="banner-title">Protocolo Soberano</div>
+    <div class="banner-sub">4 de 10 módulos completados</div>
+    <div class="progress-track-big">
+      <div class="progress-fill-mint"></div>
+    </div>
+  </div>
+
+  <!-- MÓDULOS LIST -->
+  <div class="modules-list">
+
+    <!-- COMPLETADO 1 -->
+    <div class="module-card completed">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">01</span>
+          <span class="module-icon" style="color:var(--mint)">◎</span>
+          <div class="module-info">
+            <div class="module-title">Identidad Soberana</div>
+            <div class="module-sub">Quién eres antes de lo que haces</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-completed">Completado</span>
+          <span class="check-icon">✓</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETADO 2 -->
+    <div class="module-card completed">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">02</span>
+          <span class="module-icon" style="color:var(--mint)">⬡</span>
+          <div class="module-info">
+            <div class="module-title">Dominio del Cuerpo</div>
+            <div class="module-sub">Tu templo, tu ventaja</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-completed">Completado</span>
+          <span class="check-icon">✓</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETADO 3 -->
+    <div class="module-card completed">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">03</span>
+          <span class="module-icon" style="color:var(--mint)">✦</span>
+          <div class="module-info">
+            <div class="module-title">Detox Mental</div>
+            <div class="module-sub">Elimina el ruido, amplifica la señal</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-completed">Completado</span>
+          <span class="check-icon">✓</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVO -->
+    <div class="module-card active">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order" style="color:var(--gold)">04</span>
+          <span class="module-icon" style="color:var(--gold)">🧭</span>
+          <div class="module-info">
+            <div class="module-title" style="color:var(--text)">Luz Interior</div>
+            <div class="module-sub">Conecta con tu fuente de energía</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-active">EN PROGRESO</span>
+        </div>
+      </div>
+      <div class="module-progress-wrap">
+        <div class="module-progress-track">
+          <div class="module-progress-fill"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--text-faint)">65% completado</span>
+          <button class="btn-continue">Continuar →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOQUEADOS -->
+    <div class="module-card locked">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">05</span>
+          <span class="module-icon">◈</span>
+          <div class="module-info">
+            <div class="module-title">Paz Inquebrantable</div>
+            <div class="module-sub">Estabilidad bajo cualquier presión</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-locked">Disponible</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="module-card locked">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">06</span>
+          <span class="module-icon">⬡</span>
+          <div class="module-info">
+            <div class="module-title">Gran Despertar</div>
+            <div class="module-sub">Expande tu percepción de lo posible</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-locked">Disponible</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="module-card locked">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">07</span>
+          <span class="module-icon">☯</span>
+          <div class="module-info">
+            <div class="module-title">Equilibrio Total</div>
+            <div class="module-sub">Todas las áreas en armonía</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-locked">Disponible</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="module-card locked">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">08</span>
+          <span class="module-icon">♾</span>
+          <div class="module-info">
+            <div class="module-title">Armonía Profunda</div>
+            <div class="module-sub">Integración cuerpo-mente-espíritu</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-locked">Disponible</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="module-card locked">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">09</span>
+          <span class="module-icon">🌱</span>
+          <div class="module-info">
+            <div class="module-title">Crecimiento Consciente</div>
+            <div class="module-sub">Evolución intencional y sostenida</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-locked">Disponible</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="module-card locked">
+      <div class="module-header-row">
+        <div style="display:flex;align-items:center;flex:1">
+          <span class="module-order">10</span>
+          <span class="module-icon">⚔</span>
+          <div class="module-info">
+            <div class="module-title">Espíritu Invencible</div>
+            <div class="module-sub">La fortaleza que nadie puede quitarte</div>
+          </div>
+        </div>
+        <div class="module-right">
+          <span class="badge badge-locked">Disponible</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /modules-list -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-tab">
+      <span class="nav-icon">⌘</span>
+      <span class="nav-label">COMANDO</span>
+    </div>
+    <div class="nav-tab">
+      <span class="nav-icon">📓</span>
+      <span class="nav-label">BITÁCORA</span>
+    </div>
+    <div class="nav-tab">
+      <span class="nav-icon">◎</span>
+      <span class="nav-label">AVATAR</span>
+    </div>
+    <div class="nav-tab">
+      <span class="nav-icon">✦</span>
+      <span class="nav-label">MENTOR</span>
+    </div>
+    <div class="nav-tab">
+      <span class="nav-icon">◈</span>
+      <span class="nav-label">COMUNIDAD</span>
+    </div>
+    <div class="nav-tab active">
+      <span class="nav-icon">⬡</span>
+      <span class="nav-label">ROADMAP</span>
+    </div>
+  </div>
+
+  <div class="safe-area-bottom"></div>
+
+</div>
+</body>
+</html>

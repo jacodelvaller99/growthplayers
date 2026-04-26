@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx expo:*)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist)",
+      "Bash(tasklist.exe)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(npx skills:*)",
+      "WebFetch(domain:skills.sh)",
+      "Bash(npm --version)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node scraper.js)",
+      "Bash(tee /tmp/scraper_progress.txt)",
+      "Bash(echo \"Scraper PID: $!\")",
+      "Bash(node -e ' *)"
+    ]
+  }
+}
