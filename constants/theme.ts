@@ -7,14 +7,18 @@ export const palette = {
   graphite: '#171717',
   graphiteLight: '#202020',
   gold: '#EDBA01',
+  goldLight: 'rgba(237, 186, 1, 0.15)',
   goldMuted: '#A98200',
   ivory: '#F5F0E6',
+  ivoryDim: 'rgba(245, 240, 230, 0.6)',
   ash: '#A7A7A7',
   smoke: '#6F6F6F',
   line: 'rgba(237, 186, 1, 0.22)',
   lineSoft: 'rgba(245, 240, 230, 0.1)',
+  lineHard: 'rgba(237, 186, 1, 0.45)',
   success: '#76D49B',
   danger: '#D65B5B',
+  dangerMuted: 'rgba(214, 91, 91, 0.15)',
 };
 
 export const Colors = {
@@ -51,47 +55,70 @@ export const Fonts = {
 };
 
 export const typography = {
+  // Editorial hero — splash screens, covers
   hero: {
     fontFamily: Fonts.display,
-    fontSize: 30,
-    lineHeight: 35,
+    fontSize: 42,
+    lineHeight: 46,
     fontWeight: '800' as const,
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
     textTransform: 'uppercase' as const,
   },
+  // Major screen title
   title: {
     fontFamily: Fonts.display,
-    fontSize: 22,
-    lineHeight: 29,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '800' as const,
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
   },
+  // Card and section headings
   section: {
     fontFamily: Fonts.display,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '800' as const,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase' as const,
-  },
-  label: {
-    fontFamily: Fonts.display,
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: '800' as const,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase' as const,
-  },
-  body: {
-    fontFamily: Fonts.sans,
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  mono: {
-    fontFamily: Fonts.mono,
     fontSize: 12,
     lineHeight: 17,
+    fontWeight: '800' as const,
+    letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+  },
+  // Labels, tags, pills
+  label: {
+    fontFamily: Fonts.display,
+    fontSize: 9,
+    lineHeight: 13,
+    fontWeight: '800' as const,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase' as const,
+  },
+  // Body copy — readable 16px minimum
+  body: {
+    fontFamily: Fonts.sans,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  // Data, metrics, mono values
+  mono: {
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 0.5,
+  },
+  // Giant KPI numbers
+  display: {
+    fontFamily: Fonts.display,
+    fontSize: 56,
+    lineHeight: 60,
+    fontWeight: '800' as const,
+    letterSpacing: -1,
+  },
+  // Mid-size metric
+  metric: {
+    fontFamily: Fonts.display,
+    fontSize: 32,
+    lineHeight: 36,
+    fontWeight: '800' as const,
+    letterSpacing: 0,
   },
 };
 
@@ -102,13 +129,15 @@ export const spacing = {
   lg: 16,
   xl: 24,
   xxl: 32,
+  xxxl: 48,
+  section: 40,
 };
 
 export const radii = {
   none: 0,
-  sm: 4,
-  md: 6,
-  lg: 8,
+  sm: 2,
+  md: 3,
+  lg: 6,
   pill: 999,
 };
 

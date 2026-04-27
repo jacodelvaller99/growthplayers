@@ -6,6 +6,8 @@ import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
+// ─── Polaris Mark ────────────────────────────────────────────────────────────
+
 export function PolarisMark({ size = 34 }: { size?: number }) {
   return (
     <View style={[styles.mark, { width: size, height: size }]}>
@@ -14,6 +16,8 @@ export function PolarisMark({ size = 34 }: { size?: number }) {
     </View>
   );
 }
+
+// ─── App Header ──────────────────────────────────────────────────────────────
 
 export function AppHeader({
   title,
@@ -38,6 +42,8 @@ export function AppHeader({
   );
 }
 
+// ─── Premium Card ────────────────────────────────────────────────────────────
+
 export function PremiumCard({ children, style, ...props }: ViewProps) {
   return (
     <View style={[styles.card, style]} {...props}>
@@ -45,6 +51,31 @@ export function PremiumCard({ children, style, ...props }: ViewProps) {
     </View>
   );
 }
+
+// ─── Gold Accent Card (left border stripe) ───────────────────────────────────
+
+export function GoldAccentCard({ children, style, ...props }: ViewProps) {
+  return (
+    <View style={[styles.goldAccentCard, style]} {...props}>
+      <View style={styles.goldAccentStripe} />
+      <View style={styles.goldAccentContent}>{children}</View>
+    </View>
+  );
+}
+
+// ─── Gold Divider ────────────────────────────────────────────────────────────
+
+export function GoldDivider({ label }: { label?: string }) {
+  return (
+    <View style={styles.dividerRow}>
+      <View style={styles.dividerLine} />
+      {label ? <Text style={styles.dividerLabel}>{label}</Text> : null}
+      {label ? <View style={styles.dividerLine} /> : null}
+    </View>
+  );
+}
+
+// ─── Editorial Panel ─────────────────────────────────────────────────────────
 
 export function EditorialPanel({
   eyebrow,
@@ -67,6 +98,8 @@ export function EditorialPanel({
   );
 }
 
+// ─── Section Header ──────────────────────────────────────────────────────────
+
 export function SectionHeader({ title, meta }: { title: string; meta?: string }) {
   return (
     <View style={styles.sectionHeader}>
@@ -76,16 +109,81 @@ export function SectionHeader({ title, meta }: { title: string; meta?: string })
   );
 }
 
+// ─── Metric Card ─────────────────────────────────────────────────────────────
+
 export function MetricCard({ label, value, meta, icon }: { label: string; value: string; meta?: string; icon: IconName }) {
   return (
     <PremiumCard style={styles.metricCard}>
-      <MaterialIcons name={icon} color={Colors.dark.tint} size={20} />
-      <Text style={styles.metricLabel}>{label}</Text>
+      <View style={styles.metricTop}>
+        <MaterialIcons name={icon} color={palette.gold} size={18} />
+        <Text style={styles.metricLabel}>{label}</Text>
+      </View>
       <Text style={styles.metricValue}>{value}</Text>
       {meta ? <Text style={styles.metricMeta}>{meta}</Text> : null}
     </PremiumCard>
   );
 }
+
+// ─── Sovereign Score ─────────────────────────────────────────────────────────
+// Signature luxury KPI — the single most important number on the profile screen
+
+export function SovereignScore({ score, max = 1000 }: { score: number; max?: number }) {
+  const pct = Math.min(Math.round((score / max) * 100), 100);
+  const tier = score >= 800 ? 'ELITE' : score >= 600 ? 'AVANZADO' : score >= 400 ? 'EN ASCENSO' : 'INICIANDO';
+  return (
+    <PremiumCard style={styles.sovereignCard}>
+      <Text style={styles.sovereignEyebrow}>SCORE SOBERANO</Text>
+      <Text style={styles.sovereignNumber}>{score}</Text>
+      <View style={styles.sovereignTrackRow}>
+        <View style={styles.sovereignTrack}>
+          <View style={[styles.sovereignFill, { width: `${pct}%` }]} />
+        </View>
+        <Text style={styles.sovereignPct}>{pct}%</Text>
+      </View>
+      <StatusPill label={tier} tone="gold" />
+    </PremiumCard>
+  );
+}
+
+// ─── Weekly Sparkline ────────────────────────────────────────────────────────
+
+export function WeeklySparkline({ label, values, color = palette.gold }: { label: string; values: number[]; color?: string }) {
+  const max = Math.max(...values, 1);
+  return (
+    <View style={styles.sparklineBlock}>
+      <Text style={styles.sparklineLabel}>{label}</Text>
+      <View style={styles.sparklineBars}>
+        {values.map((v, i) => (
+          <View key={i} style={styles.sparklineBarWrap}>
+            <View
+              style={[
+                styles.sparklineBar,
+                {
+                  height: Math.max(4, Math.round((v / max) * 40)),
+                  backgroundColor: i === values.length - 1 ? color : `${color}66`,
+                },
+              ]}
+            />
+            <Text style={styles.sparklineDay}>{['L', 'M', 'X', 'J', 'V', 'S', 'D'][i % 7]}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Achievement Badge ───────────────────────────────────────────────────────
+
+export function AchievementBadge({ icon, label, earned }: { icon: IconName; label: string; earned: boolean }) {
+  return (
+    <View style={[styles.badge, !earned && styles.badgeEarned]}>
+      <MaterialIcons name={icon} size={22} color={earned ? palette.black : palette.smoke} />
+      <Text style={[styles.badgeLabel, !earned && styles.badgeLabelDim]}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── State Meter ─────────────────────────────────────────────────────────────
 
 export function StateMeter({ label, value, inverted = false }: { label: string; value: number; inverted?: boolean }) {
   const score = Math.max(0, Math.min(value, 10));
@@ -103,6 +201,8 @@ export function StateMeter({ label, value, inverted = false }: { label: string; 
     </View>
   );
 }
+
+// ─── Scale Selector ──────────────────────────────────────────────────────────
 
 export function ScaleSelector({
   label,
@@ -123,8 +223,10 @@ export function ScaleSelector({
         {Array.from({ length: 10 }, (_, index) => index + 1).map((item) => (
           <Pressable
             key={item}
+            accessibilityLabel={`${label} ${item}`}
+            accessibilityRole="button"
             onPress={() => onChange(item)}
-            style={[styles.scaleStep, item <= value && styles.scaleStepActive]}>
+            style={({ pressed }) => [styles.scaleStep, item <= value && styles.scaleStepActive, pressed && { opacity: 0.75 }]}>
             <Text style={[styles.scaleStepText, item <= value && styles.scaleStepTextActive]}>{item}</Text>
           </Pressable>
         ))}
@@ -132,6 +234,8 @@ export function ScaleSelector({
     </View>
   );
 }
+
+// ─── Progress Card ───────────────────────────────────────────────────────────
 
 export function ProgressCard({
   label,
@@ -155,23 +259,52 @@ export function ProgressCard({
   );
 }
 
+// ─── Primary Button ──────────────────────────────────────────────────────────
+
 export function PrimaryButton({ label, icon, onPress }: { label: string; icon?: IconName; onPress?: () => void }) {
   return (
-    <Pressable style={styles.primaryButton} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] }]}>
       <Text style={styles.primaryButtonText}>{label}</Text>
       {icon ? <MaterialIcons name={icon} color={palette.black} size={18} /> : null}
     </Pressable>
   );
 }
 
+// ─── Secondary Button ────────────────────────────────────────────────────────
+
 export function SecondaryButton({ label, icon, onPress }: { label: string; icon?: IconName; onPress?: () => void }) {
   return (
-    <Pressable style={styles.secondaryButton} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}>
       <Text style={styles.secondaryButtonText}>{label}</Text>
       {icon ? <MaterialIcons name={icon} color={palette.gold} size={18} /> : null}
     </Pressable>
   );
 }
+
+// ─── Danger Button ───────────────────────────────────────────────────────────
+
+export function DangerButton({ label, icon, onPress }: { label: string; icon?: IconName; onPress?: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}>
+      <Text style={styles.dangerButtonText}>{label}</Text>
+      {icon ? <MaterialIcons name={icon} color={palette.danger} size={18} /> : null}
+    </Pressable>
+  );
+}
+
+// ─── Premium Input ───────────────────────────────────────────────────────────
 
 export function PremiumInput(props: TextInputProps) {
   return (
@@ -184,6 +317,8 @@ export function PremiumInput(props: TextInputProps) {
   );
 }
 
+// ─── Chat Bubble ─────────────────────────────────────────────────────────────
+
 export function ChatBubble({ role, children }: { role: 'mentor' | 'user'; children: React.ReactNode }) {
   return (
     <View style={[styles.chatBubble, role === 'user' ? styles.userBubble : styles.mentorBubble]}>
@@ -191,6 +326,8 @@ export function ChatBubble({ role, children }: { role: 'mentor' | 'user'; childr
     </View>
   );
 }
+
+// ─── Status Pill ─────────────────────────────────────────────────────────────
 
 export function StatusPill({
   label,
@@ -210,17 +347,20 @@ export function StatusPill({
   );
 }
 
+// ─── Screen defaults ─────────────────────────────────────────────────────────
+
 export const screen = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.dark.background,
   },
   content: {
-    alignSelf: 'flex-start',
-    maxWidth: 390,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 430,
     paddingHorizontal: 20,
     paddingTop: 58,
-    paddingBottom: 110,
+    paddingBottom: 120,
     gap: spacing.xl,
   },
   sectionTitle: {
@@ -229,7 +369,10 @@ export const screen = StyleSheet.create({
   },
 });
 
+// ─── Internal Styles ─────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
+  // Header
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -252,10 +395,12 @@ const styles = StyleSheet.create({
     ...typography.title,
     color: palette.ivory,
   },
+
+  // Polaris mark
   mark: {
     alignItems: 'center',
     backgroundColor: palette.blackDeep,
-    borderColor: palette.gold,
+    borderColor: palette.line,
     borderRadius: radii.sm,
     borderWidth: 1,
     justifyContent: 'center',
@@ -276,10 +421,45 @@ const styles = StyleSheet.create({
     marginTop: 2,
     width: 18,
   },
+
+  // Cards
   card: {
     ...surfaces.premiumCard,
     padding: spacing.lg,
   },
+  goldAccentCard: {
+    ...surfaces.premiumCard,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    padding: 0,
+  },
+  goldAccentStripe: {
+    backgroundColor: palette.gold,
+    width: 3,
+  },
+  goldAccentContent: {
+    flex: 1,
+    gap: spacing.md,
+    padding: spacing.lg,
+  },
+
+  // Gold divider
+  dividerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  dividerLine: {
+    backgroundColor: palette.line,
+    flex: 1,
+    height: 1,
+  },
+  dividerLabel: {
+    ...typography.label,
+    color: palette.gold,
+  },
+
+  // Editorial panel
   editorialPanel: {
     gap: spacing.lg,
     overflow: 'hidden',
@@ -288,16 +468,19 @@ const styles = StyleSheet.create({
   editorialTitle: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '800',
-    letterSpacing: 1.35,
-    lineHeight: 33,
+    letterSpacing: 0.5,
+    lineHeight: 40,
     textTransform: 'uppercase',
   },
   editorialBody: {
     ...typography.body,
     color: palette.ash,
+    lineHeight: 24,
   },
+
+  // Section header
   sectionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -307,10 +490,18 @@ const styles = StyleSheet.create({
     ...typography.mono,
     color: palette.gold,
   },
+
+  // Metric card
   metricCard: {
     gap: spacing.sm,
-    minHeight: 126,
+    minHeight: 130,
     width: '47.8%',
+    justifyContent: 'space-between',
+  },
+  metricTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   metricLabel: {
     ...typography.label,
@@ -319,14 +510,109 @@ const styles = StyleSheet.create({
   metricValue: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 25,
+    fontSize: 30,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0,
+    lineHeight: 34,
   },
   metricMeta: {
     ...typography.mono,
     color: palette.gold,
   },
+
+  // Sovereign score
+  sovereignCard: {
+    gap: spacing.md,
+    alignItems: 'flex-start',
+    borderColor: palette.lineHard,
+  },
+  sovereignEyebrow: {
+    ...typography.label,
+    color: palette.gold,
+  },
+  sovereignNumber: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 72,
+    fontWeight: '800',
+    letterSpacing: -2,
+    lineHeight: 76,
+  },
+  sovereignTrackRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  sovereignTrack: {
+    backgroundColor: palette.charcoal,
+    flex: 1,
+    height: 3,
+    overflow: 'hidden',
+  },
+  sovereignFill: {
+    backgroundColor: palette.gold,
+    height: '100%',
+  },
+  sovereignPct: {
+    ...typography.mono,
+    color: palette.gold,
+  },
+
+  // Weekly sparkline
+  sparklineBlock: {
+    gap: spacing.sm,
+  },
+  sparklineLabel: {
+    ...typography.label,
+    color: palette.ash,
+  },
+  sparklineBars: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 4,
+    height: 52,
+  },
+  sparklineBarWrap: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: 4,
+  },
+  sparklineBar: {
+    borderRadius: 1,
+    width: '100%',
+    minHeight: 4,
+  },
+  sparklineDay: {
+    ...typography.label,
+    color: palette.smoke,
+  },
+
+  // Achievement badge
+  badge: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    gap: 6,
+    padding: spacing.md,
+    width: '22%',
+  },
+  badgeEarned: {
+    backgroundColor: palette.graphite,
+    borderColor: palette.lineSoft,
+    borderWidth: 1,
+  },
+  badgeLabel: {
+    ...typography.label,
+    color: palette.black,
+    textAlign: 'center',
+  },
+  badgeLabelDim: {
+    color: palette.smoke,
+  },
+
+  // Progress
   progressCard: {
     gap: spacing.md,
   },
@@ -345,36 +631,40 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     backgroundColor: palette.charcoal,
-    height: 6,
+    height: 2,
     overflow: 'hidden',
   },
   progressFill: {
     backgroundColor: palette.gold,
     height: '100%',
   },
+
+  // State meter
   stateMeter: {
     gap: spacing.sm,
   },
+
+  // Scale selector
   scaleBlock: {
     gap: spacing.md,
   },
   scaleValue: {
     color: palette.gold,
     fontFamily: Fonts.display,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
   },
   scaleRow: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 4,
   },
   scaleStep: {
     alignItems: 'center',
     backgroundColor: palette.charcoal,
-    borderColor: Colors.dark.borderSoft,
+    borderColor: palette.lineSoft,
     borderWidth: 1,
     flex: 1,
-    height: 34,
+    height: 44,
     justifyContent: 'center',
   },
   scaleStepActive: {
@@ -389,6 +679,8 @@ const styles = StyleSheet.create({
   scaleStepTextActive: {
     color: palette.black,
   },
+
+  // Buttons
   primaryButton: {
     alignItems: 'center',
     backgroundColor: palette.gold,
@@ -396,39 +688,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: spacing.lg,
+    minHeight: 54,
+    paddingHorizontal: spacing.xl,
   },
   primaryButtonText: {
-    ...typography.label,
+    ...typography.section,
     color: palette.black,
+    fontSize: 11,
   },
   secondaryButton: {
     alignItems: 'center',
     backgroundColor: 'transparent',
-    borderColor: Colors.dark.border,
+    borderColor: palette.line,
     borderRadius: radii.sm,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.lg,
+    minHeight: 50,
+    paddingHorizontal: spacing.xl,
   },
   secondaryButtonText: {
-    ...typography.label,
+    ...typography.section,
     color: palette.gold,
+    fontSize: 11,
   },
+  dangerButton: {
+    alignItems: 'center',
+    backgroundColor: palette.dangerMuted,
+    borderColor: 'rgba(214, 91, 91, 0.3)',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 50,
+    paddingHorizontal: spacing.xl,
+  },
+  dangerButtonText: {
+    ...typography.section,
+    color: palette.danger,
+    fontSize: 11,
+  },
+
+  // Input
   input: {
     ...typography.body,
     backgroundColor: palette.graphite,
-    borderColor: Colors.dark.borderSoft,
+    borderColor: palette.lineSoft,
     borderRadius: radii.sm,
     borderWidth: 1,
     color: palette.ivory,
-    minHeight: 48,
+    minHeight: 52,
     paddingHorizontal: spacing.lg,
   },
+
+  // Chat
   chatBubble: {
     borderRadius: radii.md,
     maxWidth: '86%',
@@ -437,7 +752,7 @@ const styles = StyleSheet.create({
   mentorBubble: {
     alignSelf: 'flex-start',
     backgroundColor: palette.charcoal,
-    borderColor: Colors.dark.borderSoft,
+    borderColor: palette.lineSoft,
     borderWidth: 1,
   },
   userBubble: {
@@ -452,22 +767,25 @@ const styles = StyleSheet.create({
     color: palette.black,
     fontFamily: Fonts.sansBold,
   },
+
+  // Pill
   pill: {
     alignItems: 'center',
     alignSelf: 'flex-start',
     borderRadius: radii.pill,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 7,
+    gap: 6,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   pillDot: {
     borderRadius: 4,
-    height: 8,
-    width: 8,
+    height: 7,
+    width: 7,
   },
   pillText: {
     ...typography.label,
+    fontSize: 8,
   },
 });
