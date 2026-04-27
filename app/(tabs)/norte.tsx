@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppHeader, PremiumCard, PremiumInput, PrimaryButton, SectionHeader, StatusPill, screen } from '@/components/polaris';
-import { palette, spacing, typography } from '@/constants/theme';
+import {
+  AppHeader,
+  GoldAccentCard,
+  GoldDivider,
+  PremiumCard,
+  PremiumInput,
+  PrimaryButton,
+  StatusPill,
+  screen,
+} from '@/components/polaris';
+import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 export default function NorteScreen() {
@@ -10,7 +19,9 @@ export default function NorteScreen() {
   const [purpose, setPurpose] = useState(state.northStar.purpose);
   const [identity, setIdentity] = useState(state.northStar.identity);
   const [dailyReminder, setDailyReminder] = useState(state.northStar.dailyReminder);
-  const [nonNegotiables, setNonNegotiables] = useState(state.northStar.nonNegotiables.join('\n'));
+  const [nonNegotiables, setNonNegotiables] = useState(
+    state.northStar.nonNegotiables.join('\n'),
+  );
 
   const save = () =>
     updateNorthStar({
@@ -26,59 +37,155 @@ export default function NorteScreen() {
   return (
     <ScrollView style={screen.root} contentContainerStyle={screen.content}>
       <AppHeader title="MI NORTE" />
-      <PremiumCard style={styles.statementCard}>
-        <StatusPill label="DIRECCION MAESTRA" />
-        <Text style={styles.statement}>{purpose}</Text>
-        <Text style={styles.body}>{identity}</Text>
-      </PremiumCard>
 
-      <View style={styles.section}>
-        <SectionHeader title="Editar Norte" meta="LOCAL" />
-        <PremiumCard style={styles.form}>
-          <Text style={styles.label}>Proposito principal</Text>
-          <PremiumInput value={purpose} onChangeText={setPurpose} multiline style={styles.textArea} />
-          <Text style={styles.label}>Declaracion de identidad</Text>
-          <PremiumInput value={identity} onChangeText={setIdentity} multiline style={styles.textArea} />
-          <Text style={styles.label}>No negociables</Text>
-          <PremiumInput value={nonNegotiables} onChangeText={setNonNegotiables} multiline style={styles.textArea} />
-          <Text style={styles.label}>Recordatorio diario</Text>
-          <PremiumInput value={dailyReminder} onChangeText={setDailyReminder} multiline style={styles.textArea} />
-          <PrimaryButton label="GUARDAR NORTE" icon="check" onPress={save} />
+      {/* ── Purpose Display ── */}
+      <GoldAccentCard>
+        <StatusPill label="DIRECCION MAESTRA" dot />
+        <Text style={styles.purposeStatement}>{purpose || 'Define tu proposito principal'}</Text>
+        <Text style={styles.identityStatement}>{identity || 'Define tu identidad'}</Text>
+      </GoldAccentCard>
+
+      {/* ── Daily Reminder ── */}
+      {state.northStar.dailyReminder ? (
+        <PremiumCard style={styles.reminderCard}>
+          <Text style={styles.reminderLabel}>RECORDATORIO DIARIO</Text>
+          <Text style={styles.reminderText}>{state.northStar.dailyReminder}</Text>
         </PremiumCard>
-      </View>
+      ) : null}
 
-      <View style={styles.section}>
-        <SectionHeader title="No negociables" />
-        {state.northStar.nonNegotiables.map((item, index) => (
-          <PremiumCard key={`${item}-${index}`} style={styles.ruleCard}>
-            <Text style={styles.ruleIndex}>0{index + 1}</Text>
-            <Text style={styles.ruleText}>{item}</Text>
-          </PremiumCard>
-        ))}
-      </View>
+      {/* ── Non-Negotiables ── */}
+      {state.northStar.nonNegotiables.length > 0 && (
+        <>
+          <GoldDivider label="NO NEGOCIABLES" />
+          <View style={styles.ruleList}>
+            {state.northStar.nonNegotiables.map((item, index) => (
+              <PremiumCard key={`${item}-${index}`} style={styles.ruleCard}>
+                <Text style={styles.ruleIndex}>
+                  {String(index + 1).padStart(2, '0')}
+                </Text>
+                <Text style={styles.ruleText}>{item}</Text>
+              </PremiumCard>
+            ))}
+          </View>
+        </>
+      )}
+
+      {/* ── Edit Form ── */}
+      <GoldDivider label="EDITAR NORTE" />
+      <PremiumCard style={styles.form}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>PROPOSITO PRINCIPAL</Text>
+          <PremiumInput
+            value={purpose}
+            onChangeText={setPurpose}
+            multiline
+            style={styles.textArea}
+            placeholder="¿Por que operas a este nivel?"
+            accessibilityLabel="Proposito principal"
+          />
+        </View>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>DECLARACION DE IDENTIDAD</Text>
+          <PremiumInput
+            value={identity}
+            onChangeText={setIdentity}
+            multiline
+            style={styles.textArea}
+            placeholder="Soy alguien que..."
+            accessibilityLabel="Declaracion de identidad"
+          />
+        </View>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LINEA</Text>
+          <PremiumInput
+            value={nonNegotiables}
+            onChangeText={setNonNegotiables}
+            multiline
+            style={styles.textAreaLarge}
+            placeholder="Primer principio&#10;Segundo principio&#10;..."
+            accessibilityLabel="No negociables"
+          />
+        </View>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>RECORDATORIO DIARIO</Text>
+          <PremiumInput
+            value={dailyReminder}
+            onChangeText={setDailyReminder}
+            multiline
+            style={styles.textArea}
+            placeholder="La frase que te ancla cada mañana..."
+            accessibilityLabel="Recordatorio diario"
+          />
+        </View>
+        <PrimaryButton label="GUARDAR NORTE" icon="check" onPress={save} />
+      </PremiumCard>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  statementCard: {
-    gap: spacing.lg,
-  },
-  statement: {
-    ...typography.hero,
+  // Purpose display
+  purposeStatement: {
     color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    lineHeight: 28,
+    textTransform: 'uppercase',
   },
-  body: {
+  identityStatement: {
     ...typography.body,
     color: palette.ash,
   },
-  section: {
+
+  // Daily reminder
+  reminderCard: {
+    gap: spacing.sm,
+  },
+  reminderLabel: {
+    ...typography.label,
+    color: palette.gold,
+  },
+  reminderText: {
+    ...typography.body,
+    color: palette.ivoryDim,
+    fontStyle: 'italic',
+  },
+
+  // Non-negotiables
+  ruleList: {
+    gap: spacing.sm,
+  },
+  ruleCard: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
     gap: spacing.md,
   },
+  ruleIndex: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    lineHeight: 22,
+    minWidth: 22,
+  },
+  ruleText: {
+    ...typography.section,
+    color: palette.ivory,
+    flex: 1,
+    fontWeight: '400',
+    letterSpacing: 0.5,
+    textTransform: 'none',
+  },
+
+  // Edit form
   form: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
-  label: {
+  fieldGroup: {
+    gap: spacing.sm,
+  },
+  fieldLabel: {
     ...typography.label,
     color: palette.gold,
   },
@@ -87,18 +194,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     textAlignVertical: 'top',
   },
-  ruleCard: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  ruleIndex: {
-    ...typography.mono,
-    color: palette.gold,
-  },
-  ruleText: {
-    ...typography.section,
-    color: palette.ivory,
-    flex: 1,
+  textAreaLarge: {
+    minHeight: 110,
+    paddingTop: spacing.md,
+    textAlignVertical: 'top',
   },
 });

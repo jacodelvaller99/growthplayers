@@ -4,11 +4,11 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
   EditorialPanel,
+  GoldDivider,
   MetricCard,
   PremiumCard,
   PrimaryButton,
   ProgressCard,
-  SectionHeader,
   StateMeter,
   StatusPill,
   screen,
@@ -34,25 +34,74 @@ export default function DashboardScreen() {
     <ScrollView style={screen.root} contentContainerStyle={screen.content}>
       <AppHeader title="LIFEFLOW" />
 
+      {/* ── Editorial Hero ── */}
       <EditorialPanel
         eyebrow={`DIA ${protocolDay} · PROTOCOLO SOBERANO`}
-        title={`${greeting()}, ${state.profile.name}`}
-        body={todayCheckIn ? 'Check-in registrado. Ahora convierte tu estado en ejecucion medible.' : 'Tu centro de mando esta esperando lectura interna para calibrar el dia.'}>
-        <Text style={styles.time}>{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</Text>
-        <PrimaryButton label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'} icon="assignment" onPress={() => router.push('/checkin')} />
+        title={`${greeting()},\n${state.profile.name}.`}
+        body={
+          todayCheckIn
+            ? 'Check-in registrado. Ahora convierte tu estado en ejecucion medible.'
+            : 'Tu sala de mando espera lectura interna para calibrar el dia.'
+        }>
+        <Text style={styles.time}>
+          {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+        <PrimaryButton
+          label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'}
+          icon="assignment"
+          onPress={() => router.push('/checkin')}
+        />
       </EditorialPanel>
 
-      <ProgressCard label="Progreso del protocolo" value={`${progress}% · ${protocolDay}/90`} progress={progress} />
+      {/* ── Protocol Progress ── */}
+      <ProgressCard
+        label="Progreso del protocolo"
+        value={`${progress}% · ${protocolDay}/90`}
+        progress={progress}
+      />
 
+      {/* ── Metric Grid ── */}
       <View style={styles.grid}>
-        <MetricCard label="Racha" value={`${Math.max(state.checkIns.length, protocolDay)}`} meta="dias de protocolo" icon="local-fire-department" />
-        <MetricCard label="Check-ins" value={`${state.checkIns.length}`} meta={todayCheckIn ? 'hoy completo' : 'pendiente hoy'} icon="fact-check" />
-        <MetricCard label="Modulo activo" value={`0${ACTIVE_MODULE.number}`} meta="mercader" icon="view-module" />
-        <MetricCard label="Coherencia" value={checkIn ? `${Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)}/10` : '--'} meta="estado del dia" icon="verified-user" />
+        <MetricCard
+          label="Racha"
+          value={`${Math.max(state.checkIns.length, protocolDay)}`}
+          meta="dias de protocolo"
+          icon="local-fire-department"
+        />
+        <MetricCard
+          label="Check-ins"
+          value={`${state.checkIns.length}`}
+          meta={todayCheckIn ? 'hoy completo' : 'pendiente hoy'}
+          icon="fact-check"
+        />
+        <MetricCard
+          label="Modulo"
+          value={`0${ACTIVE_MODULE.number}`}
+          meta={ACTIVE_MODULE.title.split(' ')[0].toLowerCase()}
+          icon="view-module"
+        />
+        <MetricCard
+          label="Coherencia"
+          value={
+            checkIn
+              ? `${Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)}/10`
+              : '--'
+          }
+          meta="estado del dia"
+          icon="verified-user"
+        />
       </View>
 
+      {/* ── Estado del dia ── */}
+      <GoldDivider label="ESTADO DEL DIA" />
       <View style={styles.stack}>
-        <SectionHeader title="Estado del dia" meta={todayCheckIn ? 'ACTUALIZADO' : 'SIN LECTURA'} />
+        <View style={styles.sectionTopRow}>
+          <Text style={screen.sectionTitle}>Biometria</Text>
+          <StatusPill
+            label={todayCheckIn ? 'ACTUALIZADO' : 'SIN LECTURA'}
+            tone={todayCheckIn ? 'gold' : 'muted'}
+          />
+        </View>
         <PremiumCard style={styles.meterCard}>
           <StateMeter label="Energia" value={checkIn?.energy ?? 0} />
           <StateMeter label="Enfoque / claridad" value={checkIn?.clarity ?? 0} />
@@ -60,26 +109,37 @@ export default function DashboardScreen() {
         </PremiumCard>
       </View>
 
-      <View style={styles.stack}>
-        <SectionHeader title="Hoy en tu protocolo" meta="ACCION RECOMENDADA" />
-        <PremiumCard style={styles.protocolCard}>
-          <StatusPill label={`MODULO ${ACTIVE_MODULE.number} · ACTIVO`} />
-          <Text style={styles.protocolTitle}>{ACTIVE_MODULE.title}</Text>
-          <Text style={styles.protocolBody}>
-            Proxima accion: completa la leccion activa y ejecuta un bloque mercader de 90 minutos sin mensajeria.
-          </Text>
-          <PrimaryButton label="CONTINUAR LECCION" icon="play-arrow" onPress={() => router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })} />
-        </PremiumCard>
-      </View>
+      {/* ── Protocolo del dia ── */}
+      <GoldDivider label="HOY EN TU PROTOCOLO" />
+      <PremiumCard style={styles.protocolCard}>
+        <StatusPill label={`MODULO ${ACTIVE_MODULE.number} · ACTIVO`} />
+        <Text style={styles.protocolTitle}>{ACTIVE_MODULE.title}</Text>
+        <Text style={styles.protocolBody}>
+          Proxima accion: completa la leccion activa y ejecuta un bloque mercader de 90 minutos
+          sin mensajeria.
+        </Text>
+        <PrimaryButton
+          label="CONTINUAR LECCION"
+          icon="play-arrow"
+          onPress={() =>
+            router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })
+          }
+        />
+      </PremiumCard>
 
-      <View style={styles.stack}>
-        <SectionHeader title="Mi Norte" meta="EDITABLE" />
-        <PremiumCard style={styles.northCard}>
-          <Text style={styles.northTitle}>{state.northStar.purpose}</Text>
-          <Text style={styles.northBody}>{state.northStar.dailyReminder}</Text>
-          <PrimaryButton label="EDITAR NORTE" icon="explore" onPress={() => router.push('/(tabs)/norte')} />
-        </PremiumCard>
-      </View>
+      {/* ── Mi Norte ── */}
+      <GoldDivider label="MI NORTE" />
+      <PremiumCard style={styles.northCard}>
+        <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
+        <Text style={styles.northBody}>
+          {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
+        </Text>
+        <PrimaryButton
+          label="EDITAR NORTE"
+          icon="explore"
+          onPress={() => router.push('/(tabs)/norte')}
+        />
+      </PremiumCard>
     </ScrollView>
   );
 }
@@ -97,6 +157,11 @@ const styles = StyleSheet.create({
   },
   stack: {
     gap: spacing.md,
+  },
+  sectionTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   meterCard: {
     gap: spacing.lg,
@@ -118,14 +183,15 @@ const styles = StyleSheet.create({
   northTitle: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: '800',
-    letterSpacing: 1.1,
+    letterSpacing: 0.8,
     lineHeight: 26,
     textTransform: 'uppercase',
   },
   northBody: {
     ...typography.body,
     color: palette.ash,
+    fontStyle: 'italic',
   },
 });

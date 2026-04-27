@@ -208,15 +208,20 @@ export function ScaleSelector({
   label,
   value,
   onChange,
+  icon,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
+  icon?: IconName;
 }) {
   return (
     <View style={styles.scaleBlock}>
       <View style={styles.rowBetween}>
-        <Text style={styles.cardLabel}>{label}</Text>
+        <View style={styles.scaleLabelRow}>
+          {icon ? <MaterialIcons name={icon} size={14} color={palette.gold} /> : null}
+          <Text style={styles.cardLabel}>{label}</Text>
+        </View>
         <Text style={styles.scaleValue}>{value}</Text>
       </View>
       <View style={styles.scaleRow}>
@@ -647,6 +652,11 @@ const styles = StyleSheet.create({
   // Scale selector
   scaleBlock: {
     gap: spacing.md,
+  },
+  scaleLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   scaleValue: {
     color: palette.gold,
