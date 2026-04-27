@@ -11,7 +11,7 @@ import {
 
 import { ACTIVE_MODULE } from '@/data/modules';
 import { supabase, type DbCheckIn, type DbMentorMessage, type DbNorthStar, type DbProfile } from '@/lib/supabase';
-import { diffDays } from '@/lib/utils';
+import { calcProtocolDay } from '@/lib/utils';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import type { CheckIn, LifeFlowState, MentorMessage, NorthStar, UserProfile } from '@/types/lifeflow';
@@ -345,7 +345,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   );
 
   const protocolDay = useMemo(
-    () => diffDays(state.protocolStartDate),
+    () => calcProtocolDay(state.protocolStartDate),
     [state.protocolStartDate],
   );
 

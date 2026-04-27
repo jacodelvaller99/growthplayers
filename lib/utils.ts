@@ -1,16 +1,20 @@
 // ─── Pure helpers — extracted for testability ────────────────────────────────
 
-/**
- * Returns the protocol day number (1-based).
- * Day 1 = start date through end of that day.
- *
- * NOTE: protocolDay is intentionally uncapped — the dashboard progress bar
- * applies Math.min(..., 100) separately. See calcSovereignScore for the 90D cap
- * on momentum bonus.
- */
+/** Raw day counter (1-based, uncapped). Used internally and for other calculations. */
 export function diffDays(fromIso: string): number {
   const ms = new Date().getTime() - new Date(fromIso).getTime();
   return Math.max(1, Math.floor(ms / 86400000) + 1);
+}
+
+/**
+ * Protocol day (1–90 hard cap).
+ *
+ * The Protocolo Soberano is a 90-day program. Once completed, the counter
+ * stays at 90 rather than incrementing beyond the program boundary.
+ * Use this everywhere protocolDay is displayed to the user.
+ */
+export function calcProtocolDay(fromIso: string): number {
+  return Math.min(diffDays(fromIso), 90);
 }
 
 // ─── Sovereign Score ──────────────────────────────────────────────────────────
