@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppHeader,
@@ -29,13 +30,20 @@ function lessonIconColor(status: string) {
 
 export default function ModuleDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const module = POLARIS_MODULES.find((item) => item.id === id) ?? POLARIS_MODULES[0];
   const activeLesson = module.lessons.find((lesson) => lesson.status === 'active') ?? module.lessons[0];
   const completedLessons = module.lessons.filter((l) => l.status === 'completed').length;
 
   return (
-    <ScrollView style={screen.root} contentContainerStyle={screen.content}>
+    <ScrollView
+      style={screen.root}
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      showsVerticalScrollIndicator={false}
+      bounces
+      overScrollMode="never"
+      keyboardShouldPersistTaps="handled">
       <AppHeader title={`MODULO 0${module.number}`} />
 
       {/* ── Module Hero ── */}

@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppHeader,
@@ -56,6 +57,7 @@ function TypingBubble({ text }: { text: string }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function MentorScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     state,
     todayCheckIn,
@@ -161,11 +163,14 @@ export default function MentorScreen() {
   return (
     <KeyboardAvoidingView
       style={screen.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={76}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[screen.content, styles.content]}
+        contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }, styles.content]}
+        showsVerticalScrollIndicator={false}
+        bounces
+        overScrollMode="never"
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scrollToBottom(false)}>
 
@@ -276,7 +281,7 @@ export default function MentorScreen() {
       </ScrollView>
 
       {/* ── Input Bar ── */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.md }]}>
         <PremiumInput
           value={input}
           onChangeText={setInput}
@@ -311,7 +316,7 @@ export default function MentorScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: 148,
+    paddingBottom: 32,
   },
   onlineBlock: {
     alignItems: 'flex-end',
@@ -457,12 +462,11 @@ const styles = StyleSheet.create({
     backgroundColor: palette.blackDeep,
     borderTopColor: palette.line,
     borderTopWidth: 1,
-    bottom: 76,
     flexDirection: 'row',
     gap: spacing.md,
     maxWidth: 430,
-    padding: spacing.lg,
-    position: 'absolute',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     width: '100%',
   },
   input: {

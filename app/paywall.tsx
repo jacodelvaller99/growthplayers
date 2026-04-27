@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PolarisMark } from '@/components/polaris';
 import { ENV } from '@/app/config/env';
@@ -48,6 +49,7 @@ const DEV_PLANS = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function PaywallScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedPlan, setSelectedPlan] = useState<string>('annual');
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -117,15 +119,19 @@ export default function PaywallScreen() {
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}>
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16 }]}
+        showsVerticalScrollIndicator={false}
+        bounces
+        overScrollMode="never"
+        keyboardShouldPersistTaps="handled">
 
         {/* ── Close ── */}
         <Pressable
-          style={styles.closeButton}
+          style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }]}
           onPress={handleClose}
           accessibilityRole="button"
-          accessibilityLabel="Cerrar">
+          accessibilityLabel="Cerrar"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <MaterialIcons name="close" size={22} color={palette.ash} />
         </Pressable>
 
@@ -254,7 +260,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     maxWidth: 430,
     paddingHorizontal: spacing.xl,
-    paddingTop: 60,
     paddingBottom: 48,
     width: '100%',
     gap: spacing.xl,

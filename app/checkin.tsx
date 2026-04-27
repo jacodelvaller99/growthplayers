@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppHeader,
@@ -25,6 +26,7 @@ function todayLabel() {
 
 export default function CheckInScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { todayCheckIn, saveCheckIn } = useLifeFlow();
   const [energy, setEnergy] = useState(todayCheckIn?.energy ?? 7);
   const [clarity, setClarity] = useState(todayCheckIn?.clarity ?? 7);
@@ -57,7 +59,16 @@ export default function CheckInScreen() {
   };
 
   return (
-    <ScrollView style={screen.root} contentContainerStyle={screen.content}>
+    <KeyboardAvoidingView
+      style={screen.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}>
+    <ScrollView
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      showsVerticalScrollIndicator={false}
+      bounces
+      overScrollMode="never"
+      keyboardShouldPersistTaps="handled">
       <AppHeader title="CHECK-IN DIARIO" />
 
       {/* ── Intro ── */}
@@ -131,6 +142,7 @@ export default function CheckInScreen() {
       <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
       <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

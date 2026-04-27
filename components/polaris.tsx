@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -17,6 +17,7 @@ import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
@@ -449,15 +450,48 @@ export function PremiumInput(props: TextInputProps) {
   );
 }
 
+// ─── Skeleton Bar ────────────────────────────────────────────────────────────
+// Reanimated pulse — use when content is loading
+
+export const SkeletonBar = memo(function SkeletonBar({
+  width = '100%',
+  height = 16,
+  style,
+}: {
+  width?: string | number;
+  height?: number;
+  style?: object;
+}) {
+  const opacity = useSharedValue(0.35);
+
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.75, { duration: 700 }), -1, true);
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  return (
+    <Animated.View
+      style={[{ width, height, backgroundColor: palette.charcoal, borderRadius: 2 }, animStyle, style]}
+    />
+  );
+});
+
 // ─── Chat Bubble ─────────────────────────────────────────────────────────────
 
-export function ChatBubble({ role, children }: { role: 'mentor' | 'user'; children: React.ReactNode }) {
+export const ChatBubble = memo(function ChatBubble({
+  role,
+  children,
+}: {
+  role: 'mentor' | 'user';
+  children: React.ReactNode;
+}) {
   return (
     <View style={[styles.chatBubble, role === 'user' ? styles.userBubble : styles.mentorBubble]}>
       <Text style={[styles.chatText, role === 'user' && styles.userChatText]}>{children}</Text>
     </View>
   );
-}
+});
 
 // ─── Status Pill ─────────────────────────────────────────────────────────────
 
@@ -491,7 +525,7 @@ export const screen = StyleSheet.create({
     width: '100%',
     maxWidth: 430,
     paddingHorizontal: 20,
-    paddingTop: 58,
+    paddingTop: 16,
     paddingBottom: 120,
     gap: spacing.xl,
   },
@@ -557,6 +591,7 @@ const styles = StyleSheet.create({
   // Cards
   card: {
     ...surfaces.premiumCard,
+    elevation: 2,
     padding: spacing.lg,
   },
   goldAccentCard: {

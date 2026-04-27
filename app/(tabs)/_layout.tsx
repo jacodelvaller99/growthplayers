@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors, Fonts, palette } from '@/constants/theme';
@@ -13,6 +14,8 @@ function TabBarIcon({ color, name }: { color: string; name: TabIcon }) {
 }
 
 export function BottomNavigation() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
   return (
     <Tabs
       screenOptions={{
@@ -30,8 +33,8 @@ export function BottomNavigation() {
           backgroundColor: palette.blackDeep,
           borderTopColor: Colors.dark.border,
           borderTopWidth: 1,
-          height: 76,
-          paddingBottom: 14,
+          height: tabBarHeight,
+          paddingBottom: insets.bottom + 8,
           paddingTop: 10,
         },
       }}>

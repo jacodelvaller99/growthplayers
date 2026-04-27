@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppHeader,
@@ -15,6 +16,7 @@ import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 export default function NorteScreen() {
+  const insets = useSafeAreaInsets();
   const { state, updateNorthStar } = useLifeFlow();
   const [purpose, setPurpose] = useState(state.northStar.purpose);
   const [identity, setIdentity] = useState(state.northStar.identity);
@@ -35,7 +37,16 @@ export default function NorteScreen() {
     });
 
   return (
-    <ScrollView style={screen.root} contentContainerStyle={screen.content}>
+    <KeyboardAvoidingView
+      style={screen.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}>
+    <ScrollView
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      showsVerticalScrollIndicator={false}
+      bounces
+      overScrollMode="never"
+      keyboardShouldPersistTaps="handled">
       <AppHeader title="MI NORTE" />
 
       {/* ── Purpose Display ── */}
@@ -120,6 +131,7 @@ export default function NorteScreen() {
         <PrimaryButton label="GUARDAR NORTE" icon="check" onPress={save} />
       </PremiumCard>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

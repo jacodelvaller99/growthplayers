@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AchievementBadge,
@@ -39,6 +40,7 @@ function calcScore(opts: {
 }
 
 export default function ProgresoScreen() {
+  const insets = useSafeAreaInsets();
   const { state, protocolDay, averages, updateProfile, resetOnboarding, clearData } = useLifeFlow();
   const [name, setName] = useState(state.profile.name);
   const [role, setRole] = useState(state.profile.role);
@@ -88,7 +90,16 @@ export default function ProgresoScreen() {
   };
 
   return (
-    <ScrollView style={screen.root} contentContainerStyle={screen.content}>
+    <KeyboardAvoidingView
+      style={screen.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}>
+    <ScrollView
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      showsVerticalScrollIndicator={false}
+      bounces
+      overScrollMode="never"
+      keyboardShouldPersistTaps="handled">
       {/* ── Header ── */}
       <AppHeader title="PERFIL" />
 
@@ -225,6 +236,7 @@ export default function ProgresoScreen() {
         />
       </PremiumCard>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

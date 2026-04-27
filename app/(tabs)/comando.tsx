@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppHeader,
@@ -26,12 +27,19 @@ function greeting() {
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state, protocolDay, todayCheckIn, latestCheckIn } = useLifeFlow();
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   const checkIn = todayCheckIn ?? latestCheckIn;
 
   return (
-    <ScrollView style={screen.root} contentContainerStyle={screen.content}>
+    <ScrollView
+      style={screen.root}
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      showsVerticalScrollIndicator={false}
+      bounces
+      overScrollMode="never"
+      keyboardShouldPersistTaps="handled">
       <AppHeader title="LIFEFLOW" />
 
       {/* ── Editorial Hero ── */}

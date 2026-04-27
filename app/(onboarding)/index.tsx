@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { POLARIS_MODULES } from '@/data/modules';
 import {
@@ -49,6 +50,7 @@ const TOTAL_STEPS = 4;
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { completeOnboarding, state } = useLifeFlow();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(state.profile.name);
@@ -66,7 +68,16 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <ScrollView style={screen.root} contentContainerStyle={screen.content}>
+    <KeyboardAvoidingView
+      style={screen.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}>
+    <ScrollView
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      showsVerticalScrollIndicator={false}
+      bounces
+      overScrollMode="never"
+      keyboardShouldPersistTaps="handled">
       {/* ── Step Progress ── */}
       <View style={styles.stepRow}>
         {[0, 1, 2, 3].map((i) => (
@@ -238,6 +249,7 @@ export default function OnboardingScreen() {
         </PremiumCard>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

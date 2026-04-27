@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   AppHeader,
@@ -29,13 +30,20 @@ function statusLabel(status: string) {
 
 export default function ProgramasScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isSubscribed } = useLifeFlow();
 
   const completedCount = POLARIS_MODULES.filter((m) => m.status === 'completed').length;
   const totalLessons = POLARIS_MODULES.reduce((acc, m) => acc + m.lessons.length, 0);
 
   return (
-    <ScrollView style={screen.root} contentContainerStyle={screen.content}>
+    <ScrollView
+      style={screen.root}
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      showsVerticalScrollIndicator={false}
+      bounces
+      overScrollMode="never"
+      keyboardShouldPersistTaps="handled">
       <AppHeader title="PROGRAMA" />
 
       {/* ── Protocol Hero ── */}
