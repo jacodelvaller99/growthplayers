@@ -3,6 +3,7 @@
 
 import { ENV } from '@/app/config/env';
 import { streamNvidia } from './nvidia';
+import { streamGroq } from './groq';
 import { streamOpenAI } from './openai';
 import type { CheckIn } from '@/types/lifeflow';
 
@@ -108,10 +109,11 @@ async function streamDevSimulation(
  * Envía un mensaje al mentor y hace streaming de la respuesta.
  *
  * Prioridad:
- * 1. Dev simulation (cuando isDev y sin claves de API)
- * 2. NVIDIA NIM  (si ENV.nvidiaApiKey está definida)
- * 3. OpenAI      (fallback si NVIDIA falla o no hay clave)
- * 4. Dev simulation (último recurso)
+ * 1. Dev simulation (cuando isDev y sin ninguna clave de API)
+ * 2. NVIDIA NIM    (si ENV.nvidiaApiKey está definida)
+ * 3. Groq          (qwen/qwen3-32b — si ENV.groqApiKey está definida)
+ * 4. OpenAI        (gpt-4o-mini — fallback final)
+ * 5. Dev simulation (último recurso si todas las llamadas fallan)
  */
 export async function streamMentorResponse(
   ctx: MentorContext,
@@ -120,7 +122,7 @@ export async function streamMentorResponse(
   onChunk: (delta: string) => void,
 ): Promise<string> {
   // ── Dev simulation cuando no hay claves de API
-  if (ENV.isDev && !ENV.nvidiaApiKey && !ENV.openaiApiKey) {
+  if (ENV.isDev && !ENV.nvidiaApiKey && !ENV.groqApiKey && !ENV.openaiApiKey) {
     return streamDevSimulation(userMessage, onChunk);
   }
 
@@ -141,11 +143,20 @@ export async function streamMentorResponse(
     try {
       return await streamNvidia(messages, onChunk);
     } catch (err) {
-      console.warn('[Mentor] NVIDIA falló, cambiando a OpenAI:', err);
+      console.warn('[Mentor] NVIDIA falló, cambiando a Groq:', err);
     }
   }
 
-  // ── OpenAI (fallback)
+  // ── Groq / Qwen3-32b (secondary)
+  if (ENV.groqApiKey) {
+    try {
+      return await streamGroq(messages, onChunk);
+    } catch (err) {
+      console.warn('[Mentor] Groq falló, cambiando a OpenAI:', err);
+    }
+  }
+
+  // ── OpenAI (tertiary fallback)
   if (ENV.openaiApiKey) {
     try {
       return await streamOpenAI(messages, onChunk);

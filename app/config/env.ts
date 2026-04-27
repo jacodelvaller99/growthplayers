@@ -9,7 +9,10 @@ export const ENV = {
   /** NVIDIA NIM API key – usada para meta/llama-3.3-70b-instruct */
   nvidiaApiKey: (process.env.EXPO_PUBLIC_NVIDIA_API_KEY ?? '') as string,
 
-  /** OpenAI API key – fallback si NVIDIA falla */
+  /** Groq API key – qwen/qwen3-32b con reasoning (segundo en la cadena) */
+  groqApiKey: (process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '') as string,
+
+  /** OpenAI API key – fallback final si NVIDIA y Groq fallan */
   openaiApiKey: (process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '') as string,
 
   /** RevenueCat SDK key (iOS o Android según plataforma) */

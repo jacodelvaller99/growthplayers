@@ -6,8 +6,9 @@
  * Priority routing:
  *   1. DEV simulation (isDev=true AND no API keys)
  *   2. NVIDIA NIM     (ENV.nvidiaApiKey set)
- *   3. OpenAI         (ENV.openaiApiKey set, fallback)
- *   4. DEV simulation (last resort when all providers fail)
+ *   3. Groq           (ENV.groqApiKey set — qwen/qwen3-32b)
+ *   4. OpenAI         (ENV.openaiApiKey set, final fallback)
+ *   5. DEV simulation (last resort when all providers fail)
  */
 
 import { buildSystemPrompt, streamMentorResponse, type MentorContext } from '@/lib/mentor';
@@ -18,13 +19,16 @@ import { buildSystemPrompt, streamMentorResponse, type MentorContext } from '@/l
 const mockEnv = {
   isDev: false,
   nvidiaApiKey: 'nvidia-test-key',
+  groqApiKey: 'groq-test-key',
   openaiApiKey: 'openai-test-key',
 };
 jest.mock('@/app/config/env', () => ({ get ENV() { return mockEnv; } }));
 
 const mockStreamNvidia = jest.fn();
+const mockStreamGroq   = jest.fn();
 const mockStreamOpenAI = jest.fn();
 jest.mock('@/lib/nvidia', () => ({ streamNvidia: (...args: any[]) => mockStreamNvidia(...args) }));
+jest.mock('@/lib/groq',   () => ({ streamGroq:   (...args: any[]) => mockStreamGroq(...args)   }));
 jest.mock('@/lib/openai', () => ({ streamOpenAI: (...args: any[]) => mockStreamOpenAI(...args) }));
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -85,9 +89,9 @@ describe('buildSystemPrompt', () => {
 
 describe('streamMentorResponse — DEV mode', () => {
   beforeEach(() => {
-    // Switch to DEV mode with no API keys → should use dev simulation
     mockEnv.isDev = true;
     mockEnv.nvidiaApiKey = '';
+    mockEnv.groqApiKey   = '';
     mockEnv.openaiApiKey = '';
     jest.useFakeTimers();
   });
@@ -95,20 +99,21 @@ describe('streamMentorResponse — DEV mode', () => {
   afterEach(() => {
     mockEnv.isDev = false;
     mockEnv.nvidiaApiKey = 'nvidia-test-key';
+    mockEnv.groqApiKey   = 'groq-test-key';
     mockEnv.openaiApiKey = 'openai-test-key';
     jest.useRealTimers();
   });
 
-  it('returns a non-empty string without calling NVIDIA or OpenAI', async () => {
+  it('returns a non-empty string without calling any provider', async () => {
     const onChunk = jest.fn();
     const promise = streamMentorResponse(baseCtx, 'Analiza mi estado', [], onChunk);
 
-    // Advance all setTimeout timers used by the char-by-char simulation
     await jest.runAllTimersAsync();
     const result = await promise;
 
     expect(result.length).toBeGreaterThan(0);
     expect(mockStreamNvidia).not.toHaveBeenCalled();
+    expect(mockStreamGroq).not.toHaveBeenCalled();
     expect(mockStreamOpenAI).not.toHaveBeenCalled();
   });
 
@@ -129,16 +134,44 @@ describe('streamMentorResponse — DEV mode', () => {
   });
 });
 
-// ── streamMentorResponse — network error fallback ────────────────────────────
+// ── streamMentorResponse — Groq as primary when NVIDIA key absent ─────────────
 
-describe('streamMentorResponse — network error falls back to dev simulation', () => {
+describe('streamMentorResponse — Groq slot', () => {
+  beforeEach(() => {
+    mockEnv.isDev = false;
+    mockEnv.nvidiaApiKey = '';         // no NVIDIA key
+    mockEnv.groqApiKey   = 'groq-test-key';
+    mockEnv.openaiApiKey = 'openai-test-key';
+    mockStreamGroq.mockResolvedValue('Respuesta de Groq.');
+  });
+
+  afterEach(() => {
+    mockEnv.nvidiaApiKey = 'nvidia-test-key';
+    mockStreamGroq.mockReset();
+  });
+
+  it('calls streamGroq when no NVIDIA key and groqApiKey is set', async () => {
+    const onChunk = jest.fn();
+    const result = await streamMentorResponse(baseCtx, 'Hola', [], onChunk);
+
+    expect(mockStreamGroq).toHaveBeenCalledTimes(1);
+    expect(mockStreamNvidia).not.toHaveBeenCalled();
+    expect(result).toBe('Respuesta de Groq.');
+  });
+});
+
+// ── streamMentorResponse — full cascade fallback ──────────────────────────────
+
+describe('streamMentorResponse — cascade: NVIDIA → Groq → OpenAI → dev sim', () => {
   beforeEach(() => {
     mockEnv.isDev = false;
     mockEnv.nvidiaApiKey = 'nvidia-test-key';
+    mockEnv.groqApiKey   = 'groq-test-key';
     mockEnv.openaiApiKey = 'openai-test-key';
 
-    // Both providers throw
+    // All three providers throw
     mockStreamNvidia.mockRejectedValue(new Error('NVIDIA timeout'));
+    mockStreamGroq.mockRejectedValue(new Error('Groq timeout'));
     mockStreamOpenAI.mockRejectedValue(new Error('OpenAI timeout'));
 
     jest.useFakeTimers();
@@ -146,11 +179,12 @@ describe('streamMentorResponse — network error falls back to dev simulation', 
 
   afterEach(() => {
     mockStreamNvidia.mockReset();
+    mockStreamGroq.mockReset();
     mockStreamOpenAI.mockReset();
     jest.useRealTimers();
   });
 
-  it('falls back to dev simulation when both NVIDIA and OpenAI fail', async () => {
+  it('falls back to dev simulation when NVIDIA, Groq, and OpenAI all fail', async () => {
     const onChunk = jest.fn();
     const promise = streamMentorResponse(baseCtx, 'Hola', [], onChunk);
     await jest.runAllTimersAsync();
@@ -158,6 +192,7 @@ describe('streamMentorResponse — network error falls back to dev simulation', 
 
     expect(result.length).toBeGreaterThan(0);
     expect(mockStreamNvidia).toHaveBeenCalledTimes(1);
+    expect(mockStreamGroq).toHaveBeenCalledTimes(1);
     expect(mockStreamOpenAI).toHaveBeenCalledTimes(1);
   });
 });
