@@ -1,11 +1,12 @@
 // ─── NVIDIA NIM – SSE Streaming ──────────────────────────────────────────────
-// Modelo: meta/llama-3.3-70b-instruct
+// Modelo: deepseek-ai/deepseek-v4-pro
 // Endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+// thinking: false → respuestas directas sin chain-of-thought visible
 
 import { ENV } from '@/app/config/env';
 
 const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
-const MODEL = 'meta/llama-3.3-70b-instruct';
+const MODEL = 'deepseek-ai/deepseek-v4-pro';
 
 export type ChatMessage = { role: string; content: string };
 
@@ -29,9 +30,10 @@ export async function streamNvidia(
       model: MODEL,
       messages,
       stream: true,
-      max_tokens: 512,
-      temperature: 0.7,
-      top_p: 0.9,
+      temperature: 1,
+      top_p: 0.95,
+      max_tokens: 16384,
+      chat_template_kwargs: { thinking: false },
     }),
   });
 
