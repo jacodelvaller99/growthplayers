@@ -1,6 +1,16 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { useMemo, useRef, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import {
   AppHeader,
@@ -15,34 +25,161 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
+import type { MentorMessage } from '@/types/lifeflow';
 
-const prompts = [
+// ─── Prompt shortcuts ─────────────────────────────────────────────────────────
+const QUICK_PROMPTS = [
   { label: 'Analiza mi estado', icon: 'psychology' as const },
   { label: 'Dame una practica', icon: 'fitness-center' as const },
   { label: 'Ordena mi dia', icon: 'calendar-today' as const },
   { label: 'Recuerdame mi norte', icon: 'explore' as const },
 ];
 
-export default function MentorScreen() {
-  const { state, todayCheckIn, sendMentorMessage } = useLifeFlow();
-  const [input, setInput] = useState('');
+// ─── Typing indicator ─────────────────────────────────────────────────────────
+function TypingBubble({ text }: { text: string }) {
+  return (
+    <View style={styles.typingBubble}>
+      {text ? (
+        <Text style={styles.typingText}>{text}</Text>
+      ) : (
+        <View style={styles.dotsRow}>
+          <View style={styles.dot} />
+          <View style={styles.dot} />
+          <View style={styles.dot} />
+        </View>
+      )}
+    </View>
+  );
+}
 
-  const submit = async (text = input) => {
-    const clean = text.trim();
-    if (!clean) return;
-    setInput('');
-    await sendMentorMessage(clean);
+// ─── Screen ───────────────────────────────────────────────────────────────────
+export default function MentorScreen() {
+  const router = useRouter();
+  const {
+    state,
+    todayCheckIn,
+    protocolDay,
+    isSubscribed,
+    addMentorMessages,
+  } = useLifeFlow();
+
+  const [input, setInput]               = useState('');
+  const [isStreaming, setIsStreaming]   = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [pendingUserMsg, setPendingUserMsg] = useState<MentorMessage | null>(null);
+
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Gate: ≥ 3 mensajes de usuario sin suscripción
+  const userMsgCount = useMemo(
+    () => state.mentorMessages.filter((m) => m.role === 'user').length,
+    [state.mentorMessages],
+  );
+  const isGated = !isSubscribed && userMsgCount >= 3;
+
+  // Mensajes a mostrar = persistidos + mensaje de usuario pendiente
+  const displayMessages = useMemo(() => {
+    if (pendingUserMsg) return [...state.mentorMessages, pendingUserMsg];
+    return state.mentorMessages;
+  }, [state.mentorMessages, pendingUserMsg]);
+
+  const scrollToBottom = (animated = true) => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated }), 80);
   };
 
+  // ── Submit ──────────────────────────────────────────────────────────────────
+  const submit = async (text = input) => {
+    const clean = text.trim();
+    if (!clean || isStreaming) return;
+
+    // Gate premium
+    if (isGated) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      router.push('/paywall');
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setInput('');
+
+    const userMsg: MentorMessage = {
+      id:        `u-${Date.now()}`,
+      role:      'user',
+      text:      clean,
+      createdAt: new Date().toISOString(),
+    };
+
+    setPendingUserMsg(userMsg);
+    setStreamingText('');
+    setIsStreaming(true);
+    scrollToBottom();
+
+    try {
+      const ctx: MentorContext = {
+        name:         state.profile.name,
+        role:         state.profile.role,
+        protocolDay,
+        northStar:    state.northStar,
+        todayCheckIn,
+        messageCount: userMsgCount,
+      };
+
+      const history = state.mentorMessages.slice(-10).map((m) => ({
+        role: m.role,
+        text: m.text,
+      }));
+
+      let fullText = '';
+      await streamMentorResponse(ctx, clean, history, (delta) => {
+        fullText += delta;
+        setStreamingText(fullText);
+        scrollToBottom(false);
+      });
+
+      const mentorMsg: MentorMessage = {
+        id:        `m-${Date.now()}`,
+        role:      'mentor',
+        text:      fullText || '…',
+        createdAt: new Date().toISOString(),
+      };
+
+      await addMentorMessages(userMsg, mentorMsg);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (err) {
+      console.error('[Mentor] streaming error:', err);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setPendingUserMsg(null);
+      setStreamingText('');
+      setIsStreaming(false);
+      scrollToBottom();
+    }
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <View style={screen.root}>
-      <ScrollView contentContainerStyle={[screen.content, styles.content]}>
+    <KeyboardAvoidingView
+      style={screen.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={76}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[screen.content, styles.content]}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => scrollToBottom(false)}>
+
+        {/* ── Header ── */}
         <AppHeader
           title="MENTOR POLARIS"
           right={
             <View style={styles.onlineBlock}>
               <PolarisMark size={36} />
-              <StatusPill label="EN LINEA" tone="success" dot />
+              <StatusPill
+                label={isStreaming ? 'RESPONDIENDO' : 'EN LINEA'}
+                tone={isStreaming ? 'muted' : 'success'}
+                dot
+              />
             </View>
           }
         />
@@ -76,15 +213,32 @@ export default function MentorScreen() {
           ) : null}
         </PremiumCard>
 
+        {/* ── Paywall banner ── */}
+        {isGated && (
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/paywall');
+            }}
+            style={({ pressed }) => [styles.paywallBanner, pressed && { opacity: 0.85 }]}>
+            <MaterialIcons name="lock" size={16} color={palette.black} />
+            <Text style={styles.paywallText}>DESBLOQUEAR MENTOR PREMIUM</Text>
+            <MaterialIcons name="chevron-right" size={16} color={palette.black} />
+          </Pressable>
+        )}
+
         {/* ── Quick Prompts ── */}
         <GoldDivider label="CONSULTAS RAPIDAS" />
         <View style={styles.promptGrid}>
-          {prompts.map((p) => (
+          {QUICK_PROMPTS.map((p) => (
             <Pressable
               key={p.label}
               accessibilityRole="button"
               accessibilityLabel={p.label}
-              onPress={() => submit(p.label)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                submit(p.label);
+              }}
               style={({ pressed }) => [
                 styles.prompt,
                 pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] },
@@ -96,20 +250,21 @@ export default function MentorScreen() {
         </View>
 
         {/* ── Message Thread ── */}
-        {state.mentorMessages.length > 0 && (
+        {displayMessages.length > 0 && (
           <>
             <GoldDivider label="CONVERSACION" />
             <View style={styles.thread}>
-              {state.mentorMessages.map((message) => (
+              {displayMessages.map((message) => (
                 <ChatBubble key={message.id} role={message.role}>
                   {message.text}
                 </ChatBubble>
               ))}
+              {isStreaming && <TypingBubble text={streamingText} />}
             </View>
           </>
         )}
 
-        {state.mentorMessages.length === 0 && (
+        {displayMessages.length === 0 && !isStreaming && (
           <PremiumCard style={styles.emptyCard}>
             <MaterialIcons name="chat-bubble-outline" size={28} color={palette.smoke} />
             <Text style={styles.emptyTitle}>LISTO PARA OPERAR</Text>
@@ -129,21 +284,30 @@ export default function MentorScreen() {
           style={styles.input}
           onSubmitEditing={() => submit()}
           returnKeyType="send"
+          editable={!isStreaming}
         />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Enviar mensaje"
           style={({ pressed }) => [
             styles.sendButton,
-            pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
+            isStreaming && styles.sendButtonDisabled,
+            pressed && !isStreaming && { opacity: 0.8, transform: [{ scale: 0.95 }] },
           ]}
-          onPress={() => submit()}>
-          <MaterialIcons name="arrow-upward" size={22} color={palette.black} />
+          onPress={() => submit()}
+          disabled={isStreaming}>
+          <MaterialIcons
+            name={isStreaming ? 'hourglass-empty' : 'arrow-upward'}
+            size={22}
+            color={isStreaming ? palette.smoke : palette.black}
+          />
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   content: {
@@ -194,6 +358,25 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
+  // Paywall banner
+  paywallBanner: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  paywallText: {
+    ...typography.section,
+    color: palette.black,
+    flex: 1,
+    textAlign: 'center',
+  },
+
   // Quick prompts
   promptGrid: {
     flexDirection: 'row',
@@ -222,6 +405,32 @@ const styles = StyleSheet.create({
   // Thread
   thread: {
     gap: spacing.md,
+  },
+
+  // Typing bubble
+  typingBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: palette.charcoal,
+    borderColor: palette.lineSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    maxWidth: '86%',
+    padding: spacing.lg,
+  },
+  typingText: {
+    ...typography.body,
+    color: palette.ivory,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  dot: {
+    backgroundColor: palette.ash,
+    borderRadius: 4,
+    height: 8,
+    width: 8,
   },
 
   // Empty state
@@ -270,5 +479,8 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: 'center',
     width: 48,
+  },
+  sendButtonDisabled: {
+    backgroundColor: palette.charcoal,
   },
 });

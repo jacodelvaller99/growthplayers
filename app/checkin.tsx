@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -51,6 +52,7 @@ export default function CheckInScreen() {
       sleep,
       systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
     });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.replace('/(tabs)/comando');
   };
 

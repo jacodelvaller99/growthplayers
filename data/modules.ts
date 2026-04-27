@@ -76,6 +76,59 @@ export const POLARIS_MODULES: PolarisModule[] = [
       { id: 'm6-l4', title: 'Sistema semanal de mando', duration: '28 MIN', status: 'locked' },
     ],
   },
+  {
+    id: 'liderazgo-soberano',
+    number: 7,
+    title: 'Liderazgo Soberano',
+    subtitle: 'Influencia, equipos y comunicacion de mando.',
+    status: 'locked',
+    progress: 0,
+    lessons: [
+      { id: 'm7-l1', title: 'Lenguaje del lider soberano', duration: '22 MIN', status: 'locked' },
+      { id: 'm7-l2', title: 'Cultura sin ruido', duration: '18 MIN', status: 'locked' },
+      { id: 'm7-l3', title: 'Conversaciones de alto impacto', duration: '25 MIN', status: 'locked' },
+    ],
+  },
+  {
+    id: 'capital-financiero',
+    number: 8,
+    title: 'Capital Financiero',
+    subtitle: 'Flujo, inversion y arquitectura patrimonial.',
+    status: 'locked',
+    progress: 0,
+    lessons: [
+      { id: 'm8-l1', title: 'Lectura financiera soberana', duration: '20 MIN', status: 'locked' },
+      { id: 'm8-l2', title: 'Decision de inversion ejecutiva', duration: '28 MIN', status: 'locked' },
+    ],
+  },
+  {
+    id: 'expansion-mercados',
+    number: 9,
+    title: 'Expansion de Mercados',
+    subtitle: 'Estrategia, posicionamiento y crecimiento.',
+    status: 'locked',
+    progress: 0,
+    lessons: [
+      { id: 'm9-l1', title: 'Mapa de expansion soberana', duration: '24 MIN', status: 'locked' },
+      { id: 'm9-l2', title: 'Posicionamiento de alto impacto', duration: '21 MIN', status: 'locked' },
+      { id: 'm9-l3', title: 'Alianzas estrategicas', duration: '19 MIN', status: 'locked' },
+    ],
+  },
+  {
+    id: 'legado-soberano',
+    number: 10,
+    title: 'Legado Soberano',
+    subtitle: 'Vision, trascendencia y arquitectura de vida.',
+    status: 'locked',
+    progress: 0,
+    lessons: [
+      { id: 'm10-l1', title: 'Arquitectura de legado', duration: '30 MIN', status: 'locked' },
+      { id: 'm10-l2', title: 'El operador y su trascendencia', duration: '26 MIN', status: 'locked' },
+    ],
+  },
 ];
 
 export const ACTIVE_MODULE = POLARIS_MODULES.find((module) => module.status === 'active') ?? POLARIS_MODULES[0];
+
+/** Módulos que requieren suscripción premium (número ≥ 7) */
+export const PREMIUM_MODULE_NUMBERS = new Set([7, 8, 9, 10]);

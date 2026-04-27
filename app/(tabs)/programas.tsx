@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -10,8 +11,9 @@ import {
   StatusPill,
   screen,
 } from '@/components/polaris';
-import { POLARIS_MODULES } from '@/data/modules';
-import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { POLARIS_MODULES, PREMIUM_MODULE_NUMBERS } from '@/data/modules';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 function statusTone(status: string) {
   if (status === 'active') return 'gold' as const;
@@ -27,6 +29,7 @@ function statusLabel(status: string) {
 
 export default function ProgramasScreen() {
   const router = useRouter();
+  const { isSubscribed } = useLifeFlow();
 
   const completedCount = POLARIS_MODULES.filter((m) => m.status === 'completed').length;
   const totalLessons = POLARIS_MODULES.reduce((acc, m) => acc + m.lessons.length, 0);
@@ -68,26 +71,33 @@ export default function ProgramasScreen() {
       <GoldDivider label="MODULOS" />
       <View style={styles.list}>
         {POLARIS_MODULES.map((module) => {
-          const isActive = module.status === 'active';
+          const isActive  = module.status === 'active';
+          const isPremium = PREMIUM_MODULE_NUMBERS.has(module.number) && !isSubscribed;
           return (
             <Pressable
               key={module.id}
               accessibilityRole="button"
               accessibilityLabel={`Modulo ${module.number}: ${module.title}`}
-              onPress={() =>
-                router.push({ pathname: '/module/[id]', params: { id: module.id } })
-              }
+              onPress={() => {
+                if (isPremium) {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                  router.push('/paywall');
+                  return;
+                }
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: '/module/[id]', params: { id: module.id } });
+              }}
               style={({ pressed }) => [pressed && { opacity: 0.82 }]}>
               <PremiumCard style={[styles.moduleCard, isActive && styles.moduleCardActive]}>
                 {isActive && <View style={styles.activeStripe} />}
                 <View style={[styles.moduleInner, !isActive && styles.moduleInnerFull]}>
                   <View style={styles.moduleTop}>
                     <Text style={[styles.moduleNumber, isActive && styles.moduleNumberActive]}>
-                      0{module.number}
+                      {module.number < 10 ? `0${module.number}` : module.number}
                     </Text>
                     <StatusPill
-                      label={statusLabel(module.status)}
-                      tone={statusTone(module.status)}
+                      label={isPremium ? 'PREMIUM' : statusLabel(module.status)}
+                      tone={isPremium ? 'gold' : statusTone(module.status)}
                     />
                   </View>
                   <Text style={styles.moduleTitle}>{module.title}</Text>
@@ -102,9 +112,15 @@ export default function ProgramasScreen() {
                       </View>
                       <Text style={styles.progressPct}>{module.progress}%</Text>
                     </View>
-                    <MaterialIcons name="chevron-right" size={20} color={isActive ? palette.black : palette.gold} />
+                    <MaterialIcons
+                      name={isPremium ? 'lock' : 'chevron-right'}
+                      size={20}
+                      color={isActive ? palette.black : palette.gold}
+                    />
                   </View>
                 </View>
+                {/* Premium overlay */}
+                {isPremium && <View style={styles.premiumOverlay} />}
               </PremiumCard>
             </Pressable>
           );
@@ -252,5 +268,12 @@ const styles = StyleSheet.create({
     ...typography.mono,
     color: palette.gold,
     fontSize: 9,
+  },
+
+  // Premium lock overlay
+  premiumOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 15, 15, 0.55)',
+    borderRadius: radii.md,
   },
 });

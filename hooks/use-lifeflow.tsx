@@ -12,6 +12,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { supabase, type DbCheckIn, type DbMentorMessage, type DbNorthStar, type DbProfile } from '@/lib/supabase';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
+import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import type { CheckIn, LifeFlowState, MentorMessage, NorthStar, UserProfile } from '@/types/lifeflow';
 
 // ─── Local cache key ──────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ const defaultState: LifeFlowState = {
 type LifeFlowContextValue = {
   state: LifeFlowState;
   isLoaded: boolean;
+  isSubscribed: boolean;
   protocolDay: number;
   latestCheckIn: CheckIn | null;
   todayCheckIn: CheckIn | null;
@@ -64,6 +66,8 @@ type LifeFlowContextValue = {
   updateNorthStar: (northStar: NorthStar) => Promise<void>;
   saveCheckIn: (checkIn: Omit<CheckIn, 'id' | 'date'>) => Promise<void>;
   sendMentorMessage: (text: string) => Promise<void>;
+  /** Persiste un par user+mentor ya generados (uso: streaming en mentor.tsx). */
+  addMentorMessages: (userMsg: MentorMessage, mentorMsg: MentorMessage) => Promise<void>;
   resetOnboarding: () => Promise<void>;
   clearData: () => Promise<void>;
 };
@@ -259,8 +263,9 @@ async function migrateLocalToSupabase(uid: string, s: LifeFlowState) {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function LifeFlowProvider({ children }: { children: ReactNode }) {
-  const [state, setState]   = useState<LifeFlowState>(defaultState);
+  const [state, setState]       = useState<LifeFlowState>(defaultState);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const uidRef = useRef<string | null>(null);
 
   // ── Init: Auth + load ────────────────────────────────────────────────────────
@@ -280,7 +285,16 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       if (uid) {
         uidRef.current = uid;
 
-        // 2. Intentar cargar desde Supabase
+        // 2. Inicializar RevenueCat y verificar suscripción
+        try {
+          await initRevenueCat();
+          const subscribed = await checkSubscription();
+          if (mounted) setIsSubscribed(subscribed);
+        } catch {
+          // ignore – default is false
+        }
+
+        // 3. Intentar cargar desde Supabase
         const remote = await loadFromSupabase(uid);
 
         if (remote) {
@@ -292,7 +306,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // 3. No hay datos en Supabase → cargar local y migrar
+        // 4. No hay datos en Supabase → cargar local y migrar
         const local = await readLocal<LifeFlowState>(STATE_KEY);
         if (local) {
           if (mounted) setState(local);
@@ -503,6 +517,38 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     [latestCheckIn, persist, state],
   );
 
+  const addMentorMessages = useCallback(
+    async (userMsg: MentorMessage, mentorMsg: MentorMessage) => {
+      // Mantener como máximo los últimos 20 mensajes en estado local
+      const next: LifeFlowState = {
+        ...state,
+        mentorMessages: [...state.mentorMessages, userMsg, mentorMsg].slice(-20),
+      };
+      await persist(next);
+
+      const uid = uidRef.current;
+      if (!uid) return;
+
+      await supabase.from('mentor_messages').insert([
+        {
+          id:         userMsg.id,
+          user_id:    uid,
+          role:       'user',
+          text:       userMsg.text,
+          created_at: userMsg.createdAt,
+        },
+        {
+          id:         mentorMsg.id,
+          user_id:    uid,
+          role:       'mentor',
+          text:       mentorMsg.text,
+          created_at: mentorMsg.createdAt,
+        },
+      ]);
+    },
+    [persist, state],
+  );
+
   const resetOnboarding = useCallback(async () => {
     await persist({ ...state, onboardingCompleted: false });
     const uid = uidRef.current;
@@ -538,6 +584,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       value={{
         state,
         isLoaded,
+        isSubscribed,
         protocolDay,
         latestCheckIn,
         todayCheckIn,
@@ -547,6 +594,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         updateNorthStar,
         saveCheckIn,
         sendMentorMessage,
+        addMentorMessages,
         resetOnboarding,
         clearData,
       }}>

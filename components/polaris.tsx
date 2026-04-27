@@ -1,6 +1,25 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
 import type React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, type TextInputProps, View, type ViewProps } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  type TextInputProps,
+  View,
+  type ViewProps,
+  useWindowDimensions,
+} from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
 
 import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 
@@ -125,20 +144,39 @@ export function MetricCard({ label, value, meta, icon }: { label: string; value:
 }
 
 // ─── Sovereign Score ─────────────────────────────────────────────────────────
-// Signature luxury KPI — the single most important number on the profile screen
+// Signature luxury KPI — count-up animation 0→score in 1200ms
 
 export function SovereignScore({ score, max = 1000 }: { score: number; max?: number }) {
-  const pct = Math.min(Math.round((score / max) * 100), 100);
+  const targetPct = Math.min(Math.round((score / max) * 100), 100);
   const tier = score >= 800 ? 'ELITE' : score >= 600 ? 'AVANZADO' : score >= 400 ? 'EN ASCENSO' : 'INICIANDO';
+
+  const animScore = useSharedValue(0);
+  const animPct   = useSharedValue(0);
+  const [displayScore, setDisplayScore] = useState(0);
+
+  useEffect(() => {
+    animScore.value = withTiming(score,      { duration: 1200 });
+    animPct.value   = withTiming(targetPct,  { duration: 1200 });
+  }, [score, targetPct]);
+
+  useAnimatedReaction(
+    () => Math.round(animScore.value),
+    (val) => { runOnJS(setDisplayScore)(val); },
+  );
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${animPct.value}%`,
+  }));
+
   return (
     <PremiumCard style={styles.sovereignCard}>
       <Text style={styles.sovereignEyebrow}>SCORE SOBERANO</Text>
-      <Text style={styles.sovereignNumber}>{score}</Text>
+      <Text style={styles.sovereignNumber}>{displayScore}</Text>
       <View style={styles.sovereignTrackRow}>
         <View style={styles.sovereignTrack}>
-          <View style={[styles.sovereignFill, { width: `${pct}%` }]} />
+          <Animated.View style={[styles.sovereignFill, fillStyle]} />
         </View>
-        <Text style={styles.sovereignPct}>{pct}%</Text>
+        <Text style={styles.sovereignPct}>{targetPct}%</Text>
       </View>
       <StatusPill label={tier} tone="gold" />
     </PremiumCard>
@@ -146,26 +184,104 @@ export function SovereignScore({ score, max = 1000 }: { score: number; max?: num
 }
 
 // ─── Weekly Sparkline ────────────────────────────────────────────────────────
+// Cubic bezier line + gradient fill + 800ms entrance via usePathInterpolation
 
-export function WeeklySparkline({ label, values, color = palette.gold }: { label: string; values: number[]; color?: string }) {
-  const max = Math.max(...values, 1);
+const SPARKLINE_H = 56;
+const DAY_LABELS  = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+/** Build a smooth cubic bezier path through an array of {x,y} points. */
+function buildLinePath(pts: { x: number; y: number }[]) {
+  const path = Skia.Path.Make();
+  if (pts.length === 0) return path;
+  path.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const cpx = (pts[i - 1].x + pts[i].x) / 2;
+    path.cubicTo(cpx, pts[i - 1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+  }
+  return path;
+}
+
+/** Same as buildLinePath but closed at the bottom (for gradient fill). */
+function buildFillPath(pts: { x: number; y: number }[], H: number) {
+  const path = buildLinePath(pts);
+  if (pts.length > 0) {
+    path.lineTo(pts[pts.length - 1].x, H);
+    path.lineTo(pts[0].x, H);
+    path.close();
+  }
+  return path;
+}
+
+export function WeeklySparkline({
+  label,
+  values,
+  color = palette.gold,
+}: {
+  label: string;
+  values: number[];
+  color?: string;
+}) {
+  const { width: screenWidth } = useWindowDimensions();
+  const canvasW = Math.min(screenWidth - 72, 366);
+  const H       = SPARKLINE_H;
+  const max     = Math.max(...values, 1);
+  const n       = values.length;
+
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withTiming(1, { duration: 800 });
+  }, []); // only on mount
+
+  // Pre-compute start (flat at bottom) and end (actual) paths
+  const { flatLine, actualLine, flatFill, actualFill } = useMemo(() => {
+    const actPts = values.map((v, i) => ({
+      x: n > 1 ? (i / (n - 1)) * canvasW : canvasW / 2,
+      y: H - (v / max) * H,
+    }));
+    const flatPts = values.map((_, i) => ({
+      x: n > 1 ? (i / (n - 1)) * canvasW : canvasW / 2,
+      y: H,
+    }));
+    return {
+      flatLine:   buildLinePath(flatPts),
+      actualLine: buildLinePath(actPts),
+      flatFill:   buildFillPath(flatPts, H),
+      actualFill: buildFillPath(actPts, H),
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.join(','), max, n, canvasW, H]);
+
+  // Animated paths via Skia's usePathInterpolation (SharedValue<SkPath>)
+  const animLine = usePathInterpolation(progress, [0, 1], [flatLine, actualLine]);
+  const animFill = usePathInterpolation(progress, [0, 1], [flatFill, actualFill]);
+
   return (
     <View style={styles.sparklineBlock}>
       <Text style={styles.sparklineLabel}>{label}</Text>
-      <View style={styles.sparklineBars}>
-        {values.map((v, i) => (
-          <View key={i} style={styles.sparklineBarWrap}>
-            <View
-              style={[
-                styles.sparklineBar,
-                {
-                  height: Math.max(4, Math.round((v / max) * 40)),
-                  backgroundColor: i === values.length - 1 ? color : `${color}66`,
-                },
-              ]}
-            />
-            <Text style={styles.sparklineDay}>{['L', 'M', 'X', 'J', 'V', 'S', 'D'][i % 7]}</Text>
-          </View>
+      <Canvas style={{ width: canvasW, height: H }}>
+        {/* Gradient fill area */}
+        <Path path={animFill as any} style="fill">
+          <LinearGradient
+            start={vec(0, 0)}
+            end={vec(0, H)}
+            colors={[`${color}50`, `${color}00`]}
+          />
+        </Path>
+        {/* Stroke line */}
+        <Path
+          path={animLine as any}
+          style="stroke"
+          strokeWidth={2}
+          color={color}
+          strokeCap="round"
+          strokeJoin="round"
+        />
+      </Canvas>
+      <View style={[styles.sparklineDaysRow, { width: canvasW }]}>
+        {values.map((_, i) => (
+          <Text key={i} style={[styles.sparklineDay, { flex: 1, textAlign: 'center' }]}>
+            {DAY_LABELS[i % 7]}
+          </Text>
         ))}
       </View>
     </View>
@@ -203,6 +319,7 @@ export function StateMeter({ label, value, inverted = false }: { label: string; 
 }
 
 // ─── Scale Selector ──────────────────────────────────────────────────────────
+// Selection haptic on tap + glow shadow on exact active step
 
 export function ScaleSelector({
   label,
@@ -230,9 +347,19 @@ export function ScaleSelector({
             key={item}
             accessibilityLabel={`${label} ${item}`}
             accessibilityRole="button"
-            onPress={() => onChange(item)}
-            style={({ pressed }) => [styles.scaleStep, item <= value && styles.scaleStepActive, pressed && { opacity: 0.75 }]}>
-            <Text style={[styles.scaleStepText, item <= value && styles.scaleStepTextActive]}>{item}</Text>
+            onPress={() => {
+              Haptics.selectionAsync();
+              onChange(item);
+            }}
+            style={({ pressed }) => [
+              styles.scaleStep,
+              item <= value && styles.scaleStepActive,
+              item === value && styles.scaleStepGlow,
+              pressed && { transform: [{ scale: 0.88 }] },
+            ]}>
+            <Text style={[styles.scaleStepText, item <= value && styles.scaleStepTextActive]}>
+              {item}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -564,7 +691,7 @@ const styles = StyleSheet.create({
     color: palette.gold,
   },
 
-  // Weekly sparkline
+  // Weekly sparkline (Skia)
   sparklineBlock: {
     gap: spacing.sm,
   },
@@ -572,26 +699,14 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: palette.ash,
   },
-  sparklineBars: {
-    alignItems: 'flex-end',
+  sparklineDaysRow: {
     flexDirection: 'row',
-    gap: 4,
-    height: 52,
-  },
-  sparklineBarWrap: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-    gap: 4,
-  },
-  sparklineBar: {
-    borderRadius: 1,
-    width: '100%',
-    minHeight: 4,
+    marginTop: 2,
   },
   sparklineDay: {
     ...typography.label,
     color: palette.smoke,
+    fontSize: 8,
   },
 
   // Achievement badge
@@ -680,6 +795,13 @@ const styles = StyleSheet.create({
   scaleStepActive: {
     backgroundColor: palette.gold,
     borderColor: palette.gold,
+  },
+  scaleStepGlow: {
+    shadowColor: palette.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 8,
+    elevation: 8,
   },
   scaleStepText: {
     color: palette.ash,

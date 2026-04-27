@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -65,9 +66,9 @@ export default function ProgresoScreen() {
     { icon: 'bolt' as const, label: 'ENERGIA\n8+', earned: (averages.energy ?? 0) >= 8 },
     { icon: 'stars' as const, label: 'SCORE\n600', earned: score >= 600 },
     { icon: 'fact-check' as const, label: '10 CHECK\nINS', earned: state.checkIns.length >= 10 },
-    { icon: 'emoji_events' as const, label: 'ELITE\n800', earned: score >= 800 },
+    { icon: 'emoji-events' as const, label: 'ELITE\n800', earned: score >= 800 },
     { icon: 'psychology' as const, label: 'CLARIDAD\n8+', earned: (averages.clarity ?? 0) >= 8 },
-    { icon: 'workspace_premium' as const, label: 'SOBERANO\n90D', earned: protocolDay >= 90 },
+    { icon: 'workspace-premium' as const, label: 'SOBERANO\n90D', earned: protocolDay >= 90 },
   ];
 
   const clear = () => {
@@ -195,7 +196,10 @@ export default function ProgresoScreen() {
         <PrimaryButton
           label="GUARDAR PERFIL"
           icon="check"
-          onPress={() => updateProfile({ name, role })}
+          onPress={async () => {
+            await updateProfile({ name, role });
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }}
         />
       </PremiumCard>
 
