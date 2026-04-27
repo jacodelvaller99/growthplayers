@@ -1,0 +1,66 @@
+# ─── E2E Flow 01: Onboarding completo ────────────────────────────────────────
+# Verifica que un usuario nuevo puede completar el onboarding de 4 pasos
+# y aterrizar en el Dashboard (Comando).
+#
+# Pre-condición: app en estado limpio (sin onboardingCompleted)
+# Run: maestro test __tests__/e2e/maestro/01-onboarding.yaml
+
+appId: com.polarisgrowthinstitute.lifeflow
+
+---
+
+- launchApp:
+    clearState: true
+
+# ── Step 1: Avatar selection (step1-avatar) ───────────────────────────────────
+
+- assertVisible: "POLARIS GROWTH"
+- assertVisible: "OPERADOR"
+
+- tapOn:
+    text: "CONTINUAR"
+
+# ── Step 2: Polaris / North Star (step2-polaris) ──────────────────────────────
+
+- assertVisible: "MI NORTE"
+
+- tapOn:
+    id: "purpose-input"
+- inputText: "Construir una empresa rentable y una vida soberana"
+
+- tapOn:
+    id: "identity-input"
+- inputText: "Soy un empresario soberano"
+
+- tapOn:
+    text: "CONTINUAR"
+
+# ── Step 3: Wheel of Life (step3-wheel) ───────────────────────────────────────
+
+- assertVisible: "RUEDA DE VIDA"
+
+- tapOn:
+    text: "CONTINUAR"
+
+# ── Step 4: Profile (step4-profile) ──────────────────────────────────────────
+
+- assertVisible: "PERFIL"
+
+- tapOn:
+    id: "name-input"
+- clearText
+- inputText: "Juan Carlos"
+
+- tapOn:
+    id: "role-input"
+- clearText
+- inputText: "Empresario"
+
+- tapOn:
+    text: "COMENZAR PROTOCOLO"
+
+# ── Assert: Dashboard is shown ────────────────────────────────────────────────
+
+- assertVisible: "LIFEFLOW"
+- assertVisible: "PROTOCOLO SOBERANO"
+- assertVisible: "HACER CHECK-IN"

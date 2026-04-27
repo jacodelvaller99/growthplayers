@@ -1,0 +1,50 @@
+# ─── E2E Flow 04: Módulos bloqueados para usuarios FREE ──────────────────────
+# Verifica que:
+#   - El módulo activo (01) es accesible para todos los usuarios
+#   - Los módulos premium (02+) muestran overlay de bloqueo para usuarios FREE
+#   - Tap en módulo bloqueado navega a /paywall
+#
+# Pre-condición: usuario FREE, onboarding completado.
+# Run: maestro test __tests__/e2e/maestro/04-module-lock.yaml
+
+appId: com.polarisgrowthinstitute.lifeflow
+
+---
+
+- launchApp
+
+# ── Navigate to Programas tab ─────────────────────────────────────────────────
+
+- tapOn:
+    text: "PROGRAMAS"
+
+- assertVisible: "PROTOCOLO SOBERANO"
+
+# ── Scroll to see module list ─────────────────────────────────────────────────
+
+- scroll:
+    direction: DOWN
+
+# ── Active module (01) should be accessible — no lock icon ───────────────────
+
+- assertVisible: "MODULO 01"
+- assertNotVisible:
+    text: "PREMIUM"
+    index: 0  # first instance (module 01) should not have premium lock
+
+# ── Tap on a locked module (02+) ─────────────────────────────────────────────
+
+- tapOn:
+    text: "MODULO 02"
+
+# ── Locked module should navigate to paywall ─────────────────────────────────
+
+- assertVisible: "POLARIS PREMIUM"
+- assertVisible: "DESBLOQUEA TODO EL SISTEMA"
+
+# ── User can go back from paywall ─────────────────────────────────────────────
+
+- tapOn:
+    text: "VOLVER"
+
+- assertVisible: "PROTOCOLO SOBERANO"

@@ -23,6 +23,7 @@ import Animated, {
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
 
 import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
+import { calcSovereignTier } from '@/lib/utils';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -149,7 +150,7 @@ export function MetricCard({ label, value, meta, icon }: { label: string; value:
 
 export function SovereignScore({ score, max = 1000 }: { score: number; max?: number }) {
   const targetPct = Math.min(Math.round((score / max) * 100), 100);
-  const tier = score >= 800 ? 'ELITE' : score >= 600 ? 'AVANZADO' : score >= 400 ? 'EN ASCENSO' : 'INICIANDO';
+  const tier = calcSovereignTier(score);
 
   const animScore = useSharedValue(0);
   const animPct   = useSharedValue(0);

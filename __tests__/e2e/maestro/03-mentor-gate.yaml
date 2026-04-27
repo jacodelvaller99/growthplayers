@@ -1,0 +1,69 @@
+# ─── E2E Flow 03: Paywall gate del Mentor ────────────────────────────────────
+# Verifica que:
+#   - Los primeros 3 mensajes de usuario pasan libremente
+#   - El 4to mensaje activa el paywall banner
+#   - Tap en el banner navega a la pantalla de Paywall
+#
+# Pre-condición: usuario FREE, onboarding completado, 0 mensajes de usuario.
+# Run: maestro test __tests__/e2e/maestro/03-mentor-gate.yaml
+
+appId: com.polarisgrowthinstitute.lifeflow
+
+---
+
+- launchApp
+
+# ── Navigate to Mentor tab ────────────────────────────────────────────────────
+
+- tapOn:
+    text: "MENTOR"
+
+- assertVisible: "MENTOR POLARIS"
+- assertVisible: "EN LINEA"
+
+# ── Send message 1 (free) ─────────────────────────────────────────────────────
+
+- tapOn:
+    accessibilityLabel: "CONSULTA AL MENTOR..."
+- inputText: "Analiza mi estado"
+- tapOn:
+    accessibilityLabel: "Enviar mensaje"
+
+- waitForAnimationToEnd
+- assertNotVisible: "DESBLOQUEAR MENTOR PREMIUM"
+
+# ── Send message 2 (free) ─────────────────────────────────────────────────────
+
+- tapOn:
+    accessibilityLabel: "CONSULTA AL MENTOR..."
+- inputText: "Dame una practica"
+- tapOn:
+    accessibilityLabel: "Enviar mensaje"
+
+- waitForAnimationToEnd
+- assertNotVisible: "DESBLOQUEAR MENTOR PREMIUM"
+
+# ── Send message 3 (free — last one) ─────────────────────────────────────────
+
+- tapOn:
+    accessibilityLabel: "CONSULTA AL MENTOR..."
+- inputText: "Ordena mi dia"
+- tapOn:
+    accessibilityLabel: "Enviar mensaje"
+
+- waitForAnimationToEnd
+
+# ── After 3 user messages, paywall banner should appear ──────────────────────
+
+- assertVisible: "DESBLOQUEAR MENTOR PREMIUM"
+
+# ── Tapping send on message 4 should navigate to paywall ──────────────────────
+
+- tapOn:
+    accessibilityLabel: "CONSULTA AL MENTOR..."
+- inputText: "Cuarto mensaje"
+- tapOn:
+    accessibilityLabel: "Enviar mensaje"
+
+- assertVisible: "POLARIS PREMIUM"
+- assertVisible: "OBTENER ACCESO PREMIUM"

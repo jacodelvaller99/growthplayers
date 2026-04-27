@@ -1,0 +1,64 @@
+# ─── E2E Flow 05: Empty states ───────────────────────────────────────────────
+# Verifica que todos los estados vacíos muestran mensajes útiles
+# y acciones de recuperación — nunca pantallas en blanco.
+#
+# Pre-condición: usuario recién registrado, sin datos.
+# Run: maestro test __tests__/e2e/maestro/05-empty-states.yaml
+
+appId: com.polarisgrowthinstitute.lifeflow
+
+---
+
+- launchApp:
+    clearState: true
+
+# Skip onboarding quickly to get to the main tabs
+# (assumes a way to bypass or that clearState shows onboarding-free state)
+
+# ── Mentor tab: empty conversation state ─────────────────────────────────────
+
+- tapOn:
+    text: "MENTOR"
+
+- assertVisible: "MENTOR POLARIS"
+
+# When no messages exist, the empty state card should be shown
+- assertVisible: "LISTO PARA OPERAR"
+- assertVisible: "Escribe tu consulta"
+
+# ── Progreso tab: no check-ins ────────────────────────────────────────────────
+
+- tapOn:
+    text: "PROGRESO"
+
+- assertVisible: "PERFIL"
+
+# Score starts at 0 or low — should show INICIANDO tier
+- assertVisible: "SCORE SOBERANO"
+- assertVisible: "INICIANDO"
+
+# Progress bar should show 0% or day 1
+- assertVisible: "1/90"
+
+# ── Comando/Dashboard tab: no check-in today ─────────────────────────────────
+
+- tapOn:
+    text: "COMANDO"
+
+- assertVisible: "LIFEFLOW"
+
+# Without a check-in, the primary CTA should be HACER CHECK-IN
+- assertVisible: "HACER CHECK-IN"
+
+# Biometria section should show SIN LECTURA
+- assertVisible: "SIN LECTURA"
+
+# ── Norte tab: default north star shown ───────────────────────────────────────
+
+- tapOn:
+    text: "NORTE"
+
+- assertVisible: "MI NORTE"
+
+# Default purpose should be visible (set by defaultState)
+- assertVisible: "Construir una vida soberana"

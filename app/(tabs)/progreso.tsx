@@ -23,21 +23,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-
-// ─── Sovereign Score calculation ─────────────────────────────────────────────
-function calcScore(opts: {
-  energy: number;
-  clarity: number;
-  stress: number;
-  checkIns: number;
-  streak: number;
-}) {
-  const base = ((opts.energy + opts.clarity + (10 - opts.stress)) / 3) * 80;
-  const consistency = Math.min(opts.checkIns * 8, 200);
-  const momentum = Math.min(opts.streak * 12, 300);
-  const raw = Math.round(base + consistency + momentum);
-  return Math.min(raw, 1000);
-}
+import { calcSovereignScore } from '@/lib/utils';
 
 export default function ProgresoScreen() {
   const insets = useSafeAreaInsets();
@@ -48,7 +34,7 @@ export default function ProgresoScreen() {
   const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
 
   // Sovereign Score
-  const score = calcScore({
+  const score = calcSovereignScore({
     energy: averages.energy ?? 0,
     clarity: averages.clarity ?? 0,
     stress: averages.stress ?? 5,

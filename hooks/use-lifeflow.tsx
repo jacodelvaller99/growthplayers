@@ -11,6 +11,7 @@ import {
 
 import { ACTIVE_MODULE } from '@/data/modules';
 import { supabase, type DbCheckIn, type DbMentorMessage, type DbNorthStar, type DbProfile } from '@/lib/supabase';
+import { diffDays } from '@/lib/utils';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import type { CheckIn, LifeFlowState, MentorMessage, NorthStar, UserProfile } from '@/types/lifeflow';
@@ -75,10 +76,7 @@ type LifeFlowContextValue = {
 const LifeFlowContext = createContext<LifeFlowContextValue | null>(null);
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
-function diffDays(fromIso: string) {
-  const ms = new Date().getTime() - new Date(fromIso).getTime();
-  return Math.max(1, Math.floor(ms / 86400000) + 1);
-}
+// diffDays is imported from @/lib/utils
 
 function average(items: number[]) {
   if (!items.length) return 0;

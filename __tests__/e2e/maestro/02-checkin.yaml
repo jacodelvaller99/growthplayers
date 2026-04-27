@@ -1,0 +1,66 @@
+# ─── E2E Flow 02: Check-in diario ────────────────────────────────────────────
+# Verifica que el usuario puede completar el check-in biométrico completo
+# y que el estado cambia a "ACTUALIZADO" en el dashboard.
+#
+# Pre-condición: onboarding completado, sin check-in hoy.
+# Run: maestro test __tests__/e2e/maestro/02-checkin.yaml
+
+appId: com.polarisgrowthinstitute.lifeflow
+
+---
+
+- launchApp
+
+# ── Open check-in from dashboard ──────────────────────────────────────────────
+
+- assertVisible: "HACER CHECK-IN"
+- tapOn:
+    text: "HACER CHECK-IN"
+
+# ── Assert check-in screen loaded ─────────────────────────────────────────────
+
+- assertVisible: "CHECK-IN"
+- assertVisible: "Energia"
+- assertVisible: "Claridad"
+- assertVisible: "Estres"
+- assertVisible: "Sueno"
+
+# ── Set Energia = 8 ──────────────────────────────────────────────────────────
+
+- tapOn:
+    accessibilityLabel: "Energia 8"
+
+# ── Set Claridad = 7 ──────────────────────────────────────────────────────────
+
+- tapOn:
+    accessibilityLabel: "Claridad 7"
+
+# ── Set Estres = 3 ────────────────────────────────────────────────────────────
+
+- tapOn:
+    accessibilityLabel: "Estres 3"
+
+# ── Set Sueno = 7 ─────────────────────────────────────────────────────────────
+
+- tapOn:
+    accessibilityLabel: "Sueno 7"
+
+# ── Optional: fill in system need ─────────────────────────────────────────────
+
+- tapOn:
+    id: "system-need-input"
+- inputText: "Foco en cierre de decision"
+
+# ── Submit check-in ───────────────────────────────────────────────────────────
+
+- tapOn:
+    text: "REGISTRAR CHECK-IN"
+
+# ── Assert: back to dashboard with updated state ──────────────────────────────
+
+- assertVisible: "LIFEFLOW"
+- assertVisible: "REVISAR CHECK-IN"
+
+# ── Assert: biometria section shows ACTUALIZADO ───────────────────────────────
+
+- assertVisible: "ACTUALIZADO"
