@@ -16,6 +16,7 @@ function TabBarIcon({ color, name }: { color: string; name: TabIcon }) {
 export function BottomNavigation() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = 56 + insets.bottom;
+
   return (
     <Tabs
       screenOptions={{
@@ -26,7 +27,7 @@ export function BottomNavigation() {
         tabBarLabelStyle: {
           fontFamily: Fonts.display,
           fontSize: 9,
-          letterSpacing: 1,
+          letterSpacing: 2,           // Michroma brand spacing
           textTransform: 'uppercase',
         },
         tabBarStyle: {

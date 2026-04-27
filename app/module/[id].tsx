@@ -29,8 +29,8 @@ function lessonIconColor(status: string) {
 }
 
 export default function ModuleDetailScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const module = POLARIS_MODULES.find((item) => item.id === id) ?? POLARIS_MODULES[0];
   const activeLesson = module.lessons.find((lesson) => lesson.status === 'active') ?? module.lessons[0];

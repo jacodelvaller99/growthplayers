@@ -100,7 +100,6 @@ export default function ProgresoScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      {/* ── Header ── */}
       <AppHeader title="PERFIL" />
 
       {/* ── Profile Hero ── */}

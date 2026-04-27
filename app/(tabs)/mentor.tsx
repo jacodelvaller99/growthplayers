@@ -173,8 +173,6 @@ export default function MentorScreen() {
         overScrollMode="never"
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scrollToBottom(false)}>
-
-        {/* ── Header ── */}
         <AppHeader
           title="MENTOR POLARIS"
           right={
@@ -395,15 +393,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     width: '48%',
-    minHeight: 44,
+  },
+  promptPressed: {
+    backgroundColor: 'rgba(255, 200, 4, 0.08)',
+    borderColor: palette.gold,
   },
   promptText: {
     ...typography.label,
     color: palette.gold,
     flex: 1,
+    flexWrap: 'wrap',
     fontSize: 8,
   },
 
@@ -472,14 +475,14 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: Fonts.display,
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: 10,
+    letterSpacing: 2,
     textTransform: 'uppercase',
   },
   sendButton: {
     alignItems: 'center',
     backgroundColor: palette.gold,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,    // brand: near-sharp corner instead of pill
     height: 48,
     justifyContent: 'center',
     width: 48,

@@ -472,7 +472,7 @@ export const SkeletonBar = memo(function SkeletonBar({
 
   return (
     <Animated.View
-      style={[{ width, height, backgroundColor: palette.charcoal, borderRadius: 2 }, animStyle, style]}
+      style={[{ width, height, backgroundColor: palette.charcoal, borderRadius: radii.sm }, animStyle, style]}
     />
   );
 });
@@ -632,19 +632,36 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingVertical: spacing.xl,
   },
+  // Brand accent panel — left gold strip signature element
+  accentPanel: {
+    flexDirection: 'row',
+    backgroundColor: palette.graphite,
+    borderRadius: radii.none,
+    overflow: 'hidden',
+  },
+  accentStrip: {
+    width: 3,
+    backgroundColor: palette.gold,
+  },
+  accentContent: {
+    flex: 1,
+    gap: spacing.md,
+    padding: spacing.lg,
+    paddingLeft: spacing.lg,
+  },
   editorialTitle: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 40,
+    fontSize: 28,
+    fontWeight: '400',      // Michroma is single-weight
+    letterSpacing: 2.5,     // Extended brand spacing
+    lineHeight: 36,
     textTransform: 'uppercase',
   },
   editorialBody: {
     ...typography.body,
     color: palette.ash,
-    lineHeight: 24,
+    lineHeight: 22,
   },
 
   // Section header
@@ -677,10 +694,9 @@ const styles = StyleSheet.create({
   metricValue: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: 0,
-    lineHeight: 34,
+    fontSize: 26,
+    fontWeight: '400',   // Michroma single-weight
+    letterSpacing: 2,
   },
   metricMeta: {
     ...typography.mono,
@@ -786,7 +802,8 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     backgroundColor: palette.charcoal,
-    height: 2,
+    borderRadius: radii.none,  // sharp = brand tactical feel
+    height: 3,                 // thin, precise line
     overflow: 'hidden',
   },
   progressFill: {
@@ -811,8 +828,9 @@ const styles = StyleSheet.create({
   scaleValue: {
     color: palette.gold,
     fontFamily: Fonts.display,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '400',
+    letterSpacing: 2,
   },
   scaleRow: {
     flexDirection: 'row',
@@ -851,7 +869,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: 'center',
     backgroundColor: palette.gold,
-    borderRadius: radii.sm,
+    borderRadius: radii.none,   // zero radius = brand precision/tactical
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
@@ -861,13 +879,14 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...typography.section,
     color: palette.black,
-    fontSize: 11,
+    letterSpacing: 2.5,
+    fontSize: 10,
   },
   secondaryButton: {
     alignItems: 'center',
     backgroundColor: 'transparent',
     borderColor: palette.line,
-    borderRadius: radii.sm,
+    borderRadius: radii.none,   // zero = brand precision/tactical
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
@@ -878,7 +897,8 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     ...typography.section,
     color: palette.gold,
-    fontSize: 11,
+    letterSpacing: 2.5,
+    fontSize: 10,
   },
   dangerButton: {
     alignItems: 'center',
@@ -912,14 +932,16 @@ const styles = StyleSheet.create({
 
   // Chat
   chatBubble: {
-    borderRadius: radii.md,
+    borderRadius: radii.sm,    // near-sharp corners — brand precision
     maxWidth: '86%',
     padding: spacing.lg,
   },
   mentorBubble: {
     alignSelf: 'flex-start',
     backgroundColor: palette.charcoal,
-    borderColor: palette.lineSoft,
+    borderColor: Colors.dark.border,
+    borderLeftColor: palette.gold,
+    borderLeftWidth: 2,        // accent left strip — brand editorial element
     borderWidth: 1,
   },
   userBubble: {
@@ -939,7 +961,7 @@ const styles = StyleSheet.create({
   pill: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,    // brand: sharp corners even on pills
     borderWidth: 1,
     flexDirection: 'row',
     gap: 6,

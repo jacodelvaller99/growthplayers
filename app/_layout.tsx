@@ -1,5 +1,5 @@
 import { Inter_400Regular, Inter_700Bold, useFonts as useInterFonts } from '@expo-google-fonts/inter';
-import { SpaceGrotesk_700Bold, useFonts as useSpaceGroteskFonts } from '@expo-google-fonts/space-grotesk';
+import { Michroma_400Regular, useFonts as useMichromaFonts } from '@expo-google-fonts/michroma';
 import { SpaceMono_400Regular, useFonts as useSpaceMonoFonts } from '@expo-google-fonts/space-mono';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -33,9 +33,9 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [interLoaded] = useInterFonts({ Inter_400Regular, Inter_700Bold });
-  const [spaceGroteskLoaded] = useSpaceGroteskFonts({ SpaceGrotesk_700Bold });
+  const [michromaLoaded] = useMichromaFonts({ Michroma_400Regular }); // brand font: Grandis Extended → Michroma
   const [spaceMonoLoaded] = useSpaceMonoFonts({ SpaceMono_400Regular });
-  const fontsLoaded = interLoaded && spaceGroteskLoaded && spaceMonoLoaded;
+  const fontsLoaded = interLoaded && michromaLoaded && spaceMonoLoaded;
 
   useEffect(() => {
     if (fontsLoaded) {

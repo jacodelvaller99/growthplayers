@@ -25,8 +25,8 @@ function todayLabel() {
 }
 
 export default function CheckInScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { todayCheckIn, saveCheckIn } = useLifeFlow();
   const [energy, setEnergy] = useState(todayCheckIn?.energy ?? 7);
   const [clarity, setClarity] = useState(todayCheckIn?.clarity ?? 7);
