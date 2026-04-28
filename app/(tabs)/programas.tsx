@@ -16,6 +16,7 @@ import {
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 function statusTone(status: string) {
   if (status === 'active') return 'gold' as const;
@@ -33,6 +34,7 @@ function statusLabel(status: string) {
 export default function ProgramasScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { state } = useLifeFlow();
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -40,8 +42,12 @@ export default function ProgramasScreen() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const completedLessons = state.completedLessons ?? [];
   const completedCount = POLARIS_MODULES.filter((m) => m.status === 'completed').length;
   const totalLessons = POLARIS_MODULES.reduce((acc, m) => acc + m.lessons.length, 0);
+  const overallProgress = totalLessons > 0
+    ? Math.round((completedLessons.length / totalLessons) * 100)
+    : 0;
 
   return (
     <View style={styles.root}>
@@ -81,7 +87,11 @@ export default function ProgramasScreen() {
           </View>
         </PremiumCard>
 
-        <ProgressCard label="Avance total del protocolo" value="62%" progress={62} />
+        <ProgressCard
+          label="Avance total del protocolo"
+          value={`${overallProgress}% · ${completedLessons.length}/${totalLessons} lecciones`}
+          progress={overallProgress}
+        />
 
         {/* ── Module List ── */}
         <GoldDivider label="MODULOS" />
@@ -89,6 +99,10 @@ export default function ProgramasScreen() {
           {POLARIS_MODULES.map((module) => {
             const isActive = module.status === 'active';
             const isComingSoon = module.status === 'coming_soon';
+            const moduleDone = module.lessons.filter((l) => completedLessons.includes(l.id)).length;
+            const moduleProgress = module.lessons.length > 0
+              ? Math.round((moduleDone / module.lessons.length) * 100)
+              : 0;
             return (
               <View key={module.id}>
                 <Pressable
@@ -125,9 +139,9 @@ export default function ProgramasScreen() {
                         {!isComingSoon && (
                           <View style={styles.progressWrap}>
                             <View style={styles.progressTrack}>
-                              <View style={[styles.progressFill, { width: `${module.progress}%` }]} />
+                              <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
                             </View>
-                            <Text style={styles.progressPct}>{module.progress}%</Text>
+                            <Text style={styles.progressPct}>{moduleProgress}%</Text>
                           </View>
                         )}
                         <MaterialIcons

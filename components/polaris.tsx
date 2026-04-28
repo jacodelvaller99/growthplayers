@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import type React from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -223,6 +224,30 @@ export function WeeklySparkline({
   values: number[];
   color?: string;
 }) {
+  // ── Web fallback — @shopify/react-native-skia doesn't run in browsers ────────
+  if (Platform.OS === 'web') {
+    const max = Math.max(...values, 1);
+    return (
+      <View style={styles.sparklineBlock}>
+        <Text style={styles.sparklineLabel}>{label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: SPARKLINE_H, gap: 4 }}>
+          {values.map((v, i) => (
+            <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+              <View style={{
+                width: '100%',
+                height: Math.max(4, Math.round((v / max) * (SPARKLINE_H - 8))),
+                backgroundColor: color,
+                borderRadius: 2,
+                opacity: 0.85,
+              }} />
+              <Text style={[styles.sparklineDay, { textAlign: 'center' }]}>{DAY_LABELS[i % 7]}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
   const { width: screenWidth } = useWindowDimensions();
   const canvasW = Math.min(screenWidth - 72, 366);
   const H       = SPARKLINE_H;

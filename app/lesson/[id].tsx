@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import Animated, {
   interpolateColor,
@@ -227,6 +227,8 @@ export default function LessonScreen() {
   const headerLabel = `MÓDULO ${String(mod.order).padStart(2, '0')} · LECCIÓN ${String(lessonIndex + 1).padStart(2, '0')}`;
 
   return (
+    <>
+      <Stack.Screen options={{ title: lesson.title }} />
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -343,6 +345,7 @@ export default function LessonScreen() {
 
       </ScrollView>
     </KeyboardAvoidingView>
+    </>
   );
 }
 
