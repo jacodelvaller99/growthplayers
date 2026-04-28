@@ -260,3 +260,122 @@ EXPO_PUBLIC_OPENAI_KEY=sk-...
 REVENUE_CAT_API_KEY=...
 ```
 Al configurar estas variables el dev bypass se desactiva automáticamente.
+
+---
+
+#### [28 Abril 2026] — OPERACIÓN LIFEFLOW COMPLETA (Sesiones 6–8)
+
+**Objetivo:** Método Polaris completo en app — 26 lecciones, Skool URLs, WebView, sistema de tareas, Mentor IA entrenado, Supabase 5 tablas.
+
+---
+
+### Arquitectura final — Stack de datos
+
+| Capa | Tecnología | Uso |
+|---|---|---|
+| Local primario | expo-secure-store (`writeLocal`/`readLocal`) | Offline-first, estado en tiempo real |
+| Remoto backup | Supabase PostgreSQL | Sync, multi-device, analytics |
+| Auth | Supabase Auth (email + anon) | Sesión persistida en SecureStore |
+| Video | react-native-webview → Skool URL | Lecciones embebidas |
+
+---
+
+### Schema Supabase — 5 tablas ✅ LIVE
+
+```sql
+user_profiles       — perfil + norte + sovereign_score + streak + tier
+daily_checkins      — energy/clarity/stress/sleep por fecha (UNIQUE user_id+date)
+lesson_tasks        — respuestas a tareas por lección (UNIQUE user_id+lesson_id)
+completed_lessons   — registro de lecciones completadas
+mentor_messages     — historial conversación IA (role: 'user'|'assistant')
+```
+
+**View:** `user_progress` — agrega perfil + lecciones + tareas + último check-in.
+**RLS:** habilitado en las 5 tablas. Políticas `auth.uid() = user_id`.
+**Triggers:** `handle_new_user()` (auto-crea perfil al registrarse), `handle_updated_at()` (updated_at automático).
+**Migración:** `supabase/migrations/20260428155503_lifeflow_complete_schema.sql` — aplicada vía SQL Editor ✅
+
+---
+
+### Módulos Polaris — estructura final
+
+| # | ID | Título | Lecciones | Status |
+|---|---|---|---|---|
+| 0 | onboarding | Onboarding | 7 | active |
+| 1 | guerrero-mentalidad | El Guerrero: Mentalidad | 7 (Skool URLs ✅) | active |
+| 2 | emociones-autoconocimiento | Emociones y Autoconocimiento | 4 | locked |
+| 3 | maduracion-guerrero | Maduración del Guerrero | 5 | locked |
+| 4 | pontifice-flow | El Pontífice y el Flow | 4 | locked |
+| 5–9 + sesiones | varios | Módulos avanzados + Sesiones Semanales | — | coming_soon |
+
+**Skool URLs:** Módulo 1 tiene todas las URLs cargadas. Módulos 2–4 sin URL (coming soon individual). Módulos 5–9 con URL de módulo general.
+
+---
+
+### Sistema de Tareas por Lección ✅
+
+- **12 tareas** en `data/tasks.ts` cubriendo módulos 1–7
+- Pantalla `app/lesson/[id].tsx`: WebView + formulario de tarea + guardar/completar flow
+- `saveLessonTask(lessonId, responses)` → local + Supabase `lesson_tasks`
+- `markLessonComplete(lessonId)` → local + Supabase `completed_lessons`
+- Estado de lección derivado dinámicamente de `completedLessons[]`
+
+---
+
+### Mentor IA — contexto completo ✅
+
+```typescript
+MentorContext {
+  userName, role, totalDays, streak, sovereignScore, tier,
+  activeModuleTitle, activeModuleProgress,
+  northStar: { purpose, identity, nonNegotiables, dailyReminder },
+  todayCheckIn,       // energy/clarity/stress/sleep del día
+  messageCount,
+  completedTasks[]    // lessonId + lessonTitle + keyResponse
+}
+```
+
+- System prompt: 9 módulos del Método Polaris + 6 reglas de comportamiento
+- Providers: NVIDIA (deepseek-ai/deepseek-v4-pro) primario, Groq (Qwen3-32b) fallback
+- `saveMentorMessage('user'|'assistant', content)` persiste cada mensaje en Supabase
+
+---
+
+### Persistencia en `hooks/use-lifeflow.tsx`
+
+| Función | Local | Supabase |
+|---|---|---|
+| `completeOnboarding` | `writeLocal` | `db.profiles().upsert()` |
+| `saveCheckIn` | `writeLocal` | `db.checkins().upsert()` + actualiza `sovereign_score/streak/total_days` en profiles |
+| `saveLessonTask` | `writeLocal` | `db.tasks().upsert()` |
+| `markLessonComplete` | `writeLocal` | `db.completed().upsert()` |
+| `saveMentorMessage` | — | `db.messages().insert()` |
+| `loadUserData(uid)` | `readLocal` (seed) | carga las 5 tablas al login |
+
+---
+
+### Estado del día — 28 Abril 2026
+
+| Ítem | Estado |
+|---|---|
+| Método Polaris completo en app (9 módulos) | ✅ |
+| 26 lecciones con estructura real | ✅ |
+| Skool URLs Módulo 1 cargadas | ✅ |
+| WebView videos con loading/error states | ✅ |
+| Sistema de tareas por lección (12 tareas) | ✅ |
+| Mentor IA entrenado al 100% con Polaris | ✅ |
+| Schema Supabase 5 tablas + RLS + triggers | ✅ LIVE |
+| TypeScript typed client + db.* helpers | ✅ |
+| Full data persistence (local-first + Supabase) | ✅ |
+| tsc --noEmit | ✅ 0 errores |
+| npm test | ✅ 34/34 |
+| TestFlight piloto | 🔴 siguiente sesión |
+
+---
+
+### Siguiente sesión — TestFlight
+
+1. `eas build --platform ios --profile preview` → IPA para piloto
+2. Subir a TestFlight + invitar testers internos
+3. Conectar Skool URLs Módulos 2–4 cuando estén listos
+4. Activar módulos 2–4 (`status: 'locked'` → `'active'`) según avance del piloto
