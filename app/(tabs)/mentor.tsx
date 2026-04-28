@@ -166,7 +166,7 @@ export default function MentorScreen() {
         northStar:            state.northStar,
         todayCheckIn,
         messageCount:         userMsgCount,
-        completedTasks:       Object.values(state.completedTasks).map((t) => ({
+        completedTasks:       Object.values(state.completedTasks ?? {}).map((t) => ({
           lessonId:    t.lessonId,
           lessonTitle: t.title,
           keyResponse: t.responses ? Object.values(t.responses)[0] : undefined,

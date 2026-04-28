@@ -118,6 +118,18 @@ function mentorReply(text: string, state: LifeFlowState, latest: CheckIn | null)
   return 'Estado util para ejecucion. Mantente en modo mercader: protege atencion, convierte tiempo en avance visible.';
 }
 
+// ─── Migrate persisted state → ensure all fields exist ───────────────────────
+function migrateState(loaded: Partial<LifeFlowState>): LifeFlowState {
+  return {
+    ...defaultState,
+    ...loaded,
+    completedLessons: loaded.completedLessons ?? [],
+    completedTasks:   loaded.completedTasks   ?? {},
+    checkIns:         loaded.checkIns         ?? [],
+    mentorMessages:   loaded.mentorMessages   ?? defaultState.mentorMessages,
+  };
+}
+
 // ─── Load all user data from Supabase ────────────────────────────────────────
 async function loadUserData(uid: string): Promise<LifeFlowState | null> {
   const [
@@ -274,12 +286,13 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
 
         const local = await readLocal<LifeFlowState>(STATE_KEY);
         if (local) {
-          if (mounted) setState(local);
-          migrateLocalToSupabase(uid, local).catch(console.error);
+          const safe = migrateState(local);
+          if (mounted) setState(safe);
+          migrateLocalToSupabase(uid, safe).catch(console.error);
         }
       } else {
         const local = await readLocal<LifeFlowState>(STATE_KEY);
-        if (local && mounted) setState(local);
+        if (local && mounted) setState(migrateState(local));
       }
 
       if (mounted) setIsLoaded(true);
@@ -288,7 +301,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     init().catch(async (err) => {
       console.error('[LifeFlow] init error:', err);
       const local = await readLocal<LifeFlowState>(STATE_KEY);
-      if (local && mounted) setState(local);
+      if (local && mounted) setState(migrateState(local));
       if (mounted) setIsLoaded(true);
     });
 

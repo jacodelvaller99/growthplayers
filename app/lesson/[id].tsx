@@ -204,8 +204,8 @@ export default function LessonScreen() {
 
   const meta = useMemo(() => findLessonMeta(lessonId), [lessonId]);
   const task = LESSON_TASKS[lessonId] ?? null;
-  const savedTask = state.completedTasks[lessonId] ?? null;
-  const isLessonCompleted = state.completedLessons.includes(lessonId);
+  const savedTask = (state.completedTasks ?? {})[lessonId] ?? null;
+  const isLessonCompleted = (state.completedLessons ?? []).includes(lessonId);
 
   const [responses, setResponses] = useState<Record<string, string>>(
     savedTask?.responses ?? {},

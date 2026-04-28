@@ -444,13 +444,13 @@ export function DangerButton({ label, icon, onPress }: { label: string; icon?: I
 
 // ─── Premium Input ───────────────────────────────────────────────────────────
 
-export function PremiumInput(props: TextInputProps) {
+export function PremiumInput({ style, ...rest }: TextInputProps) {
   return (
     <TextInput
       placeholderTextColor={palette.smoke}
-      style={[styles.input, props.style]}
+      style={[styles.input, style]}
       selectionColor={palette.gold}
-      {...props}
+      {...rest}
     />
   );
 }

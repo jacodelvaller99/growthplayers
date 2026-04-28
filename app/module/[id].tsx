@@ -52,13 +52,18 @@ export default function ModuleDetailScreen() {
   const { state } = useLifeFlow();
   const module = POLARIS_MODULES.find((item) => item.id === id) ?? POLARIS_MODULES[0];
 
+  const completedLessons = state.completedLessons ?? [];
+
   const lessonsWithStatus = module.lessons.map((lesson, idx) => ({
     ...lesson,
-    status: deriveLessonStatus(lesson.id, idx, module.lessons, state.completedLessons),
+    status: deriveLessonStatus(lesson.id, idx, module.lessons, completedLessons),
   }));
 
   const activeLesson = lessonsWithStatus.find((l) => l.status === 'active') ?? lessonsWithStatus[0];
   const completedCount = lessonsWithStatus.filter((l) => l.status === 'completed').length;
+  const dynamicProgress = module.lessons.length > 0
+    ? Math.round((completedCount / module.lessons.length) * 100)
+    : 0;
 
   return (
     <ScrollView
@@ -106,7 +111,7 @@ export default function ModuleDetailScreen() {
           </View>
           <View style={styles.heroStatDivider} />
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatNum}>{module.progress}%</Text>
+            <Text style={styles.heroStatNum}>{dynamicProgress}%</Text>
             <Text style={styles.heroStatLabel}>AVANCE</Text>
           </View>
         </View>
@@ -114,8 +119,8 @@ export default function ModuleDetailScreen() {
 
       <ProgressCard
         label="Progreso del modulo"
-        value={`${module.progress}%`}
-        progress={module.progress}
+        value={`${dynamicProgress}%`}
+        progress={dynamicProgress}
       />
 
       {/* ── Lesson List ── */}
