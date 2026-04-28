@@ -203,7 +203,7 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────────────────── STEP 3 — MI NORTE ── */}
       {step === 3 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label={`PASO 3 DE 4 · MODULO ${POLARIS_MODULES[5].number}`} tone="gold" dot />
+          <StatusPill label={`PASO 3 DE 4 · MODULO ${POLARIS_MODULES[5].order}`} tone="gold" dot />
           <Text style={styles.stepTitle}>DEFINE TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
             Estas declaraciones guian al mentor y anclan tu protocolo diario. Puedes editarlas en cualquier momento.

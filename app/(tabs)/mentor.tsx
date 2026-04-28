@@ -27,7 +27,31 @@ import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
-import type { MentorMessage } from '@/types/lifeflow';
+import type { CheckIn, MentorMessage } from '@/types/lifeflow';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function computeStreak(checkIns: CheckIn[]): number {
+  if (!checkIns.length) return 0;
+  const sorted = [...checkIns].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let streak = 0;
+  let cursor = new Date(today);
+  for (const ci of sorted) {
+    const d = new Date(ci.date);
+    d.setHours(0, 0, 0, 0);
+    if (d.getTime() === cursor.getTime()) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else if (d.getTime() < cursor.getTime()) {
+      break;
+    }
+  }
+  return streak;
+}
 
 // ─── Prompt shortcuts ─────────────────────────────────────────────────────────
 const QUICK_PROMPTS = [
@@ -62,8 +86,10 @@ export default function MentorScreen() {
     state,
     todayCheckIn,
     protocolDay,
+    averages,
     isSubscribed,
     addMentorMessages,
+    saveMentorMessage,
   } = useLifeFlow();
 
   const [input, setInput]               = useState('');
@@ -118,13 +144,33 @@ export default function MentorScreen() {
     scrollToBottom();
 
     try {
+      const streak = computeStreak(state.checkIns);
+      const sovereignScore = Math.round(
+        (averages.energy + averages.clarity + (10 - averages.stress) + averages.sleep) / 4 * 100,
+      );
+      const tier =
+        sovereignScore >= 750 ? 'Maestro'
+        : sovereignScore >= 500 ? 'Soberano'
+        : sovereignScore >= 200 ? 'Mercader'
+        : 'Explorador';
+
       const ctx: MentorContext = {
-        name:         state.profile.name,
-        role:         state.profile.role,
-        protocolDay,
-        northStar:    state.northStar,
+        userName:             state.profile.name,
+        role:                 state.profile.role,
+        totalDays:            protocolDay,
+        streak,
+        sovereignScore,
+        tier,
+        activeModuleTitle:    ACTIVE_MODULE.title,
+        activeModuleProgress: ACTIVE_MODULE.progress,
+        northStar:            state.northStar,
         todayCheckIn,
-        messageCount: userMsgCount,
+        messageCount:         userMsgCount,
+        completedTasks:       Object.values(state.completedTasks).map((t) => ({
+          lessonId:    t.lessonId,
+          lessonTitle: t.title,
+          keyResponse: t.responses ? Object.values(t.responses)[0] : undefined,
+        })),
       };
 
       const history = state.mentorMessages.slice(-10).map((m) => ({
@@ -147,6 +193,8 @@ export default function MentorScreen() {
       };
 
       await addMentorMessages(userMsg, mentorMsg);
+      await saveMentorMessage('user', clean);
+      await saveMentorMessage('assistant', fullText || '…');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err) {
       console.error('[Mentor] streaming error:', err);
@@ -189,7 +237,7 @@ export default function MentorScreen() {
 
         {/* ── Operative Context ── */}
         <PremiumCard style={styles.contextCard}>
-          <StatusPill label={`MODULO ${ACTIVE_MODULE.number} · ${ACTIVE_MODULE.title}`} />
+          <StatusPill label={`MODULO ${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title}`} />
           <Text style={styles.contextTitle}>CONTEXTO OPERATIVO</Text>
           {todayCheckIn ? (
             <View style={styles.metricsRow}>

@@ -84,7 +84,7 @@ export default function DashboardScreen() {
         />
         <MetricCard
           label="Modulo"
-          value={`0${ACTIVE_MODULE.number}`}
+          value={`0${ACTIVE_MODULE.order}`}
           meta={ACTIVE_MODULE.title.split(' ')[0].toLowerCase()}
           icon="view-module"
         />
@@ -120,7 +120,7 @@ export default function DashboardScreen() {
       {/* ── Protocolo del dia ── */}
       <GoldDivider label="HOY EN TU PROTOCOLO" />
       <PremiumCard style={styles.protocolCard}>
-        <StatusPill label={`MODULO ${ACTIVE_MODULE.number} · ACTIVO`} />
+        <StatusPill label={`MODULO ${ACTIVE_MODULE.order} · ACTIVO`} />
         <Text style={styles.protocolTitle}>{ACTIVE_MODULE.title}</Text>
         <Text style={styles.protocolBody}>
           Proxima accion: completa la leccion activa y ejecuta un bloque mercader de 90 minutos

@@ -108,7 +108,7 @@ export default function ProgresoScreen() {
             </View>
             <View style={styles.heroBadge}>
               <MaterialIcons name="view-module" size={11} color={palette.gold} />
-              <Text style={styles.heroBadgeText}>MODULO {ACTIVE_MODULE.number}</Text>
+              <Text style={styles.heroBadgeText}>MODULO {ACTIVE_MODULE.order}</Text>
             </View>
           </View>
         </View>
@@ -206,7 +206,7 @@ export default function ProgresoScreen() {
           <Text style={styles.systemLabel}>PROGRAMA ACTIVO</Text>
           <Text style={styles.systemValue}>Protocolo Soberano</Text>
           <Text style={styles.systemMeta}>
-            Modulo {ACTIVE_MODULE.number} — {ACTIVE_MODULE.title}
+            Modulo {ACTIVE_MODULE.order} — {ACTIVE_MODULE.title}
           </Text>
         </View>
         <SecondaryButton

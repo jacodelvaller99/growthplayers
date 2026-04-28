@@ -1,21 +1,26 @@
-export type LessonStatus = 'completed' | 'active' | 'locked';
-export type ModuleStatus = 'completed' | 'active' | 'locked';
+export type LessonStatus = 'completed' | 'active' | 'locked' | 'available';
+export type ModuleStatus = 'completed' | 'active' | 'locked' | 'coming_soon';
 
 export type Lesson = {
   id: string;
+  order: number;
   title: string;
-  duration: string;
+  duration?: string;
   status: LessonStatus;
+  skoolUrl?: string;
 };
 
 export type PolarisModule = {
   id: string;
-  number: number;
+  order: number;
   title: string;
   subtitle: string;
+  arquetipo?: string | null;
+  semana?: number | null;
   status: ModuleStatus;
   progress: number;
   lessons: Lesson[];
+  skoolUrl?: string;
 };
 
 export type NorthStar = {
@@ -47,6 +52,25 @@ export type MentorMessage = {
   createdAt: string;
 };
 
+export interface TaskField {
+  id: string;
+  label: string;
+  type: 'textarea' | 'text' | 'checkbox' | 'scale' | 'multiline';
+  placeholder?: string;
+  required: boolean;
+}
+
+export interface LessonTask {
+  id: string;
+  lessonId: string;
+  title: string;
+  description: string;
+  type: 'reflection' | 'exercise' | 'checklist' | 'writing' | 'action';
+  fields: TaskField[];
+  completedAt?: string;
+  responses?: Record<string, string>;
+}
+
 export type LifeFlowState = {
   onboardingCompleted: boolean;
   protocolStartDate: string;
@@ -56,4 +80,6 @@ export type LifeFlowState = {
   northStar: NorthStar;
   checkIns: CheckIn[];
   mentorMessages: MentorMessage[];
+  completedLessons: string[];
+  completedTasks: Record<string, LessonTask>;
 };

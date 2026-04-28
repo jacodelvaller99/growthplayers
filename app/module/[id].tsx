@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 function lessonIcon(status: string) {
   if (status === 'completed') return 'check-circle' as const;
@@ -28,13 +29,36 @@ function lessonIconColor(status: string) {
   return palette.smoke;
 }
 
+function deriveLessonStatus(
+  lessonId: string,
+  lessonIndex: number,
+  allLessons: { id: string; status: string }[],
+  completedLessons: string[],
+): 'completed' | 'active' | 'locked' {
+  if (completedLessons.includes(lessonId)) return 'completed';
+  // active if first lesson or previous is completed
+  if (lessonIndex === 0) return 'active';
+  const prevId = allLessons[lessonIndex - 1].id;
+  if (completedLessons.includes(prevId) || allLessons[lessonIndex - 1].status === 'completed') {
+    return 'active';
+  }
+  return 'locked';
+}
+
 export default function ModuleDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { state } = useLifeFlow();
   const module = POLARIS_MODULES.find((item) => item.id === id) ?? POLARIS_MODULES[0];
-  const activeLesson = module.lessons.find((lesson) => lesson.status === 'active') ?? module.lessons[0];
-  const completedLessons = module.lessons.filter((l) => l.status === 'completed').length;
+
+  const lessonsWithStatus = module.lessons.map((lesson, idx) => ({
+    ...lesson,
+    status: deriveLessonStatus(lesson.id, idx, module.lessons, state.completedLessons),
+  }));
+
+  const activeLesson = lessonsWithStatus.find((l) => l.status === 'active') ?? lessonsWithStatus[0];
+  const completedCount = lessonsWithStatus.filter((l) => l.status === 'completed').length;
 
   return (
     <ScrollView
@@ -44,7 +68,7 @@ export default function ModuleDetailScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      <AppHeader title={`MODULO 0${module.number}`} />
+      <AppHeader title={`MODULO ${String(module.order).padStart(2, '0')}`} />
 
       {/* ── Module Hero ── */}
       <PremiumCard style={styles.hero}>
@@ -66,13 +90,13 @@ export default function ModuleDetailScreen() {
             }
             dot={module.status === 'active'}
           />
-          <Text style={styles.heroNumber}>0{module.number}</Text>
+          <Text style={styles.heroNumber}>{String(module.order).padStart(2, '0')}</Text>
         </View>
         <Text style={styles.heroTitle}>{module.title}</Text>
         <Text style={styles.heroBody}>{module.subtitle}</Text>
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatNum}>{completedLessons}</Text>
+            <Text style={styles.heroStatNum}>{completedCount}</Text>
             <Text style={styles.heroStatLabel}>COMPLETADAS</Text>
           </View>
           <View style={styles.heroStatDivider} />
@@ -97,36 +121,46 @@ export default function ModuleDetailScreen() {
       {/* ── Lesson List ── */}
       <GoldDivider label="LECCIONES" />
       <View style={styles.lessons}>
-        {module.lessons.map((lesson, index) => {
+        {lessonsWithStatus.map((lesson, index) => {
           const isActive = lesson.status === 'active';
+          const isCompleted = lesson.status === 'completed';
+          const isNavigable = isActive || isCompleted;
           return (
-            <PremiumCard
+            <Pressable
               key={lesson.id}
-              style={[styles.lessonRow, isActive && styles.lessonRowActive]}>
-              <View style={styles.lessonIconWrap}>
-                <MaterialIcons
-                  name={lessonIcon(lesson.status)}
-                  color={lessonIconColor(lesson.status)}
-                  size={20}
-                />
-              </View>
-              <View style={styles.lessonCopy}>
-                <Text style={[styles.lessonIndex, isActive && styles.lessonIndexActive]}>
-                  LECCION {String(index + 1).padStart(2, '0')}
-                </Text>
-                <Text style={[styles.lessonTitle, isActive && styles.lessonTitleActive]}>
-                  {lesson.title}
-                </Text>
-                <Text style={[styles.lessonMeta, isActive && styles.lessonMetaActive]}>
-                  {lesson.duration}
-                </Text>
-              </View>
-              {isActive && (
-                <View style={styles.activeIndicator}>
-                  <MaterialIcons name="chevron-right" size={18} color={palette.black} />
+              disabled={!isNavigable}
+              onPress={() => router.push(`/lesson/${lesson.id}` as never)}>
+              <PremiumCard
+                style={[styles.lessonRow, isActive && styles.lessonRowActive]}>
+                <View style={styles.lessonIconWrap}>
+                  <MaterialIcons
+                    name={lessonIcon(lesson.status)}
+                    color={lessonIconColor(lesson.status)}
+                    size={20}
+                  />
                 </View>
-              )}
-            </PremiumCard>
+                <View style={styles.lessonCopy}>
+                  <Text style={[styles.lessonIndex, isActive && styles.lessonIndexActive]}>
+                    LECCION {String(index + 1).padStart(2, '0')}
+                  </Text>
+                  <Text style={[styles.lessonTitle, isActive && styles.lessonTitleActive]}>
+                    {lesson.title}
+                  </Text>
+                  <Text style={[styles.lessonMeta, isActive && styles.lessonMetaActive]}>
+                    {lesson.duration}
+                  </Text>
+                </View>
+                {isNavigable && (
+                  <View style={styles.activeIndicator}>
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={18}
+                      color={isActive ? palette.black : palette.ash}
+                    />
+                  </View>
+                )}
+              </PremiumCard>
+            </Pressable>
           );
         })}
       </View>
@@ -134,6 +168,7 @@ export default function ModuleDetailScreen() {
       <PrimaryButton
         label={`CONTINUAR: ${activeLesson.title.toUpperCase()}`}
         icon="play-arrow"
+        onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
       />
       <SecondaryButton label="VOLVER" icon="arrow-back" onPress={() => router.back()} />
     </ScrollView>

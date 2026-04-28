@@ -395,13 +395,17 @@ export function ProgressCard({
 
 // ─── Primary Button ──────────────────────────────────────────────────────────
 
-export function PrimaryButton({ label, icon, onPress }: { label: string; icon?: IconName; onPress?: () => void }) {
+export function PrimaryButton({ label, icon, onPress, disabled }: { label: string; icon?: IconName; onPress?: () => void; disabled?: boolean }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] }]}>
+      onPress={disabled ? undefined : onPress}
+      style={({ pressed }) => [
+        styles.primaryButton,
+        disabled && { opacity: 0.4 },
+        !disabled && pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
+      ]}>
       <Text style={styles.primaryButtonText}>{label}</Text>
       {icon ? <MaterialIcons name={icon} color={palette.black} size={18} /> : null}
     </Pressable>

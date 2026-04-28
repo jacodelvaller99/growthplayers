@@ -34,9 +34,14 @@ jest.mock('@/lib/openai', () => ({ streamOpenAI: (...args: any[]) => mockStreamO
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const baseCtx: MentorContext = {
-  name: 'Juan Carlos',
+  userName: 'Juan Carlos',
   role: 'Empresario',
-  protocolDay: 7,
+  totalDays: 7,
+  streak: 3,
+  sovereignScore: 650,
+  tier: 'Soberano',
+  activeModuleTitle: 'Mercader: Gestión del Tiempo',
+  activeModuleProgress: 25,
   northStar: {
     purpose: 'Construir una vida soberana',
     identity: 'Empresario soberano',
@@ -53,7 +58,7 @@ describe('buildSystemPrompt', () => {
   it('includes operator name and protocol day', () => {
     const prompt = buildSystemPrompt(baseCtx);
     expect(prompt).toContain('Juan Carlos');
-    expect(prompt).toContain('7/90');
+    expect(prompt).toContain('7 días juntos');
   });
 
   it('includes north star purpose', () => {
@@ -63,7 +68,7 @@ describe('buildSystemPrompt', () => {
 
   it('uses fallback message when no check-in available', () => {
     const prompt = buildSystemPrompt({ ...baseCtx, todayCheckIn: null });
-    expect(prompt).toContain('Sin check-in registrado hoy');
+    expect(prompt).toContain('No registrado hoy');
   });
 
   it('injects check-in biometrics when available', () => {
@@ -79,8 +84,8 @@ describe('buildSystemPrompt', () => {
         systemNeed: 'Mas foco',
       },
     });
-    expect(prompt).toContain('Energía 8/10');
-    expect(prompt).toContain('Estrés 3/10');
+    expect(prompt).toContain('Energía: 8/10');
+    expect(prompt).toContain('Estrés: 3/10');
     expect(prompt).toContain('Mas foco');
   });
 });
