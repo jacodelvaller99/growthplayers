@@ -276,7 +276,8 @@ Al configurar estas variables el dev bypass se desactiva automáticamente.
 | Local primario | expo-secure-store (`writeLocal`/`readLocal`) | Offline-first, estado en tiempo real |
 | Remoto backup | Supabase PostgreSQL | Sync, multi-device, analytics |
 | Auth | Supabase Auth (email + anon) | Sesión persistida en SecureStore |
-| Video | react-native-webview → Skool URL | Lecciones embebidas |
+| Video web | Vimeo iframe embed directo (`player.vimeo.com/video/{id}`) | Reproducción sin salir de la app |
+| Video nativo | react-native-webview → Vimeo embed URL | Reproducción embebida iOS/Android |
 
 ---
 
@@ -308,7 +309,14 @@ mentor_messages     — historial conversación IA (role: 'user'|'assistant')
 | 4 | pontifice-flow | El Pontífice y el Flow | 4 | locked |
 | 5–9 + sesiones | varios | Módulos avanzados + Sesiones Semanales | — | coming_soon |
 
-**Skool URLs:** Módulo 1 tiene todas las URLs cargadas. Módulos 2–4 sin URL (coming soon individual). Módulos 5–9 con URL de módulo general.
+**Skool URLs + Vimeo IDs:** Todos los módulos 0–4 tienen skoolUrl + vimeoId cargados (27 lecciones). Módulos 5–9 con URL de módulo general (coming_soon). Los videos se embeben directamente via iframe Vimeo en web y WebView en nativo.
+
+**Vimeo IDs por módulo:**
+- Onboarding (ob-1→ob-7): 1085827630, 1085834569, 1088268193, 1088267512, 1117193173, 1110043409, 1109082325
+- Módulo 1 (m1-1→m1-7): 1088923347, 1088926583, 1088935041, 1088929514, 1088936319, 1088937516, 1117104560
+- Módulo 2 (m2-1→m2-4): 1097988685, 1097992012, 1097994417, 1097996259
+- Módulo 3 (m3-1→m3-5): 1085877501, 1085877661, 1085877756, 1085877856, 1101667335
+- Módulo 4 (m4-1→m4-4): 1097998980, 1098000497, 1097999810, 1097999601
 
 ---
 
@@ -354,22 +362,61 @@ MentorContext {
 
 ---
 
-### Estado del día — 28 Abril 2026
+### Estado del día — 28 Abril 2026 (Sesiones 6–9)
 
 | Ítem | Estado |
 |---|---|
 | Método Polaris completo en app (9 módulos) | ✅ |
-| 26 lecciones con estructura real | ✅ |
-| Skool URLs Módulo 1 cargadas | ✅ |
-| WebView videos con loading/error states | ✅ |
+| 27 lecciones con estructura real (Onboarding + M1-4) | ✅ |
+| Skool URLs + Vimeo IDs todos los módulos activos | ✅ |
+| Videos embebidos directamente (Vimeo iframe web, WebView nativo) | ✅ LIVE |
 | Sistema de tareas por lección (12 tareas) | ✅ |
 | Mentor IA entrenado al 100% con Polaris | ✅ |
+| Mentor IA con NVIDIA DeepSeek V4 Pro + Groq Qwen3-32b | ✅ LIVE |
+| API Keys NVIDIA + Groq configuradas en Vercel | ✅ |
 | Schema Supabase 5 tablas + RLS + triggers | ✅ LIVE |
 | TypeScript typed client + db.* helpers | ✅ |
 | Full data persistence (local-first + Supabase) | ✅ |
+| migrateState() — garantiza defaults en estado legacy | ✅ |
+| Bug: browser title dinámico en lección | ✅ |
+| Bug: progreso calculado dinámicamente | ✅ |
+| Bug: WeeklySparkline web fallback (Skia no soporta web) | ✅ |
+| Bug: PremiumInput style spread fix | ✅ |
 | tsc --noEmit | ✅ 0 errores |
 | npm test | ✅ 34/34 |
 | TestFlight piloto | 🔴 siguiente sesión |
+
+---
+
+### Mentor IA — API Keys en Producción
+
+```
+EXPO_PUBLIC_NVIDIA_API_KEY=nvapi-...  (Vercel ✅)
+EXPO_PUBLIC_GROQ_API_KEY=gsk_...      (Vercel ✅)
+```
+
+Proveedor activo: **NVIDIA DeepSeek V4 Pro** (primario) → **Groq Qwen3-32b** (fallback)
+Verificado en vivo: responde con tono Método Polaris, streaming palabra a palabra ✅
+
+---
+
+### Videos — Arquitectura Vimeo
+
+```
+components/SkoolVideo.tsx
+  props: url? (Skool), vimeoId? (Vimeo), height?
+
+  Platform.OS === 'web' + vimeoId:
+    → <iframe src="player.vimeo.com/video/{id}" allowFullScreen />
+
+  Platform.OS === 'web' sin vimeoId:
+    → Botón "Ver en Skool →" (Linking.openURL)
+
+  Platform.OS !== 'web':
+    → <WebView source={{ uri: vimeoEmbedUrl ?? skoolUrl }} />
+```
+
+Skool usa Vimeo internamente. IDs extraídos con monitor de red en tiempo real.
 
 ---
 
@@ -377,5 +424,5 @@ MentorContext {
 
 1. `eas build --platform ios --profile preview` → IPA para piloto
 2. Subir a TestFlight + invitar testers internos
-3. Conectar Skool URLs Módulos 2–4 cuando estén listos
-4. Activar módulos 2–4 (`status: 'locked'` → `'active'`) según avance del piloto
+3. Activar módulos 2–4 (`status: 'locked'` → `'active'`) según avance del piloto
+4. Agregar Skool URLs para módulos 5–9 cuando publiquen el contenido
