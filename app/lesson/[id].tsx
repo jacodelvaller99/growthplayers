@@ -1,6 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import Animated, {
@@ -10,7 +9,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -21,41 +19,13 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
-
+import { SkoolVideo } from '@/components/SkoolVideo';
 import { GoldDivider, PrimaryButton, SecondaryButton, screen } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import type { TaskField } from '@/types/lifeflow';
-
-// ─── Video sub-components ─────────────────────────────────────────────────────
-
-function VideoErrorFallback({ url, onOpen }: { url: string; onOpen: () => void }) {
-  return (
-    <View style={styles.videoFallback}>
-      <Text style={styles.videoFallbackIcon}>▶</Text>
-      <Text style={styles.videoFallbackText}>
-        El video no pudo cargar aquí.{'\n'}Ábrelo directamente en Skool.
-      </Text>
-      <Pressable
-        onPress={onOpen}
-        style={({ pressed }) => [styles.videoFallbackBtn, pressed && { opacity: 0.8 }]}>
-        <Text style={styles.videoFallbackBtnText}>Ver en Skool →</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function VideoComingSoon() {
-  return (
-    <View style={styles.videoComingSoon}>
-      <Text style={styles.videoComingSoonIcon}>⏳</Text>
-      <Text style={styles.videoComingSoonText}>Video próximamente</Text>
-    </View>
-  );
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -212,8 +182,6 @@ export default function LessonScreen() {
   );
   const [taskSaved, setTaskSaved] = useState(!!savedTask);
   const [editing, setEditing] = useState(false);
-  const [videoError, setVideoError] = useState(false);
-  const [videoLoading, setVideoLoading] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
   const handleFieldChange = useCallback((id: string, value: string) => {
@@ -283,36 +251,12 @@ export default function LessonScreen() {
 
         {/* ── Video Section ── */}
         {lesson.skoolUrl ? (
-          <View style={styles.videoContainer}>
-            {videoLoading && (
-              <View style={styles.videoSkeleton}>
-                <ActivityIndicator color={palette.gold} size="large" />
-                <Text style={styles.videoLoadingText}>Cargando video...</Text>
-              </View>
-            )}
-            {!videoError ? (
-              <WebView
-                source={{ uri: lesson.skoolUrl }}
-                style={[styles.webview, videoLoading && { opacity: 0 }]}
-                allowsFullscreenVideo
-                mediaPlaybackRequiresUserAction={false}
-                javaScriptEnabled
-                domStorageEnabled
-                sharedCookiesEnabled
-                allowsInlineMediaPlayback
-                onLoad={() => setVideoLoading(false)}
-                onError={() => { setVideoError(true); setVideoLoading(false); }}
-                onHttpError={() => { setVideoError(true); setVideoLoading(false); }}
-              />
-            ) : (
-              <VideoErrorFallback
-                url={lesson.skoolUrl}
-                onOpen={() => Linking.openURL(lesson.skoolUrl!)}
-              />
-            )}
-          </View>
+          <SkoolVideo url={lesson.skoolUrl} height={220} />
         ) : (
-          <VideoComingSoon />
+          <View style={styles.videoComingSoon}>
+            <Text style={styles.videoComingSoonIcon}>⏳</Text>
+            <Text style={styles.videoComingSoonText}>Video próximamente</Text>
+          </View>
         )}
 
         {/* ── Lesson Info ── */}
@@ -432,59 +376,6 @@ const styles = StyleSheet.create({
   },
 
   // Video
-  videoContainer: {
-    backgroundColor: '#000',
-    borderRadius: radii.md,
-    height: 220,
-    overflow: 'hidden',
-  },
-  webview: {
-    backgroundColor: '#000',
-    flex: 1,
-  },
-  videoSkeleton: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    backgroundColor: '#111',
-    gap: 12,
-    justifyContent: 'center',
-  },
-  videoLoadingText: {
-    color: palette.smoke,
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-  },
-  videoFallback: {
-    alignItems: 'center',
-    backgroundColor: '#111',
-    flex: 1,
-    gap: 16,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  videoFallbackIcon: {
-    color: palette.gold,
-    fontSize: 28,
-  },
-  videoFallbackText: {
-    color: palette.ash,
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  videoFallbackBtn: {
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  videoFallbackBtnText: {
-    color: palette.black,
-    fontFamily: Fonts.display,
-    fontSize: 14,
-    fontWeight: '700',
-  },
   videoComingSoon: {
     alignItems: 'center',
     backgroundColor: '#111',
