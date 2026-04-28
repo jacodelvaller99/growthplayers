@@ -11,15 +11,40 @@ if (Platform.OS !== 'web') {
 }
 
 interface SkoolVideoProps {
-  url: string;
+  url?: string;
+  vimeoId?: string;
   height?: number;
 }
 
-export function SkoolVideo({ url, height = 220 }: SkoolVideoProps) {
+export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // ── WEB (Vercel) — iframe not allowed by Skool, show deep-link button ────────
+  const vimeoEmbedUrl = vimeoId
+    ? `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&autopause=0`
+    : null;
+
+  // ── WEB con Vimeo embed ──────────────────────────────────────────────────────
+  if (Platform.OS === 'web' && vimeoEmbedUrl) {
+    return (
+      <View style={[styles.container, { height }]}>
+        <iframe
+          src={vimeoEmbedUrl}
+          style={{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            borderRadius: radii.md,
+            backgroundColor: '#000',
+          }}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      </View>
+    );
+  }
+
+  // ── WEB sin Vimeo (fallback Skool link) ──────────────────────────────────────
   if (Platform.OS === 'web') {
     return (
       <View style={[styles.container, { height }]}>
@@ -29,11 +54,13 @@ export function SkoolVideo({ url, height = 220 }: SkoolVideoProps) {
           <Text style={styles.subtitle}>
             Los videos se reproducen en la app móvil o directamente en Skool.
           </Text>
-          <Pressable
-            onPress={() => Linking.openURL(url)}
-            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-            <Text style={styles.btnText}>Ver en Skool →</Text>
-          </Pressable>
+          {url && (
+            <Pressable
+              onPress={() => Linking.openURL(url)}
+              style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
+              <Text style={styles.btnText}>Ver en Skool →</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -46,17 +73,31 @@ export function SkoolVideo({ url, height = 220 }: SkoolVideoProps) {
         <View style={styles.fallback}>
           <Text style={styles.playIcon}>▶</Text>
           <Text style={styles.subtitle}>No se pudo cargar el video aquí.</Text>
-          <Pressable
-            onPress={() => Linking.openURL(url)}
-            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-            <Text style={styles.btnText}>Abrir en Skool →</Text>
-          </Pressable>
+          {url && (
+            <Pressable
+              onPress={() => Linking.openURL(url)}
+              style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
+              <Text style={styles.btnText}>Abrir en Skool →</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
   }
 
-  // ── NATIVO WebView ────────────────────────────────────────────────────────────
+  // ── NATIVO WebView (usa Vimeo embed si disponible, sino Skool URL) ─────────────
+  const nativeSource = vimeoEmbedUrl ?? url;
+  if (!nativeSource) {
+    return (
+      <View style={[styles.container, { height }]}>
+        <View style={styles.fallback}>
+          <Text style={styles.playIcon}>⏳</Text>
+          <Text style={styles.subtitle}>Video próximamente</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { height }]}>
       {loading && (
@@ -66,7 +107,7 @@ export function SkoolVideo({ url, height = 220 }: SkoolVideoProps) {
         </View>
       )}
       <WebView
-        source={{ uri: url }}
+        source={{ uri: nativeSource }}
         style={[styles.webview, loading && { opacity: 0 }]}
         allowsFullscreenVideo
         mediaPlaybackRequiresUserAction={false}

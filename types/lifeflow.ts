@@ -8,6 +8,7 @@ export type Lesson = {
   duration?: string;
   status: LessonStatus;
   skoolUrl?: string;
+  vimeoId?: string;
 };
 
 export type PolarisModule = {

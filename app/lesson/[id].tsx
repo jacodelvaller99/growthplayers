@@ -252,8 +252,8 @@ export default function LessonScreen() {
         </View>
 
         {/* ── Video Section ── */}
-        {lesson.skoolUrl ? (
-          <SkoolVideo url={lesson.skoolUrl} height={220} />
+        {(lesson.vimeoId || lesson.skoolUrl) ? (
+          <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} height={220} />
         ) : (
           <View style={styles.videoComingSoon}>
             <Text style={styles.videoComingSoonIcon}>⏳</Text>

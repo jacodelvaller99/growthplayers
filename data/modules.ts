@@ -13,13 +13,13 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'active',
     progress: 0,
     lessons: [
-      { id: 'ob-1', order: 1, title: 'InformACCIÓN', status: 'available' },
-      { id: 'ob-2', order: 2, title: 'Historia, Misión & Visión', status: 'available' },
-      { id: 'ob-3', order: 3, title: 'RoadMap', status: 'available' },
-      { id: 'ob-4', order: 4, title: 'Dashboard de Control de Tareas', status: 'available' },
-      { id: 'ob-5', order: 5, title: 'Funcionamiento de la comunidad', status: 'available' },
-      { id: 'ob-6', order: 6, title: 'Proceso de trabajo', status: 'available' },
-      { id: 'ob-7', order: 7, title: 'Cómo descargar y compartir el documento', status: 'available' },
+      { id: 'ob-1', order: 1, title: 'InformACCIÓN', status: 'available', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/36a2cd73?md=e9e3f1d119a64ddc83ff14e908610dba', vimeoId: '1085827630' },
+      { id: 'ob-2', order: 2, title: 'Historia, Misión & Visión', status: 'available', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/36a2cd73?md=2a1c86286d374c12933f086864923264', vimeoId: '1085834569' },
+      { id: 'ob-3', order: 3, title: 'RoadMap', status: 'available', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/36a2cd73?md=147e394f2a8f4eec91c012037b28a132', vimeoId: '1088268193' },
+      { id: 'ob-4', order: 4, title: 'Dashboard de Control de Tareas', status: 'available', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/36a2cd73?md=e9347ad2c2f34b0da64e7f856518e450', vimeoId: '1088267512' },
+      { id: 'ob-5', order: 5, title: 'Funcionamiento de la comunidad', status: 'available', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/36a2cd73?md=e9347ad2c2f34b0da64e7f856518e450', vimeoId: '1117193173' },
+      { id: 'ob-6', order: 6, title: 'Proceso de trabajo', status: 'available', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/36a2cd73?md=e9347ad2c2f34b0da64e7f856518e450', vimeoId: '1110043409' },
+      { id: 'ob-7', order: 7, title: 'Cómo descargar y compartir el documento', status: 'available', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/36a2cd73?md=e9347ad2c2f34b0da64e7f856518e450', vimeoId: '1109082325' },
     ],
   },
 
@@ -34,34 +34,13 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'active',
     progress: 0,
     lessons: [
-      {
-        id: 'm1-1', order: 1, title: 'Nunca es Suficiente', status: 'active',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=af471edf6938439c897c5a41805d3d84',
-      },
-      {
-        id: 'm1-2', order: 2, title: 'Resultados de Trabajar tu Mindset', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=089d7beb1b3b453684cba74da028919d',
-      },
-      {
-        id: 'm1-3', order: 3, title: 'Origen de una Creencia', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=f0e4f9aae07443f2b227c3afd62eeffa',
-      },
-      {
-        id: 'm1-4', order: 4, title: 'Detecta Tus Creencias', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=f488c00cf9b64c61877465375804277b',
-      },
-      {
-        id: 'm1-5', order: 5, title: 'Crea tu Nueva Identidad', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=4c74a831301a4a7ea46716d0daf7e008',
-      },
-      {
-        id: 'm1-6', order: 6, title: 'Integra tu Nueva Identidad', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=ac5c0a79eeae49cd804845a4ee07d4b8',
-      },
-      {
-        id: 'm1-7', order: 7, title: 'Recupera tu Inversión', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=7011f79a9f704bbe91b68ba2a5967703',
-      },
+      { id: 'm1-1', order: 1, title: 'Nunca es Suficiente', status: 'active', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=af471edf6938439c897c5a41805d3d84', vimeoId: '1088923347' },
+      { id: 'm1-2', order: 2, title: 'Resultados de Trabajar tu Mindset', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=089d7beb1b3b453684cba74da028919d', vimeoId: '1088926583' },
+      { id: 'm1-3', order: 3, title: 'Origen de una Creencia', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=f0e4f9aae07443f2b227c3afd62eeffa', vimeoId: '1088935041' },
+      { id: 'm1-4', order: 4, title: 'Detecta Tus Creencias', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=f488c00cf9b64c61877465375804277b', vimeoId: '1088929514' },
+      { id: 'm1-5', order: 5, title: 'Crea tu Nueva Identidad', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=4c74a831301a4a7ea46716d0daf7e008', vimeoId: '1088936319' },
+      { id: 'm1-6', order: 6, title: 'Integra tu Nueva Identidad', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=ac5c0a79eeae49cd804845a4ee07d4b8', vimeoId: '1088937516' },
+      { id: 'm1-7', order: 7, title: 'Recupera tu Inversión', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b67a0843?md=7011f79a9f704bbe91b68ba2a5967703', vimeoId: '1117104560' },
     ],
   },
 
@@ -76,22 +55,10 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'locked',
     progress: 0,
     lessons: [
-      {
-        id: 'm2-1', order: 1, title: 'Emociones', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=196d43b4cf094c1e9428366fa897d8a0',
-      },
-      {
-        id: 'm2-2', order: 2, title: 'Herramientas para subir la energía', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=492c405d134240899e62f4cef5f19905',
-      },
-      {
-        id: 'm2-3', order: 3, title: 'Escritura Terapéutica', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=5e0685267ea24bdc83bd4b8e89cd2b7d',
-      },
-      {
-        id: 'm2-4', order: 4, title: 'Escala de Consciencia', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=382efce8d76b44b09acaba22afb514b8',
-      },
+      { id: 'm2-1', order: 1, title: 'Emociones', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=196d43b4cf094c1e9428366fa897d8a0', vimeoId: '1097988685' },
+      { id: 'm2-2', order: 2, title: 'Herramientas para subir la energía', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=492c405d134240899e62f4cef5f19905', vimeoId: '1097992012' },
+      { id: 'm2-3', order: 3, title: 'Escritura Terapéutica', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=5e0685267ea24bdc83bd4b8e89cd2b7d', vimeoId: '1097994417' },
+      { id: 'm2-4', order: 4, title: 'Escala de Consciencia', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/27fd6303?md=382efce8d76b44b09acaba22afb514b8', vimeoId: '1097996259' },
     ],
   },
 
@@ -106,26 +73,11 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'locked',
     progress: 0,
     lessons: [
-      {
-        id: 'm3-1', order: 1, title: 'Sentido Propósito de Vida', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=d3041ef11b0349d0bd20938979a70c97',
-      },
-      {
-        id: 'm3-2', order: 2, title: 'HISAR - PERAS', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=10f7aa26393a41c69b461fce5e91161b',
-      },
-      {
-        id: 'm3-3', order: 3, title: 'Leyes Universales', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=e7e9a5c5dbed4b1b8092538ce04d8ce4',
-      },
-      {
-        id: 'm3-4', order: 4, title: 'Leyes Universales II', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=d8f10be096984139a3c389230993c080',
-      },
-      {
-        id: 'm3-5', order: 5, title: 'C.A.D.A.V.R.A.', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=274cdf77a7cc45eb858ce68df01e1afb',
-      },
+      { id: 'm3-1', order: 1, title: 'Sentido Propósito de Vida', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=d3041ef11b0349d0bd20938979a70c97', vimeoId: '1085877501' },
+      { id: 'm3-2', order: 2, title: 'HISAR - PERAS', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=10f7aa26393a41c69b461fce5e91161b', vimeoId: '1085877661' },
+      { id: 'm3-3', order: 3, title: 'Leyes Universales', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=e7e9a5c5dbed4b1b8092538ce04d8ce4', vimeoId: '1085877756' },
+      { id: 'm3-4', order: 4, title: 'Leyes Universales II', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=d8f10be096984139a3c389230993c080', vimeoId: '1085877856' },
+      { id: 'm3-5', order: 5, title: 'C.A.D.A.V.R.A.', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c82bdf1e?md=274cdf77a7cc45eb858ce68df01e1afb', vimeoId: '1101667335' },
     ],
   },
 
@@ -140,22 +92,10 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'locked',
     progress: 0,
     lessons: [
-      {
-        id: 'm4-1', order: 1, title: 'LifeFLOW', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=a1596b7c6d87493180508ca310d957ae',
-      },
-      {
-        id: 'm4-2', order: 2, title: 'La Ciencia detrás de la técnica', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=02eca7ebca7d48669bc1b2003460c870',
-      },
-      {
-        id: 'm4-3', order: 3, title: 'Coherencia Cardíaca', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=9138f57a60364e16814748483329ba4f',
-      },
-      {
-        id: 'm4-4', order: 4, title: 'Indicadores Subjetivos del Flow', status: 'locked',
-        skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=e87585b8124b4c4ab03a89e52559fec7',
-      },
+      { id: 'm4-1', order: 1, title: 'LifeFLOW', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=a1596b7c6d87493180508ca310d957ae', vimeoId: '1097998980' },
+      { id: 'm4-2', order: 2, title: 'La Ciencia detrás de la técnica', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=02eca7ebca7d48669bc1b2003460c870', vimeoId: '1098000497' },
+      { id: 'm4-3', order: 3, title: 'Coherencia Cardíaca', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=9138f57a60364e16814748483329ba4f', vimeoId: '1097999810' },
+      { id: 'm4-4', order: 4, title: 'Indicadores Subjetivos del Flow', status: 'locked', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/fa30fdf2?md=e87585b8124b4c4ab03a89e52559fec7', vimeoId: '1097999601' },
     ],
   },
 
