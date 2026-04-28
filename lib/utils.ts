@@ -17,37 +17,40 @@ export function calcProtocolDay(fromIso: string): number {
   return Math.min(diffDays(fromIso), 90);
 }
 
-// ─── Sovereign Score ──────────────────────────────────────────────────────────
+// ─── Sovereign Score v2 ───────────────────────────────────────────────────────
 
 export interface SovereignScoreInput {
   energy: number;
   clarity: number;
   stress: number;
-  checkIns: number;
+  sleep: number;
   streak: number;
+  completedLessons: number;
+  completedTasks: number;
 }
 
 /**
- * Calculates the Sovereign Score (0–1000).
- * Formula:
- *   base        = ((energy + clarity + (10 - stress)) / 3) × 80
- *   consistency = min(checkIns × 8, 200)
- *   momentum    = min(streak × 12, 300)
- *   result      = min(round(base + consistency + momentum), 1000)
+ * Sovereign Score v2 (0–1000).
+ *
+ * checkinScore  = avg(energy, clarity, (10-stress), sleep) / 10 × 200  — max 200
+ * lessonScore   = min(completedLessons × 15, 400)                       — max 400
+ * taskScore     = min(completedTasks × 25, 200)                         — max 200
+ * streakBonus   = 150 if streak ≥ 30 | 50 if streak ≥ 7 | 0            — max 150
+ * result        = min(round(sum), 1000)
  */
 export function calcSovereignScore(opts: SovereignScoreInput): number {
-  const base = ((opts.energy + opts.clarity + (10 - opts.stress)) / 3) * 80;
-  const consistency = Math.min(opts.checkIns * 8, 200);
-  const momentum = Math.min(opts.streak * 12, 300);
-  const raw = Math.round(base + consistency + momentum);
-  return Math.min(raw, 1000);
+  const checkinScore =
+    ((opts.energy + opts.clarity + (10 - opts.stress) + opts.sleep) / 4) * 20;
+  const lessonScore = Math.min(opts.completedLessons * 15, 400);
+  const taskScore   = Math.min(opts.completedTasks * 25, 200);
+  const streakBonus = opts.streak >= 30 ? 150 : opts.streak >= 7 ? 50 : 0;
+  return Math.min(Math.round(checkinScore + lessonScore + taskScore + streakBonus), 1000);
 }
 
 export type SovereignTier = 'ELITE' | 'AVANZADO' | 'EN ASCENSO' | 'INICIANDO';
 
 /**
- * Returns the tier label for a given Sovereign Score.
- * Tiers:  ELITE (≥800) · AVANZADO (≥600) · EN ASCENSO (≥400) · INICIANDO (<400)
+ * Tier from score: ELITE (≥800) · AVANZADO (≥600) · EN ASCENSO (≥400) · INICIANDO (<400)
  */
 export function calcSovereignTier(score: number): SovereignTier {
   if (score >= 800) return 'ELITE';

@@ -31,6 +31,27 @@ import type { CheckIn, MentorMessage } from '@/types/lifeflow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function getOpeningMessage(params: {
+  name: string;
+  protocolDay: number;
+  todayCheckIn: CheckIn | null;
+  activeModuleTitle: string;
+}): string {
+  const { name, protocolDay, todayCheckIn, activeModuleTitle } = params;
+  const firstName = name.split(' ')[0] || name;
+
+  if (!todayCheckIn) {
+    return `${firstName}, aún no has registrado tu check-in de hoy. Sin lectura del sistema, opero a ciegas. Tómate 2 minutos antes de avanzar — eso multiplica la calidad de cualquier decisión que tomemos juntos.`;
+  }
+  if (todayCheckIn.stress >= 8) {
+    return `${firstName}, veo el estrés en ${todayCheckIn.stress}/10 hoy. Antes de cualquier acción, necesitamos reducir eso. El cortisol alto colapsa el pensamiento estratégico. ¿Qué está generando esa presión? Nómbralo.`;
+  }
+  if (todayCheckIn.energy <= 3) {
+    return `Energía en ${todayCheckIn.energy}/10 hoy, ${firstName}. Eso cambia el protocolo. Enfoque mínimo viable: una acción de alto impacto, sin desperdiciar recurso cognitivo. ¿Cuál es tu prioridad número uno ahora?`;
+  }
+  return `Día ${protocolDay} del protocolo. Estás en ${activeModuleTitle}. Energía ${todayCheckIn.energy}/10, claridad ${todayCheckIn.clarity}/10 — condiciones para ejecutar. ¿En qué trabajamos hoy, ${firstName}?`;
+}
+
 function computeStreak(checkIns: CheckIn[]): number {
   if (!checkIns.length) return 0;
   const sorted = [...checkIns].sort(
@@ -119,6 +140,19 @@ export default function MentorScreen() {
   const [pendingUserMsg, setPendingUserMsg] = useState<MentorMessage | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
+
+  // Opening message — static, shown only when conversation is empty
+  const openingMessage = useMemo(
+    () =>
+      getOpeningMessage({
+        name:              state.profile.name,
+        protocolDay,
+        todayCheckIn,
+        activeModuleTitle: ACTIVE_MODULE.title,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   // Gate: ≥ 3 mensajes de usuario sin suscripción
   const userMsgCount = useMemo(
@@ -340,13 +374,12 @@ export default function MentorScreen() {
         )}
 
         {displayMessages.length === 0 && !isStreaming && (
-          <PremiumCard style={styles.emptyCard}>
-            <MaterialIcons name="chat-bubble-outline" size={28} color={palette.smoke} />
-            <Text style={styles.emptyTitle}>LISTO PARA OPERAR</Text>
-            <Text style={styles.emptyBody}>
-              Escribe tu consulta o usa las opciones rapidas para activar al mentor.
-            </Text>
-          </PremiumCard>
+          <>
+            <GoldDivider label="CONVERSACION" />
+            <View style={styles.thread}>
+              <ChatBubble role="mentor">{openingMessage}</ChatBubble>
+            </View>
+          </>
         )}
       </ScrollView>
 

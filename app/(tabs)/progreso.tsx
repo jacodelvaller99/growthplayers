@@ -59,13 +59,15 @@ export default function ProgresoScreen() {
 
   const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
 
-  // Sovereign Score
+  // Sovereign Score v2
   const score = calcSovereignScore({
-    energy: averages.energy ?? 0,
-    clarity: averages.clarity ?? 0,
-    stress: averages.stress ?? 5,
-    checkIns: state.checkIns.length,
-    streak: protocolDay,
+    energy:            averages.energy ?? 0,
+    clarity:           averages.clarity ?? 0,
+    stress:            averages.stress ?? 5,
+    sleep:             averages.sleep ?? 0,
+    streak:            state.checkIns.length,
+    completedLessons:  (state.completedLessons ?? []).length,
+    completedTasks:    Object.keys(state.completedTasks ?? {}).length,
   });
 
   // Last 7 check-ins for sparklines

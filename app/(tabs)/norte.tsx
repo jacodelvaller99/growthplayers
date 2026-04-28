@@ -1,5 +1,7 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -12,10 +14,11 @@ import {
   StatusPill,
   screen,
 } from '@/components/polaris';
-import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 export default function NorteScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state, updateNorthStar } = useLifeFlow();
   const [purpose, setPurpose] = useState(state.northStar.purpose);
@@ -24,6 +27,8 @@ export default function NorteScreen() {
   const [nonNegotiables, setNonNegotiables] = useState(
     state.northStar.nonNegotiables.join('\n'),
   );
+
+  const isNorteEmpty = !purpose.trim() && !identity.trim();
 
   const save = () =>
     updateNorthStar({
@@ -55,6 +60,18 @@ export default function NorteScreen() {
         <Text style={styles.purposeStatement}>{purpose || 'Define tu proposito principal'}</Text>
         <Text style={styles.identityStatement}>{identity || 'Define tu identidad'}</Text>
       </GoldAccentCard>
+
+      {/* ── Empty State CTA ── */}
+      {isNorteEmpty && (
+        <Pressable
+          onPress={() => router.push('/(onboarding)' as never)}
+          style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
+          <MaterialIcons name="explore" size={20} color={palette.gold} />
+          <Text style={styles.emptyCtaText}>
+            Tu Norte guía cada decisión. Configúralo ahora →
+          </Text>
+        </Pressable>
+      )}
 
       {/* ── Daily Reminder ── */}
       {state.northStar.dailyReminder ? (
@@ -210,5 +227,24 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: spacing.md,
     textAlignVertical: 'top',
+  },
+
+  // Empty state CTA
+  emptyCta: {
+    alignItems: 'center',
+    borderColor: palette.gold,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: 'rgba(201, 160, 0, 0.08)',
+  },
+  emptyCtaText: {
+    ...typography.body,
+    color: palette.gold,
+    flex: 1,
+    fontWeight: '600',
   },
 });

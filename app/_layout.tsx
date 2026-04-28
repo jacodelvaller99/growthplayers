@@ -3,9 +3,10 @@ import { Michroma_400Regular, useFonts as useMichromaFonts } from '@expo-google-
 import { SpaceMono_400Regular, useFonts as useSpaceMonoFonts } from '@expo-google-fonts/space-mono';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import { LifeFlowProvider } from '@/hooks/use-lifeflow';
@@ -32,6 +33,7 @@ const SovereignTheme = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const router = useRouter();
   const [interLoaded] = useInterFonts({ Inter_400Regular, Inter_700Bold });
   const [michromaLoaded] = useMichromaFonts({ Michroma_400Regular }); // brand font: Grandis Extended → Michroma
   const [spaceMonoLoaded] = useSpaceMonoFonts({ SpaceMono_400Regular });
@@ -42,6 +44,18 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Navigate to check-in when user taps the daily reminder notification
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let sub: { remove: () => void } | null = null;
+    import('expo-notifications').then((N) => {
+      sub = N.addNotificationResponseReceivedListener(() => {
+        router.push('/checkin' as never);
+      });
+    });
+    return () => { sub?.remove(); };
+  }, [router]);
 
   if (!fontsLoaded) {
     return null;
