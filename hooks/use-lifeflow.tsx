@@ -57,6 +57,7 @@ const defaultState: LifeFlowState = {
 type LifeFlowContextValue = {
   state: LifeFlowState;
   isLoaded: boolean;
+  isAuthenticated: boolean;
   isSubscribed: boolean;
   protocolDay: number;
   latestCheckIn: CheckIn | null;
@@ -77,6 +78,7 @@ type LifeFlowContextValue = {
   saveMentorMessage: (role: 'user' | 'assistant', content: string) => Promise<void>;
   resetOnboarding: () => Promise<void>;
   clearData: () => Promise<void>;
+  signOut: () => Promise<void>;
 };
 
 const LifeFlowContext = createContext<LifeFlowContextValue | null>(null);
@@ -245,10 +247,15 @@ async function migrateLocalToSupabase(uid: string, s: LifeFlowState) {
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
+// Dev bypass: if SUPABASE_URL is placeholder, sign in anonymously
+const SUPABASE_URL_VALUE = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const IS_PLACEHOLDER_URL = SUPABASE_URL_VALUE.includes('your-project') || !SUPABASE_URL_VALUE;
+
 export function LifeFlowProvider({ children }: { children: ReactNode }) {
-  const [state, setState]             = useState<LifeFlowState>(defaultState);
-  const [isLoaded, setIsLoaded]       = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [state, setState]                 = useState<LifeFlowState>(defaultState);
+  const [isLoaded, setIsLoaded]           = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isSubscribed, setIsSubscribed]   = useState(false);
   const uidRef = useRef<string | null>(null);
 
   // ── Init ─────────────────────────────────────────────────────────────────────
@@ -259,13 +266,15 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       let uid = session?.user?.id ?? null;
 
-      if (!uid) {
+      // Dev bypass: sign in anonymously when Supabase URL is placeholder
+      if (!uid && IS_PLACEHOLDER_URL) {
         const { data, error } = await supabase.auth.signInAnonymously();
         if (!error && data.user) uid = data.user.id;
       }
 
       if (uid) {
         uidRef.current = uid;
+        if (mounted) setIsAuthenticated(true);
 
         try {
           await initRevenueCat();
@@ -291,8 +300,10 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           migrateLocalToSupabase(uid, safe).catch(console.error);
         }
       } else {
+        // Not authenticated — load local data if available
         const local = await readLocal<LifeFlowState>(STATE_KEY);
         if (local && mounted) setState(migrateState(local));
+        if (mounted) setIsAuthenticated(false);
       }
 
       if (mounted) setIsLoaded(true);
@@ -305,7 +316,31 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       if (mounted) setIsLoaded(true);
     });
 
-    return () => { mounted = false; };
+    // Listen for auth state changes (sign in / sign out from auth screen)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!mounted) return;
+        const uid = session?.user?.id ?? null;
+        setIsAuthenticated(!!uid);
+
+        if (uid && uid !== uidRef.current) {
+          uidRef.current = uid;
+          const remote = await loadUserData(uid);
+          if (remote && mounted) {
+            setState(remote);
+            writeLocal(STATE_KEY, remote);
+          }
+        }
+        if (!uid) {
+          uidRef.current = null;
+        }
+      },
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // ── persist ──────────────────────────────────────────────────────────────────
@@ -623,9 +658,15 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         console.warn('[Supabase] clearData:', e);
       }
       await supabase.auth.signOut();
-      const { data } = await supabase.auth.signInAnonymously();
-      if (data.user) uidRef.current = data.user.id;
+      uidRef.current = null;
     }
+    await removeLocal(STATE_KEY);
+    setState(defaultState);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    uidRef.current = null;
     await removeLocal(STATE_KEY);
     setState(defaultState);
   }, []);
@@ -636,6 +677,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       value={{
         state,
         isLoaded,
+        isAuthenticated,
         isSubscribed,
         protocolDay,
         latestCheckIn,
@@ -652,6 +694,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         saveMentorMessage,
         resetOnboarding,
         clearData,
+        signOut,
       }}>
       {children}
     </LifeFlowContext.Provider>

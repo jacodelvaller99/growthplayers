@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -53,13 +53,34 @@ function computeStreak(checkIns: CheckIn[]): number {
   return streak;
 }
 
-// ─── Prompt shortcuts ─────────────────────────────────────────────────────────
-const QUICK_PROMPTS = [
-  { label: 'Analiza mi estado', icon: 'psychology' as const },
-  { label: 'Dame una practica', icon: 'fitness-center' as const },
-  { label: 'Ordena mi dia', icon: 'calendar-today' as const },
-  { label: 'Recuerdame mi norte', icon: 'explore' as const },
+// ─── Prompt shortcuts por módulo ──────────────────────────────────────────────
+const BASE_PROMPTS: Array<{ label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }> = [
+  { label: 'Analiza mi estado', icon: 'psychology' },
+  { label: 'Ordena mi dia', icon: 'calendar-today' },
 ];
+
+const MODULE_PROMPTS: Record<number, Array<{ label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }>> = {
+  0: [
+    { label: 'Explica el Metodo Polaris', icon: 'military-tech' },
+    { label: 'Como empiezo hoy', icon: 'play-arrow' },
+  ],
+  1: [
+    { label: 'Dame una practica de mentalidad', icon: 'fitness-center' },
+    { label: 'Como detecto mis creencias limitantes', icon: 'search' },
+  ],
+  2: [
+    { label: 'Como subir mi energia ahora', icon: 'bolt' },
+    { label: 'Practica de escritura terapeutica', icon: 'edit' },
+  ],
+  3: [
+    { label: 'Cual es mi proposito hoy', icon: 'explore' },
+    { label: 'Explicame las leyes universales', icon: 'hub' },
+  ],
+  4: [
+    { label: 'Como entrar en estado de Flow', icon: 'water' },
+    { label: 'Dame coherencia cardiaca', icon: 'favorite' },
+  ],
+};
 
 // ─── Typing indicator ─────────────────────────────────────────────────────────
 function TypingBubble({ text }: { text: string }) {
@@ -281,7 +302,10 @@ export default function MentorScreen() {
         {/* ── Quick Prompts ── */}
         <GoldDivider label="CONSULTAS RAPIDAS" />
         <View style={styles.promptGrid}>
-          {QUICK_PROMPTS.map((p) => (
+          {[
+            ...BASE_PROMPTS,
+            ...(MODULE_PROMPTS[ACTIVE_MODULE.order] ?? []),
+          ].map((p) => (
             <Pressable
               key={p.label}
               accessibilityRole="button"

@@ -5,7 +5,7 @@ import { palette } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 export default function Index() {
-  const { isLoaded, state } = useLifeFlow();
+  const { isLoaded, isAuthenticated, state } = useLifeFlow();
 
   if (!isLoaded) {
     return (
@@ -13,6 +13,10 @@ export default function Index() {
         <ActivityIndicator color={palette.gold} />
       </View>
     );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect href={'/(auth)' as never} />;
   }
 
   return <Redirect href={state.onboardingCompleted ? '/(tabs)/comando' : '/(onboarding)'} />;

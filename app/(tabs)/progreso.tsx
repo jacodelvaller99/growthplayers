@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -21,15 +22,40 @@ import {
   screen,
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
-import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { calcSovereignScore } from '@/lib/utils';
+import {
+  requestNotificationPermissions,
+  scheduleCheckinReminder,
+  cancelReminders,
+} from '@/services/notifications';
+import type { NorthStar } from '@/types/lifeflow';
 
 export default function ProgresoScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state, protocolDay, averages, updateProfile, resetOnboarding, clearData } = useLifeFlow();
+  const {
+    state, protocolDay, averages,
+    updateProfile, updateNorthStar,
+    resetOnboarding, clearData, signOut,
+  } = useLifeFlow();
+
   const [name, setName] = useState(state.profile.name);
   const [role, setRole] = useState(state.profile.role);
+  const [north, setNorth] = useState<NorthStar>(state.northStar);
+  const [notificationsOn, setNotificationsOn] = useState(false);
+  const [savingNorth, setSavingNorth] = useState(false);
+
+  // Check if notifications are already scheduled
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    import('expo-notifications').then((N) =>
+      N.getAllScheduledNotificationsAsync().then((list) =>
+        setNotificationsOn(list.length > 0),
+      ),
+    );
+  }, []);
 
   const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
 
@@ -58,6 +84,45 @@ export default function ProgresoScreen() {
     { icon: 'psychology' as const, label: 'CLARIDAD\n8+', earned: (averages.clarity ?? 0) >= 8 },
     { icon: 'workspace-premium' as const, label: 'SOBERANO\n90D', earned: protocolDay >= 90 },
   ];
+
+  const toggleNotifications = async (value: boolean) => {
+    if (value) {
+      const granted = await requestNotificationPermissions();
+      if (!granted) {
+        Alert.alert('Permisos requeridos', 'Activa las notificaciones en Configuración para recibir recordatorios.');
+        return;
+      }
+      await scheduleCheckinReminder(protocolDay);
+      setNotificationsOn(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else {
+      await cancelReminders();
+      setNotificationsOn(false);
+    }
+  };
+
+  const saveNorth = async () => {
+    setSavingNorth(true);
+    await updateNorthStar(north);
+    setSavingNorth(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleSignOut = () => {
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm('¿Cerrar sesión? Puedes volver a ingresar cuando quieras.');
+      if (ok) { signOut(); router.replace('/'); }
+      return;
+    }
+    Alert.alert(
+      'CERRAR SESIÓN',
+      '¿Cerrar sesión? Puedes volver a ingresar cuando quieras.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cerrar sesión', style: 'destructive', onPress: async () => { await signOut(); router.replace('/'); } },
+      ],
+    );
+  };
 
   const clear = () => {
     if (typeof window !== 'undefined') {
@@ -199,14 +264,75 @@ export default function ProgresoScreen() {
         />
       </PremiumCard>
 
-      {/* ── System ── */}
-      <GoldDivider label="SISTEMA LOCAL" />
+      {/* ── Mi Norte ── */}
+      <GoldDivider label="MI NORTE" />
+      <PremiumCard style={styles.form}>
+        <View style={styles.northField}>
+          <Text style={styles.northLabel}>PROPÓSITO PRINCIPAL</Text>
+          <PremiumInput
+            value={north.purpose}
+            onChangeText={(purpose) => setNorth({ ...north, purpose })}
+            placeholder="¿Por qué operas a este nivel?"
+            multiline
+            style={styles.textarea}
+            accessibilityLabel="Propósito principal"
+          />
+        </View>
+        <View style={styles.northField}>
+          <Text style={styles.northLabel}>DECLARACIÓN DE IDENTIDAD</Text>
+          <PremiumInput
+            value={north.identity}
+            onChangeText={(identity) => setNorth({ ...north, identity })}
+            placeholder="Soy alguien que..."
+            multiline
+            style={styles.textarea}
+            accessibilityLabel="Declaración de identidad"
+          />
+        </View>
+        <View style={styles.northField}>
+          <Text style={styles.northLabel}>RECORDATORIO DIARIO</Text>
+          <PremiumInput
+            value={north.dailyReminder}
+            onChangeText={(dailyReminder) => setNorth({ ...north, dailyReminder })}
+            placeholder="La frase que te ancla cada mañana..."
+            multiline
+            style={styles.textarea}
+            accessibilityLabel="Recordatorio diario"
+          />
+        </View>
+        <PrimaryButton
+          label={savingNorth ? 'GUARDANDO...' : 'GUARDAR NORTE'}
+          icon="explore"
+          onPress={saveNorth}
+          disabled={savingNorth}
+        />
+      </PremiumCard>
+
+      {/* ── Notificaciones ── */}
+      <GoldDivider label="NOTIFICACIONES" />
+      <PremiumCard style={styles.settingsCard}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>RECORDATORIO DIARIO</Text>
+            <Text style={styles.settingMeta}>Check-in a las 7:00 AM</Text>
+          </View>
+          <Switch
+            value={notificationsOn}
+            onValueChange={toggleNotifications}
+            trackColor={{ false: palette.charcoal, true: palette.gold }}
+            thumbColor={notificationsOn ? palette.black : palette.ash}
+          />
+        </View>
+      </PremiumCard>
+
+      {/* ── Sistema ── */}
+      <GoldDivider label="SISTEMA" />
       <PremiumCard style={styles.systemCard}>
         <View style={styles.systemInfo}>
           <Text style={styles.systemLabel}>PROGRAMA ACTIVO</Text>
           <Text style={styles.systemValue}>Protocolo Soberano</Text>
           <Text style={styles.systemMeta}>
-            Modulo {ACTIVE_MODULE.order} — {ACTIVE_MODULE.title}
+            Módulo {ACTIVE_MODULE.order} — {ACTIVE_MODULE.title}
           </Text>
         </View>
         <SecondaryButton
@@ -214,6 +340,10 @@ export default function ProgresoScreen() {
           icon="restart-alt"
           onPress={resetOnboarding}
         />
+        <Pressable onPress={handleSignOut} style={styles.signOutBtn}>
+          <MaterialIcons name="logout" size={18} color={palette.danger} />
+          <Text style={styles.signOutText}>CERRAR SESIÓN</Text>
+        </Pressable>
         <DangerButton
           label="LIMPIAR DATOS LOCALES"
           icon="delete-outline"
@@ -319,6 +449,63 @@ const styles = StyleSheet.create({
   // Form
   form: {
     gap: spacing.md,
+  },
+
+  // Norte fields
+  northField: {
+    gap: spacing.sm,
+  },
+  northLabel: {
+    ...typography.label,
+    color: palette.gold,
+  },
+  textarea: {
+    minHeight: 80,
+    paddingTop: spacing.sm,
+    textAlignVertical: 'top',
+  },
+
+  // Settings card
+  settingsCard: {
+    gap: spacing.md,
+  },
+  settingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  settingInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  settingTitle: {
+    ...typography.label,
+    color: palette.ivory,
+    letterSpacing: 1,
+  },
+  settingMeta: {
+    ...typography.mono,
+    color: palette.smoke,
+  },
+
+  // Sign out
+  signOutBtn: {
+    alignItems: 'center',
+    borderColor: palette.danger,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  signOutText: {
+    ...typography.label,
+    color: palette.danger,
+    fontSize: 11,
+    letterSpacing: 2,
   },
 
   // System

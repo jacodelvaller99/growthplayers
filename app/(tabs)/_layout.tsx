@@ -80,7 +80,11 @@ export function BottomNavigation() {
 }
 
 export default function TabLayout() {
-  const { isLoaded, state } = useLifeFlow();
+  const { isLoaded, isAuthenticated, state } = useLifeFlow();
+
+  if (isLoaded && !isAuthenticated) {
+    return <Redirect href={'/(auth)' as never} />;
+  }
 
   if (isLoaded && !state.onboardingCompleted) {
     return <Redirect href="/(onboarding)" />;

@@ -19,16 +19,32 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 function statusTone(status: string) {
-  if (status === 'active') return 'gold' as const;
+  if (status === 'active' || status === 'unlocked') return 'gold' as const;
   if (status === 'completed') return 'success' as const;
   return 'muted' as const;
 }
 
 function statusLabel(status: string) {
   if (status === 'completed') return 'COMPLETADO';
-  if (status === 'active') return 'ACTIVO';
+  if (status === 'active' || status === 'unlocked') return 'ACTIVO';
   if (status === 'coming_soon') return 'PRÓXIMAMENTE';
   return 'BLOQUEADO';
+}
+
+// A module is unlocked when either:
+//  - It is the first active module (static status 'active')
+//  - All lessons of the previous module have been completed
+function isModuleUnlocked(
+  modules: typeof POLARIS_MODULES,
+  moduleIndex: number,
+  completedLessons: string[],
+): boolean {
+  const mod = modules[moduleIndex];
+  if (mod.status === 'coming_soon') return false;
+  if (moduleIndex === 0) return true;
+  const prev = modules[moduleIndex - 1];
+  if (prev.status === 'coming_soon' || prev.lessons.length === 0) return false;
+  return prev.lessons.every((l) => completedLessons.includes(l.id));
 }
 
 export default function ProgramasScreen() {
@@ -96,13 +112,17 @@ export default function ProgramasScreen() {
         {/* ── Module List ── */}
         <GoldDivider label="MODULOS" />
         <View style={styles.list}>
-          {POLARIS_MODULES.map((module) => {
-            const isActive = module.status === 'active';
+          {POLARIS_MODULES.map((module, idx) => {
             const isComingSoon = module.status === 'coming_soon';
+            const unlocked = isModuleUnlocked(POLARIS_MODULES, idx, completedLessons);
+            const isLocked = !unlocked && !isComingSoon;
             const moduleDone = module.lessons.filter((l) => completedLessons.includes(l.id)).length;
+            const isAllDone = module.lessons.length > 0 && moduleDone === module.lessons.length;
             const moduleProgress = module.lessons.length > 0
               ? Math.round((moduleDone / module.lessons.length) * 100)
               : 0;
+            const effectiveStatus = isAllDone ? 'completed' : unlocked ? 'active' : module.status;
+            const isActive = effectiveStatus === 'active';
             return (
               <View key={module.id}>
                 <Pressable
@@ -111,7 +131,12 @@ export default function ProgramasScreen() {
                   onPress={() => {
                     if (isComingSoon) {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                      showToast('Este módulo se publica cuando completes el módulo anterior');
+                      showToast('Este módulo se publica próximamente');
+                      return;
+                    }
+                    if (isLocked) {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                      showToast('Completa el módulo anterior para desbloquear este');
                       return;
                     }
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -126,8 +151,8 @@ export default function ProgramasScreen() {
                           {String(module.order).padStart(2, '0')}
                         </Text>
                         <StatusPill
-                          label={statusLabel(module.status)}
-                          tone={statusTone(module.status)}
+                          label={statusLabel(effectiveStatus)}
+                          tone={statusTone(effectiveStatus)}
                         />
                       </View>
                       <Text style={styles.moduleTitle}>{module.title}</Text>
@@ -136,7 +161,7 @@ export default function ProgramasScreen() {
                         <Text style={styles.moduleLessons}>
                           {isComingSoon ? 'PRÓXIMAMENTE' : `${module.lessons.length} LECCIONES`}
                         </Text>
-                        {!isComingSoon && (
+                        {!isComingSoon && !isLocked && (
                           <View style={styles.progressWrap}>
                             <View style={styles.progressTrack}>
                               <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
@@ -145,19 +170,19 @@ export default function ProgramasScreen() {
                           </View>
                         )}
                         <MaterialIcons
-                          name={isComingSoon ? 'lock' : 'chevron-right'}
+                          name={isComingSoon || isLocked ? 'lock' : 'chevron-right'}
                           size={20}
                           color={isActive ? palette.black : palette.gold}
                         />
                       </View>
                     </View>
-                    {/* Coming soon overlay */}
-                    {isComingSoon && <View style={styles.comingSoonOverlay} />}
+                    {/* Locked/coming-soon overlay */}
+                    {(isComingSoon || isLocked) && <View style={styles.comingSoonOverlay} />}
                   </PremiumCard>
                 </Pressable>
 
-                {/* Explorar en Skool — only for coming_soon modules with a URL */}
-                {isComingSoon && module.skoolUrl && (
+                {/* Explorar en Skool — for coming_soon or locked modules with a URL */}
+                {(isComingSoon || isLocked) && module.skoolUrl && (
                   <Pressable
                     style={({ pressed }) => [styles.skoolLink, pressed && { opacity: 0.7 }]}
                     onPress={() => Linking.openURL(module.skoolUrl!)}>

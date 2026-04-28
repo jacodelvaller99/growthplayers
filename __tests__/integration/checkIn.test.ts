@@ -36,6 +36,9 @@ jest.mock('@/lib/supabase', () => ({
         data: { user: { id: 'test-uid-123' } },
         error: null,
       }),
+      onAuthStateChange: jest.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: jest.fn() } },
+      }),
     },
     from: jest.fn().mockImplementation((table: string) => ({
       select: jest.fn().mockReturnThis(),
