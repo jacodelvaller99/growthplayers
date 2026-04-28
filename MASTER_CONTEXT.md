@@ -420,6 +420,35 @@ Skool usa Vimeo internamente. IDs extraídos con monitor de red en tiempo real.
 
 ---
 
+---
+
+#### [28 Abril 2026] — OPERACIÓN 100% FUNCIONAL (Sesión 9)
+
+**Objetivo:** App 100% funcional — auth, perfil completo, módulos secuenciales, notificaciones, mentor contextual.
+
+**Implementado:**
+
+| Bloque | Feature | Status |
+|---|---|---|
+| Auth | `app/(auth)/index.tsx` login/register/forgot password | ✅ |
+| Auth | `use-lifeflow.tsx` `isAuthenticated` + `signOut` + `onAuthStateChange` | ✅ |
+| Auth | Dev bypass: signInAnonymously solo si SUPABASE_URL es placeholder | ✅ |
+| Auth | Redirect a `/(auth)` si no autenticado (index + tabs/_layout) | ✅ |
+| Perfil | Sección "MI NORTE" — editar purpose/identity/dailyReminder | ✅ |
+| Perfil | Toggle notificaciones con Switch nativo | ✅ |
+| Perfil | Botón "CERRAR SESIÓN" con confirmación | ✅ |
+| Notificaciones | 7 mensajes rotativos por día de protocolo | ✅ |
+| Módulos | `isModuleUnlocked()` — desbloqueo secuencial dinámico | ✅ |
+| Módulos | Overlay visual + toast para módulos bloqueados | ✅ |
+| Mentor | Prompts rápidos por módulo (`MODULE_PROMPTS[order]`) | ✅ |
+
+**Estado:**
+- `tsc --noEmit`: 0 errores ✅
+- `npm test`: 34/34 ✅
+- Deploy: `ffa5cbc` en main → Vercel auto-deploy ✅
+
+---
+
 ### Siguiente sesión — TestFlight
 
 1. `eas build --platform ios --profile preview` → IPA para piloto
