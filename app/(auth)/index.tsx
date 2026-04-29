@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +21,7 @@ import {
   screen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { supabase } from '@/lib/supabase';
 
 type AuthMode = 'login' | 'register' | 'forgot';
@@ -28,6 +29,14 @@ type AuthMode = 'login' | 'register' | 'forgot';
 export default function AuthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated, state } = useLifeFlow();
+
+  // Navigate as soon as the auth state confirms the session is live
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(state.onboardingCompleted ? '/(tabs)/comando' : '/(onboarding)');
+    }
+  }, [isAuthenticated]);
   const [mode, setMode]         = useState<AuthMode>('login');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -66,7 +75,7 @@ export default function AuthScreen() {
         }
         return;
       }
-      router.replace('/');
+      // Navigation handled by the useEffect watching isAuthenticated
     } catch {
       setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
     } finally {
