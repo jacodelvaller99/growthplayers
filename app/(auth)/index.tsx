@@ -78,34 +78,35 @@ export default function AuthScreen() {
     setLoading(true);
     setError(null);
 
-    // Validar y consumir el código de acceso
+    // Validar código — SELECT directo (sin RPC)
+    const code = accessCode.trim().toUpperCase();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: codeResult, error: codeErr } = await (supabase as any)
-      .rpc('redeem_access_code', { p_code: accessCode.trim() });
+    const { data: rows, error: selectErr } = await (supabase as any)
+      .from('access_codes')
+      .select('id, max_uses, uses_count, is_active, expires_at')
+      .ilike('code', code)
+      .limit(1);
 
-    if (codeErr) {
-      setLoading(false);
-      setError('Error al validar el código. Intenta de nuevo.');
-      return;
-    }
-    if (codeResult === 'invalid') {
+    if (selectErr || !rows || rows.length === 0) {
       setLoading(false);
       setError('Código de acceso inválido. Verifica que esté bien escrito.');
       return;
     }
-    if (codeResult === 'exhausted') {
+
+    const row = rows[0];
+    if (!row.is_active) {
       setLoading(false);
-      setError('Este código ya fue usado. Solicita uno nuevo a tu coach.');
+      setError('Código inactivo. Contacta a tu coach.');
       return;
     }
-    if (codeResult === 'expired') {
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
       setLoading(false);
       setError('Este código ha vencido. Solicita uno nuevo a tu coach.');
       return;
     }
-    if (codeResult === 'inactive') {
+    if (row.max_uses !== -1 && row.uses_count >= row.max_uses) {
       setLoading(false);
-      setError('Código inactivo. Contacta a tu coach.');
+      setError('Este código ya fue usado. Solicita uno nuevo a tu coach.');
       return;
     }
 
@@ -114,6 +115,15 @@ export default function AuthScreen() {
       email: email.trim().toLowerCase(),
       password,
     });
+
+    // Consumir el código (incrementar uses_count)
+    if (!err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('access_codes')
+        .update({ uses_count: row.uses_count + 1 })
+        .eq('id', row.id);
+    }
     setLoading(false);
     if (err) {
       setError(err.message);
