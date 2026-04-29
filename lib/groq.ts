@@ -8,7 +8,7 @@ import type { ChatMessage } from './nvidia';
 import { parseSSEStream } from './nvidia';
 
 const GROQ_BASE = 'https://api.groq.com/openai/v1';
-const MODEL = 'qwen/qwen3-32b';
+const MODEL = 'llama-3.3-70b-versatile'; // qwen3-32b daba 413 (payload too large con system prompts largos)
 
 /**
  * Hace streaming de la respuesta Groq (Qwen3-32b).
@@ -36,10 +36,9 @@ export async function streamGroq(
       model: MODEL,
       messages,
       stream: true,
-      temperature: 0.6,
-      max_completion_tokens: 4096,
-      top_p: 0.95,
-      reasoning_effort: 'default',
+      temperature: 0.7,
+      max_tokens: 1024,
+      top_p: 0.9,
     }),
   });
 

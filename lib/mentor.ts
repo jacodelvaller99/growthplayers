@@ -373,7 +373,10 @@ export async function streamMentorResponse(
     { role: 'user' as const, content: userMessage },
   ];
 
-  if (ENV.nvidiaApiKey) {
+  // NVIDIA NIM no soporta CORS desde el navegador — solo se usa desde un servidor.
+  // En web siempre se salta directamente a Groq u OpenAI.
+  const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+  if (ENV.nvidiaApiKey && !isWeb) {
     try {
       return await streamNvidia(messages, onChunk);
     } catch (err) {
