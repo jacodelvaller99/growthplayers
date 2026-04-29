@@ -1,23 +1,61 @@
-import { Redirect } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { palette } from '@/constants/theme';
-import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { supabase } from '@/lib/supabase';
+import { readLocal } from '@/storage/local';
+import type { LifeFlowState } from '@/types/lifeflow';
 
 export default function Index() {
-  const { isLoaded, isAuthenticated, state } = useLifeFlow();
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
 
-  if (!isLoaded) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.black }}>
-        <ActivityIndicator color={palette.gold} />
-      </View>
-    );
-  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // Verificar si el usuario ya completó el onboarding (lectura local rápida)
+        readLocal<LifeFlowState>('state')
+          .then((local) => {
+            if (local?.onboardingCompleted) {
+              router.replace('/(tabs)/comando');
+            } else {
+              router.replace('/(onboarding)');
+            }
+          })
+          .catch(() => {
+            router.replace('/(tabs)/comando');
+          })
+          .finally(() => setChecking(false));
+      } else {
+        router.replace('/(auth)');
+        setChecking(false);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  if (!isAuthenticated) {
-    return <Redirect href={'/(auth)' as never} />;
-  }
+  if (!checking) return null;
 
-  return <Redirect href={state.onboardingCompleted ? '/(tabs)/comando' : '/(onboarding)'} />;
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: palette.black,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 24,
+      }}>
+      <Text
+        style={{
+          color: palette.gold,
+          fontSize: 28,
+          letterSpacing: 6,
+          fontWeight: '700',
+        }}>
+        LIFEFLOW
+      </Text>
+      <ActivityIndicator color={palette.gold} size="large" />
+    </View>
+  );
 }

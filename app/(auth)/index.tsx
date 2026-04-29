@@ -21,7 +21,6 @@ import {
   screen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { supabase } from '@/lib/supabase';
 
 type AuthMode = 'login' | 'register' | 'forgot';
@@ -29,14 +28,6 @@ type AuthMode = 'login' | 'register' | 'forgot';
 export default function AuthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, state } = useLifeFlow();
-
-  // Navigate as soon as the auth state confirms the session is live
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace(state.onboardingCompleted ? '/(tabs)/comando' : '/(onboarding)');
-    }
-  }, [isAuthenticated]);
   const [mode, setMode]         = useState<AuthMode>('login');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +36,19 @@ export default function AuthScreen() {
   const [error, setError]       = useState<string | null>(null);
   const [success, setSuccess]   = useState<string | null>(null);
 
+  // ── Navigate when Supabase confirms the session — no race condition ──────────
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          router.replace('/(tabs)/comando');
+        }
+      },
+    );
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const reset = (next: AuthMode) => {
     setMode(next);
     setError(null);
@@ -52,6 +56,7 @@ export default function AuthScreen() {
     setAccessCode('');
   };
 
+  // ── Login — NO navegación manual; el useEffect de arriba la maneja ──────────
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setError('Ingresa tu email y contraseña.');
@@ -73,9 +78,8 @@ export default function AuthScreen() {
         } else {
           setError(err.message);
         }
-        return;
       }
-      // Navigation handled by the useEffect watching isAuthenticated
+      // Si no hay error, el onAuthStateChange dispara SIGNED_IN y navega solo
     } catch {
       setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
     } finally {
