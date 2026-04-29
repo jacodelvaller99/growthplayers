@@ -28,9 +28,10 @@ type AuthMode = 'login' | 'register' | 'forgot';
 export default function AuthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [mode, setMode]     = useState<AuthMode>('login');
-  const [email, setEmail]   = useState('');
+  const [mode, setMode]         = useState<AuthMode>('login');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  const [accessCode, setAccessCode] = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [success, setSuccess]   = useState<string | null>(null);
@@ -39,6 +40,7 @@ export default function AuthScreen() {
     setMode(next);
     setError(null);
     setSuccess(null);
+    setAccessCode('');
   };
 
   const handleLogin = async () => {
@@ -65,8 +67,8 @@ export default function AuthScreen() {
   };
 
   const handleRegister = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Completa todos los campos.');
+    if (!email.trim() || !password.trim() || !accessCode.trim()) {
+      setError('Completa todos los campos, incluyendo el código de acceso.');
       return;
     }
     if (password.length < 6) {
@@ -75,6 +77,39 @@ export default function AuthScreen() {
     }
     setLoading(true);
     setError(null);
+
+    // Validar y consumir el código de acceso
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: codeResult, error: codeErr } = await (supabase as any)
+      .rpc('redeem_access_code', { p_code: accessCode.trim() });
+
+    if (codeErr) {
+      setLoading(false);
+      setError('Error al validar el código. Intenta de nuevo.');
+      return;
+    }
+    if (codeResult === 'invalid') {
+      setLoading(false);
+      setError('Código de acceso inválido. Verifica que esté bien escrito.');
+      return;
+    }
+    if (codeResult === 'exhausted') {
+      setLoading(false);
+      setError('Este código ya fue usado. Solicita uno nuevo a tu coach.');
+      return;
+    }
+    if (codeResult === 'expired') {
+      setLoading(false);
+      setError('Este código ha vencido. Solicita uno nuevo a tu coach.');
+      return;
+    }
+    if (codeResult === 'inactive') {
+      setLoading(false);
+      setError('Código inactivo. Contacta a tu coach.');
+      return;
+    }
+
+    // Código válido — crear cuenta
     const { error: err } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
@@ -84,7 +119,7 @@ export default function AuthScreen() {
       setError(err.message);
       return;
     }
-    setSuccess('Cuenta creada. Revisa tu email para confirmar tu acceso.');
+    setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu acceso.');
   };
 
   const handleForgot = async () => {
@@ -176,9 +211,26 @@ export default function AuthScreen() {
                 onChangeText={setPassword}
                 placeholder="••••••••"
                 secureTextEntry
+                returnKeyType={mode === 'register' ? 'next' : 'done'}
+                onSubmitEditing={mode === 'register' ? undefined : submit}
+              />
+            </View>
+          )}
+          {mode === 'register' && (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO</Text>
+              <PremiumInput
+                value={accessCode}
+                onChangeText={(t) => setAccessCode(t.toUpperCase())}
+                placeholder="POLARIS-XXXX"
+                autoCapitalize="characters"
+                autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={submit}
               />
+              <Text style={styles.codeHint}>
+                Tu coach te entregó este código al inscribirte.
+              </Text>
             </View>
           )}
         </View>
@@ -294,6 +346,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 20,
+  },
+
+  codeHint: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 11,
+    marginTop: 4,
   },
 
   linkWrap: {
