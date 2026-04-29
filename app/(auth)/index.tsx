@@ -50,20 +50,28 @@ export default function AuthScreen() {
     }
     setLoading(true);
     setError(null);
-    const { error: err } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-    setLoading(false);
-    if (err) {
-      setError(
-        err.message.toLowerCase().includes('invalid')
-          ? 'Email o contraseña incorrectos.'
-          : err.message,
-      );
-      return;
+    try {
+      const { error: err } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (err) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes('invalid') || msg.includes('credentials')) {
+          setError('Email o contraseña incorrectos.');
+        } else if (msg.includes('not confirmed') || msg.includes('email')) {
+          setError('Confirma tu email antes de ingresar. Revisa tu bandeja de entrada.');
+        } else {
+          setError(err.message);
+        }
+        return;
+      }
+      router.replace('/');
+    } catch {
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
-    router.replace('/');
   };
 
   const handleRegister = async () => {
@@ -77,59 +85,59 @@ export default function AuthScreen() {
     }
     setLoading(true);
     setError(null);
-
-    // Validar código — SELECT directo (sin RPC)
-    const code = accessCode.trim().toUpperCase();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: rows, error: selectErr } = await (supabase as any)
-      .from('access_codes')
-      .select('id, max_uses, uses_count, is_active, expires_at')
-      .ilike('code', code)
-      .limit(1);
-
-    if (selectErr || !rows || rows.length === 0) {
-      setLoading(false);
-      setError('Código de acceso inválido. Verifica que esté bien escrito.');
-      return;
-    }
-
-    const row = rows[0];
-    if (!row.is_active) {
-      setLoading(false);
-      setError('Código inactivo. Contacta a tu coach.');
-      return;
-    }
-    if (row.expires_at && new Date(row.expires_at) < new Date()) {
-      setLoading(false);
-      setError('Este código ha vencido. Solicita uno nuevo a tu coach.');
-      return;
-    }
-    if (row.max_uses !== -1 && row.uses_count >= row.max_uses) {
-      setLoading(false);
-      setError('Este código ya fue usado. Solicita uno nuevo a tu coach.');
-      return;
-    }
-
-    // Código válido — crear cuenta
-    const { error: err } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-
-    // Consumir el código (incrementar uses_count)
-    if (!err) {
+    try {
+      // Validar código — SELECT directo (sin RPC)
+      const code = accessCode.trim().toUpperCase();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
+      const { data: rows, error: selectErr } = await (supabase as any)
         .from('access_codes')
-        .update({ uses_count: row.uses_count + 1 })
-        .eq('id', row.id);
+        .select('id, max_uses, uses_count, is_active, expires_at')
+        .ilike('code', code)
+        .limit(1);
+
+      if (selectErr || !rows || rows.length === 0) {
+        setError('Código de acceso inválido. Verifica que esté bien escrito.');
+        return;
+      }
+
+      const row = rows[0];
+      if (!row.is_active) {
+        setError('Código inactivo. Contacta a tu coach.');
+        return;
+      }
+      if (row.expires_at && new Date(row.expires_at) < new Date()) {
+        setError('Este código ha vencido. Solicita uno nuevo a tu coach.');
+        return;
+      }
+      if (row.max_uses !== -1 && row.uses_count >= row.max_uses) {
+        setError('Este código ya fue usado. Solicita uno nuevo a tu coach.');
+        return;
+      }
+
+      // Código válido — crear cuenta
+      const { error: err } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      // Consumir el código (incrementar uses_count)
+      if (!err) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from('access_codes')
+          .update({ uses_count: row.uses_count + 1 })
+          .eq('id', row.id);
+      }
+      if (err) {
+        setError(err.message);
+        return;
+      }
+      setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu acceso.');
+    } catch {
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu acceso.');
   };
 
   const handleForgot = async () => {
@@ -139,15 +147,20 @@ export default function AuthScreen() {
     }
     setLoading(true);
     setError(null);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-    );
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+      );
+      if (err) {
+        setError(err.message);
+        return;
+      }
+      setSuccess('Te enviamos un enlace para restablecer tu contraseña.');
+    } catch {
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
-    setSuccess('Te enviamos un enlace para restablecer tu contraseña.');
   };
 
   const submit =
