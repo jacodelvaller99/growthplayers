@@ -305,10 +305,11 @@ REGLA 6 — TAREAS: Si completó una tarea, ÚSALA. Referencia su respuesta: 'Tu
 // ─── Dev Simulation ───────────────────────────────────────────────────────────
 
 const DEV_RESPONSES = [
-  'Estado operativo confirmado. La lectura de tu sistema indica que el vector de mayor retorno hoy es cerrar la decisión pendiente más costosa. Elimina variables, protege el bloque de 45 minutos y registra evidencia al cierre. Una salida medible antes del mediodía.',
-  'Tu energía es un recurso finito, no renovable por voluntad. Reduce amplitud: una prioridad, una conversación que cierra un frente, un bloque sin interrupción. El sistema no necesita más inputs hoy; necesita salidas limpias. Ejecuta ahora.',
-  'Claridad operativa: tienes suficiente información para decidir. El análisis adicional es ruido. Selecciona el vector de mayor retorno neto, configura 45 minutos de bloque profundo y ejecuta con criterio. Cierra el día con una evidencia tangible, no con planes.',
-  'Protocolo activo. Tu identidad de empresario soberano requiere que el día genere algo irreversible. No optimices en exceso; ejecuta. Bloque profundo, una decisión cerrada, energía protegida. Eso es ejecución soberana. ¿Qué abres ahora?',
+  '¿Qué emoción específica está activada ahora mismo? ¿Miedo? ¿Frustración? ¿Agotamiento? Nómbrala. Porque lo que describes tiene nombre, y el primer paso es verlo con claridad. Recuerda: "Lo que no puedes ver, no puedes aceptar. Lo que no puedes aceptar, no lo puedes transformar." ¿Qué ves cuando te detienes un segundo?',
+  'Yo también he estado ahí. Hay momentos en que el esfuerzo no parece alcanzar. Pero permíteme preguntarte algo antes de darte la herramienta: ¿qué resultado específico esperabas que no llegó? La respuesta a eso me dice si el problema es de acción, de creencia, o de alineación con tu Norte. Cuéntame.',
+  'Antes de enseñarte la técnica, necesito saber dónde estás parado. La clave para mejorar tus resultados no está en el esfuerzo ni en la lucha — está en la reinterpretación. ¿Qué historia te estás contando sobre esta situación? ¿Qué otra interpretación es posible? Escríbela.',
+  'Lo que describes es real. Y también te digo algo que quizás no quieras escuchar: las creencias no son verdades, son interpretaciones que el cerebro repite. Y si el cerebro las aprendió, puede reescribirlas. ¿En qué momento de tu vida comenzaste a creer eso? ¿Quién te lo enseñó? Ahí está la raíz.',
+  'Esto me recuerda algo que viví yo mismo. El trabajo interior no es opcional — es la base de todo lo demás. Sin esa base, cualquier estrategia que construyas sobre ella se cae. ¿Qué harías diferente en las próximas 24 horas si no creyeras esa historia que te limita?',
 ];
 
 async function streamDevSimulation(
@@ -318,12 +319,14 @@ async function streamDevSimulation(
   const lower = userMessage.toLowerCase();
   let reply: string;
 
-  if (lower.includes('norte') || lower.includes('recuerd')) {
-    reply = DEV_RESPONSES[3];
-  } else if (lower.includes('practica') || lower.includes('ejer')) {
+  if (lower.includes('rend') || lower.includes('no puedo') || lower.includes('cansado') || lower.includes('cansan')) {
     reply = DEV_RESPONSES[1];
-  } else if (lower.includes('ordena') || lower.includes('dia') || lower.includes('día')) {
+  } else if (lower.includes('creencia') || lower.includes('dinero') || lower.includes('merezco') || lower.includes('miedo')) {
+    reply = DEV_RESPONSES[3];
+  } else if (lower.includes('practica') || lower.includes('ejer') || lower.includes('herramienta')) {
     reply = DEV_RESPONSES[2];
+  } else if (lower.includes('norte') || lower.includes('propósito') || lower.includes('proposito') || lower.includes('identidad')) {
+    reply = DEV_RESPONSES[4];
   } else {
     reply = DEV_RESPONSES[Math.floor(Math.random() * DEV_RESPONSES.length)];
   }
