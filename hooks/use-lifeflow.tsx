@@ -655,7 +655,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           session_name:     session.sessionName,
           duration_seconds: session.durationSeconds,
           completed_at:     session.completedAt,
-          metadata:         session.metadata ?? null,
+          metadata:         (session.metadata ?? null) as import('@/types/supabase').Json | null,
         });
       } catch (e) {
         console.warn('[Supabase] saveWellnessSession:', e);

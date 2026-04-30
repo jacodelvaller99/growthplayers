@@ -1,9 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { WellnessMiniPlayer } from '@/components/WellnessMiniPlayer';
 import { Colors, Fonts, palette } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
@@ -90,5 +92,10 @@ export default function TabLayout() {
     return <Redirect href="/(onboarding)" />;
   }
 
-  return <BottomNavigation />;
+  return (
+    <View style={{ flex: 1 }}>
+      <BottomNavigation />
+      <WellnessMiniPlayer />
+    </View>
+  );
 }

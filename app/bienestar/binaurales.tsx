@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -112,6 +113,85 @@ const slider = StyleSheet.create({
     fontSize: 11,
     width: 32,
     textAlign: 'right',
+  },
+});
+
+// ─── Mixer mode presets ───────────────────────────────────────────────────────
+interface MixerPreset {
+  id: string;
+  label: string;
+  description: string;
+  carrierHz: number;
+  beatHz: number;
+  color: string;
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+}
+
+const MIXER_PRESETS: MixerPreset[] = [
+  { id: 'intelligence', label: 'INTELLIGENCE',  description: '40 Hz Gamma — Foco máximo y cognición',      carrierHz: 200, beatHz: 40,   color: '#4a90d9', icon: 'psychology'       },
+  { id: 'intuition',    label: 'INTUITION',     description: '8 Hz Alpha — Creatividad e intuición',       carrierHz: 210, beatHz: 8,    color: '#9c6aff', icon: 'auto-awesome'     },
+  { id: 'euphoria',     label: 'EUPHORIA',      description: '10 Hz Alpha — Estados elevados de bienestar', carrierHz: 432, beatHz: 10,   color: '#e8a62a', icon: 'sentiment-very-satisfied' },
+  { id: 'healing',      label: 'HEALING',       description: '7.83 Hz Schumann — Resonancia terrestre',    carrierHz: 200, beatHz: 7.83, color: '#2e7d52', icon: 'favorite'         },
+  { id: 'memory',       label: 'MEMORY',        description: '4 Hz Theta — Memoria profunda y sueños',     carrierHz: 100, beatHz: 4,    color: '#c0392b', icon: 'memory'           },
+];
+
+// ─── Wave Visualizer ──────────────────────────────────────────────────────────
+function WaveVisualizer({ active, color }: { active: boolean; color: string }) {
+  const bars = useRef(
+    Array.from({ length: 7 }, () => new Animated.Value(0.3))
+  ).current;
+
+  useEffect(() => {
+    if (!active) {
+      bars.forEach((b) => Animated.timing(b, { toValue: 0.3, duration: 300, useNativeDriver: false }).start());
+      return;
+    }
+    const anims = bars.map((bar, i) => {
+      const delay = i * 80;
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(bar, { toValue: 0.2 + Math.random() * 0.6, duration: 300 + Math.random() * 200, useNativeDriver: false }),
+          Animated.timing(bar, { toValue: 0.2 + Math.random() * 0.4, duration: 300 + Math.random() * 200, useNativeDriver: false }),
+        ])
+      );
+    });
+    Animated.stagger(60, anims).start();
+    return () => anims.forEach((a) => a.stop());
+  }, [active]);
+
+  return (
+    <View style={wave.row}>
+      {bars.map((anim, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            wave.bar,
+            {
+              backgroundColor: color,
+              height: anim.interpolate({ inputRange: [0, 1], outputRange: [6, 40] }),
+              opacity: active ? 1 : 0.3,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+const wave = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    height: 48,
+    paddingHorizontal: spacing.md,
+  },
+  bar: {
+    width: 5,
+    borderRadius: 3,
+    minHeight: 6,
   },
 });
 
@@ -230,6 +310,7 @@ function BinauralPlayer({
         ) : (
           <NativeRing progress={progress} color={preset.color} label={done ? '✓' : running ? formatTime(remaining) : preset.description} />
         )}
+        <WaveVisualizer active={running} color={preset.color} />
       </View>
 
       {/* Hz info */}
@@ -410,6 +491,8 @@ export default function BinauralesScreen() {
   const insets = useSafeAreaInsets();
   const { saveWellnessSession } = useLifeFlow();
   const [active, setActive] = useState<BinauralPreset | null>(null);
+  const [mixerMode, setMixerMode] = useState(false);
+  const [activeMixer, setActiveMixer] = useState<MixerPreset | null>(null);
 
   const handleComplete = useCallback(async (preset: BinauralPreset, secs: number) => {
     await saveWellnessSession({
@@ -459,36 +542,128 @@ export default function BinauralesScreen() {
         </Text>
       </PremiumCard>
 
-      <GoldDivider label="FRECUENCIAS" />
-
-      {BINAURAL_PRESETS.map((preset) => (
+      {/* Mode toggle */}
+      <View style={styles.modeToggleRow}>
         <Pressable
-          key={preset.id}
-          onPress={() => { haptic('light'); setActive(preset); }}
-          style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-          <View style={[styles.colorBar, { backgroundColor: preset.color }]} />
-          <View style={styles.cardContent}>
-            <View style={styles.cardTop}>
-              <View style={[styles.iconBox, { backgroundColor: preset.color + '22' }]}>
-                <MaterialIcons
-                  name={preset.icon as React.ComponentProps<typeof MaterialIcons>['name']}
-                  size={24}
-                  color={preset.color}
-                />
-              </View>
-              <View style={styles.cardMeta}>
-                <Text style={styles.cardLabel}>{preset.label}</Text>
-                <Text style={[styles.cardHz, { color: preset.color }]}>{preset.description}</Text>
-              </View>
-              <MaterialIcons name="play-circle" size={32} color={preset.color} />
-            </View>
-            <Text style={styles.cardBenefit}>{preset.benefit}</Text>
-            <View style={styles.cardFooter}>
-              <Text style={styles.cardFooterText}>{preset.beatHz} Hz beat · {preset.carrierHz} Hz portadora</Text>
-            </View>
-          </View>
+          onPress={() => { setMixerMode(false); haptic('light'); }}
+          style={[styles.modeBtn, !mixerMode && styles.modeBtnActive]}>
+          <MaterialIcons name="queue-music" size={16} color={!mixerMode ? palette.black : palette.ash} />
+          <Text style={[styles.modeBtnText, !mixerMode && styles.modeBtnTextActive]}>BÁSICO</Text>
         </Pressable>
-      ))}
+        <Pressable
+          onPress={() => { setMixerMode(true); haptic('light'); }}
+          style={[styles.modeBtn, mixerMode && styles.modeBtnActive]}>
+          <MaterialIcons name="tune" size={16} color={mixerMode ? palette.black : palette.ash} />
+          <Text style={[styles.modeBtnText, mixerMode && styles.modeBtnTextActive]}>MEZCLADOR</Text>
+        </Pressable>
+      </View>
+
+      {!mixerMode ? (
+        <>
+          <GoldDivider label="FRECUENCIAS" />
+          {BINAURAL_PRESETS.map((preset) => (
+            <Pressable
+              key={preset.id}
+              onPress={() => { haptic('light'); setActive(preset); }}
+              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+              <View style={[styles.colorBar, { backgroundColor: preset.color }]} />
+              <View style={styles.cardContent}>
+                <View style={styles.cardTop}>
+                  <View style={[styles.iconBox, { backgroundColor: preset.color + '22' }]}>
+                    <MaterialIcons
+                      name={preset.icon as React.ComponentProps<typeof MaterialIcons>['name']}
+                      size={24}
+                      color={preset.color}
+                    />
+                  </View>
+                  <View style={styles.cardMeta}>
+                    <Text style={styles.cardLabel}>{preset.label}</Text>
+                    <Text style={[styles.cardHz, { color: preset.color }]}>{preset.description}</Text>
+                  </View>
+                  <MaterialIcons name="play-circle" size={32} color={preset.color} />
+                </View>
+                <Text style={styles.cardBenefit}>{preset.benefit}</Text>
+                <View style={styles.cardFooter}>
+                  <Text style={styles.cardFooterText}>{preset.beatHz} Hz beat · {preset.carrierHz} Hz portadora</Text>
+                </View>
+              </View>
+            </Pressable>
+          ))}
+        </>
+      ) : (
+        <>
+          <GoldDivider label="FRECUENCIAS AVANZADAS" />
+          <Text style={styles.mixerIntro}>
+            Selecciona una categoría de estado mental y lanza la sesión desde el mezclador.
+          </Text>
+          <View style={styles.mixerGrid}>
+            {MIXER_PRESETS.map((mp) => (
+              <Pressable
+                key={mp.id}
+                onPress={() => { setActiveMixer(activeMixer?.id === mp.id ? null : mp); haptic('light'); }}
+                style={[
+                  styles.mixerCard,
+                  activeMixer?.id === mp.id && { borderColor: mp.color, backgroundColor: mp.color + '18' },
+                ]}>
+                <View style={[styles.mixerIconBox, { backgroundColor: mp.color + '22' }]}>
+                  <MaterialIcons name={mp.icon} size={22} color={mp.color} />
+                </View>
+                <Text style={[styles.mixerLabel, { color: mp.color }]}>{mp.label}</Text>
+                <Text style={styles.mixerDesc} numberOfLines={2}>{mp.description}</Text>
+                <Text style={styles.mixerHz}>{mp.beatHz} Hz · {mp.carrierHz} Hz</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {activeMixer && (
+            <PremiumCard style={[styles.mixerPlayerCard, { borderColor: activeMixer.color + '66' }]}>
+              <View style={styles.mixerPlayerHeader}>
+                <Text style={[styles.mixerPlayerTitle, { color: activeMixer.color }]}>
+                  {activeMixer.label}
+                </Text>
+                <WaveVisualizer active={false} color={activeMixer.color} />
+              </View>
+              <View style={styles.mixerHzRow}>
+                <View style={styles.mixerHzBox}>
+                  <Text style={[styles.mixerHzVal, { color: activeMixer.color }]}>{activeMixer.carrierHz}</Text>
+                  <Text style={styles.mixerHzLabel}>Hz portadora</Text>
+                </View>
+                <View style={styles.hzDividerV} />
+                <View style={styles.mixerHzBox}>
+                  <Text style={[styles.mixerHzVal, { color: activeMixer.color }]}>{activeMixer.beatHz}</Text>
+                  <Text style={styles.mixerHzLabel}>Hz beat</Text>
+                </View>
+                <View style={styles.hzDividerV} />
+                <View style={styles.mixerHzBox}>
+                  <Text style={[styles.mixerHzVal, { color: activeMixer.color }]}>
+                    {activeMixer.carrierHz + activeMixer.beatHz}
+                  </Text>
+                  <Text style={styles.mixerHzLabel}>Hz derecho</Text>
+                </View>
+              </View>
+              <Pressable
+                style={[styles.mixerStartBtn, { backgroundColor: activeMixer.color }]}
+                onPress={() => {
+                  haptic('medium');
+                  // Convert mixer preset to BinauralPreset shape and launch player
+                  setActive({
+                    id: activeMixer.id,
+                    label: activeMixer.label,
+                    description: `${activeMixer.beatHz} Hz beat`,
+                    benefit: activeMixer.description,
+                    carrierHz: activeMixer.carrierHz,
+                    beatHz: activeMixer.beatHz,
+                    color: activeMixer.color,
+                    icon: activeMixer.icon as string,
+                  } as BinauralPreset);
+                }}>
+                <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+                <Text style={styles.mixerStartText}>LANZAR SESIÓN</Text>
+              </Pressable>
+            </PremiumCard>
+          )}
+        </>
+      )}
 
       <View style={{ height: spacing.xxxl }} />
     </ScrollView>
@@ -591,6 +766,143 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: palette.smoke,
     fontSize: 10,
+  },
+
+  // Mode toggle
+  modeToggleRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: palette.line,
+  },
+  modeBtnActive: {
+    backgroundColor: palette.gold,
+    borderColor: palette.gold,
+  },
+  modeBtnText: {
+    ...typography.label,
+    color: palette.ash,
+    fontSize: 11,
+    letterSpacing: 1.5,
+  },
+  modeBtnTextActive: {
+    color: palette.black,
+    fontWeight: '700',
+  },
+
+  // Mixer
+  mixerIntro: {
+    ...typography.body,
+    color: palette.smoke,
+    fontSize: 12,
+    marginBottom: spacing.lg,
+  },
+  mixerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  mixerCard: {
+    width: '47%',
+    flexGrow: 1,
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    minWidth: 130,
+  },
+  mixerIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mixerLabel: {
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+  mixerDesc: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  mixerHz: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 9,
+    marginTop: 2,
+  },
+  mixerPlayerCard: {
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  mixerPlayerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mixerPlayerTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+  mixerHzRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  mixerHzBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  mixerHzVal: {
+    fontFamily: Fonts.display,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  mixerHzLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 9,
+    marginTop: 2,
+  },
+  hzDividerV: {
+    width: 1,
+    height: 28,
+    backgroundColor: palette.line,
+  },
+  mixerStartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+  },
+  mixerStartText: {
+    ...typography.label,
+    color: palette.black,
+    fontWeight: '700',
+    fontSize: 13,
   },
 });
 

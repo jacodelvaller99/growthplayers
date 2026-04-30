@@ -183,6 +183,69 @@ export type Database = {
         };
         Relationships: [];
       };
+      journal_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          content: string;
+          entry_type: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content: string;
+          entry_type?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          content?: string;
+          entry_type?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
+      wellness_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: string;
+          session_name: string | null;
+          duration_seconds: number | null;
+          frequency_hz: number | null;
+          background_track: string | null;
+          completed_at: string | null;
+          metadata: Json | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: string;
+          session_name?: string | null;
+          duration_seconds?: number | null;
+          frequency_hz?: number | null;
+          background_track?: string | null;
+          completed_at?: string | null;
+          metadata?: Json | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: string;
+          session_name?: string | null;
+          duration_seconds?: number | null;
+          frequency_hz?: number | null;
+          background_track?: string | null;
+          completed_at?: string | null;
+          metadata?: Json | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       user_progress: {

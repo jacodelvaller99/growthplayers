@@ -89,13 +89,14 @@ export function createMeditationAudio(
 ): MeditationAudioHandle | null {
   const AudioCtxCtor = getAudioCtx();
   if (!AudioCtxCtor) return null;
+  const SafeAudioCtx = AudioCtxCtor;
 
   let ctx: AudioContext | null = null;
   let gainNode: GainNode | null = null;
   let noiseSource: AudioBufferSourceNode | null = null;
 
   function start() {
-    ctx = new AudioCtxCtor();
+    ctx = new SafeAudioCtx();
 
     gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(0, ctx.currentTime);
@@ -162,6 +163,7 @@ export function createBinauralAudio(
 ): BinauralAudioHandle | null {
   const AudioCtxCtor = getAudioCtx();
   if (!AudioCtxCtor) return null;
+  const SafeAudioCtx2 = AudioCtxCtor;
 
   let ctx: AudioContext | null = null;
   let binauralGain: GainNode | null = null;
@@ -172,7 +174,7 @@ export function createBinauralAudio(
   let currentAmbience: AmbienceType = 'none';
 
   function start() {
-    ctx = new AudioCtxCtor();
+    ctx = new SafeAudioCtx2();
 
     // ── Binaural oscillators ──────────────────────────────────────────────────
     const merger = ctx.createChannelMerger(2);

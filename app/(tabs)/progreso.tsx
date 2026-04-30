@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,6 +24,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useWellnessStore } from '@/store/wellnessStore';
 import { calcSovereignScore } from '@/lib/utils';
 import {
   requestNotificationPermissions,
@@ -40,6 +41,8 @@ export default function ProgresoScreen() {
     updateProfile, updateNorthStar,
     resetOnboarding, clearData, signOut,
   } = useLifeFlow();
+
+  const wellnessTier = useWellnessStore((s) => s.user.subscriptionTier);
 
   const [name, setName] = useState(state.profile.name);
   const [role, setRole] = useState(state.profile.role);
@@ -64,6 +67,34 @@ export default function ProgresoScreen() {
   const wellnessMeditation = wellnessSessions.filter((s) => s.type === 'meditation').length;
   const wellnessBreathing  = wellnessSessions.filter((s) => s.type === 'breathing').length;
   const wellnessBinaural   = wellnessSessions.filter((s) => s.type === 'binaural').length;
+
+  // Wellness stats
+  const totalWellnessMinutes = Math.round(
+    wellnessSessions.reduce((acc, s) => acc + ((s.durationSeconds ?? 0) / 60), 0)
+  );
+
+  const wellnessStreak = useMemo(() => {
+    if (!wellnessSessions.length) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let streak = 0;
+    const day = new Date(today);
+    while (streak < 365) {
+      const dayStr = day.toISOString().slice(0, 10);
+      const hasSession = wellnessSessions.some((s) => s.completedAt?.startsWith(dayStr));
+      if (!hasSession) break;
+      streak++;
+      day.setDate(day.getDate() - 1);
+    }
+    return streak;
+  }, [wellnessSessions]);
+
+  const TIER_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }> = {
+    free:         { label: 'FREE',          color: palette.smoke,   icon: 'lock-open'         },
+    premium:      { label: 'PREMIUM',       color: palette.gold,    icon: 'workspace-premium' },
+    premium_plus: { label: 'PREMIUM PLUS',  color: '#7c5cbf',       icon: 'diamond'           },
+  };
+  const tierInfo = TIER_CONFIG[wellnessTier] ?? TIER_CONFIG.free;
 
   // Sovereign Score v2 — includes wellness bonus
   const score = calcSovereignScore({
@@ -247,6 +278,84 @@ export default function ProgresoScreen() {
           <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
         ))}
       </View>
+
+      {/* ── Mi Bienestar ── */}
+      <GoldDivider label="MI BIENESTAR" />
+
+      {/* Tier badge */}
+      <PremiumCard style={[styles.tierCard, { borderColor: tierInfo.color + '55' }]}>
+        <View style={[styles.tierIconBox, { backgroundColor: tierInfo.color + '22' }]}>
+          <MaterialIcons name={tierInfo.icon} size={22} color={tierInfo.color} />
+        </View>
+        <View style={styles.tierBody}>
+          <Text style={styles.tierLabel}>PLAN ACTIVO</Text>
+          <Text style={[styles.tierName, { color: tierInfo.color }]}>{tierInfo.label}</Text>
+          {wellnessTier === 'free' && (
+            <Text style={styles.tierSub}>Actualiza a Premium para desbloquear todo el contenido</Text>
+          )}
+        </View>
+        {wellnessTier === 'free' && (
+          <Pressable style={styles.tierUpgradeBtn}>
+            <Text style={styles.tierUpgradeText}>UPGRADE</Text>
+          </Pressable>
+        )}
+      </PremiumCard>
+
+      {/* Wellness stats */}
+      <View style={styles.grid}>
+        <MetricCard
+          label="Sesiones"
+          value={`${wellnessSessions.length}`}
+          meta="totales"
+          icon="self-improvement"
+        />
+        <MetricCard
+          label="Minutos"
+          value={`${totalWellnessMinutes}`}
+          meta="acumulados"
+          icon="timer"
+        />
+        <MetricCard
+          label="Racha"
+          value={`${wellnessStreak}`}
+          meta="días wellness"
+          icon="local-fire-department"
+        />
+        <MetricCard
+          label="Meditación"
+          value={`${wellnessMeditation}`}
+          meta="sesiones"
+          icon="spa"
+        />
+      </View>
+
+      {/* B2B CTA */}
+      <PremiumCard style={styles.b2bCard}>
+        <View style={styles.b2bHeader}>
+          <View style={[styles.b2bIconBox, { backgroundColor: palette.gold + '22' }]}>
+            <MaterialIcons name="business" size={24} color={palette.gold} />
+          </View>
+          <View style={styles.b2bTextCol}>
+            <Text style={styles.b2bTitle}>LIFEFLOW PARA TU EMPRESA</Text>
+            <Text style={styles.b2bSub}>Lleva el bienestar a todo tu equipo</Text>
+          </View>
+        </View>
+        <Text style={styles.b2bBody}>
+          Acceso corporativo, dashboard de métricas de equipo, y programas de bienestar personalizados para organizaciones.
+        </Text>
+        <View style={styles.b2bFeatures}>
+          {['Dashboard de equipo', 'Licencias múltiples', 'Soporte prioritario'].map((f) => (
+            <View key={f} style={styles.b2bFeatureRow}>
+              <MaterialIcons name="check-circle" size={14} color={palette.gold} />
+              <Text style={styles.b2bFeatureText}>{f}</Text>
+            </View>
+          ))}
+        </View>
+        <Pressable style={styles.b2bBtn}>
+          <MaterialIcons name="arrow-forward" size={16} color={palette.black} />
+          <Text style={styles.b2bBtnText}>SOLICITAR INFORMACIÓN</Text>
+        </Pressable>
+      </PremiumCard>
 
       {/* ── Edit Profile ── */}
       <GoldDivider label="EDITAR PERFIL" />
@@ -517,6 +626,125 @@ const styles = StyleSheet.create({
     color: palette.danger,
     fontSize: 11,
     letterSpacing: 2,
+  },
+
+  // Tier badge
+  tierCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  tierIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  tierBody: {
+    flex: 1,
+    gap: 2,
+  },
+  tierLabel: {
+    ...typography.label,
+    color: palette.ash,
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  tierName: {
+    fontFamily: Fonts.display,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  tierSub: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 10,
+  },
+  tierUpgradeBtn: {
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  tierUpgradeText: {
+    ...typography.label,
+    color: palette.black,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+
+  // B2B card
+  b2bCard: {
+    gap: spacing.md,
+    borderColor: palette.gold + '44',
+    marginBottom: spacing.lg,
+  },
+  b2bHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  b2bIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  b2bTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  b2bTitle: {
+    ...typography.section,
+    color: palette.ivory,
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+  b2bSub: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 11,
+  },
+  b2bBody: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  b2bFeatures: {
+    gap: spacing.sm,
+  },
+  b2bFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  b2bFeatureText: {
+    ...typography.caption,
+    color: palette.ash,
+    fontSize: 11,
+  },
+  b2bBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+  },
+  b2bBtnText: {
+    ...typography.label,
+    color: palette.black,
+    fontWeight: '700',
+    fontSize: 11,
   },
 
   // System
