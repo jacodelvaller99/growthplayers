@@ -140,7 +140,7 @@ export default function MentorScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Opening message — static, shown only when conversation is empty
+  // Opening message — recomputes when check-in loads (async from Supabase)
   const openingMessage = useMemo(
     () =>
       getOpeningMessage({
@@ -149,8 +149,9 @@ export default function MentorScreen() {
         todayCheckIn,
         activeModuleTitle: ACTIVE_MODULE.title,
       }),
+    // recompute once todayCheckIn arrives from Supabase (was null at mount)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [todayCheckIn?.date, protocolDay],
   );
 
   // Gate: ≥ 3 mensajes de usuario sin suscripción
