@@ -17,6 +17,7 @@ import {
 } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { analytics } from '@/lib/analytics';
 
 function todayLabel() {
   return new Date()
@@ -54,6 +55,7 @@ export default function CheckInScreen() {
       sleep,
       systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
     });
+    analytics.checkinSubmit(energy, clarity, stress, sleep);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.replace('/(tabs)/comando');
   };

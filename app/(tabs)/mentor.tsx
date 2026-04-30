@@ -26,7 +26,10 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useMentorMemory } from '@/hooks/useMentorMemory';
+import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
+import { intel } from '@/lib/supabase';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -131,7 +134,12 @@ export default function MentorScreen() {
     averages,
     isSubscribed,
     addMentorMessages,
+    userId,
   } = useLifeFlow();
+
+  // ── Intelligence Engine hooks ──────────────────────────────────────────────
+  const { intelligence } = useUserIntelligence(userId);
+  const { addMemory, searchMemories } = useMentorMemory(userId);
 
   const [input, setInput]               = useState('');
   const [isStreaming, setIsStreaming]   = useState(false);
@@ -209,6 +217,12 @@ export default function MentorScreen() {
         : sovereignScore >= 200 ? 'Mercader'
         : 'Explorador';
 
+      // ── Step 1: Semantic memory search (parallel with build) ──────────────
+      const memoriesPromise = searchMemories(clean, 3);
+
+      // ── Step 2: Build context with Intelligence fields ─────────────────────
+      const relevantMemories = await memoriesPromise;
+
       const ctx: MentorContext = {
         userName:             state.profile.name,
         role:                 state.profile.role,
@@ -226,6 +240,19 @@ export default function MentorScreen() {
           lessonTitle: t.title,
           keyResponse: t.responses ? Object.values(t.responses)[0] : undefined,
         })),
+        // Intelligence Engine enrichment
+        engagementScore:  intelligence.engagement_score,
+        churnRisk:        intelligence.churn_risk,
+        churnRiskLabel:   intelligence.churn_risk_label,
+        anomalyType:      intelligence.anomaly_type,
+        nextAction:       intelligence.next_action,
+        cohortLabel:      intelligence.cohort_label,
+        relevantMemories: relevantMemories.map((m) => ({
+          content:     m.content,
+          memory_type: m.memory_type,
+          importance:  m.importance,
+          similarity:  m.similarity,
+        })),
       };
 
       const history = state.mentorMessages.slice(-10).map((m) => ({
@@ -233,6 +260,7 @@ export default function MentorScreen() {
         text: m.text,
       }));
 
+      // ── Step 3: Stream response ────────────────────────────────────────────
       let fullText = '';
       await streamMentorResponse(ctx, clean, history, (delta) => {
         fullText += delta;
@@ -247,7 +275,28 @@ export default function MentorScreen() {
         createdAt: new Date().toISOString(),
       };
 
+      // ── Step 4: Persist messages ───────────────────────────────────────────
       await addMentorMessages(userMsg, mentorMsg);
+
+      // ── Step 5: Save conversation to mentor_conversations (fire & forget) ──
+      if (userId) {
+        intel.conversations()
+          .insert([
+            { user_id: userId, role: 'user',      content: clean },
+            { user_id: userId, role: 'assistant', content: fullText },
+          ])
+          .then(({ error }: { error: unknown }) => {
+            if (error) console.warn('[Mentor] save conversation:', error);
+          });
+      }
+
+      // ── Step 6: Save user message as memory (fire & forget) ───────────────
+      // Only messages with meaningful content (addMemory handles threshold)
+      addMemory(clean, undefined, undefined, {
+        module: ACTIVE_MODULE.title,
+        session_msg_count: userMsgCount,
+      }).catch(() => { /* silent */ });
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err) {
       console.error('[Mentor] streaming error:', err);

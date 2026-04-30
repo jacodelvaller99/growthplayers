@@ -25,6 +25,7 @@ import {
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
+import { analytics } from '@/lib/analytics';
 
 // ─── Haptic helper ────────────────────────────────────────────────────────────
 function haptic(type: 'light' | 'medium' | 'success') {
@@ -583,6 +584,7 @@ export default function BinauralesScreen() {
       completedAt: new Date().toISOString(),
       metadata: { presetId: preset.id, beatHz: preset.beatHz, carrierHz: preset.carrierHz },
     });
+    analytics.binauralComplete(preset.label, secs);
     haptic('success');
   }, [saveWellnessSession]);
 
@@ -645,7 +647,7 @@ export default function BinauralesScreen() {
           {BINAURAL_PRESETS.map((preset) => (
             <Pressable
               key={preset.id}
-              onPress={() => { haptic('light'); setActive(preset); }}
+              onPress={() => { haptic('light'); analytics.binauralStart(preset.label, 0, preset.beatHz); setActive(preset); }}
               style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
               <View style={[styles.colorBar, { backgroundColor: preset.color }]} />
               <View style={styles.cardContent}>

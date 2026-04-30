@@ -42,8 +42,88 @@ jest.mock('@/data/modules', () => ({
   ACTIVE_MODULE: { id: 'mod-01', number: 1, title: 'Identidad Soberana' },
 }));
 
+// Prevent lib/supabase.ts from actually calling createClient (needs env vars)
+jest.mock('@/lib/supabase', () => {
+  const mockFrom = jest.fn().mockReturnValue({
+    select:  jest.fn().mockReturnThis(),
+    insert:  jest.fn().mockReturnThis(),
+    update:  jest.fn().mockReturnThis(),
+    delete:  jest.fn().mockReturnThis(),
+    eq:      jest.fn().mockReturnThis(),
+    single:  jest.fn().mockResolvedValue({ data: null, error: null }),
+    order:   jest.fn().mockReturnThis(),
+    limit:   jest.fn().mockReturnThis(),
+    in:      jest.fn().mockReturnThis(),
+    gte:     jest.fn().mockReturnThis(),
+    then:    jest.fn().mockResolvedValue({ data: null, error: null }),
+  });
+  const mockFunctions = { invoke: jest.fn().mockResolvedValue({ data: null, error: null }) };
+  const mockChannel = {
+    on: jest.fn().mockReturnThis(),
+    subscribe: jest.fn().mockReturnThis(),
+  };
+  const mockSupabase = {
+    from:           mockFrom,
+    functions:      mockFunctions,
+    channel:        jest.fn().mockReturnValue(mockChannel),
+    removeChannel:  jest.fn(),
+    auth: {
+      getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
+      onAuthStateChange: jest.fn().mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } }),
+      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+    },
+  };
+  return {
+    supabase: mockSupabase,
+    db: {
+      profiles:  () => mockFrom('user_profiles'),
+      checkins:  () => mockFrom('daily_checkins'),
+      tasks:     () => mockFrom('lesson_tasks'),
+      completed: () => mockFrom('completed_lessons'),
+      messages:  () => mockFrom('mentor_messages'),
+      wellness:  () => mockFrom('wellness_sessions'),
+      journal:   () => mockFrom('journal_entries'),
+    },
+    intel: {
+      events:        () => mockFrom('user_events'),
+      intelligence:  () => mockFrom('user_intelligence'),
+      memories:      () => mockFrom('mentor_memories'),
+      conversations: () => mockFrom('mentor_conversations'),
+      notifications: () => mockFrom('smart_notifications'),
+      profiles:      () => mockFrom('profiles'),
+    },
+  };
+});
+
 jest.mock('@/lib/mentor', () => ({
   streamMentorResponse: jest.fn().mockResolvedValue('Respuesta del mentor.'),
+}));
+
+jest.mock('@/hooks/useUserIntelligence', () => ({
+  useUserIntelligence: () => ({
+    intelligence: {
+      engagement_score: 0, churn_risk: 0, churn_risk_label: 'low',
+      days_since_last_act: 0, predicted_churn_date: null,
+      preferred_time: null, preferred_duration: null, dominant_module: null, dominant_tool: null,
+      affinity_binaural: 0, affinity_breathing: 0, affinity_meditation: 0,
+      affinity_journaling: 0, affinity_lessons: 0, affinity_mentor: 0,
+      next_action: null, next_action_reason: null, next_action_urgency: 'normal',
+      anomaly_detected: false, anomaly_type: null, anomaly_detected_at: null,
+      cohort_id: null, cohort_label: null, last_calculated_at: new Date().toISOString(),
+    },
+    isLoading: false,
+    topAffinity: 'lessons',
+    engagementTier: 'low',
+    refetch: jest.fn(),
+  }),
+}));
+
+jest.mock('@/hooks/useMentorMemory', () => ({
+  useMentorMemory: () => ({
+    addMemory:         jest.fn().mockResolvedValue(null),
+    searchMemories:    jest.fn().mockResolvedValue([]),
+    getRecentMemories: jest.fn().mockResolvedValue([]),
+  }),
 }));
 
 // ── Controllable hook mock ────────────────────────────────────────────────────
@@ -83,6 +163,8 @@ function buildMockHook({ isSubscribed, userMessages }: MockHookConfig) {
     protocolDay: 7,
     todayCheckIn: null,
     addMentorMessages: mockAddMentorMessages,
+    userId: null,
+    averages: { energy: 7, clarity: 7, stress: 4, sleep: 7 },
   };
 }
 

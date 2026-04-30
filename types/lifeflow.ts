@@ -34,6 +34,10 @@ export type NorthStar = {
 export type UserProfile = {
   name: string;
   role: string;
+  /** Whether the user has consented to ML behavioral tracking (default: true) */
+  mlConsent?: boolean;
+  /** Expo push notification token */
+  expoPushToken?: string | null;
 };
 
 export type CheckIn = {

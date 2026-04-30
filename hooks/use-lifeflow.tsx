@@ -62,6 +62,8 @@ type LifeFlowContextValue = {
   isAuthenticated: boolean;
   isSubscribed: boolean;
   protocolDay: number;
+  /** Authenticated Supabase user ID — null when anonymous or unauthenticated */
+  userId: string | null;
   latestCheckIn: CheckIn | null;
   todayCheckIn: CheckIn | null;
   averages: { energy: number; clarity: number; stress: number; sleep: number };
@@ -767,6 +769,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isSubscribed,
         protocolDay,
+        userId: uidRef.current,
         latestCheckIn,
         todayCheckIn,
         averages,

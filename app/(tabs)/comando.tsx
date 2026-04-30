@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -18,6 +19,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 
 function greeting() {
@@ -30,10 +32,41 @@ function greeting() {
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state, protocolDay, todayCheckIn, latestCheckIn } = useLifeFlow();
+  const { state, protocolDay, todayCheckIn, latestCheckIn, userId } = useLifeFlow();
   const { user: wellnessUser } = useWellnessStore();
+  const { intelligence, engagementTier } = useUserIntelligence(userId);
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   const checkIn = todayCheckIn ?? latestCheckIn;
+
+  // Intelligence-driven greeting suffix
+  const intelligenceGreeting = (() => {
+    if (intelligence.anomaly_detected && intelligence.anomaly_type === 'mood_drop') {
+      return 'Tu energía ha bajado estos días. Hablemos con Norman sobre cómo reconectarte.';
+    }
+    if (intelligence.churn_risk_label === 'critical') {
+      return 'Llevas varios días sin actividad. Un pequeño paso hoy reactiva todo el sistema.';
+    }
+    if (intelligence.churn_risk_label === 'high') {
+      return 'Tu consistencia puede estar en riesgo. ¿Qué bloqueó tu práctica?';
+    }
+    if (engagementTier === 'excellent') {
+      return '¡Excelente racha! Tu disciplina está generando resultados medibles.';
+    }
+    return null;
+  })();
+
+  // Next best action card
+  const nextActionConfig = (() => {
+    if (!intelligence.next_action) return null;
+    const configs: Record<string, { icon: React.ComponentProps<typeof MaterialIcons>['name']; label: string; screen: string }> = {
+      complete_checkin: { icon: 'assignment', label: 'REGISTRAR CHECK-IN', screen: '/checkin' },
+      continue_lesson:  { icon: 'play-arrow', label: 'CONTINUAR LECCIÓN', screen: `/module/${ACTIVE_MODULE.id}` },
+      try_binaural:     { icon: 'headphones', label: 'SESIÓN BINAURAL', screen: '/bienestar' },
+      journal:          { icon: 'edit', label: 'ESCRIBIR EN DIARIO', screen: '/bienestar' },
+      talk_to_mentor:   { icon: 'forum', label: 'CONSULTAR MENTOR', screen: '/(tabs)/mentor' },
+    };
+    return configs[intelligence.next_action] ?? null;
+  })();
 
   // Wellness stats
   const totalWellnessSessions = (state.wellnessSessions ?? []).length;
@@ -57,9 +90,10 @@ export default function DashboardScreen() {
         eyebrow={`DIA ${protocolDay} · PROTOCOLO SOBERANO`}
         title={`${greeting()},\n${state.profile.name}.`}
         body={
-          todayCheckIn
+          intelligenceGreeting ??
+          (todayCheckIn
             ? 'Check-in registrado. Ahora convierte tu estado en ejecucion medible.'
-            : 'Tu sala de mando espera lectura interna para calibrar el dia.'
+            : 'Tu sala de mando espera lectura interna para calibrar el dia.')
         }>
         <Text style={styles.time}>
           {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
@@ -70,6 +104,57 @@ export default function DashboardScreen() {
           onPress={() => router.push('/checkin')}
         />
       </EditorialPanel>
+
+      {/* ── Anomaly Alert (only when detected) ── */}
+      {intelligence.anomaly_detected && intelligence.anomaly_type && (
+        <Pressable
+          onPress={() => router.push('/(tabs)/mentor')}
+          style={({ pressed }) => [styles.anomalyCard, pressed && { opacity: 0.85 }]}>
+          <MaterialIcons name="warning-amber" size={18} color={palette.gold} />
+          <View style={styles.anomalyTextBlock}>
+            <Text style={styles.anomalyTitle}>SEÑAL DETECTADA</Text>
+            <Text style={styles.anomalyBody}>
+              {intelligence.anomaly_type === 'mood_drop'
+                ? 'Bajón de energía detectado. Norman puede ayudarte a entender qué está pasando.'
+                : intelligence.anomaly_type === 'streak_break'
+                ? 'Racha rota. Hoy es el mejor día para retomar.'
+                : 'Llevas días sin conectar con tu mentor. ¿Cómo estás?'}
+            </Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
+        </Pressable>
+      )}
+
+      {/* ── Next Best Action (from ML engine) ── */}
+      {nextActionConfig && intelligence.next_action_urgency !== 'low' && (
+        <Pressable
+          onPress={() => router.push(nextActionConfig.screen as never)}
+          style={({ pressed }) => [styles.nbaCard, pressed && { opacity: 0.85 }]}>
+          <View style={styles.nbaBadge}>
+            <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.black} />
+          </View>
+          <View style={styles.nbaTextBlock}>
+            <Text style={styles.nbaLabel}>PRÓXIMA ACCIÓN RECOMENDADA</Text>
+            <Text style={styles.nbaAction}>{nextActionConfig.label}</Text>
+            {intelligence.next_action_reason && (
+              <Text style={styles.nbaReason}>{intelligence.next_action_reason}</Text>
+            )}
+          </View>
+          <MaterialIcons name="arrow-forward" size={16} color={palette.gold} />
+        </Pressable>
+      )}
+
+      {/* ── Engagement Score (subtle pill in metric grid header) ── */}
+      {intelligence.engagement_score > 0 && (
+        <View style={styles.engagementRow}>
+          <Text style={styles.engagementLabel}>ENGAGEMENT</Text>
+          <View style={[
+            styles.engagementBar,
+            { width: `${intelligence.engagement_score}%` as unknown as number },
+          ]} />
+          <Text style={styles.engagementScore}>{intelligence.engagement_score}/100</Text>
+        </View>
+      )}
 
       {/* ── Protocol Progress ── */}
       <ProgressCard
@@ -309,5 +394,107 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: palette.ash,
     fontStyle: 'italic',
+  },
+
+  // ── Anomaly alert card ──────────────────────────────────────────────────────
+  anomalyCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 200, 4, 0.07)',
+    borderColor: palette.gold,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  anomalyTextBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  anomalyTitle: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 9,
+    letterSpacing: 2,
+  },
+  anomalyBody: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 12,
+  },
+
+  // ── Next best action card ───────────────────────────────────────────────────
+  nbaCard: {
+    alignItems: 'center',
+    backgroundColor: palette.charcoal,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  nbaBadge: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  nbaTextBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  nbaLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 8,
+    letterSpacing: 1.5,
+  },
+  nbaAction: {
+    ...typography.section,
+    color: palette.ivory,
+    fontSize: 11,
+  },
+  nbaReason: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 11,
+  },
+
+  // ── Engagement bar ──────────────────────────────────────────────────────────
+  engagementRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingHorizontal: 4,
+  },
+  engagementLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 7,
+    letterSpacing: 1.5,
+    width: 80,
+  },
+  engagementBar: {
+    backgroundColor: palette.gold,
+    borderRadius: 2,
+    flex: 1,
+    height: 3,
+    maxWidth: '60%',
+    opacity: 0.6,
+  },
+  engagementScore: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 10,
+    width: 48,
+    textAlign: 'right',
   },
 });

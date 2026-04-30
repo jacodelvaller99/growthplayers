@@ -31,6 +31,27 @@ export interface MentorContext {
     lessonTitle: string;
     keyResponse?: string;
   }>;
+
+  // ── Intelligence Engine fields (optional — enriched when available) ─────────
+  /** 0–100 engagement score from ML engine */
+  engagementScore?: number;
+  /** 0–1 churn probability */
+  churnRisk?: number;
+  /** 'low' | 'medium' | 'high' | 'critical' */
+  churnRiskLabel?: string;
+  /** Detected anomaly type, if any */
+  anomalyType?: string | null;
+  /** ML-suggested next best action */
+  nextAction?: string | null;
+  /** Cohort label from clustering */
+  cohortLabel?: string | null;
+  /** Top-K semantically relevant memories for the current query */
+  relevantMemories?: Array<{
+    content: string;
+    memory_type: string;
+    importance: number;
+    similarity?: number;
+  }>;
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -55,6 +76,51 @@ export function buildSystemPrompt(ctx: MentorContext): string {
           .map((t) => `✓ ${t.lessonTitle}: "${t.keyResponse ?? ''}"`)
           .join('\n')
       : 'Ninguna completada aún.';
+
+  // ── Intelligence block (only injected when available) ──────────────────────
+  const intelligenceBlock = (() => {
+    const lines: string[] = [];
+
+    if (ctx.engagementScore !== undefined) {
+      lines.push(`Nivel de engagement: ${ctx.engagementScore}/100`);
+    }
+    if (ctx.churnRiskLabel && ctx.churnRiskLabel !== 'low') {
+      lines.push(`Riesgo de abandono: ${ctx.churnRiskLabel.toUpperCase()}`);
+    }
+    if (ctx.anomalyType) {
+      const anomalyDesc: Record<string, string> = {
+        mood_drop:    'SEÑAL: su energía ha bajado notablemente estos días',
+        streak_break: 'SEÑAL: acaba de romper una racha — puede estar desmotivado',
+        isolation:    'SEÑAL: lleva días sin hablar con su mentor — puede necesitar conexión',
+      };
+      lines.push(anomalyDesc[ctx.anomalyType] ?? `Anomalía detectada: ${ctx.anomalyType}`);
+    }
+    if (ctx.cohortLabel) {
+      const cohortDesc: Record<string, string> = {
+        high_performer: 'Perfil: Alto rendimiento — desafíalo con nivel siguiente',
+        achiever:       'Perfil: Logrador — enfocarlo en sistema y no solo en métricas',
+        wellness_seeker:'Perfil: Buscador de bienestar — conectar método con paz interior',
+        passive_learner:'Perfil: Aprendiz pasivo — empujarlo a la acción concreta',
+        explorer:       'Perfil: Explorador — ayudarlo a profundizar en lugar de saltar temas',
+        at_risk:        'Perfil: EN RIESGO — priorizar reconexión y win rápido hoy',
+      };
+      if (cohortDesc[ctx.cohortLabel]) lines.push(cohortDesc[ctx.cohortLabel]);
+    }
+
+    return lines.length > 0
+      ? `INTELIGENCIA DE SESIÓN:\n${lines.map((l) => `- ${l}`).join('\n')}`
+      : '';
+  })();
+
+  // ── Relevant memories block (top-K semantic search results) ───────────────
+  const memoriesBlock = (() => {
+    if (!ctx.relevantMemories || ctx.relevantMemories.length === 0) return '';
+    const entries = ctx.relevantMemories
+      .slice(0, 3)
+      .map((m) => `[${m.memory_type}] "${m.content.slice(0, 150)}"`)
+      .join('\n');
+    return `MEMORIAS RELEVANTES (contexto de sesiones anteriores):\n${entries}`;
+  })();
 
   return `═══════════════════════════════════════════════
 QUIÉN ERES
@@ -149,6 +215,7 @@ ${checkInBlock}
 TAREAS COMPLETADAS:
 ${tasksBlock}
 
+${intelligenceBlock ? `${intelligenceBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
 ═══════════════════════════════════════════════
 EL MÉTODO POLARIS — TU CONOCIMIENTO COMPLETO
 ═══════════════════════════════════════════════

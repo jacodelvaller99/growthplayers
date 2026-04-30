@@ -24,6 +24,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { calcSovereignScore } from '@/lib/utils';
 import {
@@ -40,7 +41,19 @@ export default function ProgresoScreen() {
     state, protocolDay, averages,
     updateProfile, updateNorthStar,
     resetOnboarding, clearData, signOut,
+    userId,
   } = useLifeFlow();
+
+  const { intelligence, topAffinity, engagementTier } = useUserIntelligence(userId);
+
+  // ML Consent toggle
+  const [mlConsent, setMlConsent] = useState(state.profile.mlConsent !== false);
+
+  const handleMlConsentToggle = async (value: boolean) => {
+    setMlConsent(value);
+    await updateProfile({ ...state.profile, mlConsent: value });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   const wellnessTier = useWellnessStore((s) => s.user.subscriptionTier);
 
@@ -271,6 +284,83 @@ export default function ProgresoScreen() {
         </>
       )}
 
+      {/* ── Intelligence DNA Dashboard ── */}
+      {intelligence.engagement_score > 0 && (
+        <>
+          <GoldDivider label="ADN DE COMPORTAMIENTO" />
+          <PremiumCard style={dnaStyles.card}>
+            {/* Cohort badge */}
+            {intelligence.cohort_label && (
+              <View style={dnaStyles.cohortRow}>
+                <MaterialIcons name="group" size={14} color={palette.gold} />
+                <Text style={dnaStyles.cohortLabel}>
+                  PERFIL: {intelligence.cohort_label.replace(/_/g, ' ').toUpperCase()}
+                </Text>
+                <View style={[dnaStyles.tierBadge, {
+                  backgroundColor:
+                    engagementTier === 'excellent' ? 'rgba(255,200,4,0.2)'
+                    : engagementTier === 'good' ? 'rgba(180,230,100,0.15)'
+                    : 'rgba(120,120,120,0.15)',
+                }]}>
+                  <Text style={[dnaStyles.tierText, {
+                    color: engagementTier === 'excellent' ? palette.gold : engagementTier === 'good' ? '#a8e063' : palette.smoke,
+                  }]}>{engagementTier.toUpperCase()}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Engagement gauge */}
+            <View style={dnaStyles.gaugeRow}>
+              <Text style={dnaStyles.gaugeLabel}>ENGAGEMENT</Text>
+              <View style={dnaStyles.gaugeTrack}>
+                <View style={[dnaStyles.gaugeFill, { width: `${intelligence.engagement_score}%` as unknown as number }]} />
+              </View>
+              <Text style={dnaStyles.gaugeValue}>{intelligence.engagement_score}/100</Text>
+            </View>
+
+            {/* Affinity bars */}
+            <Text style={dnaStyles.sectionLabel}>AFINIDAD POR MÓDULO</Text>
+            {[
+              { key: 'binaural',   label: 'Binaurales',  value: intelligence.affinity_binaural },
+              { key: 'meditation', label: 'Meditación',  value: intelligence.affinity_meditation },
+              { key: 'breathing',  label: 'Respiración', value: intelligence.affinity_breathing },
+              { key: 'lessons',    label: 'Lecciones',   value: intelligence.affinity_lessons },
+              { key: 'mentor',     label: 'Mentor IA',   value: intelligence.affinity_mentor },
+              { key: 'journaling', label: 'Diario',      value: intelligence.affinity_journaling },
+            ].map((af) => (
+              <View key={af.key} style={dnaStyles.affinityRow}>
+                <Text style={[dnaStyles.affinityLabel, topAffinity === af.key && { color: palette.gold }]}>
+                  {af.label}{topAffinity === af.key ? ' ★' : ''}
+                </Text>
+                <View style={dnaStyles.affinityTrack}>
+                  <View style={[
+                    dnaStyles.affinityFill,
+                    { width: `${Math.round(af.value * 100)}%` as unknown as number },
+                    topAffinity === af.key && { backgroundColor: palette.gold },
+                  ]} />
+                </View>
+                <Text style={dnaStyles.affinityPct}>{Math.round(af.value * 100)}%</Text>
+              </View>
+            ))}
+
+            {/* Churn risk (only if not low) */}
+            {intelligence.churn_risk_label !== 'low' && (
+              <View style={dnaStyles.riskRow}>
+                <MaterialIcons
+                  name="warning-amber"
+                  size={13}
+                  color={intelligence.churn_risk_label === 'critical' ? '#ff4444' : palette.gold}
+                />
+                <Text style={[dnaStyles.riskText, intelligence.churn_risk_label === 'critical' && { color: '#ff6666' }]}>
+                  Riesgo de abandono: {intelligence.churn_risk_label.toUpperCase()}
+                  {'  — Habla con Norman para retomar tu impulso.'}
+                </Text>
+              </View>
+            )}
+          </PremiumCard>
+        </>
+      )}
+
       {/* ── Achievements ── */}
       <GoldDivider label="LOGROS" />
       <View style={styles.achievementsGrid}>
@@ -429,7 +519,7 @@ export default function ProgresoScreen() {
       </PremiumCard>
 
       {/* ── Notificaciones ── */}
-      <GoldDivider label="NOTIFICACIONES" />
+      <GoldDivider label="NOTIFICACIONES Y PRIVACIDAD" />
       <PremiumCard style={styles.settingsCard}>
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
@@ -441,6 +531,20 @@ export default function ProgresoScreen() {
             onValueChange={toggleNotifications}
             trackColor={{ false: palette.charcoal, true: palette.gold }}
             thumbColor={notificationsOn ? palette.black : palette.ash}
+          />
+        </View>
+        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.md }]}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>ANÁLISIS DE COMPORTAMIENTO</Text>
+            <Text style={styles.settingMeta}>
+              Permite a LifeFlow personalizar recomendaciones con IA. Tus datos nunca se venden.
+            </Text>
+          </View>
+          <Switch
+            value={mlConsent}
+            onValueChange={handleMlConsentToggle}
+            trackColor={{ false: palette.charcoal, true: palette.gold }}
+            thumbColor={mlConsent ? palette.black : palette.ash}
           />
         </View>
       </PremiumCard>
@@ -771,5 +875,121 @@ const styles = StyleSheet.create({
   systemMeta: {
     ...typography.mono,
     color: palette.smoke,
+  },
+});
+
+// ─── DNA Dashboard styles ─────────────────────────────────────────────────────
+const dnaStyles = StyleSheet.create({
+  card: {
+    gap: spacing.md,
+  },
+  cohortRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  cohortLabel: {
+    ...typography.label,
+    color: palette.ash,
+    flex: 1,
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  tierBadge: {
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  tierText: {
+    fontFamily: Fonts.display,
+    fontSize: 8,
+    letterSpacing: 1.5,
+  },
+  gaugeRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  gaugeLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 8,
+    letterSpacing: 1.5,
+    width: 82,
+  },
+  gaugeTrack: {
+    backgroundColor: palette.charcoal,
+    borderRadius: 2,
+    flex: 1,
+    height: 6,
+    overflow: 'hidden',
+  },
+  gaugeFill: {
+    backgroundColor: palette.gold,
+    borderRadius: 2,
+    height: 6,
+  },
+  gaugeValue: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 10,
+    textAlign: 'right',
+    width: 44,
+  },
+  sectionLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 8,
+    letterSpacing: 2,
+    marginBottom: 2,
+    marginTop: spacing.sm,
+  },
+  affinityRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  affinityLabel: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 11,
+    width: 82,
+  },
+  affinityTrack: {
+    backgroundColor: palette.charcoal,
+    borderRadius: 2,
+    flex: 1,
+    height: 4,
+    overflow: 'hidden',
+  },
+  affinityFill: {
+    backgroundColor: palette.lineSoft,
+    borderRadius: 2,
+    height: 4,
+  },
+  affinityPct: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 9,
+    textAlign: 'right',
+    width: 32,
+  },
+  riskRow: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,200,4,0.06)',
+    borderColor: 'rgba(255,200,4,0.3)',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  riskText: {
+    ...typography.body,
+    color: palette.gold,
+    flex: 1,
+    fontSize: 11,
   },
 });

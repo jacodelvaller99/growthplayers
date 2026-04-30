@@ -58,3 +58,20 @@ export const db = {
   wellness:  () => supabase.from('wellness_sessions'),
   journal:   () => supabase.from('journal_entries'),
 };
+
+/**
+ * Intelligence Engine table helpers — untyped (tables added in migration
+ * 20260502000000; regenerate Supabase types to get full type safety).
+ * eslint-disable-next-line @typescript-eslint/no-explicit-any
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const anyClient = supabase as any;
+export const intel = {
+  events:           () => anyClient.from('user_events'),
+  intelligence:     () => anyClient.from('user_intelligence'),
+  memories:         () => anyClient.from('mentor_memories'),
+  conversations:    () => anyClient.from('mentor_conversations'),
+  notifications:    () => anyClient.from('smart_notifications'),
+  /** profiles (with is_admin etc.) — use anyClient to bypass stale types */
+  profiles:         () => anyClient.from('profiles'),
+};

@@ -19,6 +19,7 @@ import { MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
+import { analytics } from '@/lib/analytics';
 
 function haptic(type: 'light' | 'medium' | 'success') {
   if (Platform.OS === 'web') return;
@@ -339,6 +340,7 @@ export default function MeditacionScreen() {
         completedAt: new Date().toISOString(),
         metadata: { sessionId: session.id, category: session.category },
       });
+      analytics.meditationComplete(session.title, secs);
       haptic('success');
     },
     [saveWellnessSession],

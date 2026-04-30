@@ -9,7 +9,8 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
-import { LifeFlowProvider } from '@/hooks/use-lifeflow';
+import { LifeFlowProvider, useLifeFlow } from '@/hooks/use-lifeflow';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { Colors } from '@/constants/theme';
 
 export const unstable_settings = {
@@ -31,6 +32,13 @@ const SovereignTheme = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+// ─── Analytics initializer (inside LifeFlowProvider tree) ────────────────────
+function AnalyticsInitializer() {
+  const { userId, state } = useLifeFlow();
+  useAnalytics({ userId, mlConsent: state.profile.mlConsent !== false });
+  return null;
+}
 
 export default function RootLayout() {
   const router = useRouter();
@@ -64,6 +72,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={SovereignTheme}>
       <LifeFlowProvider>
+        <AnalyticsInitializer />
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -80,6 +89,7 @@ export default function RootLayout() {
           <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="bienestar" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/index" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Modal' }} />
         </Stack>
         <StatusBar style="light" />

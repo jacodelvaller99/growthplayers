@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -25,6 +25,7 @@ import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { analytics } from '@/lib/analytics';
 import type { TaskField } from '@/types/lifeflow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -193,6 +194,23 @@ export default function LessonScreen() {
   const canComplete = !task || taskSaved;
   const canSaveTask = task && allRequiredFilled && (editing || !taskSaved);
 
+  // Track lesson start on mount
+  const lessonStartMs = useRef(Date.now());
+  useEffect(() => {
+    lessonStartMs.current = Date.now();
+    if (meta) {
+      analytics.lessonStart(lessonId, meta.mod.id);
+    }
+    return () => {
+      // Track abandon if not completed when component unmounts
+      if (!isLessonCompleted && meta) {
+        const elapsed = Date.now() - lessonStartMs.current;
+        analytics.lessonAbandon(lessonId, 0, elapsed);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
   const handleSaveTask = async () => {
     if (!task || !canSaveTask) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -204,6 +222,7 @@ export default function LessonScreen() {
   const handleCompleteLesson = async () => {
     if (!canComplete) return;
     await markLessonComplete(lessonId);
+    analytics.lessonComplete(lessonId, Date.now() - lessonStartMs.current);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     if (meta?.next) {

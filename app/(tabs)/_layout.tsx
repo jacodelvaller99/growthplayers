@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Redirect, Tabs } from 'expo-router';
-import React from 'react';
+import { Redirect, Tabs, useSegments } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +8,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { WellnessMiniPlayer } from '@/components/WellnessMiniPlayer';
 import { Colors, Fonts, palette } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { analytics } from '@/lib/analytics';
 
 type TabIcon = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -83,6 +84,17 @@ export function BottomNavigation() {
 
 export default function TabLayout() {
   const { isLoaded, isAuthenticated, state } = useLifeFlow();
+  const segments = useSegments();
+  const prevScreen = useRef<string | null>(null);
+
+  // Track tab screen views
+  useEffect(() => {
+    const screenName = segments[segments.length - 1] ?? 'unknown';
+    if (screenName !== prevScreen.current) {
+      prevScreen.current = screenName;
+      analytics.screenView(screenName);
+    }
+  }, [segments]);
 
   if (isLoaded && !isAuthenticated) {
     return <Redirect href={'/(auth)' as never} />;

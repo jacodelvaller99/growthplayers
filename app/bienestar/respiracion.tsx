@@ -17,6 +17,7 @@ import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { analytics } from '@/lib/analytics';
 import { useWellnessStore } from '@/store/wellnessStore';
 
 // ─── Haptic helper (web-safe) ─────────────────────────────────────────────────
@@ -301,6 +302,7 @@ export default function RespiracionScreen() {
       completedAt: new Date().toISOString(),
       metadata: { techniqueId: technique.id, cycles: technique.cycles },
     });
+    analytics.breathingComplete(technique.title, technique.cycles ?? 0, secs * 1000);
     haptic('success');
   }, [saveWellnessSession]);
 
