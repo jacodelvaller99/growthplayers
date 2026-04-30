@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   },
   avatarRing: {
     borderColor: palette.gold,
-    borderRadius: 2,
+    borderRadius: radii.xs,
     borderWidth: 2,
     padding: 3,
   },
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: palette.goldLight,
     borderColor: palette.line,
-    borderRadius: 2,
+    borderRadius: radii.xs,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 4,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   },
   northLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
   textarea: {
     minHeight: 80,

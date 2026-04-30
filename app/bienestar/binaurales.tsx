@@ -101,7 +101,7 @@ const slider = StyleSheet.create({
     flex: 1,
     height: 4,
     backgroundColor: palette.charcoal,
-    borderRadius: 2,
+    borderRadius: radii.xs,
     overflow: 'hidden',
   },
   fill: {
@@ -191,7 +191,7 @@ const wave = StyleSheet.create({
   },
   bar: {
     width: 5,
-    borderRadius: 3,
+    borderRadius: radii.xs,
     minHeight: 6,
   },
 });
@@ -1121,7 +1121,7 @@ const play = StyleSheet.create({
   },
   noticeText: {
     ...typography.caption,
-    color: palette.goldMuted,
+    color: palette.ash,
     fontSize: 11,
   },
   startBtn: {

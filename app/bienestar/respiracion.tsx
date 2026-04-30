@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     ...typography.body,
-    color: palette.gold,
+    color: palette.ash,
     fontSize: 12,
     marginTop: 2,
   },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   cardCycles: {
     ...typography.label,
-    color: palette.goldMuted,
+    color: palette.smoke,
   },
 });
 

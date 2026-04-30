@@ -15,7 +15,7 @@ import {
   StatusPill,
   screen,
 } from '@/components/polaris';
-import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import type { NorthStar } from '@/types/lifeflow';
 
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   stepCounter: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.ash,
   },
 
   // ── Welcome
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
   textArea: {
     minHeight: 88,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   programIconWrap: {
     alignItems: 'center',
     backgroundColor: palette.goldLight,
-    borderRadius: 2,
+    borderRadius: radii.xs,
     height: 40,
     justifyContent: 'center',
     width: 40,
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   programMeta: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.ash,
   },
   programMetaActive: {
     color: palette.graphite,

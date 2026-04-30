@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   greetingLeft: { gap: 4 },
   greetingText: { ...typography.body, color: palette.ivory, fontSize: 16, fontWeight: '600' },
   streakRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  streakText: { ...typography.mono, color: palette.gold, fontSize: 12 },
+  streakText: { ...typography.mono, color: palette.ash, fontSize: 12 },
   dotRow: { flexDirection: 'row', gap: 6 },
   dotItem: { alignItems: 'center', gap: 3 },
   dot: {

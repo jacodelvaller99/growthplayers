@@ -16,7 +16,7 @@ import {
   screen,
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
-import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   wellnessIconBox: {
     width: 56,
     height: 56,
-    borderRadius: 8,
+    borderRadius: radii.sm,
     backgroundColor: '#7c5cbf22',
     alignItems: 'center',
     justifyContent: 'center',
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#7c5cbf11',
-    borderRadius: 8,
+    borderRadius: radii.sm,
     paddingVertical: spacing.md,
   },
   wellnessStat: {

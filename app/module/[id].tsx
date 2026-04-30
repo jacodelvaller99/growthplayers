@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   heroNumber: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.smoke,
     fontSize: 13,
   },
   heroTitle: {

@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
   },
   promptText: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
     flex: 1,
     flexWrap: 'wrap',
     fontSize: 8,

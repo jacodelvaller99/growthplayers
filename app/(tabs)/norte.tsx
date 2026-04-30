@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   },
   reminderLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
   reminderText: {
     ...typography.body,
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   ruleIndex: {
-    color: palette.gold,
+    color: palette.smoke,
     fontFamily: Fonts.mono,
     fontSize: 11,
     lineHeight: 22,
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
   textArea: {
     minHeight: 78,

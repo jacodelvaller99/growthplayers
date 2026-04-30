@@ -134,11 +134,12 @@ export function SectionHeader({ title, meta }: { title: string; meta?: string })
 
 // ─── Metric Card ─────────────────────────────────────────────────────────────
 
-export function MetricCard({ label, value, meta, icon }: { label: string; value: string; meta?: string; icon: IconName }) {
+export function MetricCard({ label, value, meta, icon, accent }: { label: string; value: string; meta?: string; icon: IconName; accent?: string }) {
+  const iconColor = accent ?? palette.gold;
   return (
     <PremiumCard style={styles.metricCard}>
       <View style={styles.metricTop}>
-        <MaterialIcons name={icon} color={palette.gold} size={18} />
+        <MaterialIcons name={icon} color={iconColor} size={16} />
         <Text style={styles.metricLabel}>{label}</Text>
       </View>
       <Text style={styles.metricValue}>{value}</Text>
@@ -238,7 +239,7 @@ export function WeeklySparkline({
                 width: '100%',
                 height: Math.max(4, Math.round((v / max) * (SPARKLINE_H - 8))),
                 backgroundColor: color,
-                borderRadius: 2,
+                borderRadius: radii.xs,
                 opacity: 0.85,
               }} />
               <Text style={[styles.sparklineDay, { textAlign: 'center' }]}>{DAY_LABELS[i % 7]}</Text>
@@ -728,7 +729,7 @@ const styles = StyleSheet.create({
   },
   sectionMeta: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.ash,
   },
 
   // Metric card
@@ -756,7 +757,7 @@ const styles = StyleSheet.create({
   },
   metricMeta: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.smoke,
   },
 
   // Sovereign score
@@ -767,7 +768,7 @@ const styles = StyleSheet.create({
   },
   sovereignEyebrow: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
   sovereignNumber: {
     color: palette.ivory,
@@ -858,8 +859,8 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     backgroundColor: palette.charcoal,
-    borderRadius: radii.none,  // sharp = brand tactical feel
-    height: 3,                 // thin, precise line
+    borderRadius: radii.xs,    // subtle rounding on progress bar
+    height: 3,
     overflow: 'hidden',
   },
   progressFill: {
@@ -925,11 +926,11 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: 'center',
     backgroundColor: palette.gold,
-    borderRadius: radii.none,   // zero radius = brand precision/tactical
+    borderRadius: radii.sm,     // 8px — premium soft-sharp
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 52,
     paddingHorizontal: spacing.xl,
   },
   primaryButtonText: {
@@ -942,17 +943,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
     borderColor: palette.line,
-    borderRadius: radii.none,   // zero = brand precision/tactical
+    borderRadius: radii.sm,     // 8px — consistent with primary
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 48,
     paddingHorizontal: spacing.xl,
   },
   secondaryButtonText: {
     ...typography.section,
-    color: palette.gold,
+    color: palette.ivory,
     letterSpacing: 2.5,
     fontSize: 10,
   },
@@ -988,25 +989,33 @@ const styles = StyleSheet.create({
 
   // Chat
   chatBubble: {
-    borderRadius: radii.sm,    // near-sharp corners — brand precision
     maxWidth: '86%',
     padding: spacing.lg,
   },
   mentorBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: palette.charcoal,
-    borderColor: Colors.dark.border,
+    backgroundColor: palette.graphiteLight,
+    borderColor: palette.line,
     borderLeftColor: palette.gold,
-    borderLeftWidth: 2,        // accent left strip — brand editorial element
+    borderLeftWidth: 2,        // gold left accent — brand editorial signature
     borderWidth: 1,
+    borderTopLeftRadius: radii.md,
+    borderTopRightRadius: radii.md,
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: radii.md,
   },
   userBubble: {
     alignSelf: 'flex-end',
     backgroundColor: palette.gold,
+    borderTopLeftRadius: radii.md,
+    borderTopRightRadius: radii.md,
+    borderBottomLeftRadius: radii.md,
+    borderBottomRightRadius: 4,
   },
   chatText: {
     ...typography.body,
     color: palette.ivory,
+    lineHeight: 21,
   },
   userChatText: {
     color: palette.black,
@@ -1017,15 +1026,15 @@ const styles = StyleSheet.create({
   pill: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    borderRadius: radii.sm,    // brand: sharp corners even on pills
+    borderRadius: radii.xs,    // 4px — compact label feel, not full pill
     borderWidth: 1,
     flexDirection: 'row',
     gap: 6,
     paddingHorizontal: spacing.md,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   pillDot: {
-    borderRadius: 4,
+    borderRadius: radii.xs,
     height: 7,
     width: 7,
   },

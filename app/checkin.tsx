@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   // Intro
   dateLabel: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.ash,
   },
   introTitle: {
     color: palette.ivory,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   // System need
   systemLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
   textArea: {
     minHeight: 110,

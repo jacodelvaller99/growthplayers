@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   taskHeaderLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
     flex: 1,
     letterSpacing: 1.5,
   },

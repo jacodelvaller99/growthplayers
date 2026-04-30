@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
 
   feedbackBox: {

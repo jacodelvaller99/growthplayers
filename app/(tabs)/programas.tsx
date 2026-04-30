@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.ash,
   },
   heroTitle: {
     color: palette.ivory,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   },
   moduleNumber: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.smoke,
   },
   moduleNumberActive: {
     color: palette.black,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   progressPct: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.ash,
     fontSize: 9,
   },
 
