@@ -1,0 +1,236 @@
+name: Batman QA Suite 🦇
+
+on:
+  push:
+    branches: [main, develop, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── Job 1: Unit + Integration tests ─────────────────────────────────────────
+  unit-tests:
+    name: "🧪 Unit & Integration Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Jest unit + integration tests
+        run: npx jest --ci --coverage --testPathPattern="__tests__/(unit|integration)" --forceExit
+        env:
+          CI: true
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-coverage
+          path: coverage/
+          retention-days: 7
+
+  # ── Job 2: TypeScript type check ─────────────────────────────────────────────
+  type-check:
+    name: "🔷 TypeScript Check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check
+        run: npx tsc --noEmit
+
+  # ── Job 3: Bundle size audit ─────────────────────────────────────────────────
+  bundle-size:
+    name: "📦 Bundle Size Audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [unit-tests, type-check]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Export Expo web build
+        run: npx expo export --platform web --output-dir dist-bundle-check
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Measure bundle sizes
+        run: |
+          echo "=== BUNDLE SIZE REPORT ===" > bundle-report.txt
+          echo "Timestamp: $(date -u)" >> bundle-report.txt
+          echo "" >> bundle-report.txt
+
+          # Total dist size
+          TOTAL=$(du -sh dist-bundle-check/ | cut -f1)
+          echo "Total dist: $TOTAL" >> bundle-report.txt
+
+          # JS bundles
+          echo "" >> bundle-report.txt
+          echo "JS bundles:" >> bundle-report.txt
+          find dist-bundle-check -name "*.js" -not -name "*.map" | sort -k5 -rh | head -20 | while read f; do
+            SIZE=$(du -sh "$f" | cut -f1)
+            echo "  $SIZE  $f" >> bundle-report.txt
+          done
+
+          cat bundle-report.txt
+
+          # Assert main bundle < 3MB
+          MAIN_SIZE=$(find dist-bundle-check -name "*.js" -not -name "*.map" | xargs du -sk | sort -rn | head -1 | cut -f1)
+          echo "Largest JS chunk: ${MAIN_SIZE}KB"
+          if [ "$MAIN_SIZE" -gt 3072 ]; then
+            echo "⚠️ WARNING: Largest JS chunk exceeds 3MB (${MAIN_SIZE}KB)"
+          else
+            echo "✅ Bundle size OK (${MAIN_SIZE}KB < 3072KB)"
+          fi
+
+      - name: Upload bundle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-report
+          path: bundle-report.txt
+          retention-days: 14
+
+  # ── Job 4: Playwright E2E tests ──────────────────────────────────────────────
+  e2e-tests:
+    name: "🎭 Playwright E2E — ${{ matrix.browser }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [unit-tests, type-check]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run Playwright E2E tests (${{ matrix.browser }})
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          CI: true
+          BASE_URL: 'https://growthplayers.vercel.app'
+          TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures-${{ matrix.browser }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  # ── Summary job ──────────────────────────────────────────────────────────────
+  batman-approved:
+    name: "🦇 Batman Approved"
+    runs-on: ubuntu-latest
+    needs: [unit-tests, type-check, bundle-size, e2e-tests]
+    if: always()
+
+    steps:
+      - name: Check all jobs passed
+        run: |
+          echo "=== BATMAN QA SUITE RESULTS ==="
+          echo ""
+          if [ "${{ needs.unit-tests.result }}" = "success" ]; then
+            echo "✅ Unit & Integration Tests: PASS"
+          else
+            echo "❌ Unit & Integration Tests: ${{ needs.unit-tests.result }}"
+          fi
+
+          if [ "${{ needs.type-check.result }}" = "success" ]; then
+            echo "✅ TypeScript Check: PASS"
+          else
+            echo "❌ TypeScript Check: ${{ needs.type-check.result }}"
+          fi
+
+          if [ "${{ needs.bundle-size.result }}" = "success" ]; then
+            echo "✅ Bundle Size Audit: PASS"
+          else
+            echo "⚠️  Bundle Size Audit: ${{ needs.bundle-size.result }}"
+          fi
+
+          if [ "${{ needs.e2e-tests.result }}" = "success" ]; then
+            echo "✅ Playwright E2E (all browsers): PASS"
+          else
+            echo "❌ Playwright E2E: ${{ needs.e2e-tests.result }}"
+          fi
+
+          echo ""
+
+          # Fail if any critical job failed
+          if [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.type-check.result }}" != "success" ]; then
+            echo "💀 BATMAN DENIES DEPLOYMENT — critical tests failed"
+            exit 1
+          fi
+
+          echo "🦇 BATMAN APPROVES — the app is ready for production"

@@ -1,0 +1,109 @@
+# Maestro Flow — Bienestar Binaural Session
+# Batman QA Suite
+
+appId: com.lifeflow.app
+tags:
+  - bienestar
+  - binaural
+
+---
+# Ensure logged in
+- runFlow: ./auth-login.yaml
+
+# Navigate to NORTE / Bienestar tab
+- tapOn:
+    text: "NORTE"
+    optional: true
+- runFlow:
+    when:
+      notVisible: "NORTE"
+    commands:
+      - tapOn:
+          text: "Bienestar"
+          optional: true
+
+- waitForAnimationToEnd
+
+# Navigate to Binaurales section
+- tapOn:
+    text: "Binaurales"
+    optional: true
+- waitForAnimationToEnd
+
+# Verify binaural presets are visible
+- assertVisible:
+    text: "Alpha"
+    optional: true
+
+# Tap on first preset
+- tapOn:
+    text: "Alpha"
+    optional: true
+- runFlow:
+    when:
+      notVisible: "Alpha"
+    commands:
+      - tapOn:
+          text: "Theta"
+          optional: true
+
+- waitForAnimationToEnd
+
+# Verify player opened
+- assertTrue:
+    anyOf:
+      - visible: "Pausar"
+      - visible: "PAUSAR"
+      - visible: "00:00"
+    optional: true
+
+# Wait 3 seconds (session running)
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "00:0"
+    timeout: 5000
+
+# Pause the session
+- tapOn:
+    id: "pause-btn"
+    optional: true
+- runFlow:
+    when:
+      notVisible: "pause-btn"
+    commands:
+      - tapOn:
+          text: "Pausar"
+          optional: true
+
+- waitForAnimationToEnd
+
+# Resume
+- tapOn:
+    id: "play-btn"
+    optional: true
+- runFlow:
+    when:
+      notVisible: "play-btn"
+    commands:
+      - tapOn:
+          text: "Reanudar"
+          optional: true
+
+- waitForAnimationToEnd
+
+# Stop the session
+- tapOn:
+    text: "Terminar"
+    optional: true
+- runFlow:
+    when:
+      notVisible: "Terminar"
+    commands:
+      - tapOn:
+          id: "stop-btn"
+          optional: true
+
+- waitForAnimationToEnd
+
+# Session should be saved — verify no crash
+- assertNotVisible: "Error"

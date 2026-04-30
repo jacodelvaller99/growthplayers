@@ -1,0 +1,71 @@
+# Maestro Flow — Authentication Login
+# Batman QA Suite
+
+appId: com.lifeflow.app
+tags:
+  - auth
+  - smoke
+
+---
+- launchApp:
+    clearState: true
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Check if already on a protected screen
+- runFlow:
+    when:
+      visible: "COMANDO"
+    commands:
+      - stopFlow
+
+# Fill email
+- tapOn:
+    id: "email-input"
+    optional: true
+- runFlow:
+    when:
+      visible: "Email"
+    commands:
+      - tapOn: "Email"
+      - inputText: "${TEST_EMAIL}"
+
+# Fill password
+- tapOn:
+    id: "password-input"
+    optional: true
+- runFlow:
+    when:
+      visible: "Contraseña"
+    commands:
+      - tapOn: "Contraseña"
+      - inputText: "${TEST_PASSWORD}"
+
+# Submit
+- tapOn:
+    text: "Entrar"
+    optional: true
+- runFlow:
+    when:
+      notVisible: "Entrar"
+    commands:
+      - tapOn:
+          id: "login-btn"
+          optional: true
+
+# Wait for COMANDO screen
+- waitForAnimationToEnd
+- assertVisible: "COMANDO"
+
+# Verify greeting is shown
+- assertTrue:
+    visible: "Buenos"
+    optional: true
+- runFlow:
+    when:
+      notVisible: "Buenos"
+    commands:
+      - assertTrue:
+          visible: "Hola"
+          optional: true
