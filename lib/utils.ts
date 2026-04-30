@@ -27,24 +27,34 @@ export interface SovereignScoreInput {
   streak: number;
   completedLessons: number;
   completedTasks: number;
+  wellnessMeditation?: number;   // sessions completed
+  wellnessBreathing?: number;
+  wellnessBinaural?: number;
 }
 
 /**
  * Sovereign Score v2 (0–1000).
  *
- * checkinScore  = avg(energy, clarity, (10-stress), sleep) / 10 × 200  — max 200
- * lessonScore   = min(completedLessons × 15, 400)                       — max 400
- * taskScore     = min(completedTasks × 25, 200)                         — max 200
- * streakBonus   = 150 if streak ≥ 30 | 50 if streak ≥ 7 | 0            — max 150
- * result        = min(round(sum), 1000)
+ * checkinScore   = avg(energy, clarity, (10-stress), sleep) / 10 × 200  — max 200
+ * lessonScore    = min(completedLessons × 15, 400)                       — max 400
+ * taskScore      = min(completedTasks × 25, 200)                         — max 200
+ * streakBonus    = 150 if streak ≥ 30 | 50 if streak ≥ 7 | 0            — max 150
+ * wellnessBonus  = meditation×5 + breathing×3 + binaural×2 (capped 100) — max 100
+ * result         = min(round(sum), 1000)
  */
 export function calcSovereignScore(opts: SovereignScoreInput): number {
   const checkinScore =
     ((opts.energy + opts.clarity + (10 - opts.stress) + opts.sleep) / 4) * 20;
-  const lessonScore = Math.min(opts.completedLessons * 15, 400);
-  const taskScore   = Math.min(opts.completedTasks * 25, 200);
-  const streakBonus = opts.streak >= 30 ? 150 : opts.streak >= 7 ? 50 : 0;
-  return Math.min(Math.round(checkinScore + lessonScore + taskScore + streakBonus), 1000);
+  const lessonScore    = Math.min(opts.completedLessons * 15, 400);
+  const taskScore      = Math.min(opts.completedTasks * 25, 200);
+  const streakBonus    = opts.streak >= 30 ? 150 : opts.streak >= 7 ? 50 : 0;
+  const wellnessBonus  = Math.min(
+    (opts.wellnessMeditation ?? 0) * 5 +
+    (opts.wellnessBreathing  ?? 0) * 3 +
+    (opts.wellnessBinaural   ?? 0) * 2,
+    100,
+  );
+  return Math.min(Math.round(checkinScore + lessonScore + taskScore + streakBonus + wellnessBonus), 1000);
 }
 
 export type SovereignTier = 'ELITE' | 'AVANZADO' | 'EN ASCENSO' | 'INICIANDO';

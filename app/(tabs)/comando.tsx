@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -135,6 +136,28 @@ export default function DashboardScreen() {
         />
       </PremiumCard>
 
+      {/* ── Bienestar ── */}
+      <GoldDivider label="BIENESTAR" />
+      <PremiumCard style={styles.wellnessCard}>
+        <View style={styles.wellnessRow}>
+          <View style={styles.wellnessIconBox}>
+            <MaterialIcons name="spa" size={28} color="#7c5cbf" />
+          </View>
+          <View style={styles.wellnessBody}>
+            <Text style={styles.wellnessTitle}>MÓDULO BIENESTAR</Text>
+            <Text style={styles.wellnessSub}>Meditación · Respiración · Binaurales</Text>
+            <Text style={styles.wellnessMeta}>
+              {(state.wellnessSessions ?? []).length} sesiones completadas
+            </Text>
+          </View>
+        </View>
+        <PrimaryButton
+          label="ABRIR BIENESTAR"
+          icon="spa"
+          onPress={() => router.push('/bienestar' as never)}
+        />
+      </PremiumCard>
+
       {/* ── Mi Norte ── */}
       <GoldDivider label="MI NORTE" />
       <PremiumCard style={styles.northCard}>
@@ -184,6 +207,43 @@ const styles = StyleSheet.create({
   protocolBody: {
     ...typography.body,
     color: palette.ash,
+  },
+  wellnessCard: {
+    gap: spacing.lg,
+    marginBottom: 0,
+  },
+  wellnessRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  wellnessIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: '#7c5cbf22',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  wellnessBody: {
+    flex: 1,
+    gap: 3,
+  },
+  wellnessTitle: {
+    ...typography.section,
+    color: palette.ivory,
+    fontSize: 13,
+    letterSpacing: 2,
+  },
+  wellnessSub: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 12,
+  },
+  wellnessMeta: {
+    ...typography.caption,
+    color: palette.smoke,
   },
   northCard: {
     gap: spacing.lg,

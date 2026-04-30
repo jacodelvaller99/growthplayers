@@ -16,7 +16,7 @@ import { ENV } from '@/app/config/env';
 import { calcProtocolDay } from '@/lib/utils';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
-import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, UserProfile } from '@/types/lifeflow';
+import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, UserProfile, WellnessSession } from '@/types/lifeflow';
 
 // ─── Local cache key ──────────────────────────────────────────────────────────
 const STATE_KEY = 'state';
@@ -51,6 +51,7 @@ const defaultState: LifeFlowState = {
   ],
   completedLessons: [],
   completedTasks: {},
+  wellnessSessions: [],
 };
 
 // ─── Context type ─────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ type LifeFlowContextValue = {
   saveLessonTask: (lessonId: string, responses: Record<string, string>) => Promise<void>;
   markLessonComplete: (lessonId: string) => Promise<void>;
   saveMentorMessage: (role: 'user' | 'assistant', content: string) => Promise<void>;
+  saveWellnessSession: (session: Omit<WellnessSession, 'id'>) => Promise<void>;
   resetOnboarding: () => Promise<void>;
   clearData: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -131,10 +133,11 @@ function migrateState(loaded: Partial<LifeFlowState>): LifeFlowState {
   return {
     ...defaultState,
     ...loaded,
-    completedLessons: loaded.completedLessons ?? [],
-    completedTasks:   loaded.completedTasks   ?? {},
-    checkIns:         loaded.checkIns         ?? [],
-    mentorMessages:   loaded.mentorMessages   ?? defaultState.mentorMessages,
+    completedLessons:  loaded.completedLessons  ?? [],
+    completedTasks:    loaded.completedTasks    ?? {},
+    checkIns:          loaded.checkIns          ?? [],
+    mentorMessages:    loaded.mentorMessages    ?? defaultState.mentorMessages,
+    wellnessSessions:  loaded.wellnessSessions  ?? [],
   };
 }
 
@@ -146,12 +149,14 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     { data: lessonTaskRows },
     { data: completedRows },
     { data: mentorRows },
+    { data: wellnessRows },
   ] = await Promise.all([
     db.profiles().select('*').eq('user_id', uid).single(),
     db.checkins().select('*').eq('user_id', uid).order('date', { ascending: false }).limit(30),
     db.tasks().select('*').eq('user_id', uid),
     db.completed().select('*').eq('user_id', uid),
     db.messages().select('*').eq('user_id', uid).order('created_at', { ascending: true }).limit(50),
+    db.wellness().select('*').eq('user_id', uid).order('completed_at', { ascending: false }).limit(100),
   ]);
 
   if (profileError || !profile) return null;
@@ -192,6 +197,16 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
         }))
       : defaultState.mentorMessages;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const wellnessSessions: WellnessSession[] = (wellnessRows ?? []).map((w: any) => ({
+    id:              w.id,
+    type:            w.type as WellnessSession['type'],
+    sessionName:     w.session_name,
+    durationSeconds: w.duration_seconds,
+    completedAt:     w.completed_at,
+    metadata:        w.metadata ?? {},
+  }));
+
   return {
     onboardingCompleted: true, // if profile exists, onboarding was completed
     protocolStartDate:   profile.protocol_start_date
@@ -213,6 +228,7 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     mentorMessages,
     completedLessons,
     completedTasks,
+    wellnessSessions,
   };
 }
 
@@ -619,6 +635,35 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     [persist, state],
   );
 
+  const saveWellnessSession = useCallback(
+    async (session: Omit<WellnessSession, 'id'>) => {
+      const id = `ws-${Date.now()}`;
+      const full: WellnessSession = { ...session, id };
+      const next: LifeFlowState = {
+        ...state,
+        wellnessSessions: [full, ...state.wellnessSessions].slice(0, 200),
+      };
+      await persist(next);
+
+      const uid = uidRef.current;
+      if (!uid) return;
+
+      try {
+        await db.wellness().insert({
+          user_id:          uid,
+          type:             session.type,
+          session_name:     session.sessionName,
+          duration_seconds: session.durationSeconds,
+          completed_at:     session.completedAt,
+          metadata:         session.metadata ?? null,
+        });
+      } catch (e) {
+        console.warn('[Supabase] saveWellnessSession:', e);
+      }
+    },
+    [persist, state],
+  );
+
   const saveMentorMessage = useCallback(
     async (role: 'user' | 'assistant', content: string) => {
       if (ENV.isDev) return;
@@ -698,6 +743,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         saveLessonTask,
         markLessonComplete,
         saveMentorMessage,
+        saveWellnessSession,
         resetOnboarding,
         clearData,
         signOut,

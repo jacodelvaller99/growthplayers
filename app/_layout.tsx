@@ -79,6 +79,7 @@ export default function RootLayout() {
           />
           <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="bienestar" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Modal' }} />
         </Stack>
         <StatusBar style="light" />

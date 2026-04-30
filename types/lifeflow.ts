@@ -72,6 +72,17 @@ export interface LessonTask {
   responses?: Record<string, string>;
 }
 
+export type WellnessType = 'meditation' | 'breathing' | 'binaural';
+
+export interface WellnessSession {
+  id: string;
+  type: WellnessType;
+  sessionName: string;
+  durationSeconds: number;
+  completedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
 export type LifeFlowState = {
   onboardingCompleted: boolean;
   protocolStartDate: string;
@@ -83,4 +94,5 @@ export type LifeFlowState = {
   mentorMessages: MentorMessage[];
   completedLessons: string[];
   completedTasks: Record<string, LessonTask>;
+  wellnessSessions: WellnessSession[];
 };

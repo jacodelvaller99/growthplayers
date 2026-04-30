@@ -59,7 +59,13 @@ export default function ProgresoScreen() {
 
   const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
 
-  // Sovereign Score v2
+  // Wellness session counts for score
+  const wellnessSessions = state.wellnessSessions ?? [];
+  const wellnessMeditation = wellnessSessions.filter((s) => s.type === 'meditation').length;
+  const wellnessBreathing  = wellnessSessions.filter((s) => s.type === 'breathing').length;
+  const wellnessBinaural   = wellnessSessions.filter((s) => s.type === 'binaural').length;
+
+  // Sovereign Score v2 — includes wellness bonus
   const score = calcSovereignScore({
     energy:            averages.energy ?? 0,
     clarity:           averages.clarity ?? 0,
@@ -68,6 +74,9 @@ export default function ProgresoScreen() {
     streak:            state.checkIns.length,
     completedLessons:  (state.completedLessons ?? []).length,
     completedTasks:    Object.keys(state.completedTasks ?? {}).length,
+    wellnessMeditation,
+    wellnessBreathing,
+    wellnessBinaural,
   });
 
   // Last 7 check-ins for sparklines

@@ -55,4 +55,5 @@ export const db = {
   tasks:     () => supabase.from('lesson_tasks'),
   completed: () => supabase.from('completed_lessons'),
   messages:  () => supabase.from('mentor_messages'),
+  wellness:  () => supabase.from('wellness_sessions'),
 };
