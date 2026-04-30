@@ -18,6 +18,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useWellnessStore } from '@/store/wellnessStore';
 
 function haptic(type: 'light' | 'medium' | 'success') {
   if (Platform.OS === 'web') return;
@@ -103,6 +104,7 @@ function MeditationPlayer({
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
+  const { startSession: storeStart, stopSession: storeStop, setElapsed: storeElapsed } = useWellnessStore();
   const totalSeconds = session.durationMinutes * 60;
   const [remaining, setRemaining] = useState(totalSeconds);
   const [running, setRunning] = useState(false);
@@ -142,7 +144,10 @@ function MeditationPlayer({
     (audioRef as any).current = audio;
     audio?.start();
     audio?.bell();
-  }, [totalSeconds, session.ambientType]);
+
+    // Wire to global wellness store so mini player appears
+    storeStart({ type: 'meditation', sessionName: session.title, targetSeconds: totalSeconds });
+  }, [totalSeconds, session.ambientType, session.title, storeStart]);
 
   // Countdown timer
   useEffect(() => {
@@ -154,6 +159,7 @@ function MeditationPlayer({
           setRunning(false);
           setDone(true);
           haptic('success');
+          storeStop();
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (audioRef as any).current?.bell();
           setTimeout(() => {
@@ -163,11 +169,13 @@ function MeditationPlayer({
           onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
           return 0;
         }
+        const elapsed = totalSeconds - (prev - 1);
+        storeElapsed(elapsed);
         return prev - 1;
       });
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [running, onComplete]);
+  }, [running, onComplete, storeStop, storeElapsed, totalSeconds]);
 
   // Phase rotation
   useEffect(() => {
@@ -196,11 +204,12 @@ function MeditationPlayer({
     if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (audioRef as any).current?.stop();
+    storeStop();
     setRunning(false);
     setRemaining(totalSeconds);
     setPhaseIdx(0);
     setCurrentPhaseText(session.phases[0]?.text ?? '');
-  }, [totalSeconds, session.phases]);
+  }, [totalSeconds, session.phases, storeStop]);
 
   const progress = (totalSeconds - remaining) / totalSeconds;
   const mins = Math.floor(remaining / 60);

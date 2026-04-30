@@ -13,6 +13,7 @@ export type WeeklyActivity = [boolean, boolean, boolean, boolean, boolean, boole
 
 export interface WellnessPlayer {
   isPlaying: boolean;
+  isPaused: boolean;
   type: SessionType;
   sessionName: string;
   leftHz: number;
@@ -30,6 +31,7 @@ export interface WellnessUser {
   streak: number;
   totalWellnessMinutes: number;
   weeklyActivity: WeeklyActivity;
+  favorites: string[];  // sessionName identifiers
 }
 
 interface WellnessStore {
@@ -48,16 +50,20 @@ interface WellnessStore {
   }) => void;
 
   stopSession: () => void;
+  pauseSession: () => void;
+  resumeSession: () => void;
   minimizePlayer: () => void;
   expandPlayer: () => void;
   setVolumes: (wave: number, bg: number) => void;
   setElapsed: (seconds: number) => void;
   setUserData: (data: Partial<WellnessUser>) => void;
+  toggleFavorite: (sessionName: string) => void;
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 const defaultPlayer: WellnessPlayer = {
   isPlaying:      false,
+  isPaused:       false,
   type:           null,
   sessionName:    '',
   leftHz:         200,
@@ -75,6 +81,7 @@ const defaultUser: WellnessUser = {
   streak:              0,
   totalWellnessMinutes: 0,
   weeklyActivity:      [false, false, false, false, false, false, false],
+  favorites:           [],
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -102,6 +109,12 @@ export const useWellnessStore = create<WellnessStore>((set) => ({
   stopSession: () =>
     set(() => ({ player: { ...defaultPlayer } })),
 
+  pauseSession: () =>
+    set((s) => ({ player: { ...s.player, isPaused: true, isPlaying: false } })),
+
+  resumeSession: () =>
+    set((s) => ({ player: { ...s.player, isPaused: false, isPlaying: true } })),
+
   minimizePlayer: () =>
     set((s) => ({ player: { ...s.player, minimized: true } })),
 
@@ -116,4 +129,13 @@ export const useWellnessStore = create<WellnessStore>((set) => ({
 
   setUserData: (data) =>
     set((s) => ({ user: { ...s.user, ...data } })),
+
+  toggleFavorite: (sessionName) =>
+    set((s) => {
+      const favs = s.user.favorites ?? [];
+      const next = favs.includes(sessionName)
+        ? favs.filter((f) => f !== sessionName)
+        : [...favs, sessionName];
+      return { user: { ...s.user, favorites: next } };
+    }),
 }));

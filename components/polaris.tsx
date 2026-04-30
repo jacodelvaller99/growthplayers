@@ -19,6 +19,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
@@ -421,34 +422,59 @@ export function ProgressCard({
 // ─── Primary Button ──────────────────────────────────────────────────────────
 
 export function PrimaryButton({ label, icon, onPress, disabled }: { label: string; icon?: IconName; onPress?: () => void; disabled?: boolean }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
+  };
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 250 });
+  };
+  const handlePress = () => {
+    if (disabled) return;
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress?.();
+  };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={disabled ? undefined : onPress}
-      style={({ pressed }) => [
-        styles.primaryButton,
-        disabled && { opacity: 0.4 },
-        !disabled && pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
-      ]}>
-      <Text style={styles.primaryButtonText}>{label}</Text>
-      {icon ? <MaterialIcons name={icon} color={palette.black} size={18} /> : null}
-    </Pressable>
+    <Animated.View style={[animStyle, disabled && { opacity: 0.4 }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={handlePress}
+        onPressIn={disabled ? undefined : handlePressIn}
+        onPressOut={disabled ? undefined : handlePressOut}
+        style={styles.primaryButton}>
+        <Text style={styles.primaryButtonText}>{label}</Text>
+        {icon ? <MaterialIcons name={icon} color={palette.black} size={18} /> : null}
+      </Pressable>
+    </Animated.View>
   );
 }
 
 // ─── Secondary Button ────────────────────────────────────────────────────────
 
 export function SecondaryButton({ label, icon, onPress }: { label: string; icon?: IconName; onPress?: () => void }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePressIn = () => { scale.value = withSpring(0.96, { damping: 15, stiffness: 300 }); };
+  const handlePressOut = () => { scale.value = withSpring(1, { damping: 12, stiffness: 250 }); };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}>
-      <Text style={styles.secondaryButtonText}>{label}</Text>
-      {icon ? <MaterialIcons name={icon} color={palette.gold} size={18} /> : null}
-    </Pressable>
+    <Animated.View style={animStyle}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.secondaryButton}>
+        <Text style={styles.secondaryButtonText}>{label}</Text>
+        {icon ? <MaterialIcons name={icon} color={palette.gold} size={18} /> : null}
+      </Pressable>
+    </Animated.View>
   );
 }
 

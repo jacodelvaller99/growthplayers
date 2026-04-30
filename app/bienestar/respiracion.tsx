@@ -17,6 +17,7 @@ import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useWellnessStore } from '@/store/wellnessStore';
 
 // ─── Haptic helper (web-safe) ─────────────────────────────────────────────────
 function haptic(type: 'light' | 'medium' | 'success') {
@@ -43,6 +44,7 @@ function BreathPlayer({
   onComplete: (durationSecs: number) => void;
   onExit: () => void;
 }) {
+  const { startSession: storeStart, stopSession: storeStop, setElapsed: storeElapsed } = useWellnessStore();
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [cycleCount, setCycleCount] = useState(0);
   const [phaseTime, setPhaseTime] = useState(0);
@@ -91,7 +93,12 @@ function BreathPlayer({
     startTimeRef.current = Date.now();
     haptic('medium');
     animatePhase(0);
-  }, [animatePhase]);
+    // Wire to global wellness store so mini player appears
+    const targetSecs = Math.round(
+      phases.reduce((acc, p) => acc + p.duration, 0) * targetCycles,
+    );
+    storeStart({ type: 'breathing', sessionName: technique.title, targetSeconds: targetSecs });
+  }, [animatePhase, phases, targetCycles, technique.title, storeStart]);
 
   // Phase timer — advances phases
   useEffect(() => {
@@ -115,6 +122,7 @@ function BreathPlayer({
           setDone(true);
           haptic('success');
           scaleAnim.setValue(1);
+          storeStop();
           onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
         } else {
           setCycleCount(nextCycle);
@@ -131,14 +139,16 @@ function BreathPlayer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, phaseIdx, cycleCount]);
 
-  // Total time counter
+  // Total time counter + sync elapsed to wellness store
   useEffect(() => {
     if (!running) return;
     totalTimerRef.current = setInterval(() => {
-      setTotalTime(Math.round((Date.now() - startTimeRef.current) / 1000));
+      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+      setTotalTime(elapsed);
+      storeElapsed(elapsed);
     }, 1000);
     return () => { if (totalTimerRef.current) clearInterval(totalTimerRef.current); };
-  }, [running]);
+  }, [running, storeElapsed]);
 
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -216,7 +226,7 @@ function BreathPlayer({
         </View>
       )}
       {running && (
-        <Pressable style={player.stopBtn} onPress={() => { setRunning(false); scaleAnim.setValue(1); }}>
+        <Pressable style={player.stopBtn} onPress={() => { setRunning(false); scaleAnim.setValue(1); storeStop(); }}>
           <MaterialIcons name="stop" size={20} color={palette.ash} />
           <Text style={player.stopBtnText}>DETENER</Text>
         </Pressable>

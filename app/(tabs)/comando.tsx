@@ -18,6 +18,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useWellnessStore } from '@/store/wellnessStore';
 
 function greeting() {
   const hour = new Date().getHours();
@@ -30,8 +31,16 @@ export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state, protocolDay, todayCheckIn, latestCheckIn } = useLifeFlow();
+  const { user: wellnessUser } = useWellnessStore();
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   const checkIn = todayCheckIn ?? latestCheckIn;
+
+  // Wellness stats
+  const totalWellnessSessions = (state.wellnessSessions ?? []).length;
+  const totalWellnessMinutes = wellnessUser.totalWellnessMinutes > 0
+    ? wellnessUser.totalWellnessMinutes
+    : Math.round((state.wellnessSessions ?? []).reduce((acc, s) => acc + (s.durationSeconds ?? 0), 0) / 60);
+  const wellnessStreak = wellnessUser.weeklyActivity.filter(Boolean).length;
 
   return (
     <ScrollView
@@ -146,9 +155,22 @@ export default function DashboardScreen() {
           <View style={styles.wellnessBody}>
             <Text style={styles.wellnessTitle}>MÓDULO BIENESTAR</Text>
             <Text style={styles.wellnessSub}>Meditación · Respiración · Binaurales</Text>
-            <Text style={styles.wellnessMeta}>
-              {(state.wellnessSessions ?? []).length} sesiones completadas
-            </Text>
+          </View>
+        </View>
+        <View style={styles.wellnessStats}>
+          <View style={styles.wellnessStat}>
+            <Text style={styles.wellnessStatNum}>{totalWellnessSessions}</Text>
+            <Text style={styles.wellnessStatLabel}>SESIONES</Text>
+          </View>
+          <View style={styles.wellnessStatDivider} />
+          <View style={styles.wellnessStat}>
+            <Text style={styles.wellnessStatNum}>{totalWellnessMinutes}</Text>
+            <Text style={styles.wellnessStatLabel}>MINUTOS</Text>
+          </View>
+          <View style={styles.wellnessStatDivider} />
+          <View style={styles.wellnessStat}>
+            <Text style={styles.wellnessStatNum}>{wellnessStreak}</Text>
+            <Text style={styles.wellnessStatLabel}>DÍAS/SEM</Text>
           </View>
         </View>
         <PrimaryButton
@@ -241,9 +263,35 @@ const styles = StyleSheet.create({
     color: palette.ash,
     fontSize: 12,
   },
-  wellnessMeta: {
-    ...typography.caption,
+  wellnessStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7c5cbf11',
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+  },
+  wellnessStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  wellnessStatNum: {
+    fontFamily: Fonts.display,
+    color: '#b09cdb',
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 26,
+  },
+  wellnessStatLabel: {
+    ...typography.label,
     color: palette.smoke,
+    fontSize: 7,
+    letterSpacing: 1,
+  },
+  wellnessStatDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#7c5cbf44',
   },
   northCard: {
     gap: spacing.lg,

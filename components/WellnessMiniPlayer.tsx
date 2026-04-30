@@ -32,11 +32,12 @@ const TYPE_COLOR: Record<string, string> = {
 export function WellnessMiniPlayer() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const player     = useWellnessStore((s) => s.player);
-  const stopSession = useWellnessStore((s) => s.stopSession);
+  const player        = useWellnessStore((s) => s.player);
+  const stopSession   = useWellnessStore((s) => s.stopSession);
+  const resumeSession = useWellnessStore((s) => s.resumeSession);
 
-  // Hide when no active session
-  if (!player.isPlaying || !player.type) return null;
+  // Hide when no active session (show when playing OR paused)
+  if ((!player.isPlaying && !player.isPaused) || !player.type) return null;
 
   const tabBarHeight = 56 + insets.bottom;
   const color = TYPE_COLOR[player.type] ?? palette.gold;
@@ -96,7 +97,12 @@ export function WellnessMiniPlayer() {
           </Text>
         </View>
 
-        {/* Stop */}
+        {/* Pause indicator + stop */}
+        {player.isPaused && (
+          <Pressable onPress={resumeSession} style={styles.stopBtn} hitSlop={12}>
+            <MaterialIcons name="play-arrow" size={18} color={color} />
+          </Pressable>
+        )}
         <Pressable onPress={handleStop} style={styles.stopBtn} hitSlop={12}>
           <MaterialIcons name="stop" size={18} color={palette.ash} />
         </Pressable>

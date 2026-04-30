@@ -16,6 +16,7 @@ import { ENV } from '@/app/config/env';
 import { calcProtocolDay } from '@/lib/utils';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
+import { useWellnessStore } from '@/store/wellnessStore';
 import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, UserProfile, WellnessSession } from '@/types/lifeflow';
 
 // ─── Local cache key ──────────────────────────────────────────────────────────
@@ -639,11 +640,27 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     async (session: Omit<WellnessSession, 'id'>) => {
       const id = `ws-${Date.now()}`;
       const full: WellnessSession = { ...session, id };
+      const allSessions = [full, ...state.wellnessSessions].slice(0, 200);
       const next: LifeFlowState = {
         ...state,
-        wellnessSessions: [full, ...state.wellnessSessions].slice(0, 200),
+        wellnessSessions: allSessions,
       };
       await persist(next);
+
+      // ── Update wellness store totals ──────────────────────────────────────────
+      const addedMinutes = Math.round((session.durationSeconds ?? 0) / 60);
+      const prevUser = useWellnessStore.getState().user;
+      const newTotalMinutes = (prevUser.totalWellnessMinutes ?? 0) + addedMinutes;
+
+      // Update weekly activity (0=Monday … 6=Sunday)
+      const weeklyActivity = [...prevUser.weeklyActivity] as typeof prevUser.weeklyActivity;
+      const dayIdx = (new Date().getDay() + 6) % 7; // convert Sun=0 → Mon=0
+      weeklyActivity[dayIdx] = true;
+
+      useWellnessStore.getState().setUserData({
+        totalWellnessMinutes: newTotalMinutes,
+        weeklyActivity,
+      });
 
       const uid = uidRef.current;
       if (!uid) return;
@@ -659,6 +676,25 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         });
       } catch (e) {
         console.warn('[Supabase] saveWellnessSession:', e);
+      }
+
+      // ── Wellness bonus for Score Soberano ─────────────────────────────────────
+      const bonusMap: Record<string, number> = {
+        meditation: 5,
+        breathing:  3,
+        binaural:   2,
+      };
+      const bonus = bonusMap[session.type] ?? 0;
+      if (bonus > 0 && uid) {
+        try {
+          // Fetch current score and add bonus (capped at 1000)
+          const { data: profile } = await db.profiles().select('sovereign_score').eq('user_id', uid).single();
+          const currentScore = (profile?.sovereign_score ?? 0) as number;
+          const newScore = Math.min(1000, currentScore + bonus);
+          await db.profiles().update({ sovereign_score: newScore }).eq('user_id', uid);
+        } catch (e) {
+          console.warn('[Supabase] wellness bonus:', e);
+        }
       }
     },
     [persist, state],
