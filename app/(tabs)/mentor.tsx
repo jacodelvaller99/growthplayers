@@ -131,7 +131,6 @@ export default function MentorScreen() {
     averages,
     isSubscribed,
     addMentorMessages,
-    saveMentorMessage,
   } = useLifeFlow();
 
   const [input, setInput]               = useState('');
@@ -248,8 +247,6 @@ export default function MentorScreen() {
       };
 
       await addMentorMessages(userMsg, mentorMsg);
-      await saveMentorMessage('user', clean);
-      await saveMentorMessage('assistant', fullText || '…');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err) {
       console.error('[Mentor] streaming error:', err);
