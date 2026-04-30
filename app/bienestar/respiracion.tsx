@@ -44,17 +44,25 @@ function BreathPlayer({
   onComplete: (durationSecs: number) => void;
   onExit: () => void;
 }) {
-  const { startSession: storeStart, stopSession: storeStop, setElapsed: storeElapsed } = useWellnessStore();
+  const {
+    startSession: storeStart,
+    stopSession: storeStop,
+    pauseSession: storePause,
+    resumeSession: storeResume,
+    setElapsed: storeElapsed,
+  } = useWellnessStore();
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [cycleCount, setCycleCount] = useState(0);
   const [phaseTime, setPhaseTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [running, setRunning] = useState(false);
+  const [paused, setPaused]   = useState(false);
   const [done, setDone] = useState(false);
 
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim    = useRef(new Animated.Value(1)).current;
+  const pulseAnim    = useRef(new Animated.Value(1)).current;
   const startTimeRef = useRef<number>(0);
+  const pausedAtRef  = useRef<number>(0);
   const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -87,6 +95,7 @@ function BreathPlayer({
 
   const startSession = useCallback(() => {
     setRunning(true);
+    setPaused(false);
     setPhaseIdx(0);
     setCycleCount(0);
     setPhaseTime(0);
@@ -99,6 +108,29 @@ function BreathPlayer({
     );
     storeStart({ type: 'breathing', sessionName: technique.title, targetSeconds: targetSecs });
   }, [animatePhase, phases, targetCycles, technique.title, storeStart]);
+
+  const handlePause = useCallback(() => {
+    if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
+    if (totalTimerRef.current) clearInterval(totalTimerRef.current);
+    scaleAnim.stopAnimation();
+    pausedAtRef.current = Date.now();
+    setRunning(false);
+    setPaused(true);
+    storePause();
+    haptic('light');
+  }, [scaleAnim, storePause]);
+
+  const handleResume = useCallback(() => {
+    // Slide startTime forward by paused duration so elapsed continues correctly
+    const pausedMs = Date.now() - pausedAtRef.current;
+    startTimeRef.current += pausedMs;
+    setRunning(true);
+    setPaused(false);
+    storeResume();
+    haptic('light');
+    // Re-animate current phase from beginning (phase duration resets — acceptable UX)
+    animatePhase(phaseIdx);
+  }, [animatePhase, phaseIdx, storeResume]);
 
   // Phase timer — advances phases
   useEffect(() => {
@@ -211,7 +243,7 @@ function BreathPlayer({
       </View>
 
       {/* CTA */}
-      {!running && !done && (
+      {!running && !paused && !done && (
         <Pressable style={player.startBtn} onPress={startSession}>
           <MaterialIcons name="play-arrow" size={24} color={palette.black} />
           <Text style={player.startBtnText}>INICIAR</Text>
@@ -226,10 +258,28 @@ function BreathPlayer({
         </View>
       )}
       {running && (
-        <Pressable style={player.stopBtn} onPress={() => { setRunning(false); scaleAnim.setValue(1); storeStop(); }}>
-          <MaterialIcons name="stop" size={20} color={palette.ash} />
-          <Text style={player.stopBtnText}>DETENER</Text>
-        </Pressable>
+        <View style={player.controlRow}>
+          <Pressable style={player.pauseBtn} onPress={handlePause}>
+            <MaterialIcons name="pause" size={20} color={palette.gold} />
+            <Text style={player.pauseBtnText}>PAUSAR</Text>
+          </Pressable>
+          <Pressable style={player.stopBtn} onPress={() => { setRunning(false); scaleAnim.setValue(1); storeStop(); }}>
+            <MaterialIcons name="stop" size={20} color={palette.ash} />
+            <Text style={player.stopBtnText}>DETENER</Text>
+          </Pressable>
+        </View>
+      )}
+      {paused && !done && (
+        <View style={player.controlRow}>
+          <Pressable style={player.startBtn} onPress={handleResume}>
+            <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+            <Text style={player.startBtnText}>REANUDAR</Text>
+          </Pressable>
+          <Pressable style={player.stopBtn} onPress={() => { setPaused(false); scaleAnim.setValue(1); storeStop(); }}>
+            <MaterialIcons name="stop" size={20} color={palette.ash} />
+            <Text style={player.stopBtnText}>DETENER</Text>
+          </Pressable>
+        </View>
       )}
     </View>
   );
@@ -509,6 +559,11 @@ const player = StyleSheet.create({
   phaseDotActive: {
     backgroundColor: palette.gold,
   },
+  controlRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
   startBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -524,13 +579,28 @@ const player = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  pauseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderColor: palette.gold,
+    borderWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radii.sm,
+  },
+  pauseBtnText: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 12,
+  },
   stopBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     borderColor: palette.smoke,
     borderWidth: 1,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.sm,
   },

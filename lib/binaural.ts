@@ -152,6 +152,8 @@ export function createMeditationAudio(
 export interface BinauralAudioHandle {
   start: () => void;
   stop: () => void;
+  suspend: () => Promise<void>;
+  resume: () => Promise<void>;
   setVolume: (v: number) => void;
   setAmbienceVolume: (v: number) => void;
   setAmbience: (type: AmbienceType) => void;
@@ -255,5 +257,15 @@ export function createBinauralAudio(
     }
   }
 
-  return { start, stop, setVolume, setAmbienceVolume, setAmbience };
+  function suspend(): Promise<void> {
+    if (ctx && ctx.state === 'running') return ctx.suspend();
+    return Promise.resolve();
+  }
+
+  function resume(): Promise<void> {
+    if (ctx && ctx.state === 'suspended') return ctx.resume();
+    return Promise.resolve();
+  }
+
+  return { start, stop, suspend, resume, setVolume, setAmbienceVolume, setAmbience };
 }

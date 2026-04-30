@@ -23,6 +23,7 @@ import {
   type BinauralPreset,
 } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useWellnessStore } from '@/store/wellnessStore';
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 
 // ─── Haptic helper ────────────────────────────────────────────────────────────
@@ -206,18 +207,28 @@ function BinauralPlayer({
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
+  const {
+    startSession: storeStart,
+    stopSession: storeStop,
+    pauseSession: storePause,
+    resumeSession: storeResume,
+    setElapsed: storeElapsed,
+  } = useWellnessStore();
+
   const [running, setRunning] = useState(false);
-  const [done, setDone] = useState(false);
+  const [paused, setPaused]   = useState(false);
+  const [done, setDone]       = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [timerMinutes, setTimerMinutes] = useState<(typeof TIMER_OPTIONS)[number]>(10);
   const [binauralVol, setBinauralVol] = useState(0.6);
   const [ambienceVol, setAmbienceVol] = useState(0.4);
   const [ambience, setAmbience] = useState<AmbienceType>('none');
 
-  const audioRef = useRef<BinauralAudioHandle | null>(null);
+  const audioRef    = useRef<BinauralAudioHandle | null>(null);
   const startTimeRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const targetSecs = timerMinutes * 60;
+  const pausedAtRef  = useRef(0);   // Date.now() when paused
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const targetSecs  = timerMinutes * 60;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -229,9 +240,7 @@ function BinauralPlayer({
 
   const startSession = useCallback(() => {
     const handle = createBinauralAudio(preset.carrierHz, preset.beatHz);
-    if (!handle) {
-      // Non-web: just run timer without audio
-    } else {
+    if (handle) {
       handle.start();
       handle.setVolume(binauralVol);
       handle.setAmbienceVolume(ambienceVol);
@@ -240,12 +249,26 @@ function BinauralPlayer({
     }
     startTimeRef.current = Date.now();
     setRunning(true);
+    setPaused(false);
     setElapsed(0);
     haptic('medium');
+
+    // Wire to global wellness store so mini player appears
+    storeStart({
+      type:          'binaural',
+      sessionName:   preset.label,
+      leftHz:        preset.carrierHz,
+      rightHz:       preset.carrierHz + preset.beatHz,
+      waveVolume:    binauralVol,
+      bgVolume:      ambienceVol,
+      bgTrack:       ambience,
+      targetSeconds: targetSecs,
+    });
 
     timerRef.current = setInterval(() => {
       const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
       setElapsed(secs);
+      storeElapsed(secs);
       if (secs >= targetSecs) {
         clearInterval(timerRef.current!);
         audioRef.current?.stop();
@@ -253,19 +276,59 @@ function BinauralPlayer({
         setRunning(false);
         setDone(true);
         haptic('success');
+        storeStop();
         onComplete(secs);
       }
     }, 500);
-  }, [preset, binauralVol, ambienceVol, ambience, targetSecs, onComplete]);
+  }, [preset, binauralVol, ambienceVol, ambience, targetSecs, onComplete, storeStart, storeStop, storeElapsed]);
 
   const stopSession = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     audioRef.current?.stop();
     audioRef.current = null;
     setRunning(false);
+    setPaused(false);
     setElapsed(0);
+    storeStop();
     haptic('light');
-  }, []);
+  }, [storeStop]);
+
+  const pauseSession = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    audioRef.current?.suspend();
+    pausedAtRef.current = Date.now();
+    setRunning(false);
+    setPaused(true);
+    storePause();
+    haptic('light');
+  }, [storePause]);
+
+  const resumeSession = useCallback(() => {
+    // Slide startTime forward by the duration we were paused
+    const pausedMs = Date.now() - pausedAtRef.current;
+    startTimeRef.current += pausedMs;
+    audioRef.current?.resume();
+    setRunning(true);
+    setPaused(false);
+    storeResume();
+    haptic('light');
+
+    timerRef.current = setInterval(() => {
+      const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
+      setElapsed(secs);
+      storeElapsed(secs);
+      if (secs >= targetSecs) {
+        clearInterval(timerRef.current!);
+        audioRef.current?.stop();
+        audioRef.current = null;
+        setRunning(false);
+        setDone(true);
+        haptic('success');
+        storeStop();
+        onComplete(secs);
+      }
+    }, 500);
+  }, [targetSecs, onComplete, storeResume, storeStop, storeElapsed]);
 
   const handleBinauralVol = (v: number) => {
     setBinauralVol(v);
@@ -383,17 +446,35 @@ function BinauralPlayer({
       </View>
 
       {/* CTA */}
-      {!running && !done && (
+      {!running && !paused && !done && (
         <Pressable style={play.startBtn} onPress={startSession}>
           <MaterialIcons name="play-arrow" size={24} color={palette.black} />
           <Text style={play.startBtnText}>INICIAR {timerMinutes} MIN</Text>
         </Pressable>
       )}
       {running && (
-        <Pressable style={play.stopBtn} onPress={stopSession}>
-          <MaterialIcons name="stop" size={20} color={palette.ash} />
-          <Text style={play.stopBtnText}>DETENER</Text>
-        </Pressable>
+        <View style={play.controlRow}>
+          <Pressable style={play.pauseBtn} onPress={pauseSession}>
+            <MaterialIcons name="pause" size={20} color={palette.gold} />
+            <Text style={play.pauseBtnText}>PAUSAR</Text>
+          </Pressable>
+          <Pressable style={play.stopBtn} onPress={stopSession}>
+            <MaterialIcons name="stop" size={20} color={palette.ash} />
+            <Text style={play.stopBtnText}>DETENER</Text>
+          </Pressable>
+        </View>
+      )}
+      {paused && !done && (
+        <View style={play.controlRow}>
+          <Pressable style={play.startBtn} onPress={resumeSession}>
+            <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+            <Text style={play.startBtnText}>REANUDAR</Text>
+          </Pressable>
+          <Pressable style={play.stopBtn} onPress={stopSession}>
+            <MaterialIcons name="stop" size={20} color={palette.ash} />
+            <Text style={play.stopBtnText}>DETENER</Text>
+          </Pressable>
+        </View>
       )}
       {done && (
         <View style={play.doneBox}>
@@ -1073,6 +1154,27 @@ const play = StyleSheet.create({
   stopBtnText: {
     ...typography.label,
     color: palette.smoke,
+    fontSize: 12,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  pauseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderColor: palette.gold,
+    borderWidth: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
+    borderRadius: radii.sm,
+  },
+  pauseBtnText: {
+    ...typography.label,
+    color: palette.gold,
     fontSize: 12,
   },
   doneBox: {

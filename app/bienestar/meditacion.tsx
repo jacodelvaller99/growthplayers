@@ -104,10 +104,17 @@ function MeditationPlayer({
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
-  const { startSession: storeStart, stopSession: storeStop, setElapsed: storeElapsed } = useWellnessStore();
+  const {
+    startSession: storeStart,
+    stopSession: storeStop,
+    pauseSession: storePause,
+    resumeSession: storeResume,
+    setElapsed: storeElapsed,
+  } = useWellnessStore();
   const totalSeconds = session.durationMinutes * 60;
   const [remaining, setRemaining] = useState(totalSeconds);
   const [running, setRunning] = useState(false);
+  const [paused, setPaused]   = useState(false);
   const [done, setDone] = useState(false);
   const [currentPhaseText, setCurrentPhaseText] = useState(session.phases[0]?.text ?? '');
   const [phaseIdx, setPhaseIdx] = useState(0);
@@ -134,6 +141,7 @@ function MeditationPlayer({
 
   const startSession = useCallback(() => {
     setRunning(true);
+    setPaused(false);
     setRemaining(totalSeconds);
     startTimeRef.current = Date.now();
     haptic('medium');
@@ -206,10 +214,27 @@ function MeditationPlayer({
     (audioRef as any).current?.stop();
     storeStop();
     setRunning(false);
+    setPaused(false);
     setRemaining(totalSeconds);
     setPhaseIdx(0);
     setCurrentPhaseText(session.phases[0]?.text ?? '');
   }, [totalSeconds, session.phases, storeStop]);
+
+  const handlePause = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
+    setRunning(false);
+    setPaused(true);
+    storePause();
+    haptic('light');
+  }, [storePause]);
+
+  const handleResume = useCallback(() => {
+    setRunning(true);
+    setPaused(false);
+    storeResume();
+    haptic('light');
+  }, [storeResume]);
 
   const progress = (totalSeconds - remaining) / totalSeconds;
   const mins = Math.floor(remaining / 60);
@@ -250,17 +275,35 @@ function MeditationPlayer({
 
       {/* Controls */}
       <View style={player.controls}>
-        {!running && !done && (
+        {!running && !paused && !done && (
           <Pressable style={player.startBtn} onPress={startSession}>
             <MaterialIcons name="play-arrow" size={28} color={palette.black} />
             <Text style={player.startBtnText}>INICIAR SESIÓN</Text>
           </Pressable>
         )}
         {running && (
-          <Pressable style={player.stopBtn} onPress={handleStop}>
-            <MaterialIcons name="stop" size={22} color={palette.ash} />
-            <Text style={player.stopBtnText}>DETENER</Text>
-          </Pressable>
+          <View style={player.controlRow}>
+            <Pressable style={player.pauseBtn} onPress={handlePause}>
+              <MaterialIcons name="pause" size={22} color={palette.gold} />
+              <Text style={player.pauseBtnText}>PAUSAR</Text>
+            </Pressable>
+            <Pressable style={player.stopBtn} onPress={handleStop}>
+              <MaterialIcons name="stop" size={22} color={palette.ash} />
+              <Text style={player.stopBtnText}>DETENER</Text>
+            </Pressable>
+          </View>
+        )}
+        {paused && !done && (
+          <View style={player.controlRow}>
+            <Pressable style={player.startBtn} onPress={handleResume}>
+              <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+              <Text style={player.startBtnText}>REANUDAR</Text>
+            </Pressable>
+            <Pressable style={player.stopBtn} onPress={handleStop}>
+              <MaterialIcons name="stop" size={22} color={palette.ash} />
+              <Text style={player.stopBtnText}>DETENER</Text>
+            </Pressable>
+          </View>
         )}
         {done && (
           <Pressable style={player.startBtn} onPress={onExit}>
@@ -504,6 +547,11 @@ const player = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  controlRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
   startBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -519,13 +567,28 @@ const player = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  pauseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderColor: palette.gold,
+    borderWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radii.sm,
+  },
+  pauseBtnText: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 12,
+  },
   stopBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     borderColor: palette.smoke,
     borderWidth: 1,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.sm,
   },
