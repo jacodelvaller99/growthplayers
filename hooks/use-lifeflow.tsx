@@ -90,8 +90,14 @@ function average(items: number[]) {
   return Math.round(items.reduce((s, n) => s + n, 0) / items.length);
 }
 
+// Timezone-safe: compare local date strings directly.
+// Handles both ISO ("2026-04-30T18:29Z") and bare DATE ("2026-04-30") from Supabase.
 function isSameDay(a: string, b: Date) {
-  return new Date(a).toDateString() === b.toDateString();
+  const dateA = a.slice(0, 10); // "YYYY-MM-DD"
+  const year  = b.getFullYear();
+  const month = String(b.getMonth() + 1).padStart(2, '0');
+  const day   = String(b.getDate()).padStart(2, '0');
+  return dateA === `${year}-${month}-${day}`;
 }
 
 function todayDateStr() {

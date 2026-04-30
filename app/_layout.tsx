@@ -77,10 +77,6 @@ export default function RootLayout() {
             name="paywall"
             options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }}
           />
-          <Stack.Screen
-            name="respiracion"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }}
-          />
           <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Modal' }} />
