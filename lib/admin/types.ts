@@ -14,6 +14,7 @@ export interface AdminUser {
   is_admin?: boolean;
   subscription_tier?: string;
   sovereign_score?: number;
+  streak?: number;
 }
 
 export interface AdminUserDetail extends AdminUser {

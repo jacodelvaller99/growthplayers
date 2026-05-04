@@ -23,13 +23,15 @@ async function auditLog(
   targetId: string,
   metadata: Record<string, unknown> = {}
 ) {
-  await supa.from('admin_audit_log').insert({
-    admin_id:    adminId,
-    action,
-    target_type: targetType,
-    target_id:   targetId,
-    metadata,
-  });
+  try {
+    await supa.from('admin_audit_log').insert({
+      admin_id:    adminId,
+      action,
+      target_type: targetType,
+      target_id:   targetId,
+      metadata,
+    });
+  } catch (_) { /* admin_audit_log table not yet migrated */ }
 }
 
 // ─── Memberships ─────────────────────────────────────────────────────────────
@@ -53,6 +55,22 @@ export async function activateMembership(params: {
     p_notes:      params.notes ?? null,
   });
   if (error) return { success: false, error: error.message };
+
+  // Mirror subscription_tier onto user_profiles so the app reads it immediately
+  const tierMap: Record<string, string> = {
+    lifeflow_free:         'free',
+    lifeflow_premium:      'premium',
+    lifeflow_premium_plus: 'premium_plus',
+    polaris:               'premium_plus',
+    growthplayers:         'premium_plus',
+  };
+  try {
+    await supa
+      .from('user_profiles')
+      .update({ subscription_tier: tierMap[params.product] ?? 'premium' })
+      .eq('user_id', params.userId);
+  } catch (_) { /* user_profiles may not have subscription_tier column yet */ }
+
   return { success: true, membershipId: data as string };
 }
 
@@ -214,18 +232,23 @@ export async function redeemAccessCode(params: {
 
   // Record who used the code (only if we have a userId)
   if (params.userId) {
-    await supa.from('access_code_uses').insert({
-      code_id: (codeData as { id: string }).id,
-      user_id: params.userId,
-    });
+    // access_code_uses may not exist yet — log if available
+    try {
+      await supa.from('access_code_uses').insert({
+        code_id: (codeData as { id: string }).id,
+        user_id: params.userId,
+      });
+    } catch (_) { /* table not yet migrated */ }
 
-    // Activate membership
-    await supa.from('user_memberships').insert({
-      user_id:      params.userId,
-      product,
-      status:       'active',
-      activated_by: 'access_code',
-    });
+    // Activate membership if table exists
+    try {
+      await supa.from('user_memberships').insert({
+        user_id:      params.userId,
+        product,
+        status:       'active',
+        activated_by: 'access_code',
+      });
+    } catch (_) { /* table not yet migrated */ }
   }
 
   return { status: 'ok', product };

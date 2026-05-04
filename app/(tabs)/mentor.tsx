@@ -28,6 +28,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useMentorMemory } from '@/hooks/useMentorMemory';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
+import { analytics } from '@/lib/analytics';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
 import { intel } from '@/lib/supabase';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
@@ -192,6 +193,7 @@ export default function MentorScreen() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    analytics.chatMessage(clean.length);
     setInput('');
 
     const userMsg: MentorMessage = {

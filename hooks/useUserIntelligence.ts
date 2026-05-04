@@ -98,9 +98,13 @@ export function useUserIntelligence(userId: string | null) {
 
     fetch(userId);
 
-    // Realtime subscription: update UI whenever the engine recalculates
+    // Unique channel name per mount prevents Supabase from returning an already-
+    // subscribed channel object when React StrictMode double-invokes this effect.
+    const channelName = `intelligence:${userId}:${Date.now()}`;
+    let active = true;
+
     const channel = supabase
-      .channel(`intelligence:${userId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -110,13 +114,17 @@ export function useUserIntelligence(userId: string | null) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          if (!active) return;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setIntelligence(payload.new as unknown as UserIntelligence);
         },
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
   }, [userId, fetch]);
 
   // ── Derived helpers ──────────────────────────────────────────────────────────

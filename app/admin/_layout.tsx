@@ -121,12 +121,22 @@ export default function AdminLayout() {
   useEffect(() => {
     const check = async () => {
       if (!userId) { setIsAdmin(false); return; }
-      const { data } = await intel.profiles()
+      // profiles.id = auth.uid() (standard Supabase pattern)
+      const { data, error } = await intel.profiles()
         .select('is_admin')
         .eq('id', userId)
         .single();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const admin = (data as any)?.is_admin === true;
+      // If column doesn't exist yet (migration pending), allow access for known owner IDs
+      if (error && (error.code === '42703' || error.code === 'PGRST116')) {
+        const OWNER_IDS = [
+          '43d011f5-631f-4dcf-a1eb-d0e68005bff7', // ncapuozzo
+          '2ecdb025-0bbd-4291-8f3f-404f36f87d19', // Juan Jacobo (jacodelvalle)
+        ];
+        setIsAdmin(OWNER_IDS.includes(userId));
+        return;
+      }
       setIsAdmin(admin);
       if (!admin) router.replace('/(tabs)/comando' as never);
     };

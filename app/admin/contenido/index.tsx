@@ -23,7 +23,6 @@ import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { fetchJournalEntries, fetchMentorConversations } from '@/lib/admin/queries';
 import type { JournalEntry, MentorConversation } from '@/lib/admin/types';
-import { useRouter as useRouterNav } from 'expo-router';
 
 type Tab = 'diarios' | 'conversaciones';
 

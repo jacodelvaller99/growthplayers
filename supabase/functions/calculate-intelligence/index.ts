@@ -54,8 +54,8 @@ async function calculateForUser(userId: string): Promise<void> {
       .order('created_at', { ascending: false }),
 
     adminSupabase
-      .from('checkins')
-      .select('energy, clarity, stress, sleep_quality, created_at')
+      .from('daily_checkins')
+      .select('energy, clarity, stress, sleep, created_at')
       .eq('user_id', userId)
       .gte('created_at', d7ago),
 
@@ -66,7 +66,7 @@ async function calculateForUser(userId: string): Promise<void> {
       .gte('completed_at', d7ago),
 
     adminSupabase
-      .from('checkins')
+      .from('daily_checkins')
       .select('energy, clarity, stress')
       .eq('user_id', userId)
       .gte('created_at', prevWeek)
@@ -367,9 +367,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { user_id, batch } = body;
+    const { user_id, batch, all_users } = body;
 
-    if (batch === 'all') {
+    if (batch === 'all' || all_users === true) {
       // Process all users with ml_consent = true
       const { data: profiles } = await adminSupabase
         .from('profiles')
