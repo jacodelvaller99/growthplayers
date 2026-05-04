@@ -25,6 +25,7 @@ import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
+import { intel } from '@/lib/supabase';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { calcSovereignScore } from '@/lib/utils';
 import {
@@ -45,6 +46,18 @@ export default function ProgresoScreen() {
   } = useLifeFlow();
 
   const { intelligence, topAffinity, engagementTier } = useUserIntelligence(userId);
+
+  // ── Admin flag (read from profiles.is_admin — never hardcoded) ──────────────
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (!userId) return;
+    intel.profiles()
+      .select('is_admin')
+      .eq('id', userId)
+      .single()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then(({ data }: { data: any }) => { if (data?.is_admin === true) setIsAdmin(true); });
+  }, [userId]);
 
   // ML Consent toggle
   const [mlConsent, setMlConsent] = useState(state.profile.mlConsent !== false);
@@ -574,6 +587,17 @@ export default function ProgresoScreen() {
           onPress={clear}
         />
       </PremiumCard>
+
+      {/* ── Admin Access (only visible to admins — read from profiles.is_admin) ── */}
+      {isAdmin && (
+        <Pressable
+          style={styles.adminBtn}
+          onPress={() => router.push('/admin' as never)}
+          accessibilityLabel="Cuadro de Mando Integral">
+          <MaterialIcons name="dashboard-customize" size={16} color={palette.gold} />
+          <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
+        </Pressable>
+      )}
     </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -875,6 +899,26 @@ const styles = StyleSheet.create({
   systemMeta: {
     ...typography.mono,
     color: palette.smoke,
+  },
+  // Admin access button — ghost style, only rendered when is_admin === true
+  adminBtn: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    borderColor: 'rgba(255,200,4,0.25)',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm + 2,
+  },
+  adminBtnText: {
+    fontFamily: Fonts.sans,
+    color: palette.gold,
+    fontSize: 12,
+    letterSpacing: 1,
   },
 });
 

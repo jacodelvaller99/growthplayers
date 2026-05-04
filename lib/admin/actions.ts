@@ -55,6 +55,22 @@ export async function activateMembership(params: {
     p_notes:      params.notes ?? null,
   });
   if (error) return { success: false, error: error.message };
+
+  // Mirror subscription_tier onto user_profiles so the app reads it immediately
+  const tierMap: Record<string, string> = {
+    lifeflow_free:         'free',
+    lifeflow_premium:      'premium',
+    lifeflow_premium_plus: 'premium_plus',
+    polaris:               'premium_plus',
+    growthplayers:         'premium_plus',
+  };
+  try {
+    await supa
+      .from('user_profiles')
+      .update({ subscription_tier: tierMap[params.product] ?? 'premium' })
+      .eq('user_id', params.userId);
+  } catch (_) { /* user_profiles may not have subscription_tier column yet */ }
+
   return { success: true, membershipId: data as string };
 }
 
