@@ -1,11 +1,18 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useWellnessStore } from '@/store/wellnessStore';
+
+/** Convert "5 min" → 300, "20 min" → 1200, etc. */
+function parseDurationSecs(dur: string): number {
+  const n = parseInt(dur, 10);
+  return isNaN(n) ? 600 : n * 60;
+}
 
 // ─── Content catalog (hardcoded — audio URLs wired when available) ─────────────
 interface SleepItem {
@@ -128,8 +135,22 @@ const SLEEP_CATEGORIES: {
 export default function SuenoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useWellnessStore();
+  const { user, startSession } = useWellnessStore();
   const isPremium = user.subscriptionTier !== 'free';
+
+  function handlePlay(item: SleepItem, catColor: string) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    startSession({
+      type: 'meditation',
+      sessionName: item.title,
+      bgTrack: 'rain',
+      bgVolume: 0.5,
+      waveVolume: 0,
+      targetSeconds: parseDurationSecs(item.duration),
+    });
+    // Navigate back to hub so the mini-player is visible
+    router.back();
+  }
 
   return (
     <ScrollView
@@ -179,7 +200,7 @@ export default function SuenoScreen() {
                 key={item.id}
                 onPress={() => {
                   if (locked) return;
-                  // TODO: wire up audio player
+                  handlePlay(item, cat.color);
                 }}
                 style={({ pressed }) => [
                   styles.itemCard,
