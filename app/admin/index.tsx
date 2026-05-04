@@ -1,18 +1,15 @@
 /**
- * Admin Analytics Dashboard
+ * Admin CMI — Mission Control
  *
- * Protected by `is_admin = true` profile flag.
- * Calls the ml-dashboard edge function for aggregated ML metrics.
- *
- * Accessible via:  router.push('/admin')  (deep-link only — not in tab bar)
- * Access guard:    redirects to /(tabs) if not admin
+ * Real-time overview: KPIs, alerts, live event feed, section shortcuts.
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -21,137 +18,140 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  AppHeader,
-  GoldDivider,
-  PremiumCard,
-  SecondaryButton,
-  screen,
-  StatusPill,
-} from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, StatusPill } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { supabase, intel } from '@/lib/supabase';
+import { fetchDashboardKPIs, fetchLiveEvents } from '@/lib/admin/queries';
+import type { DashboardKPIs, LiveEvent } from '@/lib/admin/types';
+import { intel } from '@/lib/supabase';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
-interface OverviewData {
-  total: number;
-  averages: { engagement_score: number; churn_risk: number };
-  cohort_distribution: Record<string, number>;
-  churn_distribution: Record<string, number>;
-  active_anomalies: number;
-  avg_affinities: Record<string, number>;
-}
-
-interface AtRiskUser {
-  user_id:             string;
-  name?:               string;
-  email?:              string;
-  churn_risk:          number;
-  churn_risk_label:    string;
-  days_since_last_act: number;
-  engagement_score:    number;
-  anomaly_detected:    boolean;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-async function callMlDashboard<T>(action: string, extra?: Record<string, unknown>): Promise<T | null> {
-  const { data, error } = await supabase.functions.invoke('ml-dashboard', {
-    body: { action, ...extra },
-  });
-  if (error) {
-    console.error('[Admin] ml-dashboard error:', error);
-    return null;
-  }
-  return data as T;
-}
-
-function CohortBar({ label, count, total }: { label: string; count: number; total: number }) {
-  const pct = total > 0 ? (count / total) * 100 : 0;
+function KpiCard({ value, label, accent }: { value: string | number; label: string; accent?: string }) {
   return (
-    <View style={aStyles.cohortRow}>
-      <Text style={aStyles.cohortLabel}>{label.replace(/_/g, ' ').toUpperCase()}</Text>
-      <View style={aStyles.cohortTrack}>
-        <View style={[aStyles.cohortFill, { width: `${pct}%` as unknown as number }]} />
+    <PremiumCard style={s.kpiCard}>
+      <Text style={[s.kpiValue, accent ? { color: accent } : {}]}>{value}</Text>
+      <Text style={s.kpiLabel}>{label}</Text>
+    </PremiumCard>
+  );
+}
+
+function AlertCard({
+  icon, title, body, tone,
+}: {
+  icon: string; title: string; body: string; tone: 'danger' | 'warning' | 'success';
+}) {
+  const bg = tone === 'danger' ? palette.dangerMuted
+    : tone === 'warning' ? 'rgba(212,160,23,0.12)'
+    : palette.successMuted;
+  const col = tone === 'danger' ? palette.danger
+    : tone === 'warning' ? palette.warning
+    : palette.success;
+  return (
+    <View style={[s.alertCard, { backgroundColor: bg, borderColor: col }]}>
+      <Text style={{ fontSize: 18 }}>{icon}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[s.alertTitle, { color: col }]}>{title}</Text>
+        <Text style={s.alertBody}>{body}</Text>
       </View>
-      <Text style={aStyles.cohortCount}>{count}</Text>
     </View>
   );
 }
 
-function ChurnPill({ label, count }: { label: string; count: number }) {
-  const colorMap: Record<string, string> = {
-    low:      '#4caf50',
-    medium:   '#ff9800',
-    high:     '#f44336',
-    critical: '#b71c1c',
+function EventRow({ event }: { event: LiveEvent }) {
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    if (diff < 60000) return `${Math.round(diff / 1000)}s`;
+    if (diff < 3600000) return `${Math.round(diff / 60000)}m`;
+    return `${Math.round(diff / 3600000)}h`;
   };
+
+  const iconMap: Record<string, string> = {
+    screen_view:      '👁',
+    lesson_start:     '📖',
+    lesson_complete:  '✅',
+    checkin_submit:   '🎯',
+    binaural_complete:'🎵',
+    breathing_complete:'💨',
+    meditation_complete:'🧘',
+  };
+
   return (
-    <View style={[aStyles.churnPill, { borderColor: colorMap[label] ?? palette.line }]}>
-      <Text style={[aStyles.churnPillCount, { color: colorMap[label] ?? palette.ash }]}>{count}</Text>
-      <Text style={aStyles.churnPillLabel}>{label.toUpperCase()}</Text>
+    <View style={s.eventRow}>
+      <Text style={s.eventIcon}>{iconMap[event.event_type] ?? '⚡'}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={s.eventType}>{event.event_type.replace(/_/g, ' ').toUpperCase()}</Text>
+        {event.screen ? <Text style={s.eventScreen}>{event.screen}</Text> : null}
+      </View>
+      <Text style={s.eventTime}>{timeAgo(event.created_at)}</Text>
     </View>
   );
 }
+
+interface SectionCard {
+  route: string;
+  label: string;
+  icon: string;
+  desc: string;
+}
+
+const SECTIONS: SectionCard[] = [
+  { route: '/admin/usuarios',     label: 'Usuarios',        icon: '👤', desc: 'Gestionar perfiles' },
+  { route: '/admin/membresias',   label: 'Membresías',      icon: '💳', desc: 'Activar accesos' },
+  { route: '/admin/cursos',       label: 'Cursos',          icon: '🎓', desc: 'Control de acceso' },
+  { route: '/admin/codigos',      label: 'Códigos',         icon: '🔑', desc: 'Crear y gestionar' },
+  { route: '/admin/inteligencia', label: 'ML',              icon: '🧠', desc: 'Dashboard completo' },
+  { route: '/admin/contenido',    label: 'Contenido',       icon: '📝', desc: 'Diarios y chats' },
+  { route: '/admin/auditoria',    label: 'Auditoría',       icon: '📋', desc: 'Log de acciones' },
+];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function AdminDashboard() {
+export default function MissionControl() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state, userId } = useLifeFlow();
+  const { userId } = useLifeFlow();
 
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [overview, setOverview] = useState<OverviewData | null>(null);
-  const [atRisk, setAtRisk] = useState<AtRiskUser[]>([]);
+  const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [events, setEvents] = useState<LiveEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Check admin status
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (!userId) { setIsAdmin(false); return; }
-      const { data } = await intel.profiles()
-        .select('is_admin')
-        .eq('id', userId)
-        .single();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setIsAdmin((data as any)?.is_admin === true);
-    };
-    checkAdmin();
-  }, [userId]);
+  const [now, setNow] = useState(new Date());
+  const channelRef = useRef<ReturnType<typeof intel.events> | null>(null);
 
   const loadData = useCallback(async () => {
-    const [ovResult, arResult] = await Promise.all([
-      callMlDashboard<OverviewData>('overview'),
-      callMlDashboard<{ users: AtRiskUser[] }>('at_risk_users', { limit: 20 }),
+    const [kpiData, evtData] = await Promise.all([
+      fetchDashboardKPIs(),
+      fetchLiveEvents(10),
     ]);
-    if (ovResult) setOverview(ovResult);
-    if (arResult?.users) setAtRisk(arResult.users);
+    setKpis(kpiData);
+    setEvents(evtData);
     setLoading(false);
     setRefreshing(false);
   }, []);
 
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // Clock tick
   useEffect(() => {
-    if (isAdmin === true) {
-      loadData();
-    } else if (isAdmin === false) {
-      router.replace('/(tabs)/comando' as never);
-    }
-  }, [isAdmin, loadData, router]);
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
-  };
+  const onRefresh = () => { setRefreshing(true); loadData(); };
 
-  if (isAdmin === null || loading) {
+  // Colombia time (UTC-5)
+  const colombiaTime = new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/Bogota',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(now);
+
+  if (loading) {
     return (
-      <View style={[screen.root, aStyles.center]}>
+      <View style={[screen.root, s.center]}>
         <ActivityIndicator color={palette.gold} size="large" />
-        <Text style={aStyles.loadingText}>Cargando dashboard...</Text>
+        <Text style={s.loadingText}>Cargando CMI...</Text>
       </View>
     );
   }
@@ -159,358 +159,174 @@ export default function AdminDashboard() {
   return (
     <ScrollView
       style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[screen.content, { paddingTop: insets.top + spacing.lg }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={palette.gold}
-        />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.gold} />
       }>
-      <AppHeader
-        title="ADMIN INTELLIGENCE"
-        right={
-          <StatusPill label="ADMIN" tone="gold" dot />
-        }
-      />
+      {/* ── Header ── */}
+      <View style={s.header}>
+        <View>
+          <Text style={s.headerEyebrow}>POLARIS GROWTH INSTITUTE</Text>
+          <Text style={s.headerTitle}>CUADRO DE MANDO</Text>
+          <Text style={s.headerSub}>Colombia {colombiaTime} · actualizado hace 0s</Text>
+        </View>
+        <StatusPill label="ADMIN" tone="gold" dot />
+      </View>
 
-      {/* ── Overview Metrics ── */}
-      <GoldDivider label="RESUMEN GLOBAL" />
-      {overview && (
-        <View style={aStyles.overviewGrid}>
-          <PremiumCard style={aStyles.metricCard}>
-            <Text style={aStyles.metricValue}>{overview.total}</Text>
-            <Text style={aStyles.metricLabel}>USUARIOS TOTALES</Text>
-          </PremiumCard>
-          <PremiumCard style={aStyles.metricCard}>
-            <Text style={aStyles.metricValue}>{overview.averages.engagement_score}</Text>
-            <Text style={aStyles.metricLabel}>AVG ENGAGEMENT</Text>
-          </PremiumCard>
-          <PremiumCard style={aStyles.metricCard}>
-            <Text style={aStyles.metricValue}>{overview.active_anomalies}</Text>
-            <Text style={aStyles.metricLabel}>ANOMALÍAS ACTIVAS</Text>
-          </PremiumCard>
-          <PremiumCard style={aStyles.metricCard}>
-            <Text style={aStyles.metricValue}>
-              {Math.round(overview.averages.churn_risk * 100)}%
-            </Text>
-            <Text style={aStyles.metricLabel}>RIESGO PROMEDIO</Text>
-          </PremiumCard>
+      {/* ── KPIs ── */}
+      <GoldDivider label="KPIs EN TIEMPO REAL" />
+      {kpis && (
+        <View style={s.kpiGrid}>
+          <KpiCard value={kpis.total_users}    label="USUARIOS TOTALES" />
+          <KpiCard value={kpis.active_today}   label="ACTIVOS HOY" />
+          <KpiCard value={kpis.active_7d}      label="ACTIVOS 7D" />
+          <KpiCard value={kpis.avg_engagement} label="AVG ENGAGEMENT" />
+          <KpiCard
+            value={kpis.critical_churn}
+            label="RIESGO CRÍTICO"
+            accent={kpis.critical_churn > 0 ? palette.danger : palette.success}
+          />
         </View>
       )}
 
-      {/* ── Churn Distribution ── */}
-      {overview?.churn_distribution && (
-        <>
-          <GoldDivider label="DISTRIBUCIÓN DE CHURN" />
-          <PremiumCard style={aStyles.card}>
-            <View style={aStyles.churnRow}>
-              {Object.entries(overview.churn_distribution).map(([label, count]) => (
-                <ChurnPill key={label} label={label} count={count} />
-              ))}
-            </View>
-          </PremiumCard>
-        </>
-      )}
+      {/* ── Alerts ── */}
+      <GoldDivider label="ALERTAS ACTIVAS" />
+      <View style={s.alertsSection}>
+        {kpis && kpis.critical_churn > 0 && (
+          <AlertCard
+            icon="🔴"
+            title={`${kpis.critical_churn} usuarios en riesgo CRÍTICO`}
+            body="Requieren intervención inmediata. Ver Inteligencia ML."
+            tone="danger"
+          />
+        )}
+        {kpis && kpis.critical_churn === 0 && (
+          <AlertCard
+            icon="🟢"
+            title="Sin alertas críticas"
+            body="Todos los indicadores dentro del rango normal."
+            tone="success"
+          />
+        )}
+      </View>
 
-      {/* ── Cohort Distribution ── */}
-      {overview?.cohort_distribution && (
-        <>
-          <GoldDivider label="DISTRIBUCIÓN DE COHORTES" />
-          <PremiumCard style={aStyles.card}>
-            {Object.entries(overview.cohort_distribution)
-              .sort(([, a], [, b]) => b - a)
-              .map(([label, count]) => (
-                <CohortBar
-                  key={label}
-                  label={label}
-                  count={count}
-                  total={overview.total}
-                />
-              ))}
-          </PremiumCard>
-        </>
-      )}
+      {/* ── Live Feed ── */}
+      <GoldDivider label="ACTIVIDAD EN TIEMPO REAL" />
+      <PremiumCard style={s.feedCard}>
+        {events.length === 0 ? (
+          <Text style={s.emptyText}>Sin actividad reciente</Text>
+        ) : (
+          events.map(evt => <EventRow key={evt.id} event={evt} />)
+        )}
+      </PremiumCard>
 
-      {/* ── Average Affinities ── */}
-      {overview?.avg_affinities && (
-        <>
-          <GoldDivider label="AFINIDADES PROMEDIO" />
-          <PremiumCard style={aStyles.card}>
-            {Object.entries(overview.avg_affinities)
-              .sort(([, a], [, b]) => b - a)
-              .map(([module, avg]) => (
-                <View key={module} style={aStyles.affinityRow}>
-                  <Text style={aStyles.affinityLabel}>{module.toUpperCase()}</Text>
-                  <View style={aStyles.affinityTrack}>
-                    <View style={[aStyles.affinityFill, { width: `${Math.round(avg * 100)}%` as unknown as number }]} />
-                  </View>
-                  <Text style={aStyles.affinityPct}>{Math.round(avg * 100)}%</Text>
-                </View>
-              ))}
-          </PremiumCard>
-        </>
-      )}
+      {/* ── Section shortcuts ── */}
+      <GoldDivider label="MÓDULOS DEL CMI" />
+      <View style={s.sectionGrid}>
+        {SECTIONS.map(sec => (
+          <Pressable
+            key={sec.route}
+            style={s.sectionCard}
+            onPress={() => router.push(sec.route as never)}>
+            <Text style={s.sectionIcon}>{sec.icon}</Text>
+            <Text style={s.sectionLabel}>{sec.label}</Text>
+            <Text style={s.sectionDesc}>{sec.desc}</Text>
+            <MaterialIcons name="arrow-forward" size={14} color={palette.gold} style={{ marginTop: spacing.xs }} />
+          </Pressable>
+        ))}
+      </View>
 
-      {/* ── At-Risk Users ── */}
-      {atRisk.length > 0 && (
-        <>
-          <GoldDivider label={`USUARIOS EN RIESGO (${atRisk.length})`} />
-          {atRisk.map((u) => (
-            <PremiumCard key={u.user_id} style={aStyles.userCard}>
-              <View style={aStyles.userRow}>
-                <View style={aStyles.userInfo}>
-                  <Text style={aStyles.userName}>{u.name ?? 'Anónimo'}</Text>
-                  {u.email && <Text style={aStyles.userEmail}>{u.email}</Text>}
-                </View>
-                <View style={[
-                  aStyles.riskBadge,
-                  {
-                    backgroundColor:
-                      u.churn_risk_label === 'critical' ? '#b71c1c33'
-                      : u.churn_risk_label === 'high' ? '#f4433622'
-                      : '#ff980022',
-                  },
-                ]}>
-                  <Text style={[
-                    aStyles.riskBadgeText,
-                    {
-                      color:
-                        u.churn_risk_label === 'critical' ? '#ff4444'
-                        : u.churn_risk_label === 'high' ? '#f44336'
-                        : '#ff9800',
-                    },
-                  ]}>
-                    {u.churn_risk_label.toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-              <View style={aStyles.userMetrics}>
-                <Text style={aStyles.userMetric}>
-                  {Math.round(u.churn_risk * 100)}% riesgo
-                </Text>
-                <Text style={aStyles.userMetricSep}>·</Text>
-                <Text style={aStyles.userMetric}>
-                  {u.days_since_last_act}d inactivo
-                </Text>
-                <Text style={aStyles.userMetricSep}>·</Text>
-                <Text style={aStyles.userMetric}>
-                  ENG {u.engagement_score}/100
-                </Text>
-                {u.anomaly_detected && (
-                  <>
-                    <Text style={aStyles.userMetricSep}>·</Text>
-                    <MaterialIcons name="warning-amber" size={12} color={palette.gold} />
-                  </>
-                )}
-              </View>
-            </PremiumCard>
-          ))}
-        </>
-      )}
-
-      <SecondaryButton
-        label="VOLVER"
-        icon="arrow-back"
-        onPress={() => router.back()}
-      />
+      <View style={{ height: insets.bottom + spacing.xxxl }} />
     </ScrollView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  center: { alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  loadingText: { ...typography.caption, color: palette.ash },
 
-const aStyles = StyleSheet.create({
-  center: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-    gap: spacing.lg,
-  },
-  loadingText: {
-    ...typography.body,
-    color: palette.ash,
-  },
-
-  // Overview grid
-  overviewGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  metricCard: {
-    alignItems: 'center',
-    flex: 1,
-    minWidth: '40%',
-    paddingVertical: spacing.lg,
-  },
-  metricValue: {
-    color: palette.gold,
-    fontFamily: Fonts.display,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 1,
-    lineHeight: 32,
-  },
-  metricLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 7,
-    letterSpacing: 1.5,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-
-  // Cards
-  card: {
-    gap: spacing.md,
-  },
-
-  // Churn
-  churnRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    justifyContent: 'space-around',
-  },
-  churnPill: {
-    alignItems: 'center',
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    minWidth: 60,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  churnPillCount: {
-    fontFamily: Fonts.display,
-    fontSize: 22,
-    fontWeight: '800',
-    lineHeight: 26,
-  },
-  churnPillLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 7,
-    letterSpacing: 1.5,
-    marginTop: 2,
-  },
-
-  // Cohort
-  cohortRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  cohortLabel: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 8,
-    letterSpacing: 1,
-    width: 110,
-  },
-  cohortTrack: {
-    backgroundColor: palette.charcoal,
-    borderRadius: 2,
-    flex: 1,
-    height: 6,
-    overflow: 'hidden',
-  },
-  cohortFill: {
-    backgroundColor: palette.gold,
-    borderRadius: 2,
-    height: 6,
-    opacity: 0.7,
-  },
-  cohortCount: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 10,
-    textAlign: 'right',
-    width: 28,
-  },
-
-  // Affinities
-  affinityRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  affinityLabel: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 8,
-    letterSpacing: 1,
-    width: 90,
-  },
-  affinityTrack: {
-    backgroundColor: palette.charcoal,
-    borderRadius: 2,
-    flex: 1,
-    height: 4,
-    overflow: 'hidden',
-  },
-  affinityFill: {
-    backgroundColor: palette.gold,
-    borderRadius: 2,
-    height: 4,
-    opacity: 0.8,
-  },
-  affinityPct: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 9,
-    textAlign: 'right',
-    width: 32,
-  },
-
-  // At-risk users
-  userCard: {
-    gap: spacing.sm,
-  },
-  userRow: {
-    alignItems: 'center',
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.xl,
   },
-  userInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  userName: {
-    ...typography.section,
-    color: palette.ivory,
-    fontSize: 12,
-  },
-  userEmail: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 10,
-  },
-  riskBadge: {
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  riskBadgeText: {
-    fontFamily: Fonts.display,
-    fontSize: 8,
-    letterSpacing: 1,
-  },
-  userMetrics: {
-    alignItems: 'center',
+  headerEyebrow: { ...typography.label, color: palette.smoke, marginBottom: 2 },
+  headerTitle: { ...typography.title, color: palette.ivory },
+  headerSub: { ...typography.mono, color: palette.ash, marginTop: 4 },
+
+  kpiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  userMetric: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 10,
+  kpiCard: {
+    flex: 1,
+    minWidth: 100,
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
-  userMetricSep: {
-    color: palette.line,
-    fontSize: 10,
+  kpiValue: {
+    fontFamily: Fonts.display,
+    fontSize: 28,
+    color: palette.ivory,
+    letterSpacing: 1,
   },
+  kpiLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+
+  alertsSection: { gap: spacing.sm, marginBottom: spacing.md },
+  alertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+  },
+  alertTitle: { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 13 },
+  alertBody: { ...typography.caption, color: palette.ash, marginTop: 2 },
+
+  feedCard: { padding: spacing.md, gap: spacing.sm },
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.lineSoft,
+  },
+  eventIcon: { fontSize: 16, width: 24, textAlign: 'center' },
+  eventType: { ...typography.label, color: palette.ivory, fontSize: 10 },
+  eventScreen: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  eventTime: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', paddingVertical: spacing.md },
+
+  sectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  sectionCard: {
+    flex: 1,
+    minWidth: 130,
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: 2,
+  },
+  sectionIcon: { fontSize: 24, marginBottom: spacing.xs },
+  sectionLabel: { ...typography.section, color: palette.ivory, fontSize: 10, textAlign: 'center' },
+  sectionDesc: { ...typography.caption, color: palette.smoke, fontSize: 11, textAlign: 'center' },
 });

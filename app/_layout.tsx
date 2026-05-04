@@ -89,7 +89,16 @@ export default function RootLayout() {
           <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="bienestar" options={{ headerShown: false }} />
+          <Stack.Screen name="admin" options={{ headerShown: false }} />
           <Stack.Screen name="admin/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/usuarios/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/usuarios/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/membresias/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/cursos/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/codigos/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Modal' }} />
         </Stack>
         <StatusBar style="light" />
