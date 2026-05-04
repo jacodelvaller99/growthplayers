@@ -80,3 +80,6 @@ INSERT INTO public.access_codes (code, label, max_uses) VALUES
   ('POLARIS-2026-B3', 'Cliente batch 2 — slot 3',     1),
   ('POLARIS-2026-B4', 'Cliente batch 2 — slot 4',     1)
 ON CONFLICT (code) DO NOTHING;
+
+-- Permitir que usuarios anónimos y autenticados ejecuten la función
+GRANT EXECUTE ON FUNCTION public.redeem_access_code(text) TO anon, authenticated;

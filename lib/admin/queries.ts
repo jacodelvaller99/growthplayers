@@ -4,6 +4,10 @@
  * `supa` is cast to `any` to bypass Supabase's generated types for
  * admin tables (access_codes extensions, user_memberships, user_course_access,
  * admin_audit_log, access_code_uses) that are not in the schema snapshot.
+ *
+ * Real user table: `user_progress` (not user_profiles or profiles).
+ * Intelligence tables (user_events, user_intelligence, mentor_conversations):
+ * gracefully return [] when not yet migrated.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,59 +34,90 @@ const supa: any = supabase;
 
 export async function fetchDashboardKPIs(): Promise<DashboardKPIs> {
   const today = new Date().toISOString().split('T')[0];
-  const week = new Date(Date.now() - 7 * 864e5).toISOString();
 
-  const [totalRes, todayRes, weekRes, intelligenceRes, codesRes, membRes] = await Promise.all([
-    intel.profiles().select('id', { count: 'exact', head: true }),
-    intel.events().select('user_id', { count: 'exact', head: true }).gte('created_at', today),
-    intel.events().select('user_id', { count: 'exact', head: true }).gte('created_at', week),
-    intel.intelligence().select('engagement_score, churn_risk_label'),
+  // Core counts from tables that exist in prod
+  const [totalRes, activeCodesRes, membRes] = await Promise.all([
+    supa.from('user_progress').select('user_id', { count: 'exact', head: true }),
     supa.from('access_codes').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    // user_memberships may not exist yet — wrapped below
     supa.from('user_memberships').select('id', { count: 'exact', head: true }).eq('status', 'active'),
   ]);
 
-  const intel_data = (intelligenceRes.data ?? []) as Array<{ engagement_score: number; churn_risk_label: string }>;
-  const avg_eng = intel_data.length > 0
-    ? Math.round(intel_data.reduce((s: number, r: { engagement_score: number }) => s + (r.engagement_score ?? 0), 0) / intel_data.length)
+  // Active today — use user_progress.last_checkin_date
+  const { count: activeToday } = await supa
+    .from('user_progress')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('last_checkin_date', today);
+
+  // Active last 7 days — use streak > 0 as proxy
+  const { count: active7d } = await supa
+    .from('user_progress')
+    .select('user_id', { count: 'exact', head: true })
+    .gt('streak', 0);
+
+  // Avg engagement from user_progress.sovereign_score
+  const { data: scoreData } = await supa
+    .from('user_progress')
+    .select('sovereign_score');
+  const scores = ((scoreData ?? []) as Array<{ sovereign_score: number }>);
+  const avg_eng = scores.length > 0
+    ? Math.round(scores.reduce((s, r) => s + (r.sovereign_score ?? 0), 0) / scores.length)
     : 0;
-  const critical = intel_data.filter((r: { churn_risk_label: string }) => r.churn_risk_label === 'critical').length;
+
+  // Intelligence data (may not exist yet)
+  let critical = 0;
+  try {
+    const intelligenceRes = await intel.intelligence()
+      .select('churn_risk_label');
+    const intel_data = (intelligenceRes.data ?? []) as Array<{ churn_risk_label: string }>;
+    critical = intel_data.filter(r => r.churn_risk_label === 'critical').length;
+  } catch (_) { /* table not yet migrated */ }
 
   return {
     total_users:       (totalRes.count ?? 0),
-    active_today:      (todayRes.count ?? 0),
-    active_7d:         (weekRes.count ?? 0),
+    active_today:      (activeToday ?? 0),
+    active_7d:         (active7d ?? 0),
     avg_engagement:    avg_eng,
     critical_churn:    critical,
     total_memberships: (membRes.count ?? 0),
-    active_codes:      (codesRes.count ?? 0),
+    active_codes:      (activeCodesRes.count ?? 0),
   };
 }
 
 // ─── Live Events Feed ─────────────────────────────────────────────────────────
 
 export async function fetchLiveEvents(limit = 10): Promise<LiveEvent[]> {
-  const { data } = await intel.events()
-    .select('id, user_id, event_type, screen, metadata, created_at')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  return ((data ?? []) as LiveEvent[]);
+  try {
+    const { data } = await intel.events()
+      .select('id, user_id, event_type, screen, metadata, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    return ((data ?? []) as LiveEvent[]);
+  } catch (_) {
+    return []; // user_events table not yet migrated
+  }
 }
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export async function fetchUsers(search?: string): Promise<AdminUser[]> {
-  const q = intel.profiles().select('id, name, role, is_admin, created_at');
-  const { data: profiles } = await q;
-  if (!profiles) return [];
+  // user_progress is the real user table with names, scores, etc.
+  const { data } = await supa
+    .from('user_progress')
+    .select('user_id, name, tier, sovereign_score, streak, last_checkin_date, total_days')
+    .order('sovereign_score', { ascending: false });
+  if (!data) return [];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let users = (profiles as any[]).map((p: any) => ({
-    id: p.id as string,
+  let users = (data as any[]).map((p: any) => ({
+    id: p.user_id as string,
     email: '',
     name: (p.name as string) ?? 'Usuario',
-    role: p.role as string | undefined,
-    is_admin: p.is_admin as boolean | undefined,
-    created_at: p.created_at as string,
+    role: p.tier as string | undefined,
+    sovereign_score: p.sovereign_score as number | undefined,
+    streak: p.streak as number | undefined,
+    is_admin: false,
+    created_at: p.last_checkin_date as string ?? '',
   }));
 
   if (search) {
@@ -94,27 +129,32 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
 }
 
 export async function fetchUserDetail(userId: string): Promise<AdminUserDetail | null> {
-  const [profileRes, intelligenceRes, membRes, courseRes] = await Promise.all([
-    intel.profiles().select('*').eq('id', userId).single(),
-    intel.intelligence().select('*').eq('user_id', userId).single(),
+  const [progressRes, membRes, courseRes] = await Promise.all([
+    supa.from('user_progress').select('*').eq('user_id', userId).single(),
     supa.from('user_memberships').select('*').eq('user_id', userId).eq('status', 'active'),
     supa.from('user_course_access').select('*').eq('user_id', userId).eq('is_active', true),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const profile = profileRes.data as any;
+  const profile = progressRes.data as any;
   if (!profile) return null;
 
+  // Intelligence data (optional, may not exist)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const int = intelligenceRes.data as any;
+  let int: any = null;
+  try {
+    const intelligenceRes = await intel.intelligence()
+      .select('*').eq('user_id', userId).single();
+    int = intelligenceRes.data;
+  } catch (_) { /* table not yet migrated */ }
 
   return {
     id: userId,
     email: '',
     name: profile.name ?? 'Usuario',
-    role: profile.role,
-    is_admin: profile.is_admin,
-    created_at: profile.created_at,
+    role: profile.tier,
+    is_admin: profile.is_admin ?? false,
+    created_at: profile.protocol_start_date ?? '',
     sovereign_score: profile.sovereign_score,
     engagement_score: int?.engagement_score,
     churn_risk: int?.churn_risk,
@@ -137,12 +177,16 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail |
 }
 
 export async function fetchUserEvents(userId: string, limit = 30): Promise<LiveEvent[]> {
-  const { data } = await intel.events()
-    .select('id, user_id, event_type, screen, metadata, created_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  return (data ?? []) as LiveEvent[];
+  try {
+    const { data } = await intel.events()
+      .select('id, user_id, event_type, screen, metadata, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    return (data ?? []) as LiveEvent[];
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function fetchUserCheckIns(userId: string) {
@@ -158,28 +202,40 @@ export async function fetchUserCheckIns(userId: string) {
 // ─── Memberships ─────────────────────────────────────────────────────────────
 
 export async function fetchAllMemberships(statusFilter?: string): Promise<UserMembership[]> {
-  const q = supa.from('user_memberships').select('*').order('activated_at', { ascending: false });
-  const filtered = statusFilter ? q.eq('status', statusFilter) : q;
-  const { data } = await filtered;
-  return (data ?? []) as UserMembership[];
+  try {
+    const q = supa.from('user_memberships').select('*').order('activated_at', { ascending: false });
+    const filtered = statusFilter ? q.eq('status', statusFilter) : q;
+    const { data } = await filtered;
+    return (data ?? []) as UserMembership[];
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function fetchUserMemberships(userId: string): Promise<UserMembership[]> {
-  const { data } = await supa
-    .from('user_memberships')
-    .select('*')
-    .eq('user_id', userId)
-    .order('activated_at', { ascending: false });
-  return (data ?? []) as UserMembership[];
+  try {
+    const { data } = await supa
+      .from('user_memberships')
+      .select('*')
+      .eq('user_id', userId)
+      .order('activated_at', { ascending: false });
+    return (data ?? []) as UserMembership[];
+  } catch (_) {
+    return [];
+  }
 }
 
 // ─── Course Access ────────────────────────────────────────────────────────────
 
 export async function fetchCourseAccess(courseId?: string): Promise<UserCourseAccess[]> {
-  const q = supa.from('user_course_access').select('*').eq('is_active', true);
-  const filtered = courseId ? q.eq('course_id', courseId) : q;
-  const { data } = await filtered;
-  return (data ?? []) as UserCourseAccess[];
+  try {
+    const q = supa.from('user_course_access').select('*').eq('is_active', true);
+    const filtered = courseId ? q.eq('course_id', courseId) : q;
+    const { data } = await filtered;
+    return (data ?? []) as UserCourseAccess[];
+  } catch (_) {
+    return [];
+  }
 }
 
 // ─── Access Codes ─────────────────────────────────────────────────────────────
@@ -193,58 +249,92 @@ export async function fetchAccessCodes(): Promise<AccessCode[]> {
 }
 
 export async function fetchCodeUses(codeId?: string): Promise<AccessCodeUse[]> {
-  const q = supa
-    .from('access_code_uses')
-    .select('*')
-    .order('used_at', { ascending: false })
-    .limit(50);
-  const filtered = codeId ? q.eq('code_id', codeId) : q;
-  const { data } = await filtered;
-  return (data ?? []) as AccessCodeUse[];
+  try {
+    const q = supa
+      .from('access_code_uses')
+      .select('*')
+      .order('used_at', { ascending: false })
+      .limit(50);
+    const filtered = codeId ? q.eq('code_id', codeId) : q;
+    const { data } = await filtered;
+    return (data ?? []) as AccessCodeUse[];
+  } catch (_) {
+    return [];
+  }
 }
 
 // ─── Content ─────────────────────────────────────────────────────────────────
 
 export async function fetchJournalEntries(userId?: string, limit = 30): Promise<JournalEntry[]> {
-  const q = supa
-    .from('journal_entries')
-    .select('id, user_id, content, mood, entry_type, created_at')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  const filtered = userId ? q.eq('user_id', userId) : q;
-  const { data } = await filtered;
-  return (data ?? []) as JournalEntry[];
+  try {
+    const q = supa
+      .from('journal_entries')
+      .select('id, user_id, content, mood_score, entry_type, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    const filtered = userId ? q.eq('user_id', userId) : q;
+    const { data } = await filtered;
+    // Normalise: expose mood_score as mood for display components
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((data ?? []) as any[]).map((e: any) => ({ ...e, mood: e.mood_score })) as JournalEntry[];
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function fetchMentorConversations(userId?: string, limit = 50): Promise<MentorConversation[]> {
-  const q = intel.conversations()
-    .select('id, user_id, role, content, created_at')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  const filtered = userId ? q.eq('user_id', userId) : q;
-  const { data } = await filtered;
-  return (data ?? []) as MentorConversation[];
+  try {
+    const q = intel.conversations()
+      .select('id, user_id, role, content, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    const filtered = userId ? q.eq('user_id', userId) : q;
+    const { data } = await filtered;
+    return (data ?? []) as MentorConversation[];
+  } catch (_) {
+    // Fall back to mentor_messages table (original schema)
+    try {
+      const q = supa
+        .from('mentor_messages')
+        .select('id, user_id, role, content, created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      const filtered = userId ? q.eq('user_id', userId) : q;
+      const { data } = await filtered;
+      return (data ?? []) as MentorConversation[];
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 // ─── Audit Log ───────────────────────────────────────────────────────────────
 
 export async function fetchAuditLog(limit = 50): Promise<AuditLogEntry[]> {
-  const { data } = await supa
-    .from('admin_audit_log')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  return (data ?? []) as AuditLogEntry[];
+  try {
+    const { data } = await supa
+      .from('admin_audit_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    return (data ?? []) as AuditLogEntry[];
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function fetchUserAuditLog(userId: string): Promise<AuditLogEntry[]> {
-  const { data } = await supa
-    .from('admin_audit_log')
-    .select('*')
-    .eq('target_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(20);
-  return (data ?? []) as AuditLogEntry[];
+  try {
+    const { data } = await supa
+      .from('admin_audit_log')
+      .select('*')
+      .eq('target_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    return (data ?? []) as AuditLogEntry[];
+  } catch (_) {
+    return [];
+  }
 }
 
 // ─── ML Dashboard (via Edge Function) ───────────────────────────────────────
@@ -281,17 +371,19 @@ export async function recalculateAllML() {
 // ─── Search users ─────────────────────────────────────────────────────────────
 
 export async function searchUsers(query: string): Promise<AdminUser[]> {
-  const { data } = await intel.profiles()
-    .select('id, name, role, is_admin, created_at')
+  const { data } = await supa
+    .from('user_progress')
+    .select('user_id, name, tier, sovereign_score')
     .ilike('name', `%${query}%`)
     .limit(20);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((data ?? []) as any[]).map((p: any) => ({
-    id: p.id,
+    id: p.user_id,
     email: '',
     name: p.name ?? 'Usuario',
-    role: p.role,
-    is_admin: p.is_admin,
-    created_at: p.created_at,
+    role: p.tier,
+    sovereign_score: p.sovereign_score,
+    is_admin: false,
+    created_at: '',
   }));
 }

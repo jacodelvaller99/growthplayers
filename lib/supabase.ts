@@ -72,6 +72,6 @@ export const intel = {
   memories:         () => anyClient.from('mentor_memories'),
   conversations:    () => anyClient.from('mentor_conversations'),
   notifications:    () => anyClient.from('smart_notifications'),
-  /** profiles (with is_admin etc.) — use anyClient to bypass stale types */
+  /** profiles — base table with id = auth.uid(), is_admin flag */
   profiles:         () => anyClient.from('profiles'),
 };

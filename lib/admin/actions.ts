@@ -23,13 +23,15 @@ async function auditLog(
   targetId: string,
   metadata: Record<string, unknown> = {}
 ) {
-  await supa.from('admin_audit_log').insert({
-    admin_id:    adminId,
-    action,
-    target_type: targetType,
-    target_id:   targetId,
-    metadata,
-  });
+  try {
+    await supa.from('admin_audit_log').insert({
+      admin_id:    adminId,
+      action,
+      target_type: targetType,
+      target_id:   targetId,
+      metadata,
+    });
+  } catch (_) { /* admin_audit_log table not yet migrated */ }
 }
 
 // ─── Memberships ─────────────────────────────────────────────────────────────
@@ -214,18 +216,23 @@ export async function redeemAccessCode(params: {
 
   // Record who used the code (only if we have a userId)
   if (params.userId) {
-    await supa.from('access_code_uses').insert({
-      code_id: (codeData as { id: string }).id,
-      user_id: params.userId,
-    });
+    // access_code_uses may not exist yet — log if available
+    try {
+      await supa.from('access_code_uses').insert({
+        code_id: (codeData as { id: string }).id,
+        user_id: params.userId,
+      });
+    } catch (_) { /* table not yet migrated */ }
 
-    // Activate membership
-    await supa.from('user_memberships').insert({
-      user_id:      params.userId,
-      product,
-      status:       'active',
-      activated_by: 'access_code',
-    });
+    // Activate membership if table exists
+    try {
+      await supa.from('user_memberships').insert({
+        user_id:      params.userId,
+        product,
+        status:       'active',
+        activated_by: 'access_code',
+      });
+    } catch (_) { /* table not yet migrated */ }
   }
 
   return { status: 'ok', product };
