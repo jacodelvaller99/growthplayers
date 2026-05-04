@@ -43,3 +43,14 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Claude Code
+.claude/
+
+# Supabase temp
+supabase/.temp/
+
+# env files (all variants)
+.env
+.env.local
+.env.*.local
