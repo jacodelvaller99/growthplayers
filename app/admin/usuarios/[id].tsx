@@ -23,6 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldAccentCard, GoldDivider, PremiumCard, screen, StatusPill } from '@/components/polaris';
+import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import {
@@ -261,20 +262,42 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         <GoldDivider label="B. MEMBRESÍAS Y ACCESO" />
         <PremiumCard style={s.card}>
+          {/* Current tier badge */}
+          {(() => {
+            const activeMembership = (user.memberships ?? []).find(m => m.status === 'active');
+            const currentTier = activeMembership?.product ?? 'free';
+            const tierColor = getTierColor(currentTier);
+            return (
+              <View style={[s.currentTierRow, { borderColor: tierColor + '55' }]}>
+                <View style={[s.currentTierDot, { backgroundColor: tierColor }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.currentTierLabel}>TIER ACTUAL</Text>
+                  <Text style={[s.currentTierName, { color: tierColor }]}>{getTierLabel(currentTier).toUpperCase()}</Text>
+                </View>
+                <Pressable
+                  style={[s.changeTierBtn, { borderColor: tierColor + '88' }]}
+                  onPress={() => router.push(`/admin/membresias?userId=${userId}` as never)}>
+                  <Text style={[s.changeTierText, { color: tierColor }]}>CAMBIAR TIER →</Text>
+                </Pressable>
+              </View>
+            );
+          })()}
           {(user.memberships ?? []).length === 0 ? (
             <Text style={s.emptyText}>Sin membresías activas</Text>
           ) : (
             user.memberships!.map(m => (
               <View key={m.id} style={s.membershipRow}>
+                <View style={[s.statusDot, { backgroundColor: m.status === 'active' ? getTierColor(m.product) : palette.smoke }]} />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.membershipProduct}>{m.product.replace(/_/g, ' ').toUpperCase()}</Text>
+                  <Text style={[s.membershipProduct, m.status === 'active' && { color: getTierColor(m.product) }]}>
+                    {getTierLabel(m.product).toUpperCase()}
+                  </Text>
                   <Text style={s.membershipMeta}>
                     Activado {formatDate(m.activated_at)}
                     {m.expires_at ? ` · Expira ${formatDate(m.expires_at)}` : ' · Sin vencimiento'}
                   </Text>
                   {m.price_paid ? <Text style={s.membershipPrice}>${m.price_paid} {m.currency}</Text> : null}
                 </View>
-                <View style={[s.statusDot, { backgroundColor: m.status === 'active' ? palette.success : palette.danger }]} />
                 <Pressable onPress={() => handleDeactivateMembership(m)} style={s.deactivateBtn}>
                   <Text style={s.deactivateText}>DESACTIVAR</Text>
                 </Pressable>
@@ -531,6 +554,13 @@ const s = StyleSheet.create({
 
   normanBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderRadius: radii.md, borderWidth: 1, borderColor: palette.lineGold, alignSelf: 'flex-start' },
   normanBtnText: { ...typography.label, color: palette.gold, fontSize: 10 },
+
+  currentTierRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, marginBottom: spacing.sm, backgroundColor: palette.graphite },
+  currentTierDot: { width: 10, height: 10, borderRadius: 5 },
+  currentTierLabel: { ...typography.label, color: palette.ash, fontSize: 8, letterSpacing: 1.5 },
+  currentTierName: { fontFamily: Fonts.display, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
+  changeTierBtn: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radii.xs, borderWidth: 1 },
+  changeTierText: { ...typography.label, fontSize: 8, fontWeight: '700' },
 
   membershipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   membershipProduct: { fontFamily: Fonts.display, fontSize: 11, color: palette.ivory, letterSpacing: 1 },

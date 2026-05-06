@@ -53,6 +53,8 @@ const defaultState: LifeFlowState = {
   completedLessons: [],
   completedTasks: {},
   wellnessSessions: [],
+  subscriptionTier: 'free',
+  subscriptionExpiresAt: null,
 };
 
 // ─── Context type ─────────────────────────────────────────────────────────────
@@ -166,11 +168,13 @@ function migrateState(loaded: Partial<LifeFlowState>): LifeFlowState {
   return {
     ...defaultState,
     ...loaded,
-    completedLessons:  loaded.completedLessons  ?? [],
-    completedTasks:    loaded.completedTasks    ?? {},
-    checkIns:          loaded.checkIns          ?? [],
-    mentorMessages:    loaded.mentorMessages    ?? defaultState.mentorMessages,
-    wellnessSessions:  loaded.wellnessSessions  ?? [],
+    completedLessons:     loaded.completedLessons     ?? [],
+    completedTasks:       loaded.completedTasks       ?? {},
+    checkIns:             loaded.checkIns             ?? [],
+    mentorMessages:       loaded.mentorMessages       ?? defaultState.mentorMessages,
+    wellnessSessions:     loaded.wellnessSessions     ?? [],
+    subscriptionTier:     loaded.subscriptionTier     ?? 'free',
+    subscriptionExpiresAt: loaded.subscriptionExpiresAt ?? null,
   };
 }
 
@@ -240,6 +244,22 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     metadata:        w.metadata ?? {},
   }));
 
+  // Load subscription tier from profiles (auth-linked)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let subscriptionTier = 'free';
+  let subscriptionExpiresAt: string | null = null;
+  try {
+    const { data: authProfile } = await (supabase as any)
+      .from('profiles')
+      .select('subscription_tier, subscription_expires_at')
+      .eq('id', uid)
+      .single();
+    if (authProfile) {
+      subscriptionTier     = authProfile.subscription_tier ?? 'free';
+      subscriptionExpiresAt = authProfile.subscription_expires_at ?? null;
+    }
+  } catch (_) { /* profiles.subscription_tier not yet migrated */ }
+
   return {
     onboardingCompleted: true, // if profile exists, onboarding was completed
     protocolStartDate:   profile.protocol_start_date
@@ -257,11 +277,13 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
       nonNegotiables:  profile.non_negotiables ?? defaultNorth.nonNegotiables,
       dailyReminder:   profile.daily_reminder ?? defaultNorth.dailyReminder,
     },
-    checkIns:         checkInsMapped,
+    checkIns:             checkInsMapped,
     mentorMessages,
     completedLessons,
     completedTasks,
     wellnessSessions,
+    subscriptionTier,
+    subscriptionExpiresAt,
   };
 }
 
@@ -392,9 +414,40 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       },
     );
 
+    // Realtime: reflect admin tier changes instantly without refresh
+    let tierChannel: ReturnType<typeof supabase.channel> | null = null;
+    if (uidRef.current) {
+      tierChannel = supabase
+        .channel(`profile-tier-${uidRef.current}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${uidRef.current}`,
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (payload: any) => {
+            if (!mounted) return;
+            const newTier    = payload.new?.subscription_tier;
+            const newExpires = payload.new?.subscription_expires_at ?? null;
+            if (newTier) {
+              setState((prev) => ({
+                ...prev,
+                subscriptionTier:     newTier,
+                subscriptionExpiresAt: newExpires,
+              }));
+            }
+          },
+        )
+        .subscribe();
+    }
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      tierChannel?.unsubscribe();
     };
   }, []);
 

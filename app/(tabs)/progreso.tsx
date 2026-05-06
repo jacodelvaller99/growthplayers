@@ -25,6 +25,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { intel } from '@/lib/supabase';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -50,6 +51,7 @@ export default function ProgresoScreen() {
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const { intelligence, topAffinity, engagementTier } = useUserIntelligence(userId);
+  const subscription = useSubscription();
 
   // ── Admin flag (read from profiles.is_admin — never hardcoded) ──────────────
   const [isAdmin, setIsAdmin] = useState(false);
@@ -73,6 +75,17 @@ export default function ProgresoScreen() {
   };
 
   const wellnessTier = useWellnessStore((s) => s.user.subscriptionTier);
+
+  /** Subscription badge derived from Supabase Realtime-synced state */
+  const subTier   = subscription.tier;
+  const subColor  = subscription.tierInfo.color;
+  const subLabel  = subscription.tierInfo.name.toUpperCase();
+  const subIcon: React.ComponentProps<typeof MaterialIcons>['name'] =
+    subTier === 'growthplayers' ? 'groups'
+    : subTier === 'polaris'       ? 'explore'
+    : subTier === 'premium_plus'  ? 'diamond'
+    : subTier === 'premium'       ? 'workspace-premium'
+    : 'lock-open';
 
   const [deleting, setDeleting]   = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -120,13 +133,6 @@ export default function ProgresoScreen() {
     }
     return streak;
   }, [wellnessSessions]);
-
-  const TIER_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }> = {
-    free:         { label: 'FREE',          color: palette.smoke,   icon: 'lock-open'         },
-    premium:      { label: 'PREMIUM',       color: palette.gold,    icon: 'workspace-premium' },
-    premium_plus: { label: 'PREMIUM PLUS',  color: '#7c5cbf',       icon: 'diamond'           },
-  };
-  const tierInfo = TIER_CONFIG[wellnessTier] ?? TIER_CONFIG.free;
 
   // Sovereign Score v2 — includes wellness bonus
   const score = calcSovereignScore({
@@ -458,19 +464,29 @@ export default function ProgresoScreen() {
       {/* ── Mi Bienestar ── */}
       <GoldDivider label="MI BIENESTAR" />
 
-      {/* Tier badge */}
-      <PremiumCard style={[styles.tierCard, { borderColor: tierInfo.color + '55' }]}>
-        <View style={[styles.tierIconBox, { backgroundColor: tierInfo.color + '22' }]}>
-          <MaterialIcons name={tierInfo.icon} size={22} color={tierInfo.color} />
+      {/* Tier badge — Supabase Realtime-synced */}
+      <PremiumCard style={[styles.tierCard, {
+        borderColor: subscription.isExpiringSoon
+          ? palette.warning + '88'
+          : subColor + '55',
+      }]}>
+        <View style={[styles.tierIconBox, { backgroundColor: subColor + '22' }]}>
+          <MaterialIcons name={subIcon} size={22} color={subColor} />
         </View>
         <View style={styles.tierBody}>
           <Text style={styles.tierLabel}>PLAN ACTIVO</Text>
-          <Text style={[styles.tierName, { color: tierInfo.color }]}>{tierInfo.label}</Text>
-          {wellnessTier === 'free' && (
+          <Text style={[styles.tierName, { color: subColor }]}>{subLabel}</Text>
+          {subscription.isExpiringSoon && subscription.expiresAt ? (
+            <Text style={[styles.tierSub, { color: palette.warning }]}>
+              ⚠ Expira {new Date(subscription.expiresAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+            </Text>
+          ) : subTier === 'free' ? (
             <Text style={styles.tierSub}>Actualiza a Premium para desbloquear todo el contenido</Text>
+          ) : (
+            <Text style={styles.tierSub}>{subscription.tierInfo.description}</Text>
           )}
         </View>
-        {wellnessTier === 'free' && (
+        {subTier === 'free' && (
           <Pressable style={styles.tierUpgradeBtn}>
             <Text style={styles.tierUpgradeText}>UPGRADE</Text>
           </Pressable>

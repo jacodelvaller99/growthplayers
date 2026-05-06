@@ -209,12 +209,60 @@ export async function fetchUserCheckIns(userId: string) {
 
 export async function fetchAllMemberships(statusFilter?: string): Promise<UserMembership[]> {
   try {
-    const q = supa.from('user_memberships').select('*').order('activated_at', { ascending: false });
+    const q = supa
+      .from('user_memberships')
+      .select('*')
+      .order('activated_at', { ascending: false });
     const filtered = statusFilter ? q.eq('status', statusFilter) : q;
     const { data } = await filtered;
-    return (data ?? []) as UserMembership[];
+    const memberships = (data ?? []) as UserMembership[];
+
+    // Enrich with user names from user_progress
+    if (memberships.length > 0) {
+      const userIds = [...new Set(memberships.map((m: UserMembership) => m.user_id))];
+      const { data: progressData } = await supa
+        .from('user_progress')
+        .select('user_id, name')
+        .in('user_id', userIds);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nameMap: Record<string, string> = {};
+      for (const p of (progressData ?? []) as Array<{ user_id: string; name: string }>) {
+        nameMap[p.user_id] = p.name;
+      }
+      return memberships.map((m: UserMembership) => ({
+        ...m,
+        user_name: nameMap[m.user_id] ?? 'Usuario',
+      }));
+    }
+    return memberships;
   } catch (_) {
     return [];
+  }
+}
+
+export async function fetchTierCounts(): Promise<Record<string, number>> {
+  try {
+    // Count active memberships per product/tier
+    const { data } = await supa
+      .from('user_memberships')
+      .select('product')
+      .eq('status', 'active');
+    const counts: Record<string, number> = { free: 0, premium: 0, premium_plus: 0, polaris: 0, growthplayers: 0 };
+    for (const row of (data ?? []) as Array<{ product: string }>) {
+      const key = row.product.replace('lifeflow_', '');
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    // free = total users - (all who have any active paid membership)
+    const { count: totalUsers } = await supa
+      .from('user_progress')
+      .select('user_id', { count: 'exact', head: true });
+    const paidTotal = Object.entries(counts)
+      .filter(([k]) => k !== 'free')
+      .reduce((s, [, v]) => s + v, 0);
+    counts.free = Math.max(0, (totalUsers ?? 0) - paidTotal);
+    return counts;
+  } catch (_) {
+    return { free: 0, premium: 0, premium_plus: 0, polaris: 0, growthplayers: 0 };
   }
 }
 

@@ -1,8 +1,8 @@
 /**
  * CMI LifeFlow — Admin Actions
  *
- * All mutations go through Supabase RPC functions (SECURITY DEFINER)
- * so the admin_id is verified server-side before any write.
+ * All mutations use the authenticated admin supabase client (anon key + RLS).
+ * Admin RLS policies are enforced server-side via profiles.is_admin = true.
  *
  * `supa` is cast to `any` to bypass Supabase's generated types for
  * admin tables that don't yet exist in the schema snapshot.
@@ -21,7 +21,7 @@ async function auditLog(
   action: string,
   targetType: string,
   targetId: string,
-  metadata: Record<string, unknown> = {}
+  metadata: Record<string, unknown> = {},
 ) {
   try {
     await supa.from('admin_audit_log').insert({
@@ -34,62 +34,192 @@ async function auditLog(
   } catch (_) { /* admin_audit_log table not yet migrated */ }
 }
 
-// ─── Memberships ─────────────────────────────────────────────────────────────
+// ─── Tier sync helper ─────────────────────────────────────────────────────────
+// Updates subscription_tier on BOTH profiles (auth-linked) and user_profiles (app data).
+// product values in user_memberships are the raw tier IDs (free/premium/premium_plus/polaris/growthplayers).
+async function syncTier(userId: string, tier: string, expiresAt?: string | null) {
+  const payload: Record<string, unknown> = {
+    subscription_tier: tier,
+    updated_at: new Date().toISOString(),
+  };
+  if (expiresAt !== undefined) payload.subscription_expires_at = expiresAt ?? null;
 
+  await Promise.allSettled([
+    // profiles: id = auth.uid()
+    intel.profiles().update(payload).eq('id', userId),
+    // user_profiles: user_id = auth.uid()
+    supa.from('user_profiles').update(payload).eq('user_id', userId),
+  ]);
+}
+
+// ─── Trigger ML recalculation (fire & forget) ────────────────────────────────
+function triggerML(userId: string) {
+  supabase.functions
+    .invoke('calculate-intelligence', { body: { user_id: userId } })
+    .catch(() => {});
+}
+
+// ─── ACTIVATE / UPGRADE MEMBERSHIP ───────────────────────────────────────────
 export async function activateMembership(params: {
   adminId: string;
   userId: string;
-  product: MembershipProduct;
+  product: MembershipProduct | string;
   expiresAt?: string | null;
   pricePaid?: number;
   currency?: string;
   notes?: string;
+  activatedBy?: string;
 }): Promise<{ success: boolean; membershipId?: string; error?: string }> {
-  const { data, error } = await supa.rpc('admin_activate_membership', {
-    p_admin_id:   params.adminId,
-    p_user_id:    params.userId,
-    p_product:    params.product,
-    p_expires_at: params.expiresAt ?? null,
-    p_price_paid: params.pricePaid ?? 0,
-    p_currency:   params.currency ?? 'USD',
-    p_notes:      params.notes ?? null,
-  });
-  if (error) return { success: false, error: error.message };
+  const {
+    adminId, userId, product,
+    expiresAt = null,
+    pricePaid = 0,
+    currency = 'USD',
+    notes = '',
+    activatedBy = 'admin',
+  } = params;
 
-  // Mirror subscription_tier onto user_profiles so the app reads it immediately
-  const tierMap: Record<string, string> = {
-    lifeflow_free:         'free',
-    lifeflow_premium:      'premium',
-    lifeflow_premium_plus: 'premium_plus',
-    polaris:               'premium_plus',
-    growthplayers:         'premium_plus',
-  };
   try {
+    // 1. Supersede previous active membership of the same product
     await supa
-      .from('user_profiles')
-      .update({ subscription_tier: tierMap[params.product] ?? 'premium' })
-      .eq('user_id', params.userId);
-  } catch (_) { /* user_profiles may not have subscription_tier column yet */ }
+      .from('user_memberships')
+      .update({ status: 'superseded' })
+      .eq('user_id', userId)
+      .eq('product', product)
+      .eq('status', 'active');
 
-  return { success: true, membershipId: data as string };
+    // 2. Insert new membership
+    const { data: membership, error: membershipError } = await supa
+      .from('user_memberships')
+      .insert({
+        user_id:      userId,
+        product,
+        status:       'active',
+        activated_by: activatedBy,
+        activated_at: new Date().toISOString(),
+        expires_at:   expiresAt ?? null,
+        price_paid:   pricePaid,
+        currency,
+        notes:        notes || null,
+        created_by:   adminId,
+      })
+      .select('id')
+      .single();
+
+    if (membershipError) throw new Error(membershipError.message);
+
+    // 3. Sync tier to profiles tables
+    await syncTier(userId, product, expiresAt);
+
+    // 4. Audit
+    await auditLog(adminId, 'activate_membership', 'user', userId, {
+      product, price_paid: pricePaid, expires_at: expiresAt, notes,
+    });
+
+    // 5. ML recalculation (background)
+    triggerML(userId);
+
+    return { success: true, membershipId: (membership as { id: string }).id };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
 }
 
+// ─── CANCEL / DOWNGRADE ───────────────────────────────────────────────────────
+export async function cancelMembership(params: {
+  membershipId: string;
+  userId: string;
+  downgradeTo?: string;
+  adminId: string;
+  reason?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { membershipId, userId, downgradeTo = 'free', adminId, reason = '' } = params;
+
+  try {
+    await supa
+      .from('user_memberships')
+      .update({ status: 'cancelled', notes: reason || null })
+      .eq('id', membershipId);
+
+    await syncTier(userId, downgradeTo, null);
+
+    await auditLog(adminId, 'cancel_membership', 'user', userId, {
+      membership_id: membershipId, downgraded_to: downgradeTo, reason,
+    });
+
+    triggerML(userId);
+    return { success: true };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
+}
+
+// ─── CHANGE TIER DIRECTLY (upgrade / downgrade) ───────────────────────────────
+export async function changeTier(params: {
+  userId: string;
+  newTier: string;
+  adminId: string;
+  reason?: string;
+}): Promise<{ success: boolean; membershipId?: string; error?: string }> {
+  return activateMembership({
+    adminId:      params.adminId,
+    userId:       params.userId,
+    product:      params.newTier,
+    notes:        params.reason ?? '',
+    activatedBy:  'admin_direct',
+    pricePaid:    0,
+  });
+}
+
+// ─── EXTEND MEMBERSHIP ────────────────────────────────────────────────────────
+export async function extendMembership(params: {
+  membershipId: string;
+  userId: string;
+  newExpiresAt: string;
+  adminId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { membershipId, userId, newExpiresAt, adminId } = params;
+
+  try {
+    const { error } = await supa
+      .from('user_memberships')
+      .update({ expires_at: newExpiresAt })
+      .eq('id', membershipId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error(error.message);
+
+    // Sync expiry date to profiles
+    await Promise.allSettled([
+      intel.profiles().update({ subscription_expires_at: newExpiresAt }).eq('id', userId),
+      supa.from('user_profiles').update({ subscription_expires_at: newExpiresAt }).eq('user_id', userId),
+    ]);
+
+    await auditLog(adminId, 'extend_membership', 'user', userId, {
+      membership_id: membershipId, new_expires_at: newExpiresAt,
+    });
+
+    return { success: true };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
+}
+
+// ─── DEACTIVATE (legacy alias) ────────────────────────────────────────────────
 export async function deactivateMembership(params: {
   adminId: string;
   membershipId: string;
   userId: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supa
-    .from('user_memberships')
-    .update({ status: 'cancelled' })
-    .eq('id', params.membershipId);
-
-  if (error) return { success: false, error: error.message };
-
-  await auditLog(params.adminId, 'deactivate_membership', 'membership', params.membershipId, {
-    user_id: params.userId,
+  return cancelMembership({
+    membershipId: params.membershipId,
+    userId:       params.userId,
+    adminId:      params.adminId,
+    downgradeTo:  'free',
   });
-  return { success: true };
 }
 
 // ─── Course Access ────────────────────────────────────────────────────────────
@@ -198,7 +328,7 @@ export async function deactivateAccessCode(params: {
   return { success: true };
 }
 
-// ─── Redeem Access Code (in onboarding) ─────────────────────────────────────
+// ─── Redeem Access Code ───────────────────────────────────────────────────────
 
 export async function redeemAccessCode(params: {
   code: string;
@@ -217,7 +347,6 @@ export async function redeemAccessCode(params: {
 
   if (status !== 'ok') return { status: status as 'invalid' | 'exhausted' | 'expired' | 'inactive' };
 
-  // Look up code type to know what product to activate
   const { data: codeData } = await supa
     .from('access_codes')
     .select('id, type')
@@ -230,9 +359,7 @@ export async function redeemAccessCode(params: {
   const codeType = (codeData as { id: string; type: AccessCodeType }).type;
   const product = CODE_TYPE_PRODUCT[codeType] ?? 'lifeflow_free';
 
-  // Record who used the code (only if we have a userId)
   if (params.userId) {
-    // access_code_uses may not exist yet — log if available
     try {
       await supa.from('access_code_uses').insert({
         code_id: (codeData as { id: string }).id,
@@ -240,7 +367,6 @@ export async function redeemAccessCode(params: {
       });
     } catch (_) { /* table not yet migrated */ }
 
-    // Activate membership if table exists
     try {
       await supa.from('user_memberships').insert({
         user_id:      params.userId,
@@ -254,7 +380,7 @@ export async function redeemAccessCode(params: {
   return { status: 'ok', product };
 }
 
-// ─── Send message as Norman ──────────────────────────────────────────────────
+// ─── Send message as Norman ───────────────────────────────────────────────────
 
 export async function sendMessageAsNorman(params: {
   adminId: string;

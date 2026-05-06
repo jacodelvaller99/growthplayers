@@ -99,4 +99,8 @@ export type LifeFlowState = {
   completedLessons: string[];
   completedTasks: Record<string, LessonTask>;
   wellnessSessions: WellnessSession[];
+  /** Current subscription tier from profiles.subscription_tier (Supabase Realtime-synced) */
+  subscriptionTier: string;
+  /** ISO date of tier expiry, or null for indefinite */
+  subscriptionExpiresAt: string | null;
 };

@@ -19,9 +19,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, screen, StatusPill } from '@/components/polaris';
+import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { fetchDashboardKPIs, fetchLiveEvents } from '@/lib/admin/queries';
+import { fetchDashboardKPIs, fetchLiveEvents, fetchTierCounts } from '@/lib/admin/queries';
 import type { DashboardKPIs, LiveEvent } from '@/lib/admin/types';
 import { intel } from '@/lib/supabase';
 
@@ -114,18 +115,21 @@ export default function MissionControl() {
 
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
   const [events, setEvents] = useState<LiveEvent[]>([]);
+  const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
   const channelRef = useRef<ReturnType<typeof intel.events> | null>(null);
 
   const loadData = useCallback(async () => {
-    const [kpiData, evtData] = await Promise.all([
+    const [kpiData, evtData, tierData] = await Promise.all([
       fetchDashboardKPIs(),
       fetchLiveEvents(10),
+      fetchTierCounts(),
     ]);
     setKpis(kpiData);
     setEvents(evtData);
+    setTierCounts(tierData);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -189,6 +193,23 @@ export default function MissionControl() {
           />
         </View>
       )}
+
+      {/* ── Membresías por tier ── */}
+      <GoldDivider label="MEMBRESÍAS POR TIER" />
+      <View style={s.kpiGrid}>
+        {(['free', 'premium', 'premium_plus', 'polaris', 'growthplayers'] as const).map((tier) => (
+          <Pressable
+            key={tier}
+            style={[s.tierCountCard, { borderColor: getTierColor(tier) + '55' }]}
+            onPress={() => router.push('/admin/membresias' as never)}>
+            <View style={[s.tierDot, { backgroundColor: getTierColor(tier) }]} />
+            <Text style={[s.tierCountValue, { color: getTierColor(tier) }]}>
+              {tierCounts[tier] ?? 0}
+            </Text>
+            <Text style={s.tierCountLabel}>{getTierLabel(tier).toUpperCase()}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       {/* ── Alerts ── */}
       <GoldDivider label="ALERTAS ACTIVAS" />
@@ -308,6 +329,34 @@ const s = StyleSheet.create({
   eventScreen: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   eventTime: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', paddingVertical: spacing.md },
+
+  tierCountCard: {
+    alignItems: 'center',
+    backgroundColor: palette.graphite,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    minWidth: 80,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  tierDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  tierCountValue: {
+    fontFamily: Fonts.display,
+    fontSize: 24,
+    letterSpacing: 1,
+  },
+  tierCountLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 8,
+    textAlign: 'center',
+  },
 
   sectionGrid: {
     flexDirection: 'row',
