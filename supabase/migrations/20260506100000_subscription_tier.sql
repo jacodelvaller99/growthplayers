@@ -28,9 +28,23 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_subscription_tier
   ON public.user_profiles(subscription_tier);
 
 -- RLS: users can read their own subscription_tier
-CREATE POLICY IF NOT EXISTS "Users can read own subscription_tier"
-  ON public.profiles FOR SELECT
-  USING (id = auth.uid());
+-- (DROP first so this script is safely re-runnable)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename  = 'profiles'
+      AND policyname = 'Users can read own subscription_tier'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY "Users can read own subscription_tier"
+        ON public.profiles FOR SELECT
+        USING (id = auth.uid())
+    $pol$;
+  END IF;
+END
+$$;
 
 -- Enable realtime for profiles table so clients see tier changes instantly
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
