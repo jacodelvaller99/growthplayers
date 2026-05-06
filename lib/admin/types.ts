@@ -34,6 +34,12 @@ export interface AdminUserDetail extends AdminUser {
   affinity_lessons?: number;
   affinity_mentor?: number;
   days_since_last_act?: number;
+  // Biometrics (from user_intelligence)
+  biometric_readiness?: number | null;
+  biometric_provider?: string | null;
+  biometric_hrv_ms?: number | null;
+  biometric_resting_hr?: number | null;
+  biometric_anomaly?: string | null;
   // Memberships
   memberships?: UserMembership[];
   // Course access
@@ -177,6 +183,13 @@ export interface MlOverview {
   churn_distribution: Record<string, number>;
   active_anomalies: number;
   avg_affinities: Record<string, number>;
+}
+
+export interface BiometricStats {
+  users_with_wearable: number;
+  avg_hrv: number | null;
+  avg_recovery: number | null;
+  users_with_anomaly: number;
 }
 
 export interface AtRiskUser {

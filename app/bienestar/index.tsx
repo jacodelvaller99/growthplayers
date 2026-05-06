@@ -17,6 +17,7 @@ import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useWearableConnections, useWearableDaily, recoveryLabel } from '@/lib/wearables';
 
 // ─── Daily phrases (stoic / logotherapy) ─────────────────────────────────────
 const DAILY_PHRASES = [
@@ -103,6 +104,66 @@ function getWeekDots(sessions: { completedAt: string }[]): boolean[] {
 }
 
 const DAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+// ─── Wearable Card (inline) ───────────────────────────────────────────────────
+function WearableCard({ router }: { router: ReturnType<typeof useRouter> }) {
+  const { connections } = useWearableConnections();
+  const { today } = useWearableDaily(1);
+
+  if (!connections.length) {
+    // Show subtle "connect" prompt
+    return (
+      <Pressable
+        onPress={() => router.push('/bienestar/biometrics' as never)}
+        style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}>
+        <PremiumCard style={wearableCardStyles.container}>
+          <MaterialIcons name="monitor-heart" size={20} color={palette.goldMuted} />
+          <View style={wearableCardStyles.body}>
+            <Text style={wearableCardStyles.title}>MI CUERPO HOY</Text>
+            <Text style={wearableCardStyles.sub}>Conecta Oura o WHOOP →</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
+        </PremiumCard>
+      </Pressable>
+    );
+  }
+
+  const score = today?.recovery_score ?? null;
+  const label = score != null ? recoveryLabel(score) : 'Sin datos';
+  const color = score == null ? palette.smoke
+    : score >= 70 ? '#2e7d52'
+    : score >= 50 ? palette.gold
+    : score >= 30 ? '#b07d1a'
+    : '#e63946';
+
+  return (
+    <Pressable
+      onPress={() => router.push('/bienestar/biometrics' as never)}
+      style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}>
+      <PremiumCard style={wearableCardStyles.container}>
+        <MaterialIcons name="monitor-heart" size={20} color={color} />
+        <View style={wearableCardStyles.body}>
+          <Text style={wearableCardStyles.title}>MI CUERPO HOY</Text>
+          <Text style={[wearableCardStyles.sub, { color }]}>
+            Recuperación: {score ?? '–'}/100 · {label}
+          </Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
+      </PremiumCard>
+    </Pressable>
+  );
+}
+const wearableCardStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  body:  { flex: 1 },
+  title: { ...typography.label, color: palette.ivory, letterSpacing: 1.5 },
+  sub:   { ...typography.caption, color: palette.smoke, marginTop: 2 },
+});
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function BienestarHub() {
@@ -255,6 +316,9 @@ export default function BienestarHub() {
           </Pressable>
         ))}
       </View>
+
+      {/* ── Wearable card (shown if connected) ── */}
+      <WearableCard router={router} />
 
       {/* ── Frase del día ── */}
       <GoldDivider label="FRASE DEL DÍA" />

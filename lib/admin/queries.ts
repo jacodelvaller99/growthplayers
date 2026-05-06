@@ -18,6 +18,7 @@ import type {
   AdminUser,
   AdminUserDetail,
   AuditLogEntry,
+  BiometricStats,
   DashboardKPIs,
   JournalEntry,
   LiveEvent,
@@ -170,7 +171,12 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail |
     affinity_journaling: int?.affinity_journaling,
     affinity_lessons: int?.affinity_lessons,
     affinity_mentor: int?.affinity_mentor,
-    days_since_last_act: int?.days_since_last_act,
+    days_since_last_act:  int?.days_since_last_act,
+    biometric_readiness:  int?.biometric_readiness  ?? null,
+    biometric_provider:   int?.biometric_provider   ?? null,
+    biometric_hrv_ms:     int?.biometric_hrv_ms     ?? null,
+    biometric_resting_hr: int?.biometric_resting_hr ?? null,
+    biometric_anomaly:    int?.biometric_anomaly     ?? null,
     memberships: ((membRes.data ?? []) as UserMembership[]),
     course_access: ((courseRes.data ?? []) as UserCourseAccess[]),
   };
@@ -354,6 +360,29 @@ export async function fetchAtRiskUsers() {
   if (error) return [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data as any)?.users ?? [];
+}
+
+export async function fetchBiometricStats(): Promise<BiometricStats> {
+  const empty: BiometricStats = { users_with_wearable: 0, avg_hrv: null, avg_recovery: null, users_with_anomaly: 0 };
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (intel.intelligence() as any)
+      .select('biometric_provider, biometric_hrv_ms, biometric_readiness, biometric_anomaly')
+      .not('biometric_provider', 'is', null);
+    if (!data || data.length === 0) return empty;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = data as any[];
+    const hrvVals = rows.map((r: any) => r.biometric_hrv_ms).filter((v: any) => v != null) as number[];
+    const recVals = rows.map((r: any) => r.biometric_readiness).filter((v: any) => v != null) as number[];
+
+    return {
+      users_with_wearable: rows.length,
+      avg_hrv:      hrvVals.length > 0 ? parseFloat((hrvVals.reduce((a, b) => a + b, 0) / hrvVals.length).toFixed(1)) : null,
+      avg_recovery: recVals.length > 0 ? Math.round(recVals.reduce((a, b) => a + b, 0) / recVals.length) : null,
+      users_with_anomaly: rows.filter((r: any) => r.biometric_anomaly != null).length,
+    };
+  } catch (_) { return empty; }
 }
 
 export async function recalculateUserML(userId: string) {

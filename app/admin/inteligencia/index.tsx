@@ -24,8 +24,8 @@ import { GoldDivider, PremiumCard, screen, StatusPill } from '@/components/polar
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { recalculateAllMLAction } from '@/lib/admin/actions';
-import { fetchAtRiskUsers, fetchMlOverview } from '@/lib/admin/queries';
-import type { AtRiskUser, MlOverview } from '@/lib/admin/types';
+import { fetchAtRiskUsers, fetchBiometricStats, fetchMlOverview } from '@/lib/admin/queries';
+import type { AtRiskUser, BiometricStats, MlOverview } from '@/lib/admin/types';
 
 function CohortBar({ label, count, total }: { label: string; count: number; total: number }) {
   const pct = total > 0 ? (count / total) * 100 : 0;
@@ -96,14 +96,16 @@ export default function InteligenciaScreen() {
 
   const [overview, setOverview] = useState<MlOverview | null>(null);
   const [atRisk, setAtRisk] = useState<AtRiskUser[]>([]);
+  const [bioStats, setBioStats] = useState<BiometricStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [recalcLoading, setRecalcLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [ov, ar] = await Promise.all([fetchMlOverview(), fetchAtRiskUsers()]);
+    const [ov, ar, bio] = await Promise.all([fetchMlOverview(), fetchAtRiskUsers(), fetchBiometricStats()]);
     if (ov) setOverview(ov);
     setAtRisk(ar as AtRiskUser[]);
+    setBioStats(bio);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -208,8 +210,37 @@ export default function InteligenciaScreen() {
         </>
       )}
 
-      {/* E. At-risk users */}
-      <GoldDivider label={`E. USUARIOS EN RIESGO (${atRisk.length})`} />
+      {/* E. Biometric overview */}
+      <GoldDivider label="E. BIOMÉTRICOS" />
+      <PremiumCard style={s.card}>
+        <View style={s.kpiRow}>
+          <View style={s.kpiBlock}>
+            <Text style={s.kpiValue}>{bioStats?.users_with_wearable ?? 0}</Text>
+            <Text style={s.kpiLabel}>CON WEARABLE</Text>
+          </View>
+          <View style={s.kpiBlock}>
+            <Text style={s.kpiValue}>
+              {bioStats?.avg_hrv != null ? `${bioStats.avg_hrv}ms` : '–'}
+            </Text>
+            <Text style={s.kpiLabel}>HRV GLOBAL</Text>
+          </View>
+          <View style={s.kpiBlock}>
+            <Text style={s.kpiValue}>
+              {bioStats?.avg_recovery != null ? `${bioStats.avg_recovery}` : '–'}
+            </Text>
+            <Text style={s.kpiLabel}>RECOVERY AVG</Text>
+          </View>
+          <View style={s.kpiBlock}>
+            <Text style={[s.kpiValue, { color: (bioStats?.users_with_anomaly ?? 0) > 0 ? palette.danger : palette.success }]}>
+              {bioStats?.users_with_anomaly ?? 0}
+            </Text>
+            <Text style={s.kpiLabel}>ANOMALÍAS BIO</Text>
+          </View>
+        </View>
+      </PremiumCard>
+
+      {/* F. At-risk users */}
+      <GoldDivider label={`F. USUARIOS EN RIESGO (${atRisk.length})`} />
       <PremiumCard style={s.card}>
         {atRisk.length === 0 ? (
           <Text style={s.emptyText}>Sin usuarios en riesgo detectados 🟢</Text>

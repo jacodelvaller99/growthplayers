@@ -433,6 +433,58 @@ export default function UserDetailScreen() {
         </PremiumCard>
 
         {/* ─────────────────────────────────────────────────── */}
+        {/* K. BIOMÉTRICOS */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label="K. BIOMÉTRICOS" />
+        <PremiumCard style={s.card}>
+          {!user.biometric_provider ? (
+            <Text style={s.emptyText}>Sin wearable conectado</Text>
+          ) : (
+            <>
+              <View style={s.mlRow}>
+                <Text style={s.mlLabel}>DISPOSITIVO</Text>
+                <Text style={s.mlValue}>
+                  {user.biometric_provider === 'oura' ? '⬡ Oura Ring' : '◈ WHOOP'}
+                </Text>
+              </View>
+              {user.biometric_readiness != null && (
+                <View style={s.mlRow}>
+                  <Text style={s.mlLabel}>READINESS (3d avg)</Text>
+                  <Text style={[s.mlValue, {
+                    color: user.biometric_readiness >= 70 ? palette.success
+                      : user.biometric_readiness >= 50 ? palette.warning
+                      : palette.danger,
+                  }]}>
+                    {user.biometric_readiness}/100
+                  </Text>
+                </View>
+              )}
+              {user.biometric_hrv_ms != null && (
+                <View style={s.mlRow}>
+                  <Text style={s.mlLabel}>HRV HOY</Text>
+                  <Text style={s.mlValue}>{Math.round(user.biometric_hrv_ms)} ms</Text>
+                </View>
+              )}
+              {user.biometric_resting_hr != null && (
+                <View style={s.mlRow}>
+                  <Text style={s.mlLabel}>FC REPOSO</Text>
+                  <Text style={s.mlValue}>{user.biometric_resting_hr} bpm</Text>
+                </View>
+              )}
+              {user.biometric_anomaly && (
+                <View style={[s.anomalyAlert, { marginTop: spacing.sm }]}>
+                  <Text style={s.anomalyText}>
+                    ⚠ {user.biometric_anomaly === 'biometric_stress'
+                      ? 'HRV baja — sistema nervioso bajo tensión'
+                      : 'FC reposo elevada sobre línea base'}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </PremiumCard>
+
+        {/* ─────────────────────────────────────────────────── */}
         {/* H. AUDITORÍA DE ESTE USUARIO */}
         {/* ─────────────────────────────────────────────────── */}
         <GoldDivider label={`H. AUDITORÍA (${auditLog.length})`} />

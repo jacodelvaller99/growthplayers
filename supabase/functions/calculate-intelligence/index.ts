@@ -39,12 +39,16 @@ async function calculateForUser(userId: string): Promise<void> {
   const prevWeek = new Date(now.getTime() - 2 * SEVEN_DAYS_MS).toISOString();
 
   // ── Fetch all needed data in parallel ────────────────────────────────────────
+  const d3ago = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+
   const [
     eventsResult,
     checkinsResult,
     wellnessResult,
     prevCheckinsResult,
     profileResult,
+    biometricResult,
+    biometricBaselineResult,
   ] = await Promise.all([
     adminSupabase
       .from('user_events')
@@ -77,6 +81,22 @@ async function calculateForUser(userId: string): Promise<void> {
       .select('timezone, ml_consent')
       .eq('id', userId)
       .single(),
+
+    // Last 3 days of wearable data
+    adminSupabase
+      .from('wearable_daily')
+      .select('date, provider, recovery_score, hrv_ms, resting_hr, sleep_score')
+      .eq('user_id', userId)
+      .gte('date', d3ago)
+      .order('date', { ascending: false }),
+
+    // 7-day baseline for HRV anomaly detection
+    adminSupabase
+      .from('wearable_daily')
+      .select('hrv_ms, resting_hr, recovery_score')
+      .eq('user_id', userId)
+      .gte('date', new Date(now.getTime() - SEVEN_DAYS_MS).toISOString().substring(0, 10))
+      .order('date', { ascending: false }),
   ]);
 
   const events         = eventsResult.data ?? [];
@@ -84,6 +104,8 @@ async function calculateForUser(userId: string): Promise<void> {
   const wellness7d     = wellnessResult.data ?? [];
   const prevCheckins   = prevCheckinsResult.data ?? [];
   const profile        = profileResult.data;
+  const biometrics3d   = (biometricResult.data ?? []) as any[];
+  const biometrics7d   = (biometricBaselineResult.data ?? []) as any[];
 
   if (!profile?.ml_consent) return; // Respect consent
 
@@ -137,6 +159,44 @@ async function calculateForUser(userId: string): Promise<void> {
   };
   const totalWellness7d = wellness7d.length;
 
+  // ── BIOMETRIC READINESS ───────────────────────────────────────────────────────
+  const hasWearable = biometrics3d.length > 0;
+  let biometricReadiness   = 50; // neutral default
+  let biometricProvider: string | null = null;
+  let biometricHrv: number | null = null;
+  let biometricRestingHr: number | null = null;
+  let biometricAnomalyType: string | null = null;
+
+  if (hasWearable) {
+    const recScores = biometrics3d
+      .map((d: any) => d.recovery_score)
+      .filter((s: any): s is number => s != null);
+    biometricReadiness = recScores.length > 0
+      ? Math.round(recScores.reduce((a: number, b: number) => a + b, 0) / recScores.length)
+      : 50;
+    biometricProvider  = biometrics3d[0]?.provider   ?? null;
+    biometricHrv       = biometrics3d[0]?.hrv_ms     ?? null;
+    biometricRestingHr = biometrics3d[0]?.resting_hr ?? null;
+
+    // HRV anomaly: drop > 20% vs 7-day baseline
+    const baselineHrvVals = biometrics7d
+      .map((d: any) => d.hrv_ms)
+      .filter((v: any): v is number => v != null);
+    if (baselineHrvVals.length > 2 && biometricHrv != null) {
+      const avgBaseHrv = baselineHrvVals.reduce((a: number, b: number) => a + b, 0) / baselineHrvVals.length;
+      if (biometricHrv < avgBaseHrv * 0.80) biometricAnomalyType = 'biometric_stress';
+    }
+
+    // Resting HR anomaly: elevated > 10 bpm above baseline
+    const baselineHrVals = biometrics7d
+      .map((d: any) => d.resting_hr)
+      .filter((v: any): v is number => v != null);
+    if (!biometricAnomalyType && baselineHrVals.length > 2 && biometricRestingHr != null) {
+      const avgBaseHr = baselineHrVals.reduce((a: number, b: number) => a + b, 0) / baselineHrVals.length;
+      if (biometricRestingHr > avgBaseHr + 10) biometricAnomalyType = 'elevated_resting_hr';
+    }
+  }
+
   // ── 1. ENGAGEMENT SCORE (0–100) ───────────────────────────────────────────────
   let engagement =
     (uniqueDays14 / 14)          * 30 +   // 30% weight: daily active days
@@ -152,6 +212,10 @@ async function calculateForUser(userId: string): Promise<void> {
   else if (daysSinceOpen >= 3) engagement -= 15;
 
   engagement = clamp(Math.round(engagement), 0, 100);
+
+  // Biometric engagement modifier (20% bonus/penalty when wearable connected)
+  if (hasWearable && biometricReadiness >= 70) engagement = clamp(Math.round(engagement * 1.10), 0, 100);
+  if (hasWearable && biometricReadiness <  30) engagement = clamp(Math.round(engagement * 0.95), 0, 100);
 
   // ── 2. CHURN RISK (0–1) ───────────────────────────────────────────────────────
   let churnLogit = 0;
@@ -173,6 +237,9 @@ async function calculateForUser(userId: string): Promise<void> {
   if (checkins7d.length === 0) churnLogit += 0.15;
   if (mentorMsgs7d === 0 && uniqueDays7 > 2) churnLogit += 0.10;
   if (uniqueDays7 === 0)      churnLogit += 0.20;
+
+  // Biometric churn modifier: low readiness signals burnout / disengagement
+  if (hasWearable && biometricReadiness < 30) churnLogit += 0.20;
 
   const churnRisk = clamp(parseFloat(sigmoid(churnLogit - 1.5).toFixed(3)), 0, 1);
   let churnLabel: string;
@@ -240,6 +307,22 @@ async function calculateForUser(userId: string): Promise<void> {
     next_action         = 'Haz tu check-in de hoy';
     next_action_reason  = 'Sin lectura del sistema Norman opera a ciegas.';
     next_action_urgency = 'high';
+  } else if (hasWearable && biometricReadiness < 40) {
+    next_action         = 'Tu cuerpo pide recuperación — binaural delta (20 min)';
+    next_action_reason  = 'Recuperación baja detectada por tu wearable.';
+    next_action_urgency = 'high';
+  } else if (hasWearable && biometricReadiness < 60 && biometricHrv != null && biometricHrv < 30) {
+    next_action         = 'Hoy mejor escuchar que estudiar — binaural theta';
+    next_action_reason  = 'Sistema nervioso en recuperación activa.';
+    next_action_urgency = 'normal';
+  } else if (hasWearable && biometricReadiness < 60) {
+    next_action         = 'Día moderado — breathing box 4×4 antes de tu lección';
+    next_action_reason  = 'Recuperación moderada. Prepara tu sistema nervioso.';
+    next_action_urgency = 'normal';
+  } else if (hasWearable && biometricReadiness >= 70 && lessonCompletes > 0) {
+    next_action         = 'Peak biométrico — momento ideal para la lección más densa';
+    next_action_reason  = 'Recuperación óptima. Aprovecha este estado.';
+    next_action_urgency = 'low';
   } else if (wellnessBreakdown.binaural === 0 && uniqueDays7 >= 3) {
     next_action         = 'Prueba 10 min de Alpha para tu foco';
     next_action_reason  = 'Las ondas Alpha mejoran claridad mental y creatividad.';
@@ -286,11 +369,19 @@ async function calculateForUser(userId: string): Promise<void> {
     anomaly_type     = 'streak_break';
   }
 
+  // biometric_stress / elevated_resting_hr (from wearable baseline comparison)
+  if (!anomaly_detected && biometricAnomalyType) {
+    anomaly_detected = true;
+    anomaly_type     = biometricAnomalyType;
+  }
+
   // ── 7. COHORT CLUSTERING ──────────────────────────────────────────────────────
   let cohort_label: string;
   let cohort_id: number;
 
-  if (engagement >= 75 && lessonCompletes >= 10) {
+  if (hasWearable && engagement > 60 && uniqueDays7 >= 5) {
+    cohort_label = 'biohacker';      cohort_id = 7;
+  } else if (engagement >= 75 && lessonCompletes >= 10) {
     cohort_label = 'high_performer'; cohort_id = 1;
   } else if (engagement >= 60 && uniqueDays7 >= 5) {
     cohort_label = 'achiever';       cohort_id = 2;
@@ -344,6 +435,11 @@ async function calculateForUser(userId: string): Promise<void> {
       anomaly_detected_at:  anomaly_detected ? now.toISOString() : null,
       cohort_id,
       cohort_label,
+      biometric_readiness:  hasWearable ? biometricReadiness : null,
+      biometric_provider:   biometricProvider,
+      biometric_hrv_ms:     biometricHrv,
+      biometric_resting_hr: biometricRestingHr,
+      biometric_anomaly:    biometricAnomalyType,
       feature_cache:        featureCache,
       last_calculated_at:   now.toISOString(),
     },

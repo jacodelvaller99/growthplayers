@@ -52,6 +52,18 @@ export interface MentorContext {
     importance: number;
     similarity?: number;
   }>;
+
+  // ── Biometric fields (optional — present when wearable is connected) ─────────
+  /** Wearable provider: 'oura' | 'whoop' */
+  biometricProvider?: string | null;
+  /** Biometric readiness 0-100 (avg recovery last 3 days) */
+  biometricReadiness?: number | null;
+  /** Today's HRV in ms */
+  biometricHrv?: number | null;
+  /** Today's resting heart rate in bpm */
+  biometricRestingHr?: number | null;
+  /** Detected biometric anomaly: 'biometric_stress' | 'elevated_resting_hr' | null */
+  biometricAnomaly?: string | null;
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -89,14 +101,17 @@ export function buildSystemPrompt(ctx: MentorContext): string {
     }
     if (ctx.anomalyType) {
       const anomalyDesc: Record<string, string> = {
-        mood_drop:    'SEÑAL: su energía ha bajado notablemente estos días',
-        streak_break: 'SEÑAL: acaba de romper una racha — puede estar desmotivado',
-        isolation:    'SEÑAL: lleva días sin hablar con su mentor — puede necesitar conexión',
+        mood_drop:           'SEÑAL: su energía ha bajado notablemente estos días',
+        streak_break:        'SEÑAL: acaba de romper una racha — puede estar desmotivado',
+        isolation:           'SEÑAL: lleva días sin hablar con su mentor — puede necesitar conexión',
+        biometric_stress:    'SEÑAL BIOMÉTRICA: su sistema nervioso autónomo muestra tensión acumulada — sugiere herramienta de calma antes de contenido denso',
+        elevated_resting_hr: 'SEÑAL BIOMÉTRICA: su frecuencia cardíaca en reposo está elevada sobre su línea base — puede indicar fatiga o inflamación',
       };
       lines.push(anomalyDesc[ctx.anomalyType] ?? `Anomalía detectada: ${ctx.anomalyType}`);
     }
     if (ctx.cohortLabel) {
       const cohortDesc: Record<string, string> = {
+        biohacker:      'Perfil: Biohacker — integra datos de wearable; refuerza conexión cuerpo-mente-rendimiento',
         high_performer: 'Perfil: Alto rendimiento — desafíalo con nivel siguiente',
         achiever:       'Perfil: Logrador — enfocarlo en sistema y no solo en métricas',
         wellness_seeker:'Perfil: Buscador de bienestar — conectar método con paz interior',
@@ -110,6 +125,35 @@ export function buildSystemPrompt(ctx: MentorContext): string {
     return lines.length > 0
       ? `INTELIGENCIA DE SESIÓN:\n${lines.map((l) => `- ${l}`).join('\n')}`
       : '';
+  })();
+
+  // ── Biometric block (only injected when wearable data exists) ─────────────
+  const biometricBlock = (() => {
+    if (!ctx.biometricProvider || ctx.biometricReadiness == null) return '';
+    const providerName = ctx.biometricProvider === 'oura' ? 'Oura Ring' : 'WHOOP';
+    const lines: string[] = [`Wearable: ${providerName}`];
+
+    // Readiness
+    if (ctx.biometricReadiness >= 70) {
+      lines.push('Estado físico: recuperación óptima hoy — su cuerpo está en condiciones de aprendizaje intenso');
+    } else if (ctx.biometricReadiness >= 50) {
+      lines.push('Estado físico: recuperación moderada — recomendar herramienta de preparación antes del contenido');
+    } else {
+      lines.push('Estado físico: recuperación baja — priorizar herramienta de calma o recuperación sobre contenido nuevo');
+    }
+
+    // HRV context (never mention the number — humanize it)
+    if (ctx.biometricHrv != null) {
+      if (ctx.biometricHrv >= 60) {
+        lines.push('Variabilidad cardíaca: sistema nervioso en estado de resiliencia');
+      } else if (ctx.biometricHrv >= 35) {
+        lines.push('Variabilidad cardíaca: sistema nervioso equilibrado');
+      } else {
+        lines.push('Variabilidad cardíaca: sistema nervioso en modo conservación — evitar demanda cognitiva alta');
+      }
+    }
+
+    return `DATOS BIOMÉTRICOS (${new Date().toLocaleDateString('es')}):\n${lines.map((l) => `- ${l}`).join('\n')}\nREGLA: NUNCA digas "tu HRV es X" ni "tu frecuencia es Y". Traduce siempre a lenguaje humano como arriba.`;
   })();
 
   // ── Relevant memories block (top-K semantic search results) ───────────────
@@ -215,7 +259,7 @@ ${checkInBlock}
 TAREAS COMPLETADAS:
 ${tasksBlock}
 
-${intelligenceBlock ? `${intelligenceBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
+${intelligenceBlock ? `${intelligenceBlock}\n` : ''}${biometricBlock ? `\n${biometricBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
 ═══════════════════════════════════════════════
 EL MÉTODO POLARIS — TU CONOCIMIENTO COMPLETO
 ═══════════════════════════════════════════════
