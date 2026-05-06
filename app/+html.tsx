@@ -7,9 +7,34 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
+
+        {/* ── PWA / Theme ──────────────────────────────────────── */}
+        <meta name="theme-color" content="#080808" />
+        <link rel="manifest" href="/manifest.json" />
+
+        {/* ── iOS PWA ──────────────────────────────────────────── */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="LifeFlow" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+
+        {/* ── Description / OG ─────────────────────────────────── */}
+        <meta name="description" content="Transformación personal con el Método Polaris" />
+        <meta property="og:title" content="LifeFlow" />
+        <meta property="og:description" content="Transformación personal con el Método Polaris" />
+        <meta property="og:image" content="/icon-512.png" />
+        <meta property="og:type" content="website" />
+
         <ScrollViewStyleReset />
-        <style dangerouslySetInnerHTML={{ __html: `body{margin:0;background:#0F0F0F;overflow-x:hidden;}*{box-sizing:border-box;}` }} />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `body{margin:0;background:#080808;overflow-x:hidden;}*{box-sizing:border-box;}`,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>

@@ -13,6 +13,7 @@ import { LifeFlowProvider, useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { Colors } from '@/constants/theme';
 import OfflineBanner from '@/components/OfflineBanner';
+import PWAInstallBanner from '@/components/PWAInstallBanner';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -54,6 +55,15 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
+  // Register Service Worker for PWA (web only)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+    });
+  }, []);
+
   // Navigate to check-in when user taps the daily reminder notification
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -75,6 +85,7 @@ export default function RootLayout() {
       <LifeFlowProvider>
         <AnalyticsInitializer />
         <OfflineBanner />
+        <PWAInstallBanner />
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
