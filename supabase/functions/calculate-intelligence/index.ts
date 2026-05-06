@@ -454,6 +454,23 @@ async function calculateForUser(userId: string): Promise<void> {
   }
 }
 
+// ─── Auth helper ──────────────────────────────────────────────────────────────
+
+async function verifyRequest(req: Request): Promise<{ ok: boolean; userId: string | null }> {
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+
+  // Service-role key → internal call (pg_cron / admin script) — always allowed
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (token === serviceKey) return { ok: true, userId: null };
+
+  // Otherwise must be a valid user JWT
+  if (!token) return { ok: false, userId: null };
+  const { data, error } = await adminSupabase.auth.getUser(token);
+  if (error || !data.user) return { ok: false, userId: null };
+  return { ok: true, userId: data.user.id };
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -461,9 +478,17 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders() });
   }
 
+  const { ok, userId: callerUid } = await verifyRequest(req);
+  if (!ok) return json({ error: 'Unauthorized' }, 401);
+
   try {
     const body = await req.json().catch(() => ({}));
     const { user_id, batch, all_users } = body;
+
+    // Batch operations require service-role caller (callerUid is null only for service-role)
+    if ((batch === 'all' || all_users === true) && callerUid !== null) {
+      return json({ error: 'Batch operation requires service-role key' }, 403);
+    }
 
     if (batch === 'all' || all_users === true) {
       // Process all users with ml_consent = true
@@ -487,6 +512,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (user_id) {
+      // Authenticated users may only recalculate their own record
+      if (callerUid !== null && callerUid !== user_id) {
+        return json({ error: 'Forbidden' }, 403);
+      }
       await calculateForUser(user_id);
       return json({ ok: true, user_id });
     }

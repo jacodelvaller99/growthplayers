@@ -131,6 +131,30 @@ function mentorReply(text: string, state: LifeFlowState, latest: CheckIn | null)
   return 'Estado util para ejecucion. Mantente en modo mercader: protege atencion, convierte tiempo en avance visible.';
 }
 
+// ─── Streak helper ────────────────────────────────────────────────────────────
+// Counts consecutive days ending today (or yesterday) with a check-in.
+function computeStreak(checkIns: CheckIn[]): number {
+  if (!checkIns.length) return 0;
+  const sorted = [...checkIns].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let streak = 0;
+  let cursor = new Date(today);
+  for (const ci of sorted) {
+    const d = new Date(ci.date);
+    d.setHours(0, 0, 0, 0);
+    if (d.getTime() === cursor.getTime()) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else if (d.getTime() < cursor.getTime()) {
+      break;
+    }
+  }
+  return streak;
+}
+
 // ─── Migrate persisted state → ensure all fields exist ───────────────────────
 function migrateState(loaded: Partial<LifeFlowState>): LifeFlowState {
   return {
@@ -424,6 +448,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           identity:            payload.northStar.identity,
           non_negotiables:     payload.northStar.nonNegotiables,
           daily_reminder:      payload.northStar.dailyReminder,
+          ml_consent:          true, // user explicitly started the protocol — opt-in granted
         }, { onConflict: 'user_id' });
       } catch (e) {
         console.warn('[Supabase] completeOnboarding:', e);
@@ -507,7 +532,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
 
       // Also update profile with latest score
       try {
-        const streak = next.checkIns.length; // simplified; mentor.tsx computes accurate streak
+        const streak = computeStreak(next.checkIns);
         await db.profiles().upsert({
           user_id:         uid,
           sovereign_score: newScore,

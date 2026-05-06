@@ -19,6 +19,8 @@ export type Database = {
           streak: number | null;
           tier: string | null;
           total_days: number | null;
+          ml_consent: boolean | null;
+          timezone: string | null;
           created_at: string | null;
           updated_at: string | null;
         };
@@ -37,6 +39,8 @@ export type Database = {
           streak?: number | null;
           tier?: string | null;
           total_days?: number | null;
+          ml_consent?: boolean | null;
+          timezone?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
         };
@@ -55,6 +59,8 @@ export type Database = {
           streak?: number | null;
           tier?: string | null;
           total_days?: number | null;
+          ml_consent?: boolean | null;
+          timezone?: string | null;
           created_at?: string | null;
           updated_at?: string | null;
         };

@@ -9,9 +9,11 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.polarisgrowthinstitute.lifeflow"
     },
     "android": {
+      "package": "com.polarisgrowthinstitute.lifeflow",
       "adaptiveIcon": {
         "backgroundColor": "#0F0F0F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
