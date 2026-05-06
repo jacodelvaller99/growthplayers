@@ -454,6 +454,75 @@ async function syncUser(userId: string, providerFilter?: string): Promise<void> 
   await triggerIntelligence(userId);
 }
 
+// ─── OAuth Code Exchange ──────────────────────────────────────────────────────
+async function connectOura(userId: string, code: string): Promise<void> {
+  const redirectUri = `${Deno.env.get('EXPO_PUBLIC_APP_URL') ?? 'https://growthplayers.vercel.app'}/oauth/oura/callback`;
+  const res = await fetch('https://api.ouraring.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type:    'authorization_code',
+      client_id:     OURA_CLIENT_ID,
+      client_secret: OURA_CLIENT_SECRET,
+      code,
+      redirect_uri:  redirectUri,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Oura token exchange failed: ${res.status} ${err}`);
+  }
+  const data = await res.json();
+  const expiresAt = data.expires_in
+    ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+    : null;
+
+  await adminSupabase.from('wearable_connections').upsert({
+    user_id,
+    provider:         'oura',
+    access_token:     data.access_token,
+    refresh_token:    data.refresh_token ?? '',
+    token_expires_at: expiresAt,
+    is_active:        true,
+    connected_at:     new Date().toISOString(),
+    scope:            data.scope ? data.scope.split(' ') : null,
+  }, { onConflict: 'user_id,provider' });
+}
+
+async function connectWhoop(userId: string, code: string): Promise<void> {
+  const redirectUri = `${Deno.env.get('EXPO_PUBLIC_APP_URL') ?? 'https://growthplayers.vercel.app'}/oauth/whoop/callback`;
+  const res = await fetch('https://api.prod.whoop.com/oauth/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type:    'authorization_code',
+      client_id:     WHOOP_CLIENT_ID,
+      client_secret: WHOOP_CLIENT_SECRET,
+      code,
+      redirect_uri:  redirectUri,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WHOOP token exchange failed: ${res.status} ${err}`);
+  }
+  const data = await res.json();
+  const expiresAt = data.expires_in
+    ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+    : null;
+
+  await adminSupabase.from('wearable_connections').upsert({
+    user_id,
+    provider:         'whoop',
+    access_token:     data.access_token,
+    refresh_token:    data.refresh_token ?? '',
+    token_expires_at: expiresAt,
+    is_active:        true,
+    connected_at:     new Date().toISOString(),
+    scope:            data.scope ? data.scope.split(' ') : null,
+  }, { onConflict: 'user_id,provider' });
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -462,7 +531,31 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { user_id, provider, batch } = body;
+    const { user_id, provider, batch, action, code } = body;
+
+    // ── OAuth connect action ───────────────────────────────────────────────────
+    if (action === 'connect') {
+      if (!provider || !code) return json({ error: 'Missing provider or code' }, 400);
+
+      // Get the authenticated user from the JWT
+      const authHeader = req.headers.get('Authorization') ?? '';
+      const { data: { user }, error: authErr } = await adminSupabase.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      );
+      if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+
+      if (provider === 'oura') {
+        await connectOura(user.id, code);
+      } else if (provider === 'whoop') {
+        await connectWhoop(user.id, code);
+      } else {
+        return json({ error: 'Unknown provider' }, 400);
+      }
+
+      // Kick off initial sync
+      await syncUser(user.id, provider);
+      return json({ ok: true, provider });
+    }
 
     // Batch mode: sync all active connections
     if (batch === 'all') {
