@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MedicalDisclaimer from '@/components/MedicalDisclaimer';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -205,6 +206,8 @@ export default function BiometricsScreen() {
           <Text style={styles.providerText}>{provider === 'oura' ? '⬡ Oura' : '◈ WHOOP'}</Text>
         </View>
       </View>
+
+      <MedicalDisclaimer />
 
       {/* Main scores */}
       <PremiumCard style={styles.mainScores}>

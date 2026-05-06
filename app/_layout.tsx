@@ -12,6 +12,7 @@ import 'react-native-reanimated';
 import { LifeFlowProvider, useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { Colors } from '@/constants/theme';
+import OfflineBanner from '@/components/OfflineBanner';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -73,6 +74,7 @@ export default function RootLayout() {
     <ThemeProvider value={SovereignTheme}>
       <LifeFlowProvider>
         <AnalyticsInitializer />
+        <OfflineBanner />
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />

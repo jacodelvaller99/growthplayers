@@ -81,6 +81,12 @@ type LifeFlowContextValue = {
   markLessonComplete: (lessonId: string) => Promise<void>;
   saveMentorMessage: (role: 'user' | 'assistant', content: string) => Promise<void>;
   saveWellnessSession: (session: Omit<WellnessSession, 'id'>) => Promise<void>;
+  /** Load older mentor messages from Supabase (pagination). Returns true if more exist. */
+  loadMoreMentorMessages: (currentCount: number) => Promise<boolean>;
+  /** GDPR: permanently delete all user data and the auth account. */
+  deleteAccount: () => Promise<void>;
+  /** GDPR: export all user data as a JSON string. */
+  exportData: () => Promise<string>;
   resetOnboarding: () => Promise<void>;
   clearData: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -746,6 +752,70 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const loadMoreMentorMessages = useCallback(async (currentCount: number): Promise<boolean> => {
+    const uid = uidRef.current;
+    if (!uid) return false;
+    try {
+      const { data: olderRows } = await db.messages()
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
+        .range(currentCount, currentCount + 49);
+
+      if (!olderRows || olderRows.length === 0) return false;
+
+      const olderMessages: MentorMessage[] = (olderRows as Array<{
+        id: string; role: string; content: string; created_at: string | null;
+      }>).map((m) => ({
+        id:        m.id,
+        role:      (m.role === 'assistant' ? 'mentor' : m.role) as 'mentor' | 'user',
+        text:      m.content,
+        createdAt: m.created_at ?? new Date().toISOString(),
+      })).reverse(); // oldest first
+
+      setState((prev) => ({
+        ...prev,
+        mentorMessages: [...olderMessages, ...prev.mentorMessages],
+      }));
+      return olderRows.length === 50;
+    } catch (e) {
+      console.warn('[Supabase] loadMoreMentorMessages:', e);
+      return false;
+    }
+  }, []);
+
+  const deleteAccount = useCallback(async (): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('No session');
+
+    const { error } = await supabase.functions.invoke('delete-account');
+    if (error) throw new Error(error.message);
+
+    await removeLocal(STATE_KEY);
+    setState(defaultState);
+    uidRef.current = null;
+  }, []);
+
+  const exportData = useCallback(async (): Promise<string> => {
+    const uid = uidRef.current;
+    const payload: Record<string, unknown> = {
+      exportedAt:        new Date().toISOString(),
+      profile:           state.profile,
+      northStar:         state.northStar,
+      protocolStartDate: state.protocolStartDate,
+      checkIns:          state.checkIns,
+      mentorMessages:    state.mentorMessages.slice(-200),
+      completedLessons:  state.completedLessons,
+      completedTasks:    state.completedTasks,
+      wellnessSessions:  state.wellnessSessions,
+    };
+    if (uid) {
+      const { data: journal } = await db.journal().select('id,content,created_at').eq('user_id', uid);
+      payload.journalEntries = journal ?? [];
+    }
+    return JSON.stringify(payload, null, 2);
+  }, [state]);
+
   const resetOnboarding = useCallback(async () => {
     await persist({ ...state, onboardingCompleted: false });
     const uid = uidRef.current;
@@ -808,6 +878,9 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         markLessonComplete,
         saveMentorMessage,
         saveWellnessSession,
+        loadMoreMentorMessages,
+        deleteAccount,
+        exportData,
         resetOnboarding,
         clearData,
         signOut,

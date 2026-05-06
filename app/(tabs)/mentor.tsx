@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -135,6 +136,7 @@ export default function MentorScreen() {
     averages,
     isSubscribed,
     addMentorMessages,
+    loadMoreMentorMessages,
     userId,
   } = useLifeFlow();
 
@@ -146,6 +148,8 @@ export default function MentorScreen() {
   const [isStreaming, setIsStreaming]   = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [pendingUserMsg, setPendingUserMsg] = useState<MentorMessage | null>(null);
+  const [loadingMore, setLoadingMore]   = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(() => state.mentorMessages.length >= 50);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -178,6 +182,17 @@ export default function MentorScreen() {
 
   const scrollToBottom = (animated = true) => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated }), 80);
+  };
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMoreMessages) return;
+    setLoadingMore(true);
+    try {
+      const gotMore = await loadMoreMentorMessages(state.mentorMessages.length);
+      setHasMoreMessages(gotMore);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
@@ -411,6 +426,27 @@ export default function MentorScreen() {
         {displayMessages.length > 0 && (
           <>
             <GoldDivider label="CONVERSACION" />
+            {hasMoreMessages && (
+              <Pressable
+                onPress={handleLoadMore}
+                disabled={loadingMore}
+                accessibilityRole="button"
+                accessibilityLabel="Cargar mensajes anteriores"
+                style={({ pressed }) => [
+                  styles.loadMoreBtn,
+                  pressed && { opacity: 0.7 },
+                  loadingMore && { opacity: 0.5 },
+                ]}>
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color={palette.gold} />
+                ) : (
+                  <>
+                    <MaterialIcons name="history" size={14} color={palette.gold} />
+                    <Text style={styles.loadMoreText}>CARGAR MENSAJES ANTERIORES</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
             <View style={styles.thread}>
               {displayMessages.map((message) => (
                 <ChatBubble key={message.id} role={message.role}>
@@ -561,6 +597,26 @@ const styles = StyleSheet.create({
     color: palette.ash,
     flex: 1,
     flexWrap: 'wrap',
+    fontSize: 8,
+  },
+
+  // Load more
+  loadMoreBtn: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  loadMoreText: {
+    ...typography.label,
+    color: palette.gold,
     fontSize: 8,
   },
 

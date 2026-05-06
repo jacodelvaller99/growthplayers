@@ -135,6 +135,11 @@ export default function OnboardingScreen() {
             )}
           </View>
           <View style={styles.dividerLine} />
+          <Text style={styles.legalNote}>
+            Al continuar, aceptas que tus datos biométricos y de bienestar son usados exclusivamente
+            para personalizar tu experiencia. No son consejo médico. Puedes exportar o eliminar
+            tu cuenta en Perfil → Privacidad y Datos (RGPD/GDPR).
+          </Text>
           <PrimaryButton label="COMENZAR ACTIVACION" icon="arrow-forward" onPress={() => setStep(1)} />
         </View>
       )}
@@ -389,6 +394,13 @@ const styles = StyleSheet.create({
   dividerLine: {
     backgroundColor: palette.line,
     height: 1,
+  },
+  legalNote: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 10,
+    lineHeight: 15,
+    opacity: 0.7,
   },
 
   // ── Step cards

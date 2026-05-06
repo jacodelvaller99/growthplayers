@@ -2,7 +2,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -42,8 +43,11 @@ export default function ProgresoScreen() {
     state, protocolDay, averages,
     updateProfile, updateNorthStar,
     resetOnboarding, clearData, signOut,
+    deleteAccount, exportData,
     userId,
   } = useLifeFlow();
+
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const { intelligence, topAffinity, engagementTier } = useUserIntelligence(userId);
 
@@ -70,6 +74,8 @@ export default function ProgresoScreen() {
 
   const wellnessTier = useWellnessStore((s) => s.user.subscriptionTier);
 
+  const [deleting, setDeleting]   = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [name, setName] = useState(state.profile.name);
   const [role, setRole] = useState(state.profile.role);
   const [north, setNorth] = useState<NorthStar>(state.northStar);
@@ -204,6 +210,73 @@ export default function ProgresoScreen() {
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Limpiar', style: 'destructive', onPress: clearData },
+      ],
+    );
+  };
+
+  // GDPR: Export all personal data
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const json = await exportData();
+      if (Platform.OS === 'web') {
+        const blob = new Blob([json], { type: 'application/json' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `lifeflow-datos-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        await Share.share({
+          message: json,
+          title:   'Mis datos de LifeFlow',
+        });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al exportar';
+      Alert.alert('Error', msg);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // GDPR: Delete account — 2-step confirmation
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'ELIMINAR CUENTA',
+      '¿Estás seguro? Esta acción eliminará tu cuenta y TODOS tus datos de LifeFlow de forma permanente e irreversible.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'CONFIRMACIÓN FINAL',
+              'Se eliminarán: historial de check-ins, conversaciones con Norman, progreso de lecciones y todos los datos biométricos. Esta acción NO SE PUEDE DESHACER.',
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'ELIMINAR MI CUENTA',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setDeleting(true);
+                    try {
+                      await deleteAccount();
+                      router.replace('/');
+                    } catch (e: unknown) {
+                      const msg = e instanceof Error ? e.message : 'Error al eliminar';
+                      Alert.alert('Error', `No se pudo eliminar la cuenta: ${msg}`);
+                    } finally {
+                      setDeleting(false);
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
       ],
     );
   };
@@ -562,6 +635,41 @@ export default function ProgresoScreen() {
         </View>
       </PremiumCard>
 
+      {/* ── Privacidad y Datos (GDPR) ── */}
+      <GoldDivider label="PRIVACIDAD Y DATOS" />
+      <PremiumCard style={styles.gdprCard}>
+        <Text style={styles.gdprIntro}>
+          Tienes derecho a acceder, exportar y eliminar todos tus datos personales en cualquier momento (RGPD / GDPR).
+        </Text>
+
+        {/* Export */}
+        <Pressable
+          style={[styles.gdprBtn, exporting && { opacity: 0.6 }]}
+          onPress={handleExport}
+          disabled={exporting}
+          accessibilityLabel="Exportar mis datos">
+          <MaterialIcons name="download" size={18} color={palette.gold} />
+          <View style={styles.gdprBtnBody}>
+            <Text style={styles.gdprBtnTitle}>{exporting ? 'EXPORTANDO...' : 'EXPORTAR MIS DATOS'}</Text>
+            <Text style={styles.gdprBtnMeta}>JSON con todo tu historial · check-ins, conversaciones, lecciones</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+        </Pressable>
+
+        {/* Delete account */}
+        <Pressable
+          style={[styles.gdprDeleteBtn, deleting && { opacity: 0.6 }]}
+          onPress={handleDeleteAccount}
+          disabled={deleting}
+          accessibilityLabel="Eliminar cuenta">
+          <MaterialIcons name="delete-forever" size={18} color={palette.danger} />
+          <View style={styles.gdprBtnBody}>
+            <Text style={styles.gdprDeleteTitle}>{deleting ? 'ELIMINANDO...' : 'ELIMINAR CUENTA'}</Text>
+            <Text style={styles.gdprBtnMeta}>Elimina tu cuenta y todos los datos de forma permanente</Text>
+          </View>
+        </Pressable>
+      </PremiumCard>
+
       {/* ── Sistema ── */}
       <GoldDivider label="SISTEMA" />
       <PremiumCard style={styles.systemCard}>
@@ -598,6 +706,11 @@ export default function ProgresoScreen() {
           <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
         </Pressable>
       )}
+
+      {/* ── Version footer ── */}
+      <Text style={styles.versionText}>
+        LifeFlow v{appVersion} · Polaris Growth Institute
+      </Text>
     </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -900,6 +1013,71 @@ const styles = StyleSheet.create({
     ...typography.mono,
     color: palette.smoke,
   },
+  // GDPR section
+  gdprCard: {
+    gap: spacing.md,
+  },
+  gdprIntro: {
+    ...typography.caption,
+    color: palette.smoke,
+    lineHeight: 18,
+    fontSize: 11,
+  },
+  gdprBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 60,
+  },
+  gdprBtnBody: {
+    flex: 1,
+    gap: 2,
+  },
+  gdprBtnTitle: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+  gdprBtnMeta: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 10,
+  },
+  gdprDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: palette.danger + '55',
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 60,
+  },
+  gdprDeleteTitle: {
+    ...typography.label,
+    color: palette.danger,
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+
+  // Version
+  versionText: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 10,
+    textAlign: 'center',
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.sm,
+    opacity: 0.5,
+  },
+
   // Admin access button — ghost style, only rendered when is_admin === true
   adminBtn: {
     alignItems: 'center',
