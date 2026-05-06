@@ -5,7 +5,7 @@ import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
@@ -44,16 +44,40 @@ function AnalyticsInitializer() {
 
 export default function RootLayout() {
   const router = useRouter();
-  const [interLoaded] = useInterFonts({ Inter_400Regular, Inter_700Bold });
-  const [michromaLoaded] = useMichromaFonts({ Michroma_400Regular }); // brand font: Grandis Extended → Michroma
-  const [spaceMonoLoaded] = useSpaceMonoFonts({ SpaceMono_400Regular });
-  const fontsLoaded = interLoaded && michromaLoaded && spaceMonoLoaded;
+
+  // ── On web, fonts are loaded via Google Fonts <link> tags in +html.tsx.
+  // The @expo-google-fonts useFonts() tries to load binary files from
+  // /assets/node_modules/... which are NOT present in the Vercel static export,
+  // causing a permanent black screen. Skip useFonts entirely on web.
+  const isWeb = Platform.OS === 'web';
+
+  const [interLoaded, interError]         = useInterFonts(isWeb ? {} : { Inter_400Regular, Inter_700Bold });
+  const [michromaLoaded, michromaError]   = useMichromaFonts(isWeb ? {} : { Michroma_400Regular });
+  const [spaceMonoLoaded, spaceMonoError] = useSpaceMonoFonts(isWeb ? {} : { SpaceMono_400Regular });
+
+  // A font is "done" when loaded OR errored (fall back to system/CSS fonts).
+  const fontsDone = isWeb
+    ? true
+    : (interLoaded    || !!interError)    &&
+      (michromaLoaded || !!michromaError) &&
+      (spaceMonoLoaded || !!spaceMonoError);
+
+  // Hard timeout: render after 4 s regardless — no failure can permanently block the app.
+  const [timedOut, setTimedOut] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (fontsDone) return; // already ready, no need for timeout
+    timeoutRef.current = setTimeout(() => setTimedOut(true), 4000);
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  }, [fontsDone]);
+
+  const ready = fontsDone || timedOut;
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded]);
+  }, [ready]);
 
   // Register Service Worker for PWA (web only)
   useEffect(() => {
@@ -76,7 +100,7 @@ export default function RootLayout() {
     return () => { sub?.remove(); };
   }, [router]);
 
-  if (!fontsLoaded) {
+  if (!ready) {
     return null;
   }
 

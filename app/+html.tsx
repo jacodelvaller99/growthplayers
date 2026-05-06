@@ -29,6 +29,25 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:image" content="/icon-512.png" />
         <meta property="og:type" content="website" />
 
+        {/* ── Web Fonts (Google Fonts CDN — avoids broken Vercel asset paths) ── */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Inter 400 + 700 */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
+        />
+        {/* Michroma (single weight, display face) */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Michroma&display=swap"
+        />
+        {/* Space Mono 400 */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap"
+        />
+
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
