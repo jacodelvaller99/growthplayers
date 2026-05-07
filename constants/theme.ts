@@ -43,6 +43,12 @@ export const palette = {
   dangerMuted:    'rgba(192, 57, 43, 0.15)',
   warning:        '#D4A017',
   info:           '#3D8FC0',
+
+  // ── Wellness accent (meditation, sleep, breathing) ────────────────────────
+  purple:         '#7C5CBF',
+  purpleGlow:     'rgba(124, 92, 191, 0.07)',   // #7c5cbf11 — barely-there tint
+  purpleMuted:    'rgba(124, 92, 191, 0.13)',   // #7c5cbf22 — subtle background
+  purpleDim:      'rgba(124, 92, 191, 0.27)',   // #7c5cbf44 — active/hover state
 };
 
 export const Colors = {

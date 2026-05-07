@@ -56,7 +56,7 @@ const SLEEP_CATEGORIES: {
   {
     id: 'stories',
     label: 'HISTORIAS PARA DORMIR',
-    color: '#7c5cbf',
+    color: palette.purple,
     items: [
       {
         id: 'story-1',

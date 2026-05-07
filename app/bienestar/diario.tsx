@@ -33,26 +33,30 @@ export default function DiarioScreen() {
   const [text, setText]       = useState('');
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const current = ENTRY_TYPES.find((t) => t.id === type)!;
 
   const save = useCallback(async () => {
     if (!text.trim() || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from('journal_entries').insert({
+        const { error } = await supabase.from('journal_entries').insert({
           user_id:    user.id,
           content:    text.trim(),
           entry_type: type,
         });
+        if (error) throw error;
       }
       setText('');
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch {
-      // best effort
+    } catch (err) {
+      console.error('[Diario] Error al guardar entrada:', err);
+      setSaveError('No se pudo guardar tu entrada. Intenta de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -136,6 +140,13 @@ export default function DiarioScreen() {
           </View>
         )}
 
+        {saveError && (
+          <View style={styles.errorBanner}>
+            <MaterialIcons name="error-outline" size={16} color={palette.danger} />
+            <Text style={styles.errorText}>{saveError}</Text>
+          </View>
+        )}
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -198,4 +209,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   savedText: { ...typography.body, color: palette.success, fontSize: 13 },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  errorText: { ...typography.body, color: palette.danger, fontSize: 13 },
 });

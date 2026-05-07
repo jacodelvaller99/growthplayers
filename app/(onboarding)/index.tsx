@@ -53,7 +53,7 @@ const TOTAL_STEPS = 5;
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { completeOnboarding, state } = useLifeFlow();
+  const { completeOnboarding, state, userId } = useLifeFlow();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(state.profile.name);
   const [role, setRole] = useState(state.profile.role);
@@ -65,9 +65,13 @@ export default function OnboardingScreen() {
 
   const handleApplyCode = async () => {
     if (!accessCode.trim()) return;
+    if (!userId) {
+      setCodeStatus('error');
+      setCodeMessage('Sesión no encontrada. Vuelve a iniciar sesión.');
+      return;
+    }
     setCodeStatus('checking');
-    const userId = state.profile.name ? undefined : undefined; // userId not available yet
-    const result = await redeemAccessCode({ code: accessCode.trim(), userId: '' });
+    const result = await redeemAccessCode({ code: accessCode.trim(), userId });
     if (result.status === 'ok') {
       setCodeStatus('ok');
       const prodLabel = result.product ? (PRODUCT_LABELS[result.product] ?? result.product) : 'acceso';

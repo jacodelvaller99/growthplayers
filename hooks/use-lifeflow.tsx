@@ -77,7 +77,6 @@ type LifeFlowContextValue = {
   updateProfile: (profile: UserProfile) => Promise<void>;
   updateNorthStar: (northStar: NorthStar) => Promise<void>;
   saveCheckIn: (checkIn: Omit<CheckIn, 'id' | 'date'>) => Promise<void>;
-  sendMentorMessage: (text: string) => Promise<void>;
   addMentorMessages: (userMsg: MentorMessage, mentorMsg: MentorMessage) => Promise<void>;
   saveLessonTask: (lessonId: string, responses: Record<string, string>) => Promise<void>;
   markLessonComplete: (lessonId: string) => Promise<void>;
@@ -115,28 +114,6 @@ function isSameDay(a: string, b: Date) {
 
 function todayDateStr() {
   return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-}
-
-// ─── Mentor IA (keyword-based fallback) ──────────────────────────────────────
-function mentorReply(text: string, state: LifeFlowState, latest: CheckIn | null): string {
-  const lower = text.toLowerCase();
-  const energy  = latest?.energy  ?? 6;
-  const clarity = latest?.clarity ?? 6;
-  const stress  = latest?.stress  ?? 5;
-
-  if (lower.includes('norte'))
-    return `Tu norte hoy: ${state.northStar.purpose} — Traduccion operativa: una accion visible, una conversacion pendiente y cero fuga de atencion.`;
-  if (lower.includes('practica'))
-    return stress >= 7
-      ? 'Practica: 6 minutos de respiracion nasal, luego escribe la decision que estas evitando.'
-      : 'Practica: bloque de 45 minutos con una sola salida medible. Al terminar registra friccion, energia y siguiente movimiento.';
-  if (lower.includes('ordena') || lower.includes('dia'))
-    return `Orden del dia: 1) Check-in completo. 2) Leccion activa del modulo ${ACTIVE_MODULE.order}. 3) Bloque mercader profundo. 4) Cierre con evidencia.`;
-  if (energy <= 5)
-    return 'Tu sistema esta bajo de energia. Reduce amplitud: una prioridad, recuperacion activa y una decision cerrada.';
-  if (clarity <= 5)
-    return 'La claridad esta baja. Escribe tres opciones, elimina dos y ejecuta la que tenga mayor retorno con menor friccion.';
-  return 'Estado util para ejecucion. Mantente en modo mercader: protege atencion, convierte tiempo en avance visible.';
 }
 
 // ─── Streak helper ────────────────────────────────────────────────────────────
@@ -605,33 +582,6 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     [persist, state],
   );
 
-  const sendMentorMessage = useCallback(
-    async (text: string) => {
-      const now = new Date().toISOString();
-      const userMsg: MentorMessage = { id: `u-${Date.now()}`, role: 'user', text, createdAt: now };
-      const replyText = mentorReply(text, state, latestCheckIn);
-      const mentorMsg: MentorMessage = { id: `m-${Date.now()}`, role: 'mentor', text: replyText, createdAt: now };
-
-      await persist({
-        ...state,
-        mentorMessages: [...state.mentorMessages, userMsg, mentorMsg],
-      });
-
-      const uid = uidRef.current;
-      if (!uid) return;
-
-      try {
-        await db.messages().insert([
-          { user_id: uid, role: 'user',      content: text,      created_at: now },
-          { user_id: uid, role: 'assistant', content: replyText, created_at: now },
-        ]);
-      } catch (e) {
-        console.warn('[Supabase] sendMentorMessage:', e);
-      }
-    },
-    [latestCheckIn, persist, state],
-  );
-
   const addMentorMessages = useCallback(
     async (userMsg: MentorMessage, mentorMsg: MentorMessage) => {
       const next: LifeFlowState = {
@@ -925,7 +875,6 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         updateProfile,
         updateNorthStar,
         saveCheckIn,
-        sendMentorMessage,
         addMentorMessages,
         saveLessonTask,
         markLessonComplete,

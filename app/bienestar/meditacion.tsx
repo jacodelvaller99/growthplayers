@@ -31,7 +31,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   mañana: '#b07d1a',
   noche:  '#4a6fa5',
   enfoque: '#2e7d52',
-  estrés:  '#7c5cbf',
+  estrés:  palette.purple,
 };
 
 const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {

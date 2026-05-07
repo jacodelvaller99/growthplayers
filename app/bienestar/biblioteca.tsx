@@ -29,7 +29,7 @@ interface Category {
 const CATEGORIES: Category[] = [
   { id: 'binaural',    label: 'BINAURALES',    icon: 'graphic-eq',       color: '#b07d1a', count: 5  },
   { id: 'breathing',   label: 'RESPIRACIÓN',   icon: 'air',              color: '#2e7d52', count: 4  },
-  { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: '#7c5cbf', count: 5  },
+  { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: palette.purple, count: 5  },
   { id: 'sleep',       label: 'SUEÑO',         icon: 'bedtime',          color: '#4a6fa5', count: 8  },
   { id: 'focus',       label: 'ENFOQUE',       icon: 'psychology',       color: '#556B2F', count: 6  },
   { id: 'energy',      label: 'ENERGÍA',       icon: 'bolt',             color: '#c0392b', count: 4  },
@@ -43,7 +43,7 @@ const CATEGORIES: Category[] = [
 const RECENT = [
   { id: 'r1', title: 'Alpha — Flow & Relax',  type: 'BINAURAL',   duration: '10 min', color: '#b07d1a' },
   { id: 'r2', title: '4-7-8 Calma',           type: 'RESPIRACIÓN',duration: '4 min',  color: '#2e7d52' },
-  { id: 'r3', title: 'Despertar Consciente',  type: 'MEDITACIÓN', duration: '5 min',  color: '#7c5cbf' },
+  { id: 'r3', title: 'Despertar Consciente',  type: 'MEDITACIÓN', duration: '5 min',  color: palette.purple },
 ];
 
 export default function BibliotecaScreen() {

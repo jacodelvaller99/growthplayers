@@ -235,7 +235,7 @@ export default function DashboardScreen() {
       <PremiumCard style={styles.wellnessCard}>
         <View style={styles.wellnessRow}>
           <View style={styles.wellnessIconBox}>
-            <MaterialIcons name="spa" size={28} color="#7c5cbf" />
+            <MaterialIcons name="spa" size={28} color={palette.purple} />
           </View>
           <View style={styles.wellnessBody}>
             <Text style={styles.wellnessTitle}>MÓDULO BIENESTAR</Text>
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.sm,
-    backgroundColor: '#7c5cbf22',
+    backgroundColor: palette.purpleMuted,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   wellnessStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#7c5cbf11',
+    backgroundColor: palette.purpleGlow,
     borderRadius: radii.sm,
     paddingVertical: spacing.md,
   },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   wellnessStatDivider: {
     width: 1,
     height: 28,
-    backgroundColor: '#7c5cbf44',
+    backgroundColor: palette.purpleDim,
   },
   northCard: {
     gap: spacing.lg,

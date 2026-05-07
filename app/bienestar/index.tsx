@@ -74,7 +74,7 @@ type Block = {
 const BLOCKS: Block[] = [
   { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'BINAURALES',  color: '#b07d1a', type: 'binaural'   },
   { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', color: '#2e7d52', type: 'breathing'  },
-  { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  color: '#7c5cbf', type: 'meditation' },
+  { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  color: palette.purple, type: 'meditation' },
   { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       color: '#4a6fa5', type: 'sleep'      },
   { route: '/bienestar/biblioteca',  icon: 'library-music',    label: 'BIBLIOTECA',  color: '#556B2F', type: 'library'    },
   { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      color: '#7D5A50', type: 'journal'    },

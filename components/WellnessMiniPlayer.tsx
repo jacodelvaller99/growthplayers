@@ -25,7 +25,7 @@ const TYPE_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name
 
 const TYPE_COLOR: Record<string, string> = {
   binaural:  '#b07d1a',
-  meditation:'#7c5cbf',
+  meditation: palette.purple,
   breathing: '#2e7d52',
 };
 
