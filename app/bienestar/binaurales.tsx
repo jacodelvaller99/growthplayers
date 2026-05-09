@@ -130,11 +130,11 @@ interface MixerPreset {
 }
 
 const MIXER_PRESETS: MixerPreset[] = [
-  { id: 'intelligence', label: 'INTELLIGENCE',  description: '40 Hz Gamma — Foco máximo y cognición',      carrierHz: 200, beatHz: 40,   color: '#4a90d9', icon: 'psychology'       },
-  { id: 'intuition',    label: 'INTUITION',     description: '8 Hz Alpha — Creatividad e intuición',       carrierHz: 210, beatHz: 8,    color: '#9c6aff', icon: 'auto-awesome'     },
-  { id: 'euphoria',     label: 'EUPHORIA',      description: '10 Hz Alpha — Estados elevados de bienestar', carrierHz: 432, beatHz: 10,   color: '#e8a62a', icon: 'sentiment-very-satisfied' },
-  { id: 'healing',      label: 'HEALING',       description: '7.83 Hz Schumann — Resonancia terrestre',    carrierHz: 200, beatHz: 7.83, color: '#2e7d52', icon: 'favorite'         },
-  { id: 'memory',       label: 'MEMORY',        description: '4 Hz Theta — Memoria profunda y sueños',     carrierHz: 100, beatHz: 4,    color: '#c0392b', icon: 'memory'           },
+  { id: 'intelligence', label: 'INTELLIGENCE',  description: '40 Hz Gamma — Foco máximo y cognición',      carrierHz: 200, beatHz: 40,   color: palette.info,    icon: 'psychology'       },
+  { id: 'intuition',    label: 'INTUITION',     description: '8 Hz Alpha — Creatividad e intuición',       carrierHz: 210, beatHz: 8,    color: palette.purple,  icon: 'auto-awesome'     },
+  { id: 'euphoria',     label: 'EUPHORIA',      description: '10 Hz Alpha — Estados elevados de bienestar', carrierHz: 432, beatHz: 10,   color: palette.gold,    icon: 'sentiment-very-satisfied' },
+  { id: 'healing',      label: 'HEALING',       description: '7.83 Hz Schumann — Resonancia terrestre',    carrierHz: 200, beatHz: 7.83, color: palette.success, icon: 'favorite'         },
+  { id: 'memory',       label: 'MEMORY',        description: '4 Hz Theta — Memoria profunda y sueños',     carrierHz: 100, beatHz: 4,    color: palette.danger,  icon: 'memory'           },
 ];
 
 // ─── Wave Visualizer ──────────────────────────────────────────────────────────
