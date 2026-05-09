@@ -389,14 +389,15 @@ export async function redeemAccessCode(params: {
     if (row.uses_count >= row.max_uses)            return { status: 'exhausted' };
 
     // 3. Atomic increment — optimistic concurrency: only update if count unchanged
-    const { count: updated } = await supa
+    // Note: use .select('id') without head:true — head:true on PATCH returns null count
+    const { data: updatedRows, error: updateError } = await supa
       .from('access_codes')
       .update({ uses_count: row.uses_count + 1 })
       .eq('id', row.id)
       .eq('uses_count', row.uses_count)   // guard: prevent double-spend
-      .select('id', { count: 'exact', head: true });
+      .select('id');
 
-    if (!updated || updated === 0) return { status: 'exhausted' };
+    if (updateError || !updatedRows || updatedRows.length === 0) return { status: 'exhausted' };
 
     // 4. Map code type → membership product
     const { CODE_TYPE_PRODUCT } = await import('./types');
