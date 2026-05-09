@@ -14,6 +14,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { Colors } from '@/constants/theme';
 import OfflineBanner from '@/components/OfflineBanner';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
+import { ToastProvider } from '@/context/ToastContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -107,6 +108,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={SovereignTheme}>
       <LifeFlowProvider>
+        <ToastProvider>
         <AnalyticsInitializer />
         <OfflineBanner />
         <PWAInstallBanner />
@@ -136,9 +138,11 @@ export default function RootLayout() {
           <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
           <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
           <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
+          <Stack.Screen name="pricing" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Modal' }} />
         </Stack>
         <StatusBar style="light" />
+        </ToastProvider>
       </LifeFlowProvider>
     </ThemeProvider>
   );

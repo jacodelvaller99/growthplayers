@@ -24,6 +24,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { fetchDashboardKPIs, fetchLiveEvents, fetchTierCounts } from '@/lib/admin/queries';
 import type { DashboardKPIs, LiveEvent } from '@/lib/admin/types';
+import { recalculateAllMLAction } from '@/lib/admin/actions';
 import { intel } from '@/lib/supabase';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -118,6 +119,7 @@ export default function MissionControl() {
   const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [mlRecalculating, setMlRecalculating] = useState(false);
   const [now, setNow] = useState(new Date());
   const channelRef = useRef<ReturnType<typeof intel.events> | null>(null);
 
@@ -143,6 +145,13 @@ export default function MissionControl() {
   }, []);
 
   const onRefresh = () => { setRefreshing(true); loadData(); };
+
+  const handleRecalculateML = async () => {
+    if (mlRecalculating || !userId) return;
+    setMlRecalculating(true);
+    await recalculateAllMLAction(userId);
+    setMlRecalculating(false);
+  };
 
   // Colombia time (UTC-5)
   const colombiaTime = new Intl.DateTimeFormat('es-CO', {
@@ -230,6 +239,32 @@ export default function MissionControl() {
             tone="success"
           />
         )}
+      </View>
+
+      {/* ── Quick Actions ── */}
+      <GoldDivider label="ACCIONES RÁPIDAS" />
+      <View style={s.actionsRow}>
+        <Pressable
+          style={[s.actionBtn, mlRecalculating && { opacity: 0.5 }]}
+          onPress={handleRecalculateML}
+          disabled={mlRecalculating}>
+          <MaterialIcons name="psychology" size={18} color={palette.gold} />
+          <Text style={s.actionBtnText}>
+            {mlRecalculating ? 'CALCULANDO...' : 'RECALCULAR ML'}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={s.actionBtn}
+          onPress={() => router.push('/admin/inteligencia' as never)}>
+          <MaterialIcons name="bar-chart" size={18} color={palette.gold} />
+          <Text style={s.actionBtnText}>VER ML</Text>
+        </Pressable>
+        <Pressable
+          style={s.actionBtn}
+          onPress={() => router.push('/admin/auditoria' as never)}>
+          <MaterialIcons name="history" size={18} color={palette.gold} />
+          <Text style={s.actionBtnText}>AUDITORÍA</Text>
+        </Pressable>
       </View>
 
       {/* ── Live Feed ── */}
@@ -356,6 +391,32 @@ const s = StyleSheet.create({
     color: palette.smoke,
     fontSize: 8,
     textAlign: 'center',
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    flexWrap: 'wrap',
+  },
+  actionBtn: {
+    flex: 1,
+    minWidth: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  actionBtnText: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 9,
   },
 
   sectionGrid: {

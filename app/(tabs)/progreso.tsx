@@ -487,7 +487,7 @@ export default function ProgresoScreen() {
           )}
         </View>
         {subTier === 'free' && (
-          <Pressable style={styles.tierUpgradeBtn}>
+          <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)}>
             <Text style={styles.tierUpgradeText}>UPGRADE</Text>
           </Pressable>
         )}

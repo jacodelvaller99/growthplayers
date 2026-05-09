@@ -296,18 +296,36 @@ export async function createAccessCode(params: {
 }): Promise<{ success: boolean; code?: string; codeId?: string; error?: string }> {
   const code = params.customCode ? params.customCode.toUpperCase() : generateCode();
 
-  const { data, error } = await supa.rpc('admin_create_access_code', {
-    p_admin_id:   params.adminId,
-    p_code:       code,
-    p_type:       params.type,
-    p_max_uses:   params.maxUses ?? 1,
-    p_expires_at: params.expiresAt ?? null,
-    p_notes:      params.notes ?? null,
-    p_label:      params.label ?? null,
-  });
+  try {
+    // Direct INSERT — no RPC needed for code creation
+    const { data, error } = await supa
+      .from('access_codes')
+      .insert({
+        code,
+        type:       params.type,
+        max_uses:   params.maxUses ?? 1,
+        uses_count: 0,
+        is_active:  true,
+        expires_at: params.expiresAt ?? null,
+        notes:      params.notes ?? null,
+        label:      params.label ?? null,
+        created_by: params.adminId,
+      })
+      .select('id')
+      .single();
 
-  if (error) return { success: false, error: error.message };
-  return { success: true, code, codeId: data as string };
+    if (error) return { success: false, error: error.message };
+    const codeId = (data as { id: string }).id;
+
+    await auditLog(params.adminId, 'create_access_code', 'access_code', codeId, {
+      code, type: params.type, max_uses: params.maxUses ?? 1,
+    });
+
+    return { success: true, code, codeId };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
 }
 
 export async function deactivateAccessCode(params: {
@@ -338,46 +356,68 @@ export async function redeemAccessCode(params: {
   product?: MembershipProduct;
   error?: string;
 }> {
-  const { data, error } = await supa.rpc('redeem_access_code', {
-    p_code: params.code,
-  });
+  try {
+    // 1. Fetch code record
+    const { data: codeData, error: fetchError } = await supa
+      .from('access_codes')
+      .select('id, type, is_active, max_uses, uses_count, expires_at')
+      .eq('code', params.code.trim().toUpperCase())
+      .single();
 
-  if (error) return { status: 'invalid', error: error.message };
-  const status = data as string;
+    if (fetchError || !codeData) return { status: 'invalid' };
 
-  if (status !== 'ok') return { status: status as 'invalid' | 'exhausted' | 'expired' | 'inactive' };
+    const row = codeData as {
+      id: string; type: AccessCodeType; is_active: boolean;
+      max_uses: number; uses_count: number; expires_at: string | null;
+    };
 
-  const { data: codeData } = await supa
-    .from('access_codes')
-    .select('id, type')
-    .eq('code', params.code.toUpperCase())
-    .single();
+    // 2. Validate state
+    if (!row.is_active)                           return { status: 'inactive' };
+    if (row.expires_at && new Date(row.expires_at) < new Date()) return { status: 'expired' };
+    if (row.uses_count >= row.max_uses)            return { status: 'exhausted' };
 
-  if (!codeData) return { status: 'ok' };
+    // 3. Atomic increment — optimistic concurrency: only update if count unchanged
+    const { count: updated } = await supa
+      .from('access_codes')
+      .update({ uses_count: row.uses_count + 1 })
+      .eq('id', row.id)
+      .eq('uses_count', row.uses_count)   // guard: prevent double-spend
+      .select('id', { count: 'exact', head: true });
 
-  const { CODE_TYPE_PRODUCT } = await import('./types');
-  const codeType = (codeData as { id: string; type: AccessCodeType }).type;
-  const product = CODE_TYPE_PRODUCT[codeType] ?? 'lifeflow_free';
+    if (!updated || updated === 0) return { status: 'exhausted' };
 
-  if (params.userId) {
-    try {
-      await supa.from('access_code_uses').insert({
-        code_id: (codeData as { id: string }).id,
-        user_id: params.userId,
-      });
-    } catch (_) { /* table not yet migrated */ }
+    // 4. Map code type → membership product
+    const { CODE_TYPE_PRODUCT } = await import('./types');
+    const product = CODE_TYPE_PRODUCT[row.type] ?? 'lifeflow_free';
 
-    try {
-      await supa.from('user_memberships').insert({
-        user_id:      params.userId,
-        product,
-        status:       'active',
-        activated_by: 'access_code',
-      });
-    } catch (_) { /* table not yet migrated */ }
+    // 5. Record usage
+    if (params.userId) {
+      try {
+        await supa.from('access_code_uses').insert({
+          code_id: row.id,
+          user_id: params.userId,
+        });
+      } catch (_) { /* access_code_uses not yet migrated — safe to skip */ }
+
+      // 6. Activate membership
+      try {
+        await supa.from('user_memberships').insert({
+          user_id:      params.userId,
+          product,
+          status:       'active',
+          activated_by: 'access_code',
+          activated_at: new Date().toISOString(),
+        });
+        // Sync tier to profiles tables
+        await syncTier(params.userId, product, null);
+      } catch (_) { /* user_memberships not yet migrated */ }
+    }
+
+    return { status: 'ok', product };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    return { status: 'invalid', error: msg };
   }
-
-  return { status: 'ok', product };
 }
 
 // ─── Send message as Norman ───────────────────────────────────────────────────

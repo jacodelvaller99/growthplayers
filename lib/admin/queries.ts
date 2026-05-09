@@ -391,23 +391,92 @@ export async function fetchUserAuditLog(userId: string): Promise<AuditLogEntry[]
   }
 }
 
-// ─── ML Dashboard (via Edge Function) ───────────────────────────────────────
+// ─── ML Dashboard (direct DB — no Edge Function dependency) ─────────────────
 
 export async function fetchMlOverview(): Promise<MlOverview | null> {
-  const { data, error } = await supabase.functions.invoke('ml-dashboard', {
-    body: { action: 'overview' },
-  });
-  if (error) return null;
-  return data as MlOverview;
+  try {
+    const { data } = await intel.intelligence().select(
+      'engagement_score, churn_risk, churn_risk_label, cohort_id, cohort_label, ' +
+      'anomaly_detected, affinity_binaural, affinity_breathing, ' +
+      'affinity_meditation, affinity_journaling, affinity_lessons, affinity_mentor',
+    );
+    if (!data || data.length === 0) return null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = data as any[];
+
+    const avg = (key: string) => {
+      const vals = rows.map((r: any) => r[key]).filter((v: any) => v != null) as number[];
+      return vals.length > 0 ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)) : 0;
+    };
+
+    // Cohort distribution
+    const cohortDist: Record<string, number> = {};
+    for (const r of rows) {
+      const key = (r.cohort_label ?? r.cohort_id ?? 'desconocido') as string;
+      cohortDist[key] = (cohortDist[key] ?? 0) + 1;
+    }
+
+    // Churn distribution
+    const churnDist: Record<string, number> = {};
+    for (const r of rows) {
+      const key = (r.churn_risk_label ?? 'unknown') as string;
+      churnDist[key] = (churnDist[key] ?? 0) + 1;
+    }
+
+    return {
+      total: rows.length,
+      averages: {
+        engagement_score: avg('engagement_score'),
+        churn_risk:       avg('churn_risk'),
+      },
+      cohort_distribution: cohortDist,
+      churn_distribution:  churnDist,
+      active_anomalies: rows.filter((r: any) => r.anomaly_detected).length,
+      avg_affinities: {
+        binaural:   avg('affinity_binaural'),
+        breathing:  avg('affinity_breathing'),
+        meditation: avg('affinity_meditation'),
+        journaling: avg('affinity_journaling'),
+        lessons:    avg('affinity_lessons'),
+        mentor:     avg('affinity_mentor'),
+      },
+    };
+  } catch (_) {
+    return null; // user_intelligence table not yet migrated
+  }
 }
 
 export async function fetchAtRiskUsers() {
-  const { data, error } = await supabase.functions.invoke('ml-dashboard', {
-    body: { action: 'at_risk_users', limit: 50 },
-  });
-  if (error) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data as any)?.users ?? [];
+  try {
+    const { data } = await intel.intelligence()
+      .select('user_id, churn_risk, churn_risk_label, days_since_last_act, engagement_score, anomaly_detected')
+      .in('churn_risk_label', ['high', 'critical'])
+      .order('churn_risk', { ascending: false })
+      .limit(50);
+
+    if (!data) return [];
+
+    // Enrich with user names from user_progress
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = data as any[];
+    const userIds = rows.map((r: any) => r.user_id).filter(Boolean);
+    if (userIds.length === 0) return rows;
+
+    const { data: progressData } = await supabase
+      .from('user_progress')
+      .select('user_id, name')
+      .in('user_id', userIds);
+
+    const nameMap: Record<string, string> = {};
+    for (const p of (progressData ?? []) as Array<{ user_id: string; name: string }>) {
+      nameMap[p.user_id] = p.name;
+    }
+
+    return rows.map((r: any) => ({ ...r, name: nameMap[r.user_id] ?? 'Usuario' }));
+  } catch (_) {
+    return []; // user_intelligence table not yet migrated
+  }
 }
 
 export async function fetchBiometricStats(): Promise<BiometricStats> {
