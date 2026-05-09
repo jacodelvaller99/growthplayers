@@ -33,7 +33,7 @@ const SLEEP_CATEGORIES: {
   {
     id: 'sos',
     label: 'S.O.S PARA DORMIR',
-    color: '#4a6fa5',
+    color: palette.ash,
     items: [
       {
         id: 'sos-1',
@@ -87,7 +87,7 @@ const SLEEP_CATEGORIES: {
   {
     id: 'nidra',
     label: 'YOGA NIDRA',
-    color: '#2e7d52',
+    color: palette.ash,
     items: [
       {
         id: 'nidra-1',
@@ -110,7 +110,7 @@ const SLEEP_CATEGORIES: {
   {
     id: 'relax',
     label: 'RELAJACIONES',
-    color: '#b07d1a',
+    color: palette.ash,
     items: [
       {
         id: 'relax-1',
@@ -169,7 +169,7 @@ export default function SuenoScreen() {
 
       {/* Banner */}
       <PremiumCard style={styles.bannerCard}>
-        <MaterialIcons name="bedtime" size={28} color="#4a6fa5" />
+        <MaterialIcons name="bedtime" size={28} color={palette.ash} />
         <View style={styles.bannerBody}>
           <Text style={styles.bannerTitle}>Estás durmiendo, pero ¿estás descansando?</Text>
           <Text style={styles.bannerSub}>

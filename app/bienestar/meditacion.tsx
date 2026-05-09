@@ -28,10 +28,10 @@ function haptic(type: 'light' | 'medium' | 'success') {
 }
 
 const CATEGORY_COLOR: Record<string, string> = {
-  mañana: '#b07d1a',
-  noche:  '#4a6fa5',
-  enfoque: '#2e7d52',
-  estrés:  palette.purple,
+  mañana:  palette.ash,
+  noche:   palette.ash,
+  enfoque: palette.ash,
+  estrés:  palette.ash,
 };
 
 const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {

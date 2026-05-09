@@ -400,8 +400,8 @@ const styles = StyleSheet.create({
   // Video
   videoComingSoon: {
     alignItems: 'center',
-    backgroundColor: '#111',
-    borderColor: '#2A2A2A',
+    backgroundColor: palette.graphite,
+    borderColor: palette.charcoal,
     borderRadius: radii.md,
     borderStyle: 'dashed',
     borderWidth: 1,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   input: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: palette.graphiteLight,
     color: palette.ivory,
     fontFamily: Fonts.sans,
     fontSize: 15,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   // Checkbox
   checkItem: {
     alignItems: 'flex-start',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: palette.graphiteLight,
     borderColor: palette.lineSoft,
     borderRadius: radii.sm,
     borderWidth: 1,

@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Fonts, radii } from '@/constants/theme';
+import { Colors, Fonts, palette, radii } from '@/constants/theme';
 
 export default function ModalScreen() {
   return (
@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFF',
+    color: palette.ivory,
     letterSpacing: 2,
   },
   subtitle: {

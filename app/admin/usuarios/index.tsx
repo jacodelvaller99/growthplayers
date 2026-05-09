@@ -31,7 +31,7 @@ function ChurnBadge({ label }: { label?: string }) {
   const colorMap: Record<string, string> = {
     low:      palette.success,
     medium:   palette.warning,
-    high:     '#FF6B35',
+    high:     palette.warning,
     critical: palette.danger,
   };
   if (!label) return null;

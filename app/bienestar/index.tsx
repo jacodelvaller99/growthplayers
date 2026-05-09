@@ -71,13 +71,14 @@ type Block = {
   type: 'meditation' | 'breathing' | 'binaural' | 'sleep' | 'library' | 'journal';
 };
 
+// Monochrome — spec: "Sin colores por categoría (todo monocromo excepto el gold CTA)"
 const BLOCKS: Block[] = [
-  { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'BINAURALES',  color: '#b07d1a', type: 'binaural'   },
-  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', color: '#2e7d52', type: 'breathing'  },
-  { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  color: palette.purple, type: 'meditation' },
-  { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       color: '#4a6fa5', type: 'sleep'      },
-  { route: '/bienestar/biblioteca',  icon: 'library-music',    label: 'BIBLIOTECA',  color: '#556B2F', type: 'library'    },
-  { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      color: '#7D5A50', type: 'journal'    },
+  { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'BINAURALES',  color: palette.ash, type: 'binaural'   },
+  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', color: palette.ash, type: 'breathing'  },
+  { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  color: palette.ash, type: 'meditation' },
+  { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       color: palette.ash, type: 'sleep'      },
+  { route: '/bienestar/biblioteca',  icon: 'library-music',    label: 'BIBLIOTECA',  color: palette.ash, type: 'library'    },
+  { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      color: palette.ash, type: 'journal'    },
 ];
 
 function greeting() {
@@ -131,10 +132,10 @@ function WearableCard({ router }: { router: ReturnType<typeof useRouter> }) {
   const score = today?.recovery_score ?? null;
   const label = score != null ? recoveryLabel(score) : 'Sin datos';
   const color = score == null ? palette.smoke
-    : score >= 70 ? '#2e7d52'
+    : score >= 70 ? palette.success
     : score >= 50 ? palette.gold
-    : score >= 30 ? '#b07d1a'
-    : '#e63946';
+    : score >= 30 ? palette.warning
+    : palette.danger;
 
   return (
     <Pressable
@@ -309,10 +310,10 @@ export default function BienestarHub() {
             key={b.route}
             onPress={() => router.push(b.route as never)}
             style={({ pressed }) => [styles.gridCard, pressed && { opacity: 0.75 }]}>
-            <View style={[styles.gridIcon, { backgroundColor: b.color + '22' }]}>
-              <MaterialIcons name={b.icon} size={26} color={b.color} />
+            <View style={styles.gridIcon}>
+              <MaterialIcons name={b.icon} size={22} color={palette.ash} />
             </View>
-            <Text style={[styles.gridLabel, { color: b.color }]}>{b.label}</Text>
+            <Text style={styles.gridLabel}>{b.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -436,14 +437,16 @@ const styles = StyleSheet.create({
     minWidth: 90,
   },
   gridIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: radii.md,
+    width: 44,
+    height: 44,
+    borderRadius: radii.sm,
+    backgroundColor: palette.charcoal,
     alignItems: 'center',
     justifyContent: 'center',
   },
   gridLabel: {
     ...typography.label,
+    color: palette.ash,
     fontSize: 9,
     letterSpacing: 1.5,
     textAlign: 'center',

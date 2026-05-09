@@ -54,14 +54,14 @@ const PROVIDERS: {
     name:     'Oura Ring',
     subtitle: 'Readiness · Sueño · FC · HRV',
     icon:     'circle',
-    color:    '#4a9eff',
+    color:    palette.ash,
   },
   {
     id:       'whoop',
     name:     'WHOOP',
     subtitle: 'Recovery · Strain · Sueño · HRV',
     icon:     'watch',
-    color:    '#e63946',
+    color:    palette.ash,
   },
 ];
 
@@ -165,7 +165,7 @@ export default function WearablesScreen() {
       {/* Success banner */}
       {successMsg && (
         <PremiumCard style={styles.successBanner}>
-          <MaterialIcons name="check-circle" size={18} color="#2e7d52" />
+          <MaterialIcons name="check-circle" size={18} color={palette.success} />
           <Text style={styles.successText}>{successMsg}</Text>
           <Pressable onPress={() => setSuccessMsg(null)}>
             <MaterialIcons name="close" size={16} color={palette.smoke} />
@@ -214,7 +214,7 @@ export default function WearablesScreen() {
                 </View>
                 {connected && (
                   <View style={styles.connectedBadge}>
-                    <MaterialIcons name="check-circle" size={14} color="#2e7d52" />
+                    <MaterialIcons name="check-circle" size={14} color={palette.success} />
                     <Text style={styles.connectedText}>Activo</Text>
                   </View>
                 )}
@@ -293,9 +293,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.md,
-    borderColor: '#2e7d52',
+    borderColor: palette.success,
   },
-  successText: { ...typography.body, color: '#4caf50', flex: 1 },
+  successText: { ...typography.body, color: palette.success, flex: 1 },
 
   infoBanner: {
     flexDirection: 'row',
@@ -333,12 +333,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#2e7d5222',
+    backgroundColor: palette.successMuted,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radii.sm,
   },
-  connectedText: { ...typography.label, color: '#4caf50', fontSize: 10 },
+  connectedText: { ...typography.label, color: palette.success, fontSize: 10 },
 
   deviceActions: {
     flexDirection: 'row',

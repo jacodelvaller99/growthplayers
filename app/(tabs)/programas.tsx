@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   // Toast
   toast: {
     alignSelf: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: palette.charcoal,
     borderColor: palette.lineSoft,
     borderRadius: radii.md,
     borderWidth: 1,

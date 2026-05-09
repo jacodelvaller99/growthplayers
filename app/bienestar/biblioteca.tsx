@@ -27,23 +27,23 @@ interface Category {
 }
 
 const CATEGORIES: Category[] = [
-  { id: 'binaural',    label: 'BINAURALES',    icon: 'graphic-eq',       color: '#b07d1a', count: 5  },
-  { id: 'breathing',   label: 'RESPIRACIÓN',   icon: 'air',              color: '#2e7d52', count: 4  },
-  { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: palette.purple, count: 5  },
-  { id: 'sleep',       label: 'SUEÑO',         icon: 'bedtime',          color: '#4a6fa5', count: 8  },
-  { id: 'focus',       label: 'ENFOQUE',       icon: 'psychology',       color: '#556B2F', count: 6  },
-  { id: 'energy',      label: 'ENERGÍA',       icon: 'bolt',             color: '#c0392b', count: 4  },
-  { id: 'anxiety',     label: 'ANSIEDAD',      icon: 'spa',              color: '#5C6BC0', count: 7  },
-  { id: 'morning',     label: 'MAÑANA',        icon: 'wb-sunny',         color: '#E65100', count: 5  },
-  { id: 'evening',     label: 'NOCHE',         icon: 'nights-stay',      color: '#283593', count: 4  },
-  { id: 'performance', label: 'PERFORMANCE',   icon: 'trending-up',      color: '#00695C', count: 6  },
+  { id: 'binaural',    label: 'BINAURALES',    icon: 'graphic-eq',       color: palette.ash, count: 5  },
+  { id: 'breathing',   label: 'RESPIRACIÓN',   icon: 'air',              color: palette.ash, count: 4  },
+  { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: palette.ash, count: 5  },
+  { id: 'sleep',       label: 'SUEÑO',         icon: 'bedtime',          color: palette.ash, count: 8  },
+  { id: 'focus',       label: 'ENFOQUE',       icon: 'psychology',       color: palette.ash, count: 6  },
+  { id: 'energy',      label: 'ENERGÍA',       icon: 'bolt',             color: palette.ash, count: 4  },
+  { id: 'anxiety',     label: 'ANSIEDAD',      icon: 'spa',              color: palette.ash, count: 7  },
+  { id: 'morning',     label: 'MAÑANA',        icon: 'wb-sunny',         color: palette.ash, count: 5  },
+  { id: 'evening',     label: 'NOCHE',         icon: 'nights-stay',      color: palette.ash, count: 4  },
+  { id: 'performance', label: 'PERFORMANCE',   icon: 'trending-up',      color: palette.ash, count: 6  },
 ];
 
 // ─── Recent items (mock) ──────────────────────────────────────────────────────
 const RECENT = [
-  { id: 'r1', title: 'Alpha — Flow & Relax',  type: 'BINAURAL',   duration: '10 min', color: '#b07d1a' },
-  { id: 'r2', title: '4-7-8 Calma',           type: 'RESPIRACIÓN',duration: '4 min',  color: '#2e7d52' },
-  { id: 'r3', title: 'Despertar Consciente',  type: 'MEDITACIÓN', duration: '5 min',  color: palette.purple },
+  { id: 'r1', title: 'Alpha — Flow & Relax',  type: 'BINAURAL',   duration: '10 min', color: palette.ash },
+  { id: 'r2', title: '4-7-8 Calma',           type: 'RESPIRACIÓN',duration: '4 min',  color: palette.ash },
+  { id: 'r3', title: 'Despertar Consciente',  type: 'MEDITACIÓN', duration: '5 min',  color: palette.ash },
 ];
 
 export default function BibliotecaScreen() {

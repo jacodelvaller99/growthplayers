@@ -54,7 +54,7 @@ function AffinityBar({ label, value }: { label: string; value: number }) {
 }
 
 function ChurnBlock({ distribution }: { distribution: Record<string, number> }) {
-  const colorMap: Record<string, string> = { low: palette.success, medium: palette.warning, high: '#FF6B35', critical: palette.danger };
+  const colorMap: Record<string, string> = { low: palette.success, medium: palette.warning, high: palette.warning, critical: palette.danger };
   return (
     <View style={s.churnRow}>
       {['low', 'medium', 'high', 'critical'].map(key => {
@@ -72,7 +72,7 @@ function ChurnBlock({ distribution }: { distribution: Record<string, number> }) 
 
 function AtRiskRow({ user, onPress }: { user: AtRiskUser; onPress: () => void }) {
   const col = user.churn_risk_label === 'critical' ? palette.danger
-    : user.churn_risk_label === 'high' ? '#FF6B35' : palette.warning;
+    : user.churn_risk_label === 'high' ? palette.warning : palette.warning;
   return (
     <Pressable style={s.riskRow} onPress={onPress}>
       <View style={[s.riskDot, { backgroundColor: col }]} />

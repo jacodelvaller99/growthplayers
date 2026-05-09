@@ -390,12 +390,12 @@ export default function ProgresoScreen() {
                 </Text>
                 <View style={[dnaStyles.tierBadge, {
                   backgroundColor:
-                    engagementTier === 'excellent' ? 'rgba(255,200,4,0.2)'
-                    : engagementTier === 'good' ? 'rgba(180,230,100,0.15)'
+                    engagementTier === 'excellent' ? palette.goldLight
+                    : engagementTier === 'good' ? palette.successMuted
                     : 'rgba(120,120,120,0.15)',
                 }]}>
                   <Text style={[dnaStyles.tierText, {
-                    color: engagementTier === 'excellent' ? palette.gold : engagementTier === 'good' ? '#a8e063' : palette.smoke,
+                    color: engagementTier === 'excellent' ? palette.gold : engagementTier === 'good' ? palette.success : palette.smoke,
                   }]}>{engagementTier.toUpperCase()}</Text>
                 </View>
               </View>
@@ -441,9 +441,9 @@ export default function ProgresoScreen() {
                 <MaterialIcons
                   name="warning-amber"
                   size={13}
-                  color={intelligence.churn_risk_label === 'critical' ? '#ff4444' : palette.gold}
+                  color={intelligence.churn_risk_label === 'critical' ? palette.danger : palette.gold}
                 />
-                <Text style={[dnaStyles.riskText, intelligence.churn_risk_label === 'critical' && { color: '#ff6666' }]}>
+                <Text style={[dnaStyles.riskText, intelligence.churn_risk_label === 'critical' && { color: palette.danger }]}>
                   Riesgo de abandono: {intelligence.churn_risk_label.toUpperCase()}
                   {'  — Habla con Norman para retomar tu impulso.'}
                 </Text>

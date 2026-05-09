@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Redirect, Tabs, useSegments } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -12,9 +12,45 @@ import { analytics } from '@/lib/analytics';
 
 type TabIcon = React.ComponentProps<typeof MaterialIcons>['name'];
 
-function TabBarIcon({ color, name }: { color: string; name: TabIcon }) {
-  return <MaterialIcons name={name} size={24} color={color} />;
+/**
+ * Custom tab bar icon with:
+ * - 20px icon (spec: 20px, stroke mono)
+ * - 2px gold line indicator above the icon when active
+ * - Active: ivory icon; Inactive: #555 (muted)
+ */
+function TabBarIcon({
+  color,
+  name,
+  focused,
+}: {
+  color: string;
+  name: TabIcon;
+  focused: boolean;
+}) {
+  return (
+    <View style={tabStyles.wrap}>
+      {focused && <View style={tabStyles.indicator} />}
+      <MaterialIcons name={name} size={20} color={focused ? palette.ivory : palette.smoke} />
+    </View>
+  );
 }
+
+const tabStyles = StyleSheet.create({
+  wrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 2,
+    width: 40,
+  },
+  indicator: {
+    position: 'absolute',
+    top: -4,
+    width: 20,
+    height: 2,
+    backgroundColor: palette.gold,
+    borderRadius: 1,
+  },
+});
 
 export function BottomNavigation() {
   const insets = useSafeAreaInsets();
@@ -24,57 +60,61 @@ export function BottomNavigation() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.dark.tabIconSelected,
-        tabBarInactiveTintColor: Colors.dark.tabIconDefault,
+        // Active tint passes to icon — overridden inside TabBarIcon
+        tabBarActiveTintColor: palette.ivory,
+        tabBarInactiveTintColor: palette.smoke,
         tabBarButton: HapticTab,
         tabBarLabelStyle: {
           fontFamily: Fonts.display,
           fontSize: 9,
-          letterSpacing: 2,           // Michroma brand spacing
+          letterSpacing: 1.5,
           textTransform: 'uppercase',
+          marginTop: 2,
         },
         tabBarStyle: {
           backgroundColor: palette.blackDeep,
-          borderTopColor: Colors.dark.border,
+          borderTopColor: palette.lineSoft,
           borderTopWidth: 1,
           height: tabBarHeight,
-          paddingBottom: insets.bottom + 8,
-          paddingTop: 10,
+          paddingBottom: insets.bottom + 6,
+          paddingTop: 8,
+          // Subtle elevation on web
+          ...(Platform.OS === 'web' ? { boxShadow: '0 -2px 16px rgba(0,0,0,0.4)' } as any : {}),
         },
       }}>
       <Tabs.Screen
         name="comando"
         options={{
-          title: 'Comando',
-          tabBarIcon: ({ color }) => <TabBarIcon name="dashboard" color={color} />,
+          title: 'Inicio',
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="home" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="norte"
         options={{
           title: 'Norte',
-          tabBarIcon: ({ color }) => <TabBarIcon name="explore" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="explore" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="programas"
         options={{
           title: 'Programa',
-          tabBarIcon: ({ color }) => <TabBarIcon name="view-module" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="menu-book" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="mentor"
         options={{
           title: 'Mentor',
-          tabBarIcon: ({ color }) => <TabBarIcon name="forum" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="chat-bubble-outline" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="progreso"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color }) => <TabBarIcon name="show-chart" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="person-outline" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen name="explore" options={{ href: null }} />

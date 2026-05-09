@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   },
   wellnessStatNum: {
     fontFamily: Fonts.display,
-    color: '#b09cdb',
+    color: palette.purple,
     fontSize: 22,
     fontWeight: '800',
     lineHeight: 26,

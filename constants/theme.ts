@@ -225,6 +225,73 @@ export const surfaces = {
   },
 };
 
+// ─── Semantic token map (structured, spec-aligned) ──────────────────────────
+// Use these in new components. Existing code uses `palette.*` directly — both are valid.
+export const theme = {
+  colors: {
+    bg: {
+      base:    '#080808',                        // absolute canvas
+      elevated:'#141414',                        // cards, modals  (≈ graphite)
+      subtle:  '#1C1C1C',                        // inputs, hover  (≈ overlay)
+      overlay: 'rgba(0,0,0,0.70)',
+    },
+    text: {
+      primary:   '#EBEBEB',                      // ≈ palette.ivory
+      secondary: '#888888',                      // mid-hierarchy
+      muted:     '#555555',                      // ≈ palette.smoke
+      inverse:   '#080808',
+    },
+    accent: {
+      gold:    '#FFC804',
+      goldGlow:'rgba(255,200,4,0.12)',
+      goldDim: 'rgba(255,200,4,0.40)',
+    },
+    border: {
+      default: 'rgba(255,255,255,0.06)',         // ≈ palette.line
+      subtle:  'rgba(255,255,255,0.03)',         // ≈ palette.lineSoft
+      gold:    'rgba(255,200,4,0.30)',           // ≈ palette.lineGold
+    },
+    status: {
+      success: '#52A878',                        // ≈ palette.success
+      warning: '#D4A017',                        // ≈ palette.warning
+      error:   '#C0392B',                        // ≈ palette.danger
+      high:    '#E8703A',                        // churn high
+      critical:'#C0392B',                        // churn critical
+      info:    '#3D8FC0',                        // ≈ palette.info
+    },
+  },
+  spacing: {
+    xs:  4, sm:  8, md: 12, lg: 16,
+    xl: 24, '2xl': 32, '3xl': 48, '4xl': 64,
+  },
+  radius: {
+    xs: 4, sm: 8, md: 12, lg: 16, xl: 24, full: 999,
+  },
+  shadow: {
+    card: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.40,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    cardElevated: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.60,
+      shadowRadius: 24,
+      elevation: 12,
+    },
+    gold: {
+      shadowColor: '#FFC804',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      elevation: 0,
+    },
+  },
+} as const;
+
 // ─── Animation tokens (Reanimated spring configs) ─────────────────────────────
 export const animation = {
   spring: {
