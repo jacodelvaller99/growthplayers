@@ -172,7 +172,7 @@ export default function PricingScreen() {
             autoCorrect={false}
             returnKeyType="done"
             onSubmitEditing={handleRedeem}
-            maxLength={9}
+            maxLength={20}
           />
           <Pressable
             style={[s.codeBtn, (loading || !code.trim()) && { opacity: 0.4 }]}
