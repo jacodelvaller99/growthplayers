@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { Platform } from 'react-native';
 
 import { ACTIVE_MODULE } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
@@ -305,8 +306,21 @@ async function migrateLocalToSupabase(uid: string, s: LifeFlowState) {
 const SUPABASE_URL_VALUE = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const IS_PLACEHOLDER_URL = SUPABASE_URL_VALUE.includes('your-project') || !SUPABASE_URL_VALUE;
 
+// ─── Sync init from localStorage (web only) ──────────────────────────────────
+// Avoids React hydration mismatch (#418) by seeding state from persisted cache
+// before the first render, rather than always starting from defaultState.
+function getInitialState(): LifeFlowState {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem('lifeflow:v2:state');
+      if (raw) return migrateState(JSON.parse(raw) as Partial<LifeFlowState>);
+    } catch { /* ignore parse errors */ }
+  }
+  return defaultState;
+}
+
 export function LifeFlowProvider({ children }: { children: ReactNode }) {
-  const [state, setState]                 = useState<LifeFlowState>(defaultState);
+  const [state, setState]                 = useState<LifeFlowState>(getInitialState);
   const [isLoaded, setIsLoaded]           = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSubscribed, setIsSubscribed]   = useState(false);
