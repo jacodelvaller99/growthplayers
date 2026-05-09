@@ -82,7 +82,7 @@ export default function PricingScreen() {
   const insets   = useSafeAreaInsets();
   const { state, userId } = useLifeFlow();
 
-  const currentTier = (state.profile as any)?.subscriptionTier ?? 'free';
+  const currentTier = state.subscriptionTier ?? 'free';
 
   const [code,    setCode]    = useState('');
   const [loading, setLoading] = useState(false);
