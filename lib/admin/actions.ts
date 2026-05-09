@@ -36,10 +36,22 @@ async function auditLog(
 
 // ─── Tier sync helper ─────────────────────────────────────────────────────────
 // Updates subscription_tier on BOTH profiles (auth-linked) and user_profiles (app data).
-// product values in user_memberships are the raw tier IDs (free/premium/premium_plus/polaris/growthplayers).
+// Normalizes product names (e.g. 'lifeflow_premium') to tier names ('premium')
+// so the app's subscriptionTier checks work correctly.
+const PRODUCT_TO_TIER: Record<string, string> = {
+  lifeflow_free:         'free',
+  lifeflow_premium:      'premium',
+  lifeflow_premium_plus: 'premium_plus',
+  polaris:               'premium_plus',
+  growthplayers:         'premium_plus',
+};
+
 async function syncTier(userId: string, tier: string, expiresAt?: string | null) {
+  // Normalize product names to canonical tier values expected by the app
+  const normalizedTier = PRODUCT_TO_TIER[tier] ?? tier;
+
   const payload: Record<string, unknown> = {
-    subscription_tier: tier,
+    subscription_tier: normalizedTier,
     updated_at: new Date().toISOString(),
   };
   if (expiresAt !== undefined) payload.subscription_expires_at = expiresAt ?? null;
