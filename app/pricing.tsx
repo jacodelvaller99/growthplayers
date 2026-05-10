@@ -80,7 +80,7 @@ function PlanCard({
 export default function PricingScreen() {
   const router   = useRouter();
   const insets   = useSafeAreaInsets();
-  const { state, userId } = useLifeFlow();
+  const { state, userId, refreshTier } = useLifeFlow();
 
   const currentTier = state.subscriptionTier ?? 'free';
 
@@ -109,6 +109,8 @@ export default function PricingScreen() {
     setResult(msgs[res.status] ?? 'Error desconocido.');
 
     if (res.status === 'ok') {
+      // Refresh local state from DB so the new tier shows immediately on return
+      await refreshTier();
       setTimeout(() => router.back(), 2500);
     }
   };

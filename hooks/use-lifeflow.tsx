@@ -92,6 +92,8 @@ type LifeFlowContextValue = {
   resetOnboarding: () => Promise<void>;
   clearData: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Re-reads subscription_tier from DB and syncs local state + localStorage. */
+  refreshTier: () => Promise<void>;
 };
 
 const LifeFlowContext = createContext<LifeFlowContextValue | null>(null);
@@ -329,6 +331,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   // ── Init ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
+    let tierChannel: ReturnType<typeof supabase.channel> | null = null;
 
     async function init() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -351,6 +354,28 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         } catch { /* ignore */ }
 
         const remote = await loadUserData(uid);
+
+        // Realtime: reflect tier changes from DB instantly (set up after uid is known)
+        tierChannel = supabase
+          .channel(`profile-tier-${uid}`)
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${uid}` },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (payload: any) => {
+              if (!mounted) return;
+              const newTier    = payload.new?.subscription_tier;
+              const newExpires = payload.new?.subscription_expires_at ?? null;
+              if (newTier) {
+                setState((prev) => {
+                  const next = { ...prev, subscriptionTier: newTier, subscriptionExpiresAt: newExpires };
+                  writeLocal(STATE_KEY, next);
+                  return next;
+                });
+              }
+            },
+          )
+          .subscribe();
 
         if (remote) {
           if (mounted) {
@@ -404,36 +429,6 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         }
       },
     );
-
-    // Realtime: reflect admin tier changes instantly without refresh
-    let tierChannel: ReturnType<typeof supabase.channel> | null = null;
-    if (uidRef.current) {
-      tierChannel = supabase
-        .channel(`profile-tier-${uidRef.current}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${uidRef.current}`,
-          },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (payload: any) => {
-            if (!mounted) return;
-            const newTier    = payload.new?.subscription_tier;
-            const newExpires = payload.new?.subscription_expires_at ?? null;
-            if (newTier) {
-              setState((prev) => ({
-                ...prev,
-                subscriptionTier:     newTier,
-                subscriptionExpiresAt: newExpires,
-              }));
-            }
-          },
-        )
-        .subscribe();
-    }
 
     return () => {
       mounted = false;
@@ -865,6 +860,30 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     setState(defaultState);
   }, []);
 
+  const refreshTier = useCallback(async () => {
+    const uid = uidRef.current;
+    if (!uid) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('profiles')
+        .select('subscription_tier, subscription_expires_at')
+        .eq('id', uid)
+        .single();
+      if (data?.subscription_tier) {
+        setState((prev) => {
+          const next: LifeFlowState = {
+            ...prev,
+            subscriptionTier:      data.subscription_tier,
+            subscriptionExpiresAt: data.subscription_expires_at ?? null,
+          };
+          writeLocal(STATE_KEY, next);
+          return next;
+        });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     uidRef.current = null;
@@ -900,6 +919,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         resetOnboarding,
         clearData,
         signOut,
+        refreshTier,
       }}>
       {children}
     </LifeFlowContext.Provider>
