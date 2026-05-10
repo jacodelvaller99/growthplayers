@@ -78,6 +78,7 @@ type LifeFlowContextValue = {
   updateProfile: (profile: UserProfile) => Promise<void>;
   updateNorthStar: (northStar: NorthStar) => Promise<void>;
   saveCheckIn: (checkIn: Omit<CheckIn, 'id' | 'date'>) => Promise<void>;
+  sendMentorMessage: (text: string) => Promise<void>;
   addMentorMessages: (userMsg: MentorMessage, mentorMsg: MentorMessage) => Promise<void>;
   saveLessonTask: (lessonId: string, responses: Record<string, string>) => Promise<void>;
   markLessonComplete: (lessonId: string) => Promise<void>;
@@ -119,28 +120,26 @@ function todayDateStr() {
   return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 }
 
-// ─── Streak helper ────────────────────────────────────────────────────────────
-// Counts consecutive days ending today (or yesterday) with a check-in.
-function computeStreak(checkIns: CheckIn[]): number {
-  if (!checkIns.length) return 0;
-  const sorted = [...checkIns].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let streak = 0;
-  let cursor = new Date(today);
-  for (const ci of sorted) {
-    const d = new Date(ci.date);
-    d.setHours(0, 0, 0, 0);
-    if (d.getTime() === cursor.getTime()) {
-      streak++;
-      cursor.setDate(cursor.getDate() - 1);
-    } else if (d.getTime() < cursor.getTime()) {
-      break;
-    }
-  }
-  return streak;
+// ─── Mentor IA (keyword-based fallback) ──────────────────────────────────────
+function mentorReply(text: string, state: LifeFlowState, latest: CheckIn | null): string {
+  const lower = text.toLowerCase();
+  const energy  = latest?.energy  ?? 6;
+  const clarity = latest?.clarity ?? 6;
+  const stress  = latest?.stress  ?? 5;
+
+  if (lower.includes('norte'))
+    return `Tu norte hoy: ${state.northStar.purpose} — Traduccion operativa: una accion visible, una conversacion pendiente y cero fuga de atencion.`;
+  if (lower.includes('practica'))
+    return stress >= 7
+      ? 'Practica: 6 minutos de respiracion nasal, luego escribe la decision que estas evitando.'
+      : 'Practica: bloque de 45 minutos con una sola salida medible. Al terminar registra friccion, energia y siguiente movimiento.';
+  if (lower.includes('ordena') || lower.includes('dia'))
+    return `Orden del dia: 1) Check-in completo. 2) Leccion activa del modulo ${ACTIVE_MODULE.order}. 3) Bloque mercader profundo. 4) Cierre con evidencia.`;
+  if (energy <= 5)
+    return 'Tu sistema esta bajo de energia. Reduce amplitud: una prioridad, recuperacion activa y una decision cerrada.';
+  if (clarity <= 5)
+    return 'La claridad esta baja. Escribe tres opciones, elimina dos y ejecuta la que tenga mayor retorno con menor friccion.';
+  return 'Estado util para ejecucion. Mantente en modo mercader: protege atencion, convierte tiempo en avance visible.';
 }
 
 // ─── Migrate persisted state → ensure all fields exist ───────────────────────
@@ -148,12 +147,12 @@ function migrateState(loaded: Partial<LifeFlowState>): LifeFlowState {
   return {
     ...defaultState,
     ...loaded,
-    completedLessons:     loaded.completedLessons     ?? [],
-    completedTasks:       loaded.completedTasks       ?? {},
-    checkIns:             loaded.checkIns             ?? [],
-    mentorMessages:       loaded.mentorMessages       ?? defaultState.mentorMessages,
-    wellnessSessions:     loaded.wellnessSessions     ?? [],
-    subscriptionTier:     loaded.subscriptionTier     ?? 'free',
+    completedLessons:      loaded.completedLessons      ?? [],
+    completedTasks:        loaded.completedTasks        ?? {},
+    checkIns:              loaded.checkIns              ?? [],
+    mentorMessages:        loaded.mentorMessages        ?? defaultState.mentorMessages,
+    wellnessSessions:      loaded.wellnessSessions      ?? [],
+    subscriptionTier:      loaded.subscriptionTier      ?? 'free',
     subscriptionExpiresAt: loaded.subscriptionExpiresAt ?? null,
   };
 }
@@ -224,23 +223,7 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     metadata:        w.metadata ?? {},
   }));
 
-  // Load subscription tier from profiles (auth-linked)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let subscriptionTier = 'free';
-  let subscriptionExpiresAt: string | null = null;
-  try {
-    const { data: authProfile } = await (supabase as any)
-      .from('profiles')
-      .select('subscription_tier, subscription_expires_at')
-      .eq('id', uid)
-      .single();
-    if (authProfile) {
-      subscriptionTier     = authProfile.subscription_tier ?? 'free';
-      subscriptionExpiresAt = authProfile.subscription_expires_at ?? null;
-    }
-  } catch (_) { /* profiles.subscription_tier not yet migrated */ }
-
-  return {
+  const result: LifeFlowState = {
     onboardingCompleted: true, // if profile exists, onboarding was completed
     protocolStartDate:   profile.protocol_start_date
       ? new Date(profile.protocol_start_date).toISOString()
@@ -257,14 +240,30 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
       nonNegotiables:  profile.non_negotiables ?? defaultNorth.nonNegotiables,
       dailyReminder:   profile.daily_reminder ?? defaultNorth.dailyReminder,
     },
-    checkIns:             checkInsMapped,
+    checkIns:              checkInsMapped,
     mentorMessages,
     completedLessons,
     completedTasks,
     wellnessSessions,
-    subscriptionTier,
-    subscriptionExpiresAt,
+    subscriptionTier:      'free',
+    subscriptionExpiresAt: null,
   };
+
+  // Load subscription tier from profiles (auth-linked table)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: authProfile } = await (supabase as any)
+      .from('profiles')
+      .select('subscription_tier, subscription_expires_at')
+      .eq('id', uid)
+      .single();
+    if (authProfile) {
+      result.subscriptionTier      = authProfile.subscription_tier      ?? 'free';
+      result.subscriptionExpiresAt = authProfile.subscription_expires_at ?? null;
+    }
+  } catch { /* profiles.subscription_tier not yet migrated — ignore */ }
+
+  return result;
 }
 
 // ─── Migrate local storage → Supabase (first sync) ───────────────────────────
@@ -347,15 +346,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         uidRef.current = uid;
         if (mounted) setIsAuthenticated(true);
 
-        try {
-          await initRevenueCat();
-          const subscribed = await checkSubscription();
-          if (mounted) setIsSubscribed(subscribed);
-        } catch { /* ignore */ }
-
-        const remote = await loadUserData(uid);
-
-        // Realtime: reflect tier changes from DB instantly (set up after uid is known)
+        // Realtime: reflect tier changes from DB instantly (must be set up after uid is known)
         tierChannel = supabase
           .channel(`profile-tier-${uid}`)
           .on(
@@ -376,6 +367,14 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
             },
           )
           .subscribe();
+
+        try {
+          await initRevenueCat();
+          const subscribed = await checkSubscription();
+          if (mounted) setIsSubscribed(subscribed);
+        } catch { /* ignore */ }
+
+        const remote = await loadUserData(uid);
 
         if (remote) {
           if (mounted) {
@@ -493,7 +492,6 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           identity:            payload.northStar.identity,
           non_negotiables:     payload.northStar.nonNegotiables,
           daily_reminder:      payload.northStar.dailyReminder,
-          ml_consent:          true, // user explicitly started the protocol — opt-in granted
         }, { onConflict: 'user_id' });
       } catch (e) {
         console.warn('[Supabase] completeOnboarding:', e);
@@ -577,7 +575,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
 
       // Also update profile with latest score
       try {
-        const streak = computeStreak(next.checkIns);
+        const streak = next.checkIns.length; // simplified; mentor.tsx computes accurate streak
         await db.profiles().upsert({
           user_id:         uid,
           sovereign_score: newScore,
@@ -589,6 +587,33 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       }
     },
     [persist, state],
+  );
+
+  const sendMentorMessage = useCallback(
+    async (text: string) => {
+      const now = new Date().toISOString();
+      const userMsg: MentorMessage = { id: `u-${Date.now()}`, role: 'user', text, createdAt: now };
+      const replyText = mentorReply(text, state, latestCheckIn);
+      const mentorMsg: MentorMessage = { id: `m-${Date.now()}`, role: 'mentor', text: replyText, createdAt: now };
+
+      await persist({
+        ...state,
+        mentorMessages: [...state.mentorMessages, userMsg, mentorMsg],
+      });
+
+      const uid = uidRef.current;
+      if (!uid) return;
+
+      try {
+        await db.messages().insert([
+          { user_id: uid, role: 'user',      content: text,      created_at: now },
+          { user_id: uid, role: 'assistant', content: replyText, created_at: now },
+        ]);
+      } catch (e) {
+        console.warn('[Supabase] sendMentorMessage:', e);
+      }
+    },
+    [latestCheckIn, persist, state],
   );
 
   const addMentorMessages = useCallback(
@@ -764,70 +789,6 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const loadMoreMentorMessages = useCallback(async (currentCount: number): Promise<boolean> => {
-    const uid = uidRef.current;
-    if (!uid) return false;
-    try {
-      const { data: olderRows } = await db.messages()
-        .select('*')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false })
-        .range(currentCount, currentCount + 49);
-
-      if (!olderRows || olderRows.length === 0) return false;
-
-      const olderMessages: MentorMessage[] = (olderRows as Array<{
-        id: string; role: string; content: string; created_at: string | null;
-      }>).map((m) => ({
-        id:        m.id,
-        role:      (m.role === 'assistant' ? 'mentor' : m.role) as 'mentor' | 'user',
-        text:      m.content,
-        createdAt: m.created_at ?? new Date().toISOString(),
-      })).reverse(); // oldest first
-
-      setState((prev) => ({
-        ...prev,
-        mentorMessages: [...olderMessages, ...prev.mentorMessages],
-      }));
-      return olderRows.length === 50;
-    } catch (e) {
-      console.warn('[Supabase] loadMoreMentorMessages:', e);
-      return false;
-    }
-  }, []);
-
-  const deleteAccount = useCallback(async (): Promise<void> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('No session');
-
-    const { error } = await supabase.functions.invoke('delete-account');
-    if (error) throw new Error(error.message);
-
-    await removeLocal(STATE_KEY);
-    setState(defaultState);
-    uidRef.current = null;
-  }, []);
-
-  const exportData = useCallback(async (): Promise<string> => {
-    const uid = uidRef.current;
-    const payload: Record<string, unknown> = {
-      exportedAt:        new Date().toISOString(),
-      profile:           state.profile,
-      northStar:         state.northStar,
-      protocolStartDate: state.protocolStartDate,
-      checkIns:          state.checkIns,
-      mentorMessages:    state.mentorMessages.slice(-200),
-      completedLessons:  state.completedLessons,
-      completedTasks:    state.completedTasks,
-      wellnessSessions:  state.wellnessSessions,
-    };
-    if (uid) {
-      const { data: journal } = await db.journal().select('id,content,created_at').eq('user_id', uid);
-      payload.journalEntries = journal ?? [];
-    }
-    return JSON.stringify(payload, null, 2);
-  }, [state]);
-
   const resetOnboarding = useCallback(async () => {
     await persist({ ...state, onboardingCompleted: false });
     const uid = uidRef.current;
@@ -859,6 +820,67 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     await removeLocal(STATE_KEY);
     setState(defaultState);
   }, []);
+
+  const loadMoreMentorMessages = useCallback(async (currentCount: number): Promise<boolean> => {
+    const uid = uidRef.current;
+    if (!uid) return false;
+    try {
+      const { data: olderRows } = await db.messages()
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
+        .range(currentCount, currentCount + 49);
+
+      if (!olderRows || olderRows.length === 0) return false;
+
+      const olderMessages: MentorMessage[] = (olderRows as Array<{
+        id: string; role: string; content: string; created_at: string | null;
+      }>).map((m) => ({
+        id:        m.id,
+        role:      (m.role === 'assistant' ? 'mentor' : m.role) as 'mentor' | 'user',
+        text:      m.content,
+        createdAt: m.created_at ?? new Date().toISOString(),
+      })).reverse();
+
+      setState((prev) => ({
+        ...prev,
+        mentorMessages: [...olderMessages, ...prev.mentorMessages],
+      }));
+      return olderRows.length === 50;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const deleteAccount = useCallback(async (): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('No session');
+    const { error } = await supabase.functions.invoke('delete-account');
+    if (error) throw new Error(error.message);
+    await removeLocal(STATE_KEY);
+    setState(defaultState);
+    uidRef.current = null;
+  }, []);
+
+  const exportData = useCallback(async (): Promise<string> => {
+    const uid = uidRef.current;
+    const payload: Record<string, unknown> = {
+      exportedAt:        new Date().toISOString(),
+      profile:           state.profile,
+      northStar:         state.northStar,
+      protocolStartDate: state.protocolStartDate,
+      checkIns:          state.checkIns,
+      mentorMessages:    state.mentorMessages.slice(-200),
+      completedLessons:  state.completedLessons,
+      completedTasks:    state.completedTasks,
+      wellnessSessions:  state.wellnessSessions,
+    };
+    if (uid) {
+      const { data: journal } = await db.journal().select('id,content,created_at').eq('user_id', uid);
+      payload.journalEntries = journal ?? [];
+    }
+    return JSON.stringify(payload, null, 2);
+  }, [state]);
 
   const refreshTier = useCallback(async () => {
     const uid = uidRef.current;
@@ -908,6 +930,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         updateProfile,
         updateNorthStar,
         saveCheckIn,
+        sendMentorMessage,
         addMentorMessages,
         saveLessonTask,
         markLessonComplete,
