@@ -139,7 +139,6 @@ export default function RootLayout() {
           <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
           <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
           <Stack.Screen name="pricing" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Modal' }} />
         </Stack>
         <StatusBar style="light" />
         </ToastProvider>
