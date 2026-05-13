@@ -33,31 +33,21 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="preconnect" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
         <link rel="dns-prefetch" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
 
-        {/* ── Web Fonts (Google Fonts CDN — avoids broken Vercel asset paths) ── */}
+        {/* ── Web Fonts: una sola request (era 3 round-trips → ahora 1) ── */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Inter 400 + 700 */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
-        />
-        {/* Michroma (single weight, display face) */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Michroma&display=swap"
-        />
-        {/* Space Mono 400 */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Michroma&family=Space+Mono&display=swap"
         />
 
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: `body{margin:0;background:#080808;overflow-x:hidden;}*{box-sizing:border-box;}`,
+            __html: `body{margin:0;background:#080808;overflow-x:hidden;}*{box-sizing:border-box;}#root{background:#080808;}`,
           }}
         />
+
       </head>
       <body>{children}</body>
     </html>
