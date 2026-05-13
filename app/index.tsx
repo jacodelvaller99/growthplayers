@@ -1,35 +1,15 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, Text, View } from 'react-native';
 
-import { palette } from '@/constants/theme';
+import { HomeSkeleton } from '@/components/HomeSkeleton';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 export default function Index() {
   const { isLoaded, isAuthenticated, state } = useLifeFlow();
 
-  // Show POLARIS splash while the hook initialises (getSession + loadUserData)
+  // Show skeleton while auth resolves (getSession from localStorage — typically < 100ms).
+  // With two-phase init, returning users hit isLoaded=true almost instantly.
   if (!isLoaded) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: palette.black,
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 24,
-        }}>
-        <Text
-          style={{
-            color: palette.gold,
-            fontSize: 28,
-            letterSpacing: 6,
-            fontWeight: '700',
-          }}>
-          POLARIS
-        </Text>
-        <ActivityIndicator color={palette.gold} size="large" />
-      </View>
-    );
+    return <HomeSkeleton />;
   }
 
   if (!isAuthenticated) {

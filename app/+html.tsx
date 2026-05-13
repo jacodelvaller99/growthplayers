@@ -29,6 +29,10 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:image" content="/icon-512.png" />
         <meta property="og:type" content="website" />
 
+        {/* ── Supabase preconnect (opens TCP socket before JS runs) ─────── */}
+        <link rel="preconnect" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
+        <link rel="dns-prefetch" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
+
         {/* ── Web Fonts (Google Fonts CDN — avoids broken Vercel asset paths) ── */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

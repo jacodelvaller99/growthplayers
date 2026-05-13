@@ -332,6 +332,24 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     let tierChannel: ReturnType<typeof supabase.channel> | null = null;
 
+    // ── Background refresh: runs after UI is visible, never blocks render ──────
+    async function backgroundRefresh(uid: string) {
+      const [remote] = await Promise.all([
+        loadUserData(uid),
+        (async () => {
+          try {
+            await initRevenueCat();
+            const subscribed = await checkSubscription();
+            if (mounted) setIsSubscribed(subscribed);
+          } catch { /* ignore */ }
+        })(),
+      ]);
+      if (remote && mounted) {
+        setState(remote);
+        writeLocal(STATE_KEY, remote);
+      }
+    }
+
     async function init() {
       const { data: { session } } = await supabase.auth.getSession();
       let uid = session?.user?.id ?? null;
@@ -368,13 +386,27 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           )
           .subscribe();
 
-        try {
-          await initRevenueCat();
-          const subscribed = await checkSubscription();
-          if (mounted) setIsSubscribed(subscribed);
-        } catch { /* ignore */ }
+        // ── PHASE 1: instant load when cached state exists ─────────────────
+        // getInitialState() already ran synchronously from localStorage (web).
+        // If the user completed onboarding before, we show the UI immediately
+        // and refresh all data in the background.
+        if (state.onboardingCompleted) {
+          if (mounted) setIsLoaded(true);
+          backgroundRefresh(uid).catch(() => {});
+          return;
+        }
 
-        const remote = await loadUserData(uid);
+        // ── PHASE 1 (no cache): run RevenueCat + data fetch in parallel ────
+        const [remote] = await Promise.all([
+          loadUserData(uid),
+          (async () => {
+            try {
+              await initRevenueCat();
+              const subscribed = await checkSubscription();
+              if (mounted) setIsSubscribed(subscribed);
+            } catch { /* ignore */ }
+          })(),
+        ]);
 
         if (remote) {
           if (mounted) {

@@ -41,12 +41,24 @@ const SecureStoreAdapter = {
 // ─── Typed client ─────────────────────────────────────────────────────────────
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    storage: SecureStoreAdapter,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: Platform.OS === 'web',
+    storage:            SecureStoreAdapter,
+    autoRefreshToken:   true,
+    persistSession:     true,
+    // false: we use localStorage-based session persistence, not URL hash tokens.
+    // Setting true on web adds unnecessary URL parsing overhead on every init.
+    detectSessionInUrl: false,
+  },
+  realtime: {
+    params: { eventsPerSecond: 2 },   // limit reconnect aggressiveness
   },
 });
+
+// ─── TCP preconnect warm-up (web only) ────────────────────────────────────────
+// Opens the TCP connection to Supabase before the first query fires.
+// Non-blocking — errors are silently ignored.
+if (Platform.OS === 'web' && typeof window !== 'undefined' && SUPABASE_URL) {
+  fetch(`${SUPABASE_URL}/rest/v1/`, { method: 'HEAD' }).catch(() => {});
+}
 
 // ─── Typed table helpers ──────────────────────────────────────────────────────
 export const db = {

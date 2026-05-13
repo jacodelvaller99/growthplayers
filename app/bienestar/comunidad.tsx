@@ -61,7 +61,7 @@ export default function ComunidadScreen() {
       if (error || !data) { setPosts([]); return; }
 
       // Resolver nombres de autor
-      const userIds = [...new Set(data.map((p: any) => p.user_id).filter(Boolean))];
+      const userIds: string[] = [...new Set<string>(data.map((p: any) => p.user_id as string).filter((id: string): id is string => !!id))];
       const nameMap: Record<string, string> = {};
       if (userIds.length > 0) {
         try {
