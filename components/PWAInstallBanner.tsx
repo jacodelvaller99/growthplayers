@@ -60,7 +60,7 @@ export default function PWAInstallBanner() {
 
         {/* Text */}
         <View style={styles.textWrap}>
-          <Text style={styles.title}>Instala LifeFlow en tu iPhone</Text>
+          <Text style={styles.title}>Instala Polaris en tu iPhone</Text>
           <Text style={styles.body}>
             Toca{' '}
             <MaterialIcons name="ios-share" size={12} color={palette.ash} />

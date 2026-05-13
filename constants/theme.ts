@@ -1,5 +1,14 @@
 import { Platform } from 'react-native';
 
+// ─── Brand Identity ──────────────────────────────────────────────────────────────
+export const BRAND = {
+  name:        'Polaris Growth Institute',
+  shortName:   'Polaris',
+  tagline:     'Persigue el estado. No el resultado.',
+  mentor:      'Norman',
+  accentColor: '#EDBA01',
+} as const;
+
 // ─── Polaris Brand Colors (Manual de Marca, Orgánico Studio 2024) ──────────────
 // Philippine Yellow  #FFC804  PANTONE 7548 C  — primary accent
 // Smoky Black        #0F0F0F  PANTONE Black 6 C — background

@@ -7,7 +7,7 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 export default function Index() {
   const { isLoaded, isAuthenticated, state } = useLifeFlow();
 
-  // Show LIFEFLOW splash while the hook initialises (getSession + loadUserData)
+  // Show POLARIS splash while the hook initialises (getSession + loadUserData)
   if (!isLoaded) {
     return (
       <View
@@ -25,7 +25,7 @@ export default function Index() {
             letterSpacing: 6,
             fontWeight: '700',
           }}>
-          LIFEFLOW
+          POLARIS
         </Text>
         <ActivityIndicator color={palette.gold} size="large" />
       </View>

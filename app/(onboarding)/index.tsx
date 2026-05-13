@@ -329,7 +329,7 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(3)} />
-            <PrimaryButton label="ACTIVAR LIFEFLOW" icon="check" onPress={finish} />
+            <PrimaryButton label="ACTIVAR POLARIS" icon="check" onPress={finish} />
           </View>
         </PremiumCard>
       )}

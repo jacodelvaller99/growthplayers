@@ -1,5 +1,5 @@
 /**
- * CMI LifeFlow — Admin TypeScript Types
+ * CMI Polaris — Admin TypeScript Types
  */
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -75,9 +75,9 @@ export type MembershipProduct =
 export type MembershipStatus = 'active' | 'expired' | 'cancelled' | 'paused';
 
 export const PRODUCT_LABELS: Record<MembershipProduct, string> = {
-  lifeflow_free:         'LifeFlow Free',
-  lifeflow_premium:      'LifeFlow Premium',
-  lifeflow_premium_plus: 'LifeFlow Premium Plus',
+  lifeflow_free:         'Polaris Free',
+  lifeflow_premium:      'Polaris Premium',
+  lifeflow_premium_plus: 'Polaris Premium Plus',
   polaris:               'Polaris (Curso Completo)',
   growthplayers:         'Growth Players (Curso Completo)',
 };
@@ -104,7 +104,7 @@ export type CourseId = 'polaris' | 'growthplayers' | 'lifeflow_bienestar';
 export const COURSE_LABELS: Record<CourseId, string> = {
   polaris:           'Polaris',
   growthplayers:     'Growth Players',
-  lifeflow_bienestar:'LifeFlow Bienestar',
+  lifeflow_bienestar:'Polaris Bienestar',
 };
 
 // ─── Access Codes ─────────────────────────────────────────────────────────────
@@ -132,7 +132,7 @@ export type AccessCodeType =
   | 'full_access';
 
 export const CODE_TYPE_LABELS: Record<AccessCodeType, string> = {
-  beta:         'Beta (LifeFlow Free)',
+  beta:         'Beta (Polaris Free)',
   premium:      'Premium',
   premium_plus: 'Premium Plus',
   polaris:      'Polaris (Curso)',

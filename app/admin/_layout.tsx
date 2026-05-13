@@ -67,7 +67,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       {/* Logo / toggle */}
       <Pressable style={s.sidebarLogo} onPress={onToggle}>
         <MaterialIcons name="dashboard-customize" size={20} color={palette.gold} />
-        {!collapsed && <Text style={s.sidebarTitle}>CMI LIFEFLOW</Text>}
+        {!collapsed && <Text style={s.sidebarTitle}>CMI POLARIS</Text>}
       </Pressable>
 
       <View style={s.sidebarDivider} />

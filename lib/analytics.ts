@@ -52,7 +52,7 @@ function generateUUID(): string {
 
 // ─── Analytics Singleton ──────────────────────────────────────────────────────
 
-class LifeFlowAnalytics {
+class PolarisAnalytics {
   private sessionId: string = generateUUID();
   private userId: string | null = null;
   private mlConsent: boolean = true;
@@ -219,4 +219,4 @@ class LifeFlowAnalytics {
 
 // ─── Export singleton ─────────────────────────────────────────────────────────
 
-export const analytics = new LifeFlowAnalytics();
+export const analytics = new PolarisAnalytics();

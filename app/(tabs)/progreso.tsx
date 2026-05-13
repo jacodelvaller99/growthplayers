@@ -206,13 +206,13 @@ export default function ProgresoScreen() {
 
   const clear = () => {
     if (typeof window !== 'undefined') {
-      const ok = window.confirm('¿Limpiar todos los datos de LifeFlow?');
+      const ok = window.confirm('¿Limpiar todos los datos de Polaris?');
       if (ok) clearData();
       return;
     }
     Alert.alert(
       'LIMPIAR DATOS',
-      'Esto elimina todo el progreso local de LifeFlow. Esta acción no se puede deshacer.',
+      'Esto elimina todo el progreso local de Polaris. Esta acción no se puede deshacer.',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Limpiar', style: 'destructive', onPress: clearData },
@@ -230,13 +230,13 @@ export default function ProgresoScreen() {
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = `lifeflow-datos-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `polaris-datos-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
         await Share.share({
           message: json,
-          title:   'Mis datos de LifeFlow',
+          title:   'Mis datos de Polaris',
         });
       }
     } catch (e: unknown) {
@@ -251,7 +251,7 @@ export default function ProgresoScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'ELIMINAR CUENTA',
-      '¿Estás seguro? Esta acción eliminará tu cuenta y TODOS tus datos de LifeFlow de forma permanente e irreversible.',
+      '¿Estás seguro? Esta acción eliminará tu cuenta y TODOS tus datos de Polaris de forma permanente e irreversible.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -528,7 +528,7 @@ export default function ProgresoScreen() {
             <MaterialIcons name="business" size={24} color={palette.gold} />
           </View>
           <View style={styles.b2bTextCol}>
-            <Text style={styles.b2bTitle}>LIFEFLOW PARA TU EMPRESA</Text>
+            <Text style={styles.b2bTitle}>POLARIS PARA TU EMPRESA</Text>
             <Text style={styles.b2bSub}>Lleva el bienestar a todo tu equipo</Text>
           </View>
         </View>
@@ -639,7 +639,7 @@ export default function ProgresoScreen() {
           <View style={styles.settingInfo}>
             <Text style={styles.settingTitle}>ANÁLISIS DE COMPORTAMIENTO</Text>
             <Text style={styles.settingMeta}>
-              Permite a LifeFlow personalizar recomendaciones con IA. Tus datos nunca se venden.
+              Permite a Polaris personalizar recomendaciones con IA. Tus datos nunca se venden.
             </Text>
           </View>
           <Switch
@@ -725,7 +725,7 @@ export default function ProgresoScreen() {
 
       {/* ── Version footer ── */}
       <Text style={styles.versionText}>
-        LifeFlow v{appVersion} · Polaris Growth Institute
+        Polaris Growth Institute v{appVersion}
       </Text>
     </ScrollView>
     </KeyboardAvoidingView>

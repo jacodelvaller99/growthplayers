@@ -83,7 +83,7 @@ export default function BibliotecaScreen() {
         <MaterialIcons name="search" size={20} color={palette.smoke} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Busca en LifeFlow..."
+          placeholder="Busca en Polaris..."
           placeholderTextColor={palette.smoke}
           value={query}
           onChangeText={setQuery}

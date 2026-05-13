@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Lifeflow",
-    "slug": "Lifeflow",
+    "name": "Polaris Growth Institute",
+    "slug": "polaris-growth-institute",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "lifeflow",
+    "scheme": "polaris",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {

@@ -94,7 +94,7 @@ export default function DashboardScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      <AppHeader title="LIFEFLOW" />
+      <AppHeader title="POLARIS" />
 
       {/* ── Editorial Hero ── */}
       <EditorialPanel

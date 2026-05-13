@@ -7,7 +7,7 @@ export const SUBSCRIPTION_TIERS = {
   free: {
     id: 'free',
     name: 'Free',
-    description: 'Acceso básico a LifeFlow',
+    description: 'Acceso básico a Polaris',
     color: '#888888',
     features: [
       'Check-in diario',
@@ -24,12 +24,12 @@ export const SUBSCRIPTION_TIERS = {
   premium: {
     id: 'premium',
     name: 'Premium',
-    description: 'Experiencia completa de LifeFlow',
+    description: 'Experiencia completa de Polaris',
     color: '#FFC804',
     features: [
       'Todo lo de Free',
       'Mentor Norman ilimitado',
-      'Todos los módulos LifeFlow',
+      'Todos los módulos Polaris',
       'Todos los binaurales',
       'Respiración y meditación completas',
       'Score Soberano + racha',
@@ -44,7 +44,7 @@ export const SUBSCRIPTION_TIERS = {
   premium_plus: {
     id: 'premium_plus',
     name: 'Premium Plus',
-    description: 'LifeFlow + Polaris completo',
+    description: 'Polaris + Polaris completo',
     color: '#C0A060',
     features: [
       'Todo lo de Premium',

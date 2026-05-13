@@ -234,7 +234,7 @@ export default function SuenoScreen() {
         <PremiumCard style={styles.premiumCta}>
           <Text style={styles.premiumCtaTitle}>DESBLOQUEA TODO EL CONTENIDO</Text>
           <Text style={styles.premiumCtaBody}>
-            Historias, Yoga Nidra, relajaciones guiadas y más con LifeFlow Premium.
+            Historias, Yoga Nidra, relajaciones guiadas y más con Polaris Premium.
           </Text>
           <Pressable style={styles.premiumBtn}>
             <Text style={styles.premiumBtnText}>VER PLANES</Text>
