@@ -16,21 +16,17 @@ const getBreakpoint = (width: number): Breakpoint => ({
 });
 
 export const useBreakpoint = (): Breakpoint => {
-  const [bp, setBp] = useState<Breakpoint>(() => {
-    // SSR-safe: default to mobile on server
-    if (typeof window === 'undefined') {
-      return getBreakpoint(375);
-    }
-    return getBreakpoint(Dimensions.get('window').width);
-  });
+  // Always start with mobile default so server-render and first client-render match.
+  // The real width is applied after hydration in useEffect.
+  const [bp, setBp] = useState<Breakpoint>(() => getBreakpoint(375));
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    // Sync to real viewport width after hydration (no mismatch risk)
+    setBp(getBreakpoint(Dimensions.get('window').width));
     const sub = Dimensions.addEventListener('change', ({ window }) => {
       setBp(getBreakpoint(window.width));
     });
-    // Sync immediately after mount (covers hydration mismatch)
-    setBp(getBreakpoint(Dimensions.get('window').width));
     return () => sub?.remove();
   }, []);
 
