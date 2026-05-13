@@ -503,7 +503,9 @@ export async function streamMentorResponse(
     }
   }
 
-  if (ENV.openaiApiKey) {
+  // Guard: skip OpenAI if the key is clearly a Groq key (starts with 'gsk_').
+  // This prevents a 401 waste when EXPO_PUBLIC_OPENAI_API_KEY is misconfigured.
+  if (ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) {
     try {
       return await streamOpenAI(messages, onChunk);
     } catch (err) {
