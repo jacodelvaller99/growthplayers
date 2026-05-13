@@ -75,3 +75,17 @@ export const intel = {
   /** profiles — base table with id = auth.uid(), is_admin flag */
   profiles:         () => anyClient.from('profiles'),
 };
+
+// ─── Additive v4.1 table helpers — untyped (tables added in migration 20260513000000) ──
+export const db2 = {
+  habits:             () => anyClient.from('habits'),
+  habitLogs:          () => anyClient.from('habit_logs'),
+  fasting:            () => anyClient.from('fasting_sessions'),
+  communityPosts:     () => anyClient.from('community_posts'),
+  communityReactions: () => anyClient.from('community_reactions'),
+  bodyMeasurements:   () => anyClient.from('body_measurements'),
+  nutritionProfiles:  () => anyClient.from('nutrition_profiles'),
+  supplements:        () => anyClient.from('supplement_stacks'),
+  weeklySessions:     () => anyClient.from('weekly_sessions'),
+  mentorThreads:      () => anyClient.from('mentor_threads'),
+};

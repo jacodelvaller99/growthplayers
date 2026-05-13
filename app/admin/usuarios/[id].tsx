@@ -36,6 +36,7 @@ import {
 } from '@/lib/admin/queries';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman } from '@/lib/admin/actions';
+import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -157,6 +158,11 @@ export default function UserDetailScreen() {
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [expandedConv, setExpandedConv] = useState<string | null>(null);
 
+  // Weekly session state
+  const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
+  const [generatingSession, setGeneratingSession] = useState(false);
+  const [showWeeklySession, setShowWeeklySession] = useState(false);
+
   const load = useCallback(async () => {
     if (!userId) return;
     const [userDetail, evts, convs, cis, audit] = await Promise.all([
@@ -206,6 +212,34 @@ export default function UserDetailScreen() {
     setShowNorman(false);
     Alert.alert('✅ Enviado', 'El mensaje fue enviado al chat del usuario.');
   };
+
+  const handleGenerateWeeklySession = async () => {
+    if (!userId || !user) return;
+    setGeneratingSession(true);
+    try {
+      const userAny = user as any;
+      const session = await generateWeeklySessionIfNeeded(userId, userAny.protocol_day ?? 1, {
+        full_name:       user.name,
+        role:            user.role ?? 'Empresario',
+        current_module:  'Módulo 1 - Guerrero Mentalidad',
+        sovereign_score: userAny.sovereign_score ?? 0,
+      });
+      if (session) { setWeeklySession(session); setShowWeeklySession(true); }
+      else Alert.alert('Sin cambios', 'Ya existe una sesión para esta semana.');
+    } catch { Alert.alert('Error', 'No se pudo generar la sesión.'); }
+    setGeneratingSession(false);
+  };
+
+  // Burnout risk from last 7 check-ins
+  const burnoutRisk = (() => {
+    if (!checkIns.length) return null;
+    const last7 = checkIns.slice(0, 7);
+    const avgStress = last7.reduce((s, c) => s + c.stress, 0) / last7.length;
+    const avgEnergy = last7.reduce((s, c) => s + c.energy, 0) / last7.length;
+    if (avgStress > 7 && avgEnergy < 4) return 'ALTO';
+    if (avgStress > 6 && avgEnergy < 5) return 'MEDIO';
+    return 'BAJO';
+  })();
 
   if (loading || !user) {
     return (
@@ -456,6 +490,43 @@ export default function UserDetailScreen() {
         </PremiumCard>
 
         {/* ─────────────────────────────────────────────────── */}
+        {/* I. PREDICCIÓN & SESIÓN SEMANAL */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label="I. PREDICCIÓN & SESIÓN SEMANAL" />
+        <PremiumCard style={s.card}>
+          {burnoutRisk && (
+            <View style={s.mlRow}>
+              <Text style={s.mlLabel}>RIESGO DE BURNOUT (7 días)</Text>
+              <Text style={[s.mlValue, {
+                color: burnoutRisk === 'ALTO' ? palette.danger : burnoutRisk === 'MEDIO' ? palette.warning : palette.success,
+              }]}>
+                {burnoutRisk}
+              </Text>
+            </View>
+          )}
+          <Pressable
+            style={[s.addBtn, generatingSession && { opacity: 0.6 }]}
+            onPress={handleGenerateWeeklySession}
+            disabled={generatingSession}>
+            <MaterialIcons name="psychology" size={16} color={palette.gold} />
+            <Text style={s.addBtnText}>
+              {generatingSession ? 'GENERANDO...' : 'GENERAR SESIÓN SEMANAL NORMAN'}
+            </Text>
+          </Pressable>
+          {weeklySession && showWeeklySession && (
+            <Pressable
+              onPress={() => setShowWeeklySession(v => !v)}
+              style={s.weeklySessionBox}>
+              <View style={s.weeklySessionHeader}>
+                <Text style={s.mlLabel}>SEMANA {weeklySession.week_number} · MENSAJE</Text>
+                <MaterialIcons name="expand-less" size={16} color={palette.gold} />
+              </View>
+              <Text style={s.weeklySessionText}>{weeklySession.ai_message}</Text>
+            </Pressable>
+          )}
+        </PremiumCard>
+
+        {/* ─────────────────────────────────────────────────── */}
         {/* K. BIOMÉTRICOS */}
         {/* ─────────────────────────────────────────────────── */}
         <GoldDivider label="K. BIOMÉTRICOS" />
@@ -605,6 +676,10 @@ const s = StyleSheet.create({
   auditRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   auditAction: { fontFamily: Fonts.sans, fontSize: 12, color: palette.ivory, textTransform: 'capitalize' },
   auditTime: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+
+  weeklySessionBox: { marginTop: spacing.md, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: palette.gold },
+  weeklySessionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
+  weeklySessionText: { ...typography.body, color: palette.ash, fontStyle: 'italic', lineHeight: 20 },
 });
 
 const h = StyleSheet.create({

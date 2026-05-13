@@ -81,6 +81,15 @@ const BLOCKS: Block[] = [
   { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      color: palette.ash, type: 'journal'    },
 ];
 
+const BLOCKS_EXTENDED = [
+  { id: 'habitos',     icon: 'check-circle-outline' as const, label: 'HÁBITOS',     route: '/bienestar/habitos' },
+  { id: 'ayuno',       icon: 'timer' as const,                label: 'AYUNO',       route: '/bienestar/ayuno' },
+  { id: 'nutricion',   icon: 'restaurant' as const,           label: 'NUTRICIÓN',   route: '/bienestar/nutricion' },
+  { id: 'cuerpo',      icon: 'monitor-weight' as const,       label: 'CUERPO',      route: '/bienestar/cuerpo' },
+  { id: 'suplementos', icon: 'science' as const,              label: 'SUPLEMENTOS', route: '/bienestar/suplementacion' },
+  { id: 'comunidad',   icon: 'group' as const,                label: 'COMUNIDAD',   route: '/bienestar/comunidad' },
+];
+
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Buenos días';
@@ -308,6 +317,22 @@ export default function BienestarHub() {
         {BLOCKS.map((b) => (
           <Pressable
             key={b.route}
+            onPress={() => router.push(b.route as never)}
+            style={({ pressed }) => [styles.gridCard, pressed && { opacity: 0.75 }]}>
+            <View style={styles.gridIcon}>
+              <MaterialIcons name={b.icon} size={22} color={palette.ash} />
+            </View>
+            <Text style={styles.gridLabel}>{b.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* ── Extended blocks grid ── */}
+      <GoldDivider label="SALUD & COMUNIDAD" />
+      <View style={styles.grid}>
+        {BLOCKS_EXTENDED.map((b) => (
+          <Pressable
+            key={b.id}
             onPress={() => router.push(b.route as never)}
             style={({ pressed }) => [styles.gridCard, pressed && { opacity: 0.75 }]}>
             <View style={styles.gridIcon}>

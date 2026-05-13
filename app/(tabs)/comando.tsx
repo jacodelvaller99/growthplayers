@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,6 +21,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
+import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 
 function greeting() {
   const hour = new Date().getHours();
@@ -37,6 +38,16 @@ export default function DashboardScreen() {
   const { intelligence, engagementTier } = useUserIntelligence(userId);
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   const checkIn = todayCheckIn ?? latestCheckIn;
+
+  const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
+
+  useEffect(() => {
+    if (userId && state.profile) {
+      generateWeeklySessionIfNeeded(userId, protocolDay, state.profile)
+        .then(s => { if (s?.ai_message) setWeeklySession(s); })
+        .catch(() => {});
+    }
+  }, [userId]);
 
   // Intelligence-driven greeting suffix
   const intelligenceGreeting = (() => {
@@ -265,6 +276,26 @@ export default function DashboardScreen() {
         />
       </PremiumCard>
 
+      {/* ── Sesión Semanal Norman ── */}
+      {weeklySession && (
+        <>
+          <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
+          <PremiumCard style={styles.normanCard}>
+            <View style={styles.normanHeader}>
+              <MaterialIcons name="psychology" size={20} color={palette.gold} />
+              <Text style={styles.normanLabel}>MENSAJE SEMANAL</Text>
+            </View>
+            <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
+            <Pressable
+              onPress={() => router.push('/(tabs)/mentor')}
+              style={({ pressed }) => [styles.normanBtn, pressed && { opacity: 0.8 }]}>
+              <Text style={styles.normanBtnText}>RESPONDER A NORMAN</Text>
+              <MaterialIcons name="arrow-forward" size={14} color={palette.black} />
+            </Pressable>
+          </PremiumCard>
+        </>
+      )}
+
       {/* ── Mi Norte ── */}
       <GoldDivider label="MI NORTE" />
       <PremiumCard style={styles.northCard}>
@@ -380,6 +411,43 @@ const styles = StyleSheet.create({
   },
   northCard: {
     gap: spacing.lg,
+  },
+  normanCard: {
+    gap: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: palette.gold,
+  },
+  normanHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  normanLabel: {
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    color: palette.gold,
+    letterSpacing: 2,
+  },
+  normanMessage: {
+    ...typography.body,
+    color: palette.ash,
+    lineHeight: 22,
+    fontStyle: 'italic',
+  },
+  normanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    paddingVertical: 10,
+  },
+  normanBtnText: {
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    color: palette.black,
+    letterSpacing: 1.5,
   },
   northTitle: {
     color: palette.ivory,

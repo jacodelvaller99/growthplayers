@@ -6,11 +6,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { LifeFlowProvider, useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useSmartNotifications } from '@/hooks/use-smart-notifications';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { Colors } from '@/constants/theme';
 import OfflineBanner from '@/components/OfflineBanner';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
@@ -43,8 +45,15 @@ function AnalyticsInitializer() {
   return null;
 }
 
+// ─── Smart notifications initializer ─────────────────────────────────────────
+function SmartNotificationsInitializer() {
+  useSmartNotifications();
+  return null;
+}
+
 export default function RootLayout() {
   const router = useRouter();
+  const { isDesktop } = useBreakpoint();
 
   // ── On web, fonts are loaded via Google Fonts <link> tags in +html.tsx.
   // The @expo-google-fonts useFonts() tries to load binary files from
@@ -110,8 +119,10 @@ export default function RootLayout() {
       <LifeFlowProvider>
         <ToastProvider>
         <AnalyticsInitializer />
+        <SmartNotificationsInitializer />
         <OfflineBanner />
         <PWAInstallBanner />
+        <View style={Platform.OS === 'web' && isDesktop ? { maxWidth: 480, alignSelf: 'center' as const, width: '100%', flex: 1 } : { flex: 1 }}>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -135,6 +146,12 @@ export default function RootLayout() {
           <Stack.Screen name="bienestar/diario" options={{ headerShown: false }} />
           <Stack.Screen name="bienestar/biblioteca" options={{ headerShown: false }} />
           <Stack.Screen name="bienestar/biometrics" options={{ headerShown: false }} />
+          <Stack.Screen name="bienestar/habitos" options={{ headerShown: false }} />
+          <Stack.Screen name="bienestar/ayuno" options={{ headerShown: false }} />
+          <Stack.Screen name="bienestar/nutricion" options={{ headerShown: false }} />
+          <Stack.Screen name="bienestar/cuerpo" options={{ headerShown: false }} />
+          <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
+          <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
           <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
           <Stack.Screen name="admin" options={{ headerShown: false }} />
           <Stack.Screen name="admin/index" options={{ headerShown: false }} />
@@ -149,6 +166,7 @@ export default function RootLayout() {
           <Stack.Screen name="pricing" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="light" />
+        </View>
         </ToastProvider>
       </LifeFlowProvider>
     </ThemeProvider>

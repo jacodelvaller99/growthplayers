@@ -5,11 +5,13 @@ import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +33,7 @@ import { useMentorMemory } from '@/hooks/useMentorMemory';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { analytics } from '@/lib/analytics';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
-import { intel } from '@/lib/supabase';
+import { db2, intel } from '@/lib/supabase';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -150,6 +152,22 @@ export default function MentorScreen() {
   const [pendingUserMsg, setPendingUserMsg] = useState<MentorMessage | null>(null);
   const [loadingMore, setLoadingMore]   = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(() => state.mentorMessages.length >= 50);
+
+  // Threads state
+  const [showThreads, setShowThreads] = useState(false);
+  const [threads, setThreads] = useState<Array<{ id: string; title: string; created_at: string }>>([]);
+
+  const loadThreads = async () => {
+    if (!userId) return;
+    try {
+      const { data } = await db2.mentorThreads()
+        .select('id, title, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (data) setThreads(data as typeof threads);
+    } catch { /* tabla puede no existir */ }
+  };
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -344,6 +362,12 @@ export default function MentorScreen() {
           title="MENTOR POLARIS"
           right={
             <View style={styles.onlineBlock}>
+              <TouchableOpacity
+                onPress={() => { loadThreads(); setShowThreads(true); }}
+                style={styles.chatsBtn}
+                accessibilityLabel="Ver historial de chats">
+                <Text style={styles.chatsBtnText}>CHATS</Text>
+              </TouchableOpacity>
               <PolarisMark size={36} />
               <StatusPill
                 label={isStreaming ? 'RESPONDIENDO' : 'EN LINEA'}
@@ -468,6 +492,43 @@ export default function MentorScreen() {
         )}
       </ScrollView>
 
+      {/* ── Threads Modal ── */}
+      <Modal visible={showThreads} transparent animationType="slide">
+        <View style={styles.threadsOverlay}>
+          <View style={styles.threadsSheet}>
+            <View style={styles.threadsHeader}>
+              <Text style={styles.threadsTitle}>HISTORIAL DE CHATS</Text>
+              <Pressable onPress={() => setShowThreads(false)} style={styles.threadsClose}>
+                <MaterialIcons name="close" size={20} color={palette.ash} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {threads.length === 0 ? (
+                <Text style={styles.threadsEmpty}>Sin conversaciones guardadas aún</Text>
+              ) : (
+                threads.map(t => (
+                  <Pressable
+                    key={t.id}
+                    onPress={() => setShowThreads(false)}
+                    style={styles.threadRow}>
+                    <MaterialIcons name="chat-bubble-outline" size={16} color={palette.gold} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.threadTitle} numberOfLines={1}>
+                        {t.title || 'Conversación sin título'}
+                      </Text>
+                      <Text style={styles.threadDate}>
+                        {new Date(t.created_at).toLocaleDateString('es-CO')}
+                      </Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Input Bar ── */}
       <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.md }]}>
         <PremiumInput
@@ -509,6 +570,74 @@ const styles = StyleSheet.create({
   onlineBlock: {
     alignItems: 'flex-end',
     gap: spacing.sm,
+  },
+  chatsBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.4)',
+  },
+  chatsBtnText: {
+    fontFamily: Fonts.display,
+    fontSize: 9,
+    color: palette.gold,
+    letterSpacing: 1.5,
+  },
+  threadsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  threadsSheet: {
+    backgroundColor: '#111111',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderTopWidth: 1,
+    borderColor: palette.line,
+    maxHeight: '70%',
+    paddingBottom: 32,
+  },
+  threadsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.line,
+  },
+  threadsTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    color: palette.ivory,
+    letterSpacing: 2,
+  },
+  threadsClose: { padding: 4 },
+  threadsEmpty: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: palette.smoke,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
+  },
+  threadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  threadTitle: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    color: palette.ivory,
+  },
+  threadDate: {
+    fontSize: 11,
+    color: palette.smoke,
+    marginTop: 2,
   },
 
   // Context card
