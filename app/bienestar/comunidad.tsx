@@ -51,17 +51,32 @@ export default function ComunidadScreen() {
 
   const loadPosts = async () => {
     try {
-      // Cargar posts con join a user_profiles para obtener nombre
-      const { data } = await db2.communityPosts()
-        .select(`
-          id, user_id, content, likes_count, is_pinned, created_at,
-          user_profiles!inner(full_name)
-        `)
+      // Cargar posts (sin join — evita problema de FK en PostgREST)
+      const { data, error } = await db2.communityPosts()
+        .select('id, user_id, content, likes_count, is_pinned, created_at')
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (!data) { setPosts([]); return; }
+      if (error || !data) { setPosts([]); return; }
+
+      // Resolver nombres de autor
+      const userIds = [...new Set(data.map((p: any) => p.user_id).filter(Boolean))];
+      const nameMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        try {
+          const { supabase } = await import('@/lib/supabase');
+          const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('user_id, full_name')
+            .in('user_id', userIds);
+          if (profiles) {
+            profiles.forEach((p: any) => {
+              if (p.user_id && p.full_name) nameMap[p.user_id] = p.full_name;
+            });
+          }
+        } catch { /* silencioso */ }
+      }
 
       // Cargar likes del usuario actual
       let userLikes: Set<string> = new Set();
@@ -82,14 +97,16 @@ export default function ComunidadScreen() {
         likes_count: p.likes_count ?? 0,
         is_pinned:   p.is_pinned ?? false,
         created_at:  p.created_at,
-        author_name: p.user_profiles?.full_name ?? 'Miembro',
+        author_name: nameMap[p.user_id] ?? 'Miembro',
         liked:       userLikes.has(p.id),
       }));
 
       setPosts(mapped);
     } catch { setPosts([]); }
-    setLoading(false);
-    setRefreshing(false);
+    finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => { loadPosts(); }, [userId]);
