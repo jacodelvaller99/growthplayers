@@ -311,10 +311,21 @@ async function migrateLocalToSupabase(uid: string, s: LifeFlowState) {
 const SUPABASE_URL_VALUE = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const IS_PLACEHOLDER_URL = SUPABASE_URL_VALUE.includes('your-project') || !SUPABASE_URL_VALUE;
 
+// ─── Sync init from localStorage (web only, SPA mode — no SSR) ───────────────
+// With output:"spa" there is no server pre-render, so reading localStorage here
+// is safe and gives instant state on mount (no hydration mismatch possible).
+function getInitialState(): LifeFlowState {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem('lifeflow:v2:state');
+      if (raw) return migrateState(JSON.parse(raw) as Partial<LifeFlowState>);
+    } catch { /* ignore parse errors */ }
+  }
+  return defaultState;
+}
+
 export function LifeFlowProvider({ children }: { children: ReactNode }) {
-  // Always start with defaultState so SSG pre-render and client hydration match.
-  // localStorage is applied in useEffect (runs after hydration, client-only).
-  const [state, setState]                 = useState<LifeFlowState>(defaultState);
+  const [state, setState]                 = useState<LifeFlowState>(getInitialState);
   const [isLoaded, setIsLoaded]           = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSubscribed, setIsSubscribed]   = useState(false);
@@ -324,20 +335,6 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let tierChannel: ReturnType<typeof supabase.channel> | null = null;
-
-    // ── Step 0: apply localStorage cache now (post-hydration, client-only) ─────
-    // Reading localStorage here (not in useState initializer) eliminates the
-    // SSG/client mismatch that caused React hydration error #418.
-    let cachedState: LifeFlowState = defaultState;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem('lifeflow:v2:state');
-        if (raw) {
-          cachedState = migrateState(JSON.parse(raw) as Partial<LifeFlowState>);
-          if (mounted) setState(cachedState);
-        }
-      } catch { /* ignore parse errors */ }
-    }
 
     // ── Background refresh: runs after UI is visible, never blocks render ──────
     async function backgroundRefresh(uid: string) {
@@ -394,10 +391,11 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           .subscribe();
 
         // ── PHASE 1: instant load when cached state exists ─────────────────
-        // cachedState was read from localStorage above (post-hydration).
-        // If the user completed onboarding before, we show the UI immediately
+        // getInitialState() already read localStorage synchronously (SPA mode,
+        // no SSR — safe to read localStorage in useState initializer).
+        // If the user completed onboarding before, show the UI immediately
         // and refresh all data in the background.
-        if (cachedState.onboardingCompleted) {
+        if (state.onboardingCompleted) {
           if (mounted) setIsLoaded(true);
           backgroundRefresh(uid).catch(() => {});
           return;
