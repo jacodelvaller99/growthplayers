@@ -199,7 +199,7 @@ export default function DashboardScreen() {
       <MetricCard
         label="Modulo"
         value={`0${ACTIVE_MODULE.order}`}
-        meta={ACTIVE_MODULE.title.split(' ')[0].toLowerCase()}
+        meta={ACTIVE_MODULE.title.split(/[\s:]/)[0].toLowerCase()}
         icon="view-module"
         entryDelay={120}
         style={isDesktop ? styles.metricCardDesktop : undefined}
