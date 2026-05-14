@@ -89,6 +89,8 @@ function MainStack() {
       <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
       <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
       <Stack.Screen name="pricing" options={{ headerShown: false }} />
+      <Stack.Screen name="oauth/whoop/callback" options={{ headerShown: false }} />
+      <Stack.Screen name="oauth/oura/callback"  options={{ headerShown: false }} />
     </Stack>
   );
 }
