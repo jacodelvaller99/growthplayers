@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, screen } from '@/components/polaris';
+import { GoldDivider, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 
 // ─── Time chips ───────────────────────────────────────────────────────────────
@@ -47,6 +47,7 @@ const RECENT = [
 ];
 
 export default function BibliotecaScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery]           = useState('');
@@ -64,8 +65,8 @@ export default function BibliotecaScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled">
 

@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, PrimaryButton, SecondaryButton, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, PrimaryButton, SecondaryButton, screen, useScreen } from '@/components/polaris';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -78,6 +78,7 @@ function PlanCard({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PricingScreen() {
+  const sc = useScreen();
   const router   = useRouter();
   const insets   = useSafeAreaInsets();
   const { state, userId, refreshTier } = useLifeFlow();
@@ -117,8 +118,8 @@ export default function PricingScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + spacing.lg }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + spacing.lg }]}
       showsVerticalScrollIndicator={false}>
 
       {/* Header */}

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -177,6 +177,7 @@ const wearableCardStyles = StyleSheet.create({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function BienestarHub() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state } = useLifeFlow();
@@ -241,8 +242,8 @@ export default function BienestarHub() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled">
 

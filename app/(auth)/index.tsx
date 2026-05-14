@@ -19,6 +19,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -26,6 +27,7 @@ import { supabase } from '@/lib/supabase';
 type AuthMode = 'login' | 'register' | 'forgot';
 
 export default function AuthScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [mode, setMode]         = useState<AuthMode>('login');
@@ -183,11 +185,11 @@ export default function AuthScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={screen.root}
+      style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
       <ScrollView
-        contentContainerStyle={[screen.content, { paddingTop: insets.top + 32 }]}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 32 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
 

@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, StatusPill } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
 import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -110,6 +110,7 @@ const SECTIONS: SectionCard[] = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MissionControl() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
@@ -162,7 +163,7 @@ export default function MissionControl() {
 
   if (loading) {
     return (
-      <View style={[screen.root, s.center]}>
+      <View style={[sc.root, s.center]}>
         <ActivityIndicator color={palette.gold} size="large" />
         <Text style={s.loadingText}>Cargando CMI...</Text>
       </View>
@@ -171,8 +172,8 @@ export default function MissionControl() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + spacing.lg }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + spacing.lg }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.gold} />

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -289,6 +289,7 @@ function BreathPlayer({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function RespiracionScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { saveWellnessSession } = useLifeFlow();
@@ -318,8 +319,8 @@ export default function RespiracionScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}>
 
       {/* Header */}

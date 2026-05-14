@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { createAccessCode, deactivateAccessCode } from '@/lib/admin/actions';
@@ -74,6 +74,7 @@ function CodeRow({ code, onCopy, onDeactivate }: { code: AccessCode; onCopy: () 
 }
 
 export default function CodigosScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId: adminId } = useLifeFlow();
@@ -149,7 +150,7 @@ export default function CodigosScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
+      style={sc.root}
       contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled">

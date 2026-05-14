@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, StatusPill } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { recalculateAllMLAction } from '@/lib/admin/actions';
@@ -90,6 +90,7 @@ function AtRiskRow({ user, onPress }: { user: AtRiskUser; onPress: () => void })
 }
 
 export default function InteligenciaScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId: adminId } = useLifeFlow();
@@ -127,7 +128,7 @@ export default function InteligenciaScreen() {
 
   if (loading) {
     return (
-      <View style={[screen.root, s.center]}>
+      <View style={[sc.root, s.center]}>
         <ActivityIndicator color={palette.gold} size="large" />
       </View>
     );
@@ -137,7 +138,7 @@ export default function InteligenciaScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
+      style={sc.root}
       contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.gold} />}>

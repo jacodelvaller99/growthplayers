@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, StatusPill, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
@@ -320,6 +320,7 @@ function MeditationPlayer({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function MeditacionScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { saveWellnessSession, state } = useLifeFlow();
@@ -358,8 +359,8 @@ export default function MeditacionScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}>
 
       <View style={styles.topRow}>

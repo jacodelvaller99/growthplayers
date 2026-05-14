@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldAccentCard, GoldDivider, PremiumCard, screen, StatusPill } from '@/components/polaris';
+import { GoldAccentCard, GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
 import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -143,6 +143,7 @@ function NormanModal({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function UserDetailScreen() {
+  const sc = useScreen();
   const { id: userId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -243,7 +244,7 @@ export default function UserDetailScreen() {
 
   if (loading || !user) {
     return (
-      <View style={[screen.root, s.center]}>
+      <View style={[sc.root, s.center]}>
         <ActivityIndicator color={palette.gold} />
       </View>
     );
@@ -254,7 +255,7 @@ export default function UserDetailScreen() {
   return (
     <>
       <ScrollView
-        style={screen.root}
+        style={sc.root}
         contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}>
 

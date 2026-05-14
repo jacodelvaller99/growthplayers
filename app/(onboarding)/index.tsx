@@ -16,6 +16,7 @@ import {
   SecondaryButton,
   StatusPill,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -51,6 +52,7 @@ const programs = [
 const TOTAL_STEPS = 5;
 
 export default function OnboardingScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { completeOnboarding, state, userId } = useLifeFlow();
@@ -99,11 +101,11 @@ export default function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={screen.root}
+      style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
     <ScrollView
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"

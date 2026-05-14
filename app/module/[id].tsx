@@ -12,6 +12,7 @@ import {
   SecondaryButton,
   StatusPill,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -46,6 +47,7 @@ function deriveLessonStatus(
 }
 
 export default function ModuleDetailScreen() {
+  const sc = useScreen();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -67,8 +69,8 @@ export default function ModuleDetailScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"

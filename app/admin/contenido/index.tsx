@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { fetchJournalEntries, fetchMentorConversations } from '@/lib/admin/queries';
 import type { JournalEntry, MentorConversation } from '@/lib/admin/types';
@@ -95,6 +95,7 @@ function ConvThread({ convs, userId, onUserPress }: {
 }
 
 export default function ContenidoScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -126,7 +127,7 @@ export default function ContenidoScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
+      style={sc.root}
       contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.gold} />}>

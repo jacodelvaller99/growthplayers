@@ -25,6 +25,7 @@ import {
   PremiumInput,
   StatusPill,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -129,6 +130,7 @@ function TypingBubble({ text }: { text: string }) {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function MentorScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
@@ -347,12 +349,12 @@ export default function MentorScreen() {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
-      style={screen.root}
+      style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }, styles.content]}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }, styles.content]}
         showsVerticalScrollIndicator={false}
         bounces
         overScrollMode="never"

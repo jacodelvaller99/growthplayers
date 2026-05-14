@@ -616,6 +616,23 @@ export const screen = StyleSheet.create({
   },
 });
 
+/**
+ * Returns responsive screen styles.
+ * On desktop (≥1200px): full width, wider padding, no maxWidth cap.
+ * On mobile: identical to the static `screen` export.
+ */
+export function useScreen() {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1200;
+  return {
+    root: screen.root,
+    content: isDesktop
+      ? ({ paddingHorizontal: 48, paddingTop: 32, paddingBottom: 80, gap: spacing.xl } as const)
+      : screen.content,
+    isDesktop,
+  };
+}
+
 // ─── Internal Styles ─────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({

@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useWellnessStore } from '@/store/wellnessStore';
 
@@ -133,6 +133,7 @@ const SLEEP_CATEGORIES: {
 ];
 
 export default function SuenoScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, startSession } = useWellnessStore();
@@ -154,8 +155,8 @@ export default function SuenoScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}>
 
       {/* Header */}

@@ -22,6 +22,7 @@ import {
   StateMeter,
   StatusPill,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -39,6 +40,7 @@ function greeting() {
 }
 
 export default function DashboardScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
@@ -289,11 +291,11 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
+      style={sc.root}
       contentContainerStyle={
         isDesktop
           ? styles.contentDesktop
-          : [screen.content, { paddingTop: insets.top + 16 }]
+          : [sc.content, { paddingTop: insets.top + 16 }]
       }
       showsVerticalScrollIndicator={false}
       bounces

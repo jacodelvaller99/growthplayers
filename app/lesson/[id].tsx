@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SkoolVideo } from '@/components/SkoolVideo';
-import { GoldDivider, PrimaryButton, SecondaryButton, screen } from '@/components/polaris';
+import { GoldDivider, PrimaryButton, SecondaryButton, screen, useScreen } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -168,6 +168,7 @@ function TaskForm({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function LessonScreen() {
+  const sc = useScreen();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id: lessonId } = useLocalSearchParams<{ id: string }>();
@@ -234,7 +235,7 @@ export default function LessonScreen() {
 
   if (!meta) {
     return (
-      <View style={[screen.root, styles.center]}>
+      <View style={[sc.root, styles.center]}>
         <Text style={styles.errorText}>Lección no encontrada.</Text>
         <SecondaryButton label="VOLVER" icon="arrow-back" onPress={() => router.back()} />
       </View>
@@ -254,7 +255,7 @@ export default function LessonScreen() {
       keyboardVerticalOffset={insets.top}>
       <ScrollView
         ref={scrollRef}
-        style={screen.root}
+        style={sc.root}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32, paddingHorizontal: 20 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">

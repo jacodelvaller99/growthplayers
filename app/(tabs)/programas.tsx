@@ -13,6 +13,7 @@ import {
   ProgressCard,
   StatusPill,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -48,6 +49,7 @@ function isModuleUnlocked(
 }
 
 export default function ProgramasScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state } = useLifeFlow();
@@ -68,8 +70,8 @@ export default function ProgramasScreen() {
   return (
     <View style={styles.root}>
       <ScrollView
-        style={screen.root}
-        contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+        style={sc.root}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
         showsVerticalScrollIndicator={false}
         bounces
         overScrollMode="never"

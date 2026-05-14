@@ -14,6 +14,7 @@ import {
   ScaleSelector,
   SecondaryButton,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -26,6 +27,7 @@ function todayLabel() {
 }
 
 export default function CheckInScreen() {
+  const sc = useScreen();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { todayCheckIn, saveCheckIn } = useLifeFlow();
@@ -62,11 +64,11 @@ export default function CheckInScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={screen.root}
+      style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
     <ScrollView
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"

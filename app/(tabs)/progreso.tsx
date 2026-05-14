@@ -21,6 +21,7 @@ import {
   StatusPill,
   WeeklySparkline,
   screen,
+  useScreen,
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -38,6 +39,7 @@ import {
 import type { NorthStar } from '@/types/lifeflow';
 
 export default function ProgresoScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
@@ -289,11 +291,11 @@ export default function ProgresoScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={screen.root}
+      style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
     <ScrollView
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"

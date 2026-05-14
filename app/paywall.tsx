@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, screen } from '@/components/polaris';
+import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import {
   checkSubscription,
@@ -28,6 +28,7 @@ type PurchasesPackage = {
 };
 
 export default function PaywallScreen() {
+  const sc = useScreen();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -112,8 +113,8 @@ export default function PaywallScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode={Platform.OS === 'android' ? 'never' : undefined}>

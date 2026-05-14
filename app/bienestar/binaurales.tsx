@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import {
   AMBIENCE_OPTIONS,
@@ -208,6 +208,7 @@ function BinauralPlayer({
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
+  const sc = useScreen();
   const {
     startSession: storeStart,
     stopSession: storeStop,
@@ -352,8 +353,8 @@ function BinauralPlayer({
 
   return (
     <ScrollView
-      style={[screen.root]}
-      contentContainerStyle={[screen.content, { paddingTop: 56, alignItems: 'center' }]}
+      style={[sc.root]}
+      contentContainerStyle={[sc.content, { paddingTop: 56, alignItems: 'center' }]}
       showsVerticalScrollIndicator={false}>
 
       {/* Header */}
@@ -569,6 +570,7 @@ const ring = StyleSheet.create({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BinauralesScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { saveWellnessSession } = useLifeFlow();
@@ -600,8 +602,8 @@ export default function BinauralesScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}>
 
       {/* Header */}

@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import {
   useWearableConnections,
@@ -135,6 +135,7 @@ const weeklyStyles = StyleSheet.create({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function BiometricsScreen() {
+  const sc = useScreen();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
 
@@ -149,8 +150,8 @@ export default function BiometricsScreen() {
   if (!hasWearable) {
     return (
       <ScrollView
-        style={screen.root}
-        contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}>
+        style={sc.root}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}>
         <View style={styles.topRow}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
@@ -188,9 +189,9 @@ export default function BiometricsScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
+      style={sc.root}
       contentContainerStyle={[
-        screen.content,
+        sc.content,
         { paddingTop: insets.top + 16, paddingBottom: 80 },
       ]}
       showsVerticalScrollIndicator={false}>

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,6 +67,7 @@ const PROVIDERS: {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function WearablesScreen() {
+  const sc = useScreen();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const params  = useLocalSearchParams<{ connected?: string; error?: string }>();
@@ -146,9 +147,9 @@ export default function WearablesScreen() {
 
   return (
     <ScrollView
-      style={screen.root}
+      style={sc.root}
       contentContainerStyle={[
-        screen.content,
+        sc.content,
         { paddingTop: insets.top + 16, paddingBottom: 80 },
       ]}
       showsVerticalScrollIndicator={false}>

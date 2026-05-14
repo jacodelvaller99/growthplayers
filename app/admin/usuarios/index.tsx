@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, screen } from '@/components/polaris';
+import { GoldDivider, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { fetchUsers } from '@/lib/admin/queries';
 import type { AdminUser } from '@/lib/admin/types';
@@ -80,6 +80,7 @@ function UserRow({ user, onPress }: { user: AdminUser; onPress: () => void }) {
 }
 
 export default function UsuariosScreen() {
+  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -111,14 +112,14 @@ export default function UsuariosScreen() {
 
   if (loading) {
     return (
-      <View style={[screen.root, s.center]}>
+      <View style={[sc.root, s.center]}>
         <ActivityIndicator color={palette.gold} />
       </View>
     );
   }
 
   return (
-    <View style={[screen.root, { paddingTop: insets.top + spacing.lg }]}>
+    <View style={[sc.root, { paddingTop: insets.top + spacing.lg }]}>
       {/* Header */}
       <View style={s.header}>
         <Pressable onPress={() => router.back()} style={s.backBtn}>
