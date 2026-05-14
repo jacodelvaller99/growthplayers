@@ -17,6 +17,7 @@ import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polari
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useWearableConnections, useWearableDaily, recoveryLabel } from '@/lib/wearables';
 
 // ─── Daily phrases (stoic / logotherapy) ─────────────────────────────────────
@@ -178,6 +179,7 @@ const wearableCardStyles = StyleSheet.create({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function BienestarHub() {
   const sc = useScreen();
+  const { isDesktop } = useBreakpoint();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state } = useLifeFlow();
@@ -240,6 +242,137 @@ export default function BienestarHub() {
 
   const phrase = useMemo(() => getTodayPhrase(), []);
 
+  // ── Desktop layout ──────────────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <ScrollView
+        style={sc.root}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 60 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+
+        <View style={desktopStyles.contentWrap}>
+
+          {/* ── Header row ── */}
+          <View style={styles.topRow}>
+            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+              <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
+            </Pressable>
+            <Text style={styles.screenTitle}>BIENESTAR</Text>
+            <View style={{ width: 36 }} />
+          </View>
+
+          <View style={desktopStyles.row}>
+
+            {/* ──────────────── LEFT COLUMN ──────────────── */}
+            <View style={desktopStyles.left}>
+
+              {/* Wearable card */}
+              <WearableCard router={router} />
+
+              {/* PRÁCTICA grid */}
+              <GoldDivider label="PRÁCTICA" />
+              <View style={desktopStyles.blocksGrid}>
+                {BLOCKS.map((block) => (
+                  <Pressable
+                    key={block.route}
+                    onPress={() => router.push(block.route as never)}
+                    style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
+                    <MaterialIcons name={block.icon} size={28} color={palette.ash} />
+                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* SISTEMA INTEGRAL grid */}
+              <GoldDivider label="SISTEMA INTEGRAL" />
+              <View style={desktopStyles.blocksGrid}>
+                {BLOCKS_EXTENDED.map((block) => (
+                  <Pressable
+                    key={block.route}
+                    onPress={() => router.push(block.route as never)}
+                    style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
+                    <MaterialIcons name={block.icon} size={28} color={palette.ash} />
+                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+            </View>
+            {/* ──────────────── RIGHT COLUMN ──────────────── */}
+            <View style={desktopStyles.right}>
+
+              {/* Stats card */}
+              <PremiumCard>
+                <Text style={[styles.chipsLabel, { marginBottom: spacing.md }]}>ESTA SEMANA</Text>
+                <View style={styles.statsRow}>
+                  <View style={styles.stat}>
+                    <Text style={styles.statValue}>{stats.weekSessions}</Text>
+                    <Text style={styles.statLabel}>SESIONES</Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.stat}>
+                    <Text style={styles.statValue}>{stats.weekMinutes}</Text>
+                    <Text style={styles.statLabel}>MINUTOS</Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.stat}>
+                    <Text style={styles.statValue}>{streak}</Text>
+                    <Text style={styles.statLabel}>DÍAS/SEM</Text>
+                  </View>
+                </View>
+
+                {/* Week dots */}
+                <View style={[styles.dotRow, { justifyContent: 'center', marginTop: spacing.md }]}>
+                  {DAY_LABELS.map((label, i) => (
+                    <View key={label} style={styles.dotItem}>
+                      <View style={[styles.dot, weekDots[i] && styles.dotActive]} />
+                      <Text style={styles.dotLabel}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </PremiumCard>
+
+              {/* Journal rápido */}
+              <GoldDivider label="DIARIO RÁPIDO" />
+              <PremiumCard style={{ gap: spacing.md }}>
+                <TextInput
+                  style={styles.journalInput}
+                  multiline
+                  value={journalText}
+                  onChangeText={setJournalText}
+                  placeholder="Escribe tu reflexión de hoy..."
+                  placeholderTextColor={palette.smoke}
+                  textAlignVertical="top"
+                  returnKeyType="default"
+                />
+                <Pressable
+                  style={[styles.journalBtn, (!journalText.trim() || saving) && styles.journalBtnDisabled]}
+                  onPress={saveJournal}
+                  disabled={!journalText.trim() || saving}>
+                  {saving
+                    ? <ActivityIndicator size="small" color={palette.black} />
+                    : journalSaved
+                      ? <MaterialIcons name="check" size={18} color={palette.black} />
+                      : <Text style={styles.journalBtnText}>GUARDAR</Text>
+                  }
+                </Pressable>
+              </PremiumCard>
+
+              {/* Frase del día */}
+              <PremiumCard style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+                <MaterialIcons name="format-quote" size={20} color={palette.goldMuted} />
+                <Text style={styles.phraseText}>{phrase}</Text>
+              </PremiumCard>
+
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // ── Mobile layout ────────────────────────────────────────────────────────────
   return (
     <ScrollView
       style={sc.root}
@@ -505,4 +638,49 @@ const styles = StyleSheet.create({
   },
   journalBtnDisabled: { opacity: 0.4 },
   journalBtnText: { ...typography.label, color: palette.black, fontWeight: '700' },
+});
+
+// ─── Desktop-only styles ──────────────────────────────────────────────────────
+const desktopStyles = StyleSheet.create({
+  contentWrap: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 1200,
+    paddingHorizontal: 40,
+    paddingTop: 32,
+    paddingBottom: 60,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 32,
+    alignItems: 'flex-start',
+  },
+  left: {
+    flex: 3,
+    gap: 16,
+  },
+  right: {
+    flex: 2,
+    gap: 16,
+  },
+  blocksGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  gridCard: {
+    width: '31%',
+    aspectRatio: 1.2,
+    backgroundColor: palette.graphite,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  gridLabel: {
+    ...typography.label,
+    color: palette.ivory,
+    fontSize: 10,
+    textAlign: 'center',
+  },
 });

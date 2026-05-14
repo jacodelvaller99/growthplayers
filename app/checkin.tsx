@@ -17,6 +17,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
 
@@ -28,6 +29,7 @@ function todayLabel() {
 
 export default function CheckInScreen() {
   const sc = useScreen();
+  const { isDesktop } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { todayCheckIn, saveCheckIn } = useLifeFlow();
@@ -62,6 +64,117 @@ export default function CheckInScreen() {
     router.replace('/(tabs)/comando');
   };
 
+  // ── Shared JSX blocks ──────────────────────────────────────────────────────
+  const coherenceCard = (
+    <PremiumCard style={styles.coherenceCard}>
+      <Text style={styles.coherenceEyebrow}>COHERENCIA DEL SISTEMA</Text>
+      <View style={styles.coherenceRow}>
+        <Text style={[styles.coherenceScore, coherenceStrong && styles.coherenceScoreStrong]}>
+          {coherence}
+        </Text>
+        <Text style={styles.coherenceDenom}>/10</Text>
+      </View>
+      <View style={styles.coherenceTrack}>
+        <View
+          style={[
+            styles.coherenceFill,
+            {
+              width: `${coherence * 10}%` as `${number}%`,
+              backgroundColor: coherenceStrong ? palette.gold : palette.smoke,
+            },
+          ]}
+        />
+      </View>
+      <Text style={[styles.coherenceStatus, coherenceStrong && { color: palette.gold }]}>
+        {coherenceLabel}
+      </Text>
+    </PremiumCard>
+  );
+
+  const systemNeedCard = (
+    <PremiumCard style={styles.card}>
+      <Text style={styles.systemLabel}>QUE NECESITA TU SISTEMA HOY</Text>
+      <PremiumInput
+        value={systemNeed}
+        onChangeText={setSystemNeed}
+        placeholder="Escribe una lectura honesta de lo que necesitas..."
+        multiline
+        style={styles.textArea}
+        accessibilityLabel="Que necesita tu sistema hoy"
+      />
+    </PremiumCard>
+  );
+
+  // ── Desktop layout ──────────────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <KeyboardAvoidingView
+        style={sc.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={insets.top}>
+        <ScrollView
+          contentContainerStyle={[styles.contentDesktop, { paddingTop: insets.top + 32 }]}
+          showsVerticalScrollIndicator={false}
+          bounces
+          overScrollMode="never"
+          keyboardShouldPersistTaps="handled">
+          <AppHeader title="CHECK-IN DIARIO" />
+
+          <View style={styles.desktopGrid}>
+            {/* ── Left column: Biometría ── */}
+            <View style={styles.desktopLeft}>
+              <GoldAccentCard>
+                <Text style={styles.dateLabel}>{todayLabel()}</Text>
+                <Text style={styles.introTitle}>LEE EL{'\n'}SISTEMA.</Text>
+                <Text style={styles.introBody}>
+                  Esta medicion calibra tu dashboard, mentor y score soberano. La honestidad aqui es
+                  una ventaja competitiva.
+                </Text>
+              </GoldAccentCard>
+
+              <GoldDivider label="BIOMETRIA" />
+
+              <PremiumCard style={styles.card}>
+                <ScaleSelector label="ENERGIA" value={energy} onChange={setEnergy} icon="bolt" />
+                <ScaleSelector
+                  label="CLARIDAD MENTAL"
+                  value={clarity}
+                  onChange={setClarity}
+                  icon="center-focus-strong"
+                />
+                <ScaleSelector
+                  label="ESTRES"
+                  value={stress}
+                  onChange={setStress}
+                  icon="device-thermostat"
+                />
+                <ScaleSelector
+                  label="CALIDAD DE SUEÑO"
+                  value={sleep}
+                  onChange={setSleep}
+                  icon="bedtime"
+                />
+              </PremiumCard>
+            </View>
+
+            {/* ── Right column: Coherencia + Necesidad ── */}
+            <View style={styles.desktopRight}>
+              {coherenceCard}
+
+              <GoldDivider label="LECTURA INTERNA" />
+
+              {systemNeedCard}
+
+              <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+              <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ── Mobile layout (unchanged) ───────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={sc.root}
@@ -105,43 +218,11 @@ export default function CheckInScreen() {
       </PremiumCard>
 
       {/* ── Real-time Coherence Preview ── */}
-      <PremiumCard style={styles.coherenceCard}>
-        <Text style={styles.coherenceEyebrow}>COHERENCIA DEL SISTEMA</Text>
-        <View style={styles.coherenceRow}>
-          <Text style={[styles.coherenceScore, coherenceStrong && styles.coherenceScoreStrong]}>
-            {coherence}
-          </Text>
-          <Text style={styles.coherenceDenom}>/10</Text>
-        </View>
-        <View style={styles.coherenceTrack}>
-          <View
-            style={[
-              styles.coherenceFill,
-              {
-                width: `${coherence * 10}%`,
-                backgroundColor: coherenceStrong ? palette.gold : palette.smoke,
-              },
-            ]}
-          />
-        </View>
-        <Text style={[styles.coherenceStatus, coherenceStrong && { color: palette.gold }]}>
-          {coherenceLabel}
-        </Text>
-      </PremiumCard>
+      {coherenceCard}
 
       {/* ── System Need ── */}
       <GoldDivider label="LECTURA INTERNA" />
-      <PremiumCard style={styles.card}>
-        <Text style={styles.systemLabel}>QUE NECESITA TU SISTEMA HOY</Text>
-        <PremiumInput
-          value={systemNeed}
-          onChangeText={setSystemNeed}
-          placeholder="Escribe una lectura honesta de lo que necesitas..."
-          multiline
-          style={styles.textArea}
-          accessibilityLabel="Que necesita tu sistema hoy"
-        />
-      </PremiumCard>
+      {systemNeedCard}
 
       <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
       <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
@@ -230,5 +311,29 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: spacing.lg,
     textAlignVertical: 'top',
+  },
+
+  // Desktop layout
+  contentDesktop: {
+    alignSelf: 'center' as const,
+    width: '100%',
+    maxWidth: 1200,
+    paddingHorizontal: 40,
+    paddingTop: 32,
+    paddingBottom: 60,
+    gap: 24,
+  },
+  desktopGrid: {
+    flexDirection: 'row' as const,
+    gap: 32,
+    alignItems: 'flex-start' as const,
+  },
+  desktopLeft: {
+    flex: 1,
+    gap: 16,
+  },
+  desktopRight: {
+    flex: 1,
+    gap: 16,
   },
 });

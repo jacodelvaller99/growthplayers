@@ -16,10 +16,12 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 export default function NorteScreen() {
   const sc = useScreen();
+  const { isDesktop } = useBreakpoint();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state, updateNorthStar } = useLifeFlow();
@@ -43,6 +45,123 @@ export default function NorteScreen() {
         .filter(Boolean),
     });
 
+  // ── Desktop layout ────────────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <KeyboardAvoidingView style={sc.root} behavior="padding">
+        <ScrollView
+          contentContainerStyle={styles.contentDesktop}
+          showsVerticalScrollIndicator={false}
+          bounces
+          overScrollMode="never"
+          keyboardShouldPersistTaps="handled">
+          <AppHeader title="MI NORTE" />
+          <View style={styles.desktopGrid}>
+            {/* ── Left column: preview ── */}
+            <View style={styles.desktopLeft}>
+              <GoldAccentCard>
+                <StatusPill label="DIRECCION MAESTRA" dot />
+                <Text style={styles.purposeStatement}>
+                  {purpose || 'Define tu proposito principal'}
+                </Text>
+                <Text style={styles.identityStatement}>
+                  {identity || 'Define tu identidad'}
+                </Text>
+              </GoldAccentCard>
+
+              {isNorteEmpty && (
+                <Pressable
+                  onPress={() => router.push('/(onboarding)' as never)}
+                  style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
+                  <MaterialIcons name="explore" size={20} color={palette.gold} />
+                  <Text style={styles.emptyCtaText}>
+                    Tu Norte guía cada decisión. Configúralo ahora →
+                  </Text>
+                </Pressable>
+              )}
+
+              {state.northStar.dailyReminder ? (
+                <PremiumCard style={styles.reminderCard}>
+                  <Text style={styles.reminderLabel}>RECORDATORIO DIARIO</Text>
+                  <Text style={styles.reminderText}>{state.northStar.dailyReminder}</Text>
+                </PremiumCard>
+              ) : null}
+
+              {state.northStar.nonNegotiables.length > 0 && (
+                <>
+                  <GoldDivider label="NO NEGOCIABLES" />
+                  <View style={styles.ruleList}>
+                    {state.northStar.nonNegotiables.map((item, index) => (
+                      <PremiumCard key={`${item}-${index}`} style={styles.ruleCard}>
+                        <Text style={styles.ruleIndex}>
+                          {String(index + 1).padStart(2, '0')}
+                        </Text>
+                        <Text style={styles.ruleText}>{item}</Text>
+                      </PremiumCard>
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* ── Right column: edit form ── */}
+            <View style={styles.desktopRight}>
+              <GoldDivider label="EDITAR NORTE" />
+              <PremiumCard style={styles.form}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>PROPOSITO PRINCIPAL</Text>
+                  <PremiumInput
+                    value={purpose}
+                    onChangeText={setPurpose}
+                    multiline
+                    style={styles.textArea}
+                    placeholder="¿Por que operas a este nivel?"
+                    accessibilityLabel="Proposito principal"
+                  />
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>DECLARACION DE IDENTIDAD</Text>
+                  <PremiumInput
+                    value={identity}
+                    onChangeText={setIdentity}
+                    multiline
+                    style={styles.textArea}
+                    placeholder="Soy alguien que..."
+                    accessibilityLabel="Declaracion de identidad"
+                  />
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LINEA</Text>
+                  <PremiumInput
+                    value={nonNegotiables}
+                    onChangeText={setNonNegotiables}
+                    multiline
+                    style={styles.textAreaLarge}
+                    placeholder="Primer principio&#10;Segundo principio&#10;..."
+                    accessibilityLabel="No negociables"
+                  />
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>RECORDATORIO DIARIO</Text>
+                  <PremiumInput
+                    value={dailyReminder}
+                    onChangeText={setDailyReminder}
+                    multiline
+                    style={styles.textArea}
+                    placeholder="La frase que te ancla cada mañana..."
+                    accessibilityLabel="Recordatorio diario"
+                  />
+                </View>
+                <PrimaryButton label="GUARDAR NORTE" icon="check" onPress={save} />
+              </PremiumCard>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ── Mobile / tablet layout (unchanged) ───────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={sc.root}
@@ -155,6 +274,30 @@ export default function NorteScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Desktop layout
+  contentDesktop: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 1200,
+    paddingHorizontal: 40,
+    paddingTop: 32,
+    paddingBottom: 60,
+    gap: 24,
+  },
+  desktopGrid: {
+    flexDirection: 'row',
+    gap: 32,
+    alignItems: 'flex-start',
+  },
+  desktopLeft: {
+    flex: 1,
+    gap: 16,
+  },
+  desktopRight: {
+    flex: 1,
+    gap: 16,
+  },
+
   // Purpose display
   purposeStatement: {
     color: palette.ivory,

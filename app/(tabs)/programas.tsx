@@ -17,6 +17,7 @@ import {
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 function statusTone(status: string) {
@@ -50,6 +51,7 @@ function isModuleUnlocked(
 
 export default function ProgramasScreen() {
   const sc = useScreen();
+  const { isDesktop } = useBreakpoint();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state } = useLifeFlow();
@@ -67,6 +69,157 @@ export default function ProgramasScreen() {
     ? Math.round((completedLessons.length / totalLessons) * 100)
     : 0;
 
+  // ── Module card renderer (shared between mobile and desktop) ──────────────
+  const renderModuleCard = (module: typeof POLARIS_MODULES[number], idx: number, wrapStyle?: object) => {
+    const isComingSoon = module.status === 'coming_soon';
+    const unlocked = isModuleUnlocked(POLARIS_MODULES, idx, completedLessons);
+    const isLocked = !unlocked && !isComingSoon;
+    const moduleDone = module.lessons.filter((l) => completedLessons.includes(l.id)).length;
+    const isAllDone = module.lessons.length > 0 && moduleDone === module.lessons.length;
+    const moduleProgress = module.lessons.length > 0
+      ? Math.round((moduleDone / module.lessons.length) * 100)
+      : 0;
+    const effectiveStatus = isAllDone ? 'completed' : unlocked ? 'active' : module.status;
+    const isActive = effectiveStatus === 'active';
+
+    return (
+      <View key={module.id} style={wrapStyle}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Modulo ${module.order}: ${module.title}`}
+          onPress={() => {
+            if (isComingSoon) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              showToast('Este módulo se publica próximamente');
+              return;
+            }
+            if (isLocked) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              showToast('Completa el módulo anterior para desbloquear este');
+              return;
+            }
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push({ pathname: '/module/[id]', params: { id: module.id } });
+          }}
+          style={({ pressed }) => [pressed && { opacity: 0.82 }]}>
+          <PremiumCard style={[styles.moduleCard, isActive && styles.moduleCardActive, isDesktop && styles.moduleCardDesktop]}>
+            {isActive && <View style={styles.activeStripe} />}
+            <View style={[styles.moduleInner, !isActive && styles.moduleInnerFull]}>
+              <View style={styles.moduleTop}>
+                <Text style={[styles.moduleNumber, isActive && styles.moduleNumberActive]}>
+                  {String(module.order).padStart(2, '0')}
+                </Text>
+                <StatusPill
+                  label={statusLabel(effectiveStatus)}
+                  tone={statusTone(effectiveStatus)}
+                />
+              </View>
+              <Text style={styles.moduleTitle}>{module.title}</Text>
+              <Text style={styles.moduleSubtitle}>{module.subtitle}</Text>
+              <View style={styles.moduleFooter}>
+                <Text style={styles.moduleLessons}>
+                  {isComingSoon ? 'PRÓXIMAMENTE' : `${module.lessons.length} LECCIONES`}
+                </Text>
+                {!isComingSoon && !isLocked && (
+                  <View style={styles.progressWrap}>
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
+                    </View>
+                    <Text style={styles.progressPct}>{moduleProgress}%</Text>
+                  </View>
+                )}
+                <MaterialIcons
+                  name={isComingSoon || isLocked ? 'lock' : 'chevron-right'}
+                  size={20}
+                  color={isActive ? palette.black : palette.gold}
+                />
+              </View>
+            </View>
+            {/* Locked/coming-soon overlay */}
+            {(isComingSoon || isLocked) && <View style={styles.comingSoonOverlay} />}
+          </PremiumCard>
+        </Pressable>
+
+        {/* Explorar en Skool — for coming_soon or locked modules with a URL */}
+        {(isComingSoon || isLocked) && module.skoolUrl && (
+          <Pressable
+            style={({ pressed }) => [styles.skoolLink, pressed && { opacity: 0.7 }]}
+            onPress={() => Linking.openURL(module.skoolUrl!)}>
+            <MaterialIcons name="open-in-new" size={12} color={palette.gold} />
+            <Text style={styles.skoolLinkText}>Explorar en Skool →</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  };
+
+  // ── DESKTOP LAYOUT ────────────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <View style={styles.root}>
+        <ScrollView
+          style={sc.root}
+          contentContainerStyle={styles.contentDesktop}
+          showsVerticalScrollIndicator={false}
+          bounces
+          overScrollMode="never"
+          keyboardShouldPersistTaps="handled">
+          <AppHeader title="PROGRAMA" />
+
+          {/* Hero row — left title + stats + progress */}
+          <View style={styles.desktopHero}>
+            <View style={styles.desktopHeroLeft}>
+              <Text style={styles.heroEyebrow}>PROTOCOLO SOBERANO</Text>
+              <Text style={styles.heroTitle}>90 DÍAS DE{'\n'}EJECUCIÓN.</Text>
+              <StatusPill label="ACTIVO" tone="gold" dot />
+            </View>
+
+            <View style={styles.desktopHeroStats}>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatNum}>{completedCount}</Text>
+                <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}COMPLETADOS</Text>
+              </View>
+              <View style={styles.heroStatDivider} />
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatNum}>{POLARIS_MODULES.length}</Text>
+                <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}TOTALES</Text>
+              </View>
+              <View style={styles.heroStatDivider} />
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatNum}>{totalLessons}</Text>
+                <Text style={styles.heroStatMeta}>LECCIONES{'\n'}EN TOTAL</Text>
+              </View>
+            </View>
+
+            <View style={styles.desktopHeroProgress}>
+              <ProgressCard
+                label="Avance total"
+                value={`${overallProgress}% · ${completedLessons.length}/${totalLessons} lecciones`}
+                progress={overallProgress}
+              />
+            </View>
+          </View>
+
+          {/* Module grid — 2 columns */}
+          <GoldDivider label="MÓDULOS" />
+          <View style={styles.desktopModuleGrid}>
+            {POLARIS_MODULES.map((module, idx) =>
+              renderModuleCard(module, idx, styles.desktopModuleItem),
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Toast */}
+        {toast && (
+          <View style={[styles.toast, { bottom: insets.bottom + 16 }]}>
+            <Text style={styles.toastText}>{toast}</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // ── MOBILE / TABLET LAYOUT (original, untouched) ─────────────────────────
   return (
     <View style={styles.root}>
       <ScrollView
@@ -285,6 +438,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.gold,
     borderColor: palette.gold,
   },
+  moduleCardDesktop: {
+    minHeight: 160,
+  },
   activeStripe: {
     backgroundColor: palette.black,
     opacity: 0.18,
@@ -399,5 +555,47 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: palette.ivory,
     textAlign: 'center',
+  },
+
+  // ── Desktop layout ──────────────────────────────────────────────────────
+  contentDesktop: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 1200,
+    paddingHorizontal: 40,
+    paddingTop: 32,
+    paddingBottom: 60,
+    gap: 24,
+  },
+  desktopHero: {
+    flexDirection: 'row',
+    gap: 24,
+    alignItems: 'stretch',
+    backgroundColor: palette.graphite,
+    borderRadius: 12,
+    padding: 24,
+  },
+  desktopHeroLeft: {
+    flex: 2,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  desktopHeroStats: {
+    flex: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
+  },
+  desktopHeroProgress: {
+    flex: 2,
+    justifyContent: 'center',
+  },
+  desktopModuleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  desktopModuleItem: {
+    width: '48%',
   },
 });

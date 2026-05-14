@@ -289,6 +289,228 @@ export default function ProgresoScreen() {
     );
   };
 
+  // ── Desktop (≥1200px) layout ─────────────────────────────────────────────────
+  if (sc.isDesktop) {
+    return (
+      <KeyboardAvoidingView
+        style={sc.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={insets.top}>
+        <ScrollView
+          contentContainerStyle={[deskStyles.contentDesktop, { paddingTop: insets.top + 32 }]}
+          showsVerticalScrollIndicator={false}
+          bounces
+          overScrollMode="never"
+          keyboardShouldPersistTaps="handled">
+
+          {/* ── ZONA 1: Top row ── */}
+          <AppHeader title="PROGRESO" />
+          <SovereignScore score={score} />
+
+          {/* ── ZONA 2: Middle two-column row ── */}
+          <View style={deskStyles.desktopMiddle}>
+
+            {/* Left column */}
+            <View style={deskStyles.desktopLeft}>
+              <GoldDivider label="MÉTRICAS DEL SISTEMA" />
+              <View style={styles.grid}>
+                <MetricCard
+                  label="Racha"
+                  value={`${Math.max(state.checkIns.length, protocolDay)}`}
+                  meta="dias activos"
+                  icon="local-fire-department"
+                />
+                <MetricCard
+                  label="Check-ins"
+                  value={`${state.checkIns.length}`}
+                  meta="completados"
+                  icon="fact-check"
+                />
+                <MetricCard
+                  label="Lecciones"
+                  value={`${(state.completedLessons ?? []).length}`}
+                  meta="completadas"
+                  icon="menu-book"
+                />
+                <MetricCard
+                  label="Días"
+                  value={`${protocolDay}`}
+                  meta="protocolo"
+                  icon="calendar-today"
+                />
+              </View>
+
+              <GoldDivider label="BIOMETRÍA PROMEDIO (7D)" />
+              <PremiumCard style={styles.sparklineCard}>
+                <WeeklySparkline label="ENERGIA" values={energyValues} color={palette.gold} />
+                <View style={styles.sparklineDivider} />
+                <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
+              </PremiumCard>
+
+              <GoldDivider label="LOGROS" />
+              <View style={styles.achievementsGrid}>
+                {achievements.map((a) => (
+                  <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
+                ))}
+              </View>
+            </View>
+
+            {/* Right column */}
+            <View style={deskStyles.desktopRight}>
+              <GoldDivider label="PROTOCOLO" />
+              <ProgressCard
+                label="Progreso · Protocolo Soberano 90D"
+                value={`${protocolProgress}% · ${protocolDay}/90`}
+                progress={protocolProgress}
+              />
+
+              {/* Profile edit */}
+              <PremiumCard style={styles.form}>
+                <PremiumInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="NOMBRE"
+                  accessibilityLabel="Nombre de perfil"
+                  returnKeyType="next"
+                />
+                <PremiumInput
+                  value={role}
+                  onChangeText={setRole}
+                  placeholder="ROL / TITULO"
+                  accessibilityLabel="Rol o título"
+                  returnKeyType="done"
+                />
+                <PrimaryButton
+                  label="GUARDAR PERFIL"
+                  icon="check"
+                  onPress={async () => {
+                    await updateProfile({ name, role });
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  }}
+                />
+              </PremiumCard>
+
+              {/* Subscription tier badge */}
+              <PremiumCard style={[styles.tierCard, {
+                borderColor: subscription.isExpiringSoon
+                  ? palette.warning + '88'
+                  : subColor + '55',
+              }]}>
+                <View style={[styles.tierIconBox, { backgroundColor: subColor + '22' }]}>
+                  <MaterialIcons name={subIcon} size={22} color={subColor} />
+                </View>
+                <View style={styles.tierBody}>
+                  <Text style={styles.tierLabel}>PLAN ACTIVO</Text>
+                  <Text style={[styles.tierName, { color: subColor }]}>{subLabel}</Text>
+                  {subscription.isExpiringSoon && subscription.expiresAt ? (
+                    <Text style={[styles.tierSub, { color: palette.warning }]}>
+                      ⚠ Expira {new Date(subscription.expiresAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                    </Text>
+                  ) : subTier === 'free' ? (
+                    <Text style={styles.tierSub}>Actualiza a Premium para desbloquear todo el contenido</Text>
+                  ) : (
+                    <Text style={styles.tierSub}>{subscription.tierInfo.description}</Text>
+                  )}
+                </View>
+                {subTier === 'free' && (
+                  <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)}>
+                    <Text style={styles.tierUpgradeText}>UPGRADE</Text>
+                  </Pressable>
+                )}
+              </PremiumCard>
+
+              {isAdmin && (
+                <Pressable
+                  style={styles.adminBtn}
+                  onPress={() => router.push('/admin' as never)}
+                  accessibilityLabel="Cuadro de Mando Integral">
+                  <MaterialIcons name="dashboard-customize" size={16} color={palette.gold} />
+                  <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* ── ZONA 3: Bottom full-width account section ── */}
+          <View style={deskStyles.desktopBottom}>
+            <GoldDivider label="CUENTA" />
+            <View style={deskStyles.desktopAccountGrid}>
+              {/* Notificaciones */}
+              <PremiumCard style={[styles.settingsCard, deskStyles.desktopAccountCard]}>
+                <View style={styles.settingRow}>
+                  <View style={styles.settingInfo}>
+                    <Text style={styles.settingTitle}>RECORDATORIO DIARIO</Text>
+                    <Text style={styles.settingMeta}>Check-in a las 7:00 AM</Text>
+                  </View>
+                  <Switch
+                    value={notificationsOn}
+                    onValueChange={toggleNotifications}
+                    trackColor={{ false: palette.charcoal, true: palette.gold }}
+                    thumbColor={notificationsOn ? palette.black : palette.ash}
+                  />
+                </View>
+                <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.md }]}>
+                  <View style={styles.settingInfo}>
+                    <Text style={styles.settingTitle}>ANÁLISIS DE COMPORTAMIENTO</Text>
+                    <Text style={styles.settingMeta}>
+                      Permite a Polaris personalizar recomendaciones con IA. Tus datos nunca se venden.
+                    </Text>
+                  </View>
+                  <Switch
+                    value={mlConsent}
+                    onValueChange={handleMlConsentToggle}
+                    trackColor={{ false: palette.charcoal, true: palette.gold }}
+                    thumbColor={mlConsent ? palette.black : palette.ash}
+                  />
+                </View>
+              </PremiumCard>
+
+              {/* Export / Sign out / Danger zone */}
+              <PremiumCard style={[styles.gdprCard, deskStyles.desktopAccountCard]}>
+                <Text style={styles.gdprIntro}>
+                  Tienes derecho a acceder, exportar y eliminar todos tus datos personales en cualquier momento (RGPD / GDPR).
+                </Text>
+                <Pressable
+                  style={[styles.gdprBtn, exporting && { opacity: 0.6 }]}
+                  onPress={handleExport}
+                  disabled={exporting}
+                  accessibilityLabel="Exportar mis datos">
+                  <MaterialIcons name="download" size={18} color={palette.gold} />
+                  <View style={styles.gdprBtnBody}>
+                    <Text style={styles.gdprBtnTitle}>{exporting ? 'EXPORTANDO...' : 'EXPORTAR MIS DATOS'}</Text>
+                    <Text style={styles.gdprBtnMeta}>JSON con todo tu historial · check-ins, conversaciones, lecciones</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+                </Pressable>
+                <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
+                  <MaterialIcons name="logout" size={18} color={palette.danger} />
+                  <Text style={styles.signOutText}>CERRAR SESIÓN</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.gdprDeleteBtn, deleting && { opacity: 0.6 }]}
+                  onPress={handleDeleteAccount}
+                  disabled={deleting}
+                  accessibilityLabel="Eliminar cuenta">
+                  <MaterialIcons name="delete-forever" size={18} color={palette.danger} />
+                  <View style={styles.gdprBtnBody}>
+                    <Text style={styles.gdprDeleteTitle}>{deleting ? 'ELIMINANDO...' : 'ELIMINAR CUENTA'}</Text>
+                    <Text style={styles.gdprBtnMeta}>Elimina tu cuenta y todos los datos de forma permanente</Text>
+                  </View>
+                </Pressable>
+              </PremiumCard>
+            </View>
+          </View>
+
+          {/* Version footer */}
+          <Text style={styles.versionText}>
+            Polaris Growth Institute v{appVersion}
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ── Mobile / Tablet layout (original) ────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={sc.root}
@@ -1115,6 +1337,44 @@ const styles = StyleSheet.create({
     color: palette.gold,
     fontSize: 12,
     letterSpacing: 1,
+  },
+});
+
+// ─── Desktop layout styles ───────────────────────────────────────────────────
+const deskStyles = StyleSheet.create({
+  contentDesktop: {
+    alignSelf:        'center' as const,
+    width:            '100%'  as const,
+    maxWidth:         1200,
+    paddingHorizontal: 40,
+    paddingTop:       32,
+    paddingBottom:    60,
+    gap:              24,
+  },
+  desktopMiddle: {
+    flexDirection: 'row',
+    gap:           24,
+    alignItems:    'flex-start',
+  },
+  desktopLeft: {
+    flex: 3,
+    gap:  16,
+  },
+  desktopRight: {
+    flex: 2,
+    gap:  16,
+  },
+  desktopBottom: {
+    gap: 16,
+  },
+  desktopAccountGrid: {
+    flexDirection: 'row',
+    flexWrap:      'wrap',
+    gap:           16,
+  },
+  desktopAccountCard: {
+    flex:     1,
+    minWidth: 280,
   },
 });
 
