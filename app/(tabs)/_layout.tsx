@@ -8,6 +8,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { WellnessMiniPlayer } from '@/components/WellnessMiniPlayer';
 import { Colors, Fonts, palette } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { analytics } from '@/lib/analytics';
 
 type TabIcon = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -54,6 +55,7 @@ const tabStyles = StyleSheet.create({
 
 export function BottomNavigation() {
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useBreakpoint();
   const tabBarHeight = 56 + insets.bottom;
 
   return (
@@ -75,10 +77,11 @@ export function BottomNavigation() {
           backgroundColor: palette.blackDeep,
           borderTopColor: palette.lineSoft,
           borderTopWidth: 1,
-          height: tabBarHeight,
+          height: isDesktop ? 0 : tabBarHeight,
           paddingBottom: insets.bottom + 6,
           paddingTop: 8,
-          // Subtle elevation on web
+          // Hidden on desktop — navigation via DesktopSidebar
+          display: isDesktop ? 'none' : 'flex',
           ...(Platform.OS === 'web' ? { boxShadow: '0 -2px 16px rgba(0,0,0,0.4)' } as any : {}),
         },
       }}>

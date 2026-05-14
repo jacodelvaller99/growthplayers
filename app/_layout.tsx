@@ -16,6 +16,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { Colors } from '@/constants/theme';
 import OfflineBanner from '@/components/OfflineBanner';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
+import { DesktopSidebar } from '@/components/DesktopSidebar';
 import { ToastProvider } from '@/context/ToastContext';
 
 export const unstable_settings = {
@@ -49,6 +50,47 @@ function AnalyticsInitializer() {
 function SmartNotificationsInitializer() {
   useSmartNotifications();
   return null;
+}
+
+function MainStack() {
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+      <Stack.Screen name="checkin" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
+      <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
+      <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/binaurales" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/meditacion" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/respiracion" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/sueno" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/diario" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/biblioteca" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/biometrics" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/habitos" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/ayuno" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/nutricion" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/cuerpo" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
+      <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/usuarios/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/usuarios/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/membresias/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/cursos/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/codigos/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
+      <Stack.Screen name="pricing" options={{ headerShown: false }} />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
@@ -122,51 +164,33 @@ export default function RootLayout() {
         <SmartNotificationsInitializer />
         <OfflineBanner />
         <PWAInstallBanner />
-        <View style={Platform.OS === 'web' && isDesktop ? { maxWidth: 480, alignSelf: 'center' as const, width: '100%', flex: 1 } : { flex: 1 }}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="checkin"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }}
-          />
-          <Stack.Screen
-            name="paywall"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }}
-          />
-          <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/binaurales" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/meditacion" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/respiracion" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/sueno" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/diario" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/biblioteca" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/biometrics" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/habitos" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/ayuno" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/nutricion" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/cuerpo" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
-          <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
-          <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
-          <Stack.Screen name="admin" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/usuarios/index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/usuarios/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/membresias/index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/cursos/index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/codigos/index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
-          <Stack.Screen name="pricing" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="light" />
-        </View>
+        {Platform.OS === 'web' && isDesktop ? (
+          /* ── Desktop: sidebar izquierdo + contenido centrado 480px ── */
+          <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#080808' }}>
+            <DesktopSidebar />
+            <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#0A0A0A' }}>
+              <View style={{
+                width: '100%',
+                maxWidth: 480,
+                flex: 1,
+                backgroundColor: '#080808',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.5,
+                shadowRadius: 40,
+              }}>
+                <MainStack />
+                <StatusBar style="light" />
+              </View>
+            </View>
+          </View>
+        ) : (
+          /* ── Mobile / nativo: sin cambios ── */
+          <View style={{ flex: 1 }}>
+            <MainStack />
+            <StatusBar style="light" />
+          </View>
+        )}
         </ToastProvider>
       </LifeFlowProvider>
     </ThemeProvider>
