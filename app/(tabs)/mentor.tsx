@@ -532,7 +532,7 @@ export default function MentorScreen() {
       </Modal>
 
       {/* ── Input Bar ── */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.md, maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}>
         <PremiumInput
           value={input}
           onChangeText={setInput}
@@ -808,7 +808,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     flexDirection: 'row',
     gap: spacing.md,
-    maxWidth: 430,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     width: '100%',

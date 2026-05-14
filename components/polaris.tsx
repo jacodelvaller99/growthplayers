@@ -618,18 +618,54 @@ export const screen = StyleSheet.create({
 
 /**
  * Returns responsive screen styles.
- * On desktop (≥1200px): full width, wider padding, no maxWidth cap.
- * On mobile: identical to the static `screen` export.
+ * Desktop (≥1200px): centrado, maxWidth 960, padding horizontal 40.
+ * Tablet  (768-1199): centrado, maxWidth 720, padding horizontal 32.
+ * Mobile  (<768):     maxWidth 430 (igual que screen.content estático).
  */
 export function useScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1200;
+  const isTablet  = width >= 768;
+
+  if (isDesktop) {
+    return {
+      root: screen.root,
+      content: {
+        alignSelf:       'center'  as const,
+        width:           '100%'   as const,
+        maxWidth:        960,
+        paddingHorizontal: 40,
+        paddingTop:      32,
+        paddingBottom:   80,
+        gap:             spacing.xl,
+      },
+      isDesktop: true,
+      isTablet:  true,
+    };
+  }
+
+  if (isTablet) {
+    return {
+      root: screen.root,
+      content: {
+        alignSelf:       'center'  as const,
+        width:           '100%'   as const,
+        maxWidth:        720,
+        paddingHorizontal: 32,
+        paddingTop:      16,
+        paddingBottom:   120,
+        gap:             spacing.xl,
+      },
+      isDesktop: false,
+      isTablet:  true,
+    };
+  }
+
   return {
-    root: screen.root,
-    content: isDesktop
-      ? ({ paddingHorizontal: 48, paddingTop: 32, paddingBottom: 80, gap: spacing.xl } as const)
-      : screen.content,
-    isDesktop,
+    root:      screen.root,
+    content:   screen.content,
+    isDesktop: false,
+    isTablet:  false,
   };
 }
 

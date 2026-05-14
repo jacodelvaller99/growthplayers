@@ -431,6 +431,9 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   // ── Desktop content container ──────────────────────────────────────────────
   contentDesktop: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 1200,
     paddingHorizontal: 40,
     paddingTop: 32,
     paddingBottom: 60,
