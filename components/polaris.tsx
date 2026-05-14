@@ -14,14 +14,19 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Animated, {
+  Easing,
+  FadeInDown,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+
+import { AnimatedNumber } from './AnimatedNumber';
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
 
 import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
@@ -134,17 +139,36 @@ export function SectionHeader({ title, meta }: { title: string; meta?: string })
 
 // ─── Metric Card ─────────────────────────────────────────────────────────────
 
-export function MetricCard({ label, value, meta, icon, accent }: { label: string; value: string; meta?: string; icon: IconName; accent?: string }) {
+export function MetricCard({
+  label, value, numericValue, numericSuffix = '', meta, icon, accent, entryDelay = 0, style,
+}: {
+  label: string;
+  value: string;
+  numericValue?: number;
+  numericSuffix?: string;
+  meta?: string;
+  icon: IconName;
+  accent?: string;
+  entryDelay?: number;
+  /** Override card container styles — use for desktop flex:1 or custom sizing */
+  style?: object;
+}) {
   const iconColor = accent ?? palette.gold;
   return (
-    <PremiumCard style={styles.metricCard}>
+    <Animated.View
+      style={[styles.card, styles.metricCard, style]}
+      entering={FadeInDown.delay(entryDelay).springify().damping(20).stiffness(180)}
+    >
       <View style={styles.metricTop}>
         <MaterialIcons name={icon} color={iconColor} size={16} />
         <Text style={styles.metricLabel}>{label}</Text>
       </View>
-      <Text style={styles.metricValue}>{value}</Text>
+      {numericValue !== undefined
+        ? <AnimatedNumber value={numericValue} suffix={numericSuffix} delay={entryDelay + 120} style={styles.metricValue} />
+        : <Text style={styles.metricValue}>{value}</Text>
+      }
       {meta ? <Text style={styles.metricMeta}>{meta}</Text> : null}
-    </PremiumCard>
+    </Animated.View>
   );
 }
 

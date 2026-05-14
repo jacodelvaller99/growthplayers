@@ -165,23 +165,12 @@ export default function RootLayout() {
         <OfflineBanner />
         <PWAInstallBanner />
         {Platform.OS === 'web' && isDesktop ? (
-          /* ── Desktop: sidebar izquierdo + contenido centrado 480px ── */
+          /* ── Desktop: sidebar fijo + contenido full-width ── */
           <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#080808' }}>
             <DesktopSidebar />
-            <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#0A0A0A' }}>
-              <View style={{
-                width: '100%',
-                maxWidth: 480,
-                flex: 1,
-                backgroundColor: '#080808',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.5,
-                shadowRadius: 40,
-              }}>
-                <MainStack />
-                <StatusBar style="light" />
-              </View>
+            <View style={{ flex: 1, backgroundColor: '#080808' }}>
+              <MainStack />
+              <StatusBar style="light" />
             </View>
           </View>
         ) : (

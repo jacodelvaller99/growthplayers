@@ -2,7 +2,14 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { AnimatedNumber } from '@/components/AnimatedNumber';
 
 import {
   AppHeader,
@@ -19,6 +26,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
@@ -33,6 +41,7 @@ function greeting() {
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useBreakpoint();
   const { state, protocolDay, todayCheckIn, latestCheckIn, userId } = useLifeFlow();
   const { user: wellnessUser } = useWellnessStore();
   const { intelligence, engagementTier } = useUserIntelligence(userId);
@@ -86,234 +95,383 @@ export default function DashboardScreen() {
     : Math.round((state.wellnessSessions ?? []).reduce((acc, s) => acc + (s.durationSeconds ?? 0), 0) / 60);
   const wellnessStreak = wellnessUser.weeklyActivity.filter(Boolean).length;
 
+  // Engagement bar animated width
+  const engagementWidth = useSharedValue(0);
+  useEffect(() => {
+    if (intelligence.engagement_score > 0) {
+      engagementWidth.value = withTiming(intelligence.engagement_score, { duration: 1000 });
+    }
+  }, [intelligence.engagement_score]);
+  const engagementBarStyle = useAnimatedStyle(() => ({
+    width: `${engagementWidth.value}%` as unknown as number,
+  }));
+
+  // ── Shared JSX blocks (idénticos en mobile y desktop) ─────────────────────
+
+  const heroBlock = (
+    <EditorialPanel
+      eyebrow={`DIA ${protocolDay} · PROTOCOLO SOBERANO`}
+      title={`${greeting()},\n${state.profile.name}.`}
+      body={
+        intelligenceGreeting ??
+        (todayCheckIn
+          ? 'Check-in registrado. Ahora convierte tu estado en ejecucion medible.'
+          : 'Tu sala de mando espera lectura interna para calibrar el dia.')
+      }>
+      <Text style={styles.time}>
+        {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+      </Text>
+      <PrimaryButton
+        label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'}
+        icon="assignment"
+        onPress={() => router.push('/checkin')}
+      />
+    </EditorialPanel>
+  );
+
+  const anomalyBlock = intelligence.anomaly_detected && intelligence.anomaly_type && (
+    <Pressable
+      onPress={() => router.push('/(tabs)/mentor')}
+      style={({ pressed }) => [styles.anomalyCard, pressed && { opacity: 0.85 }]}>
+      <MaterialIcons name="warning-amber" size={18} color={palette.gold} />
+      <View style={styles.anomalyTextBlock}>
+        <Text style={styles.anomalyTitle}>SEÑAL DETECTADA</Text>
+        <Text style={styles.anomalyBody}>
+          {intelligence.anomaly_type === 'mood_drop'
+            ? 'Bajón de energía detectado. Norman puede ayudarte a entender qué está pasando.'
+            : intelligence.anomaly_type === 'streak_break'
+            ? 'Racha rota. Hoy es el mejor día para retomar.'
+            : 'Llevas días sin conectar con tu mentor. ¿Cómo estás?'}
+        </Text>
+      </View>
+      <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
+    </Pressable>
+  );
+
+  const nbaBlock = nextActionConfig && intelligence.next_action_urgency !== 'low' && (
+    <Pressable
+      onPress={() => router.push(nextActionConfig.screen as never)}
+      style={({ pressed }) => [styles.nbaCard, pressed && { opacity: 0.85 }]}>
+      <View style={styles.nbaBadge}>
+        <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.black} />
+      </View>
+      <View style={styles.nbaTextBlock}>
+        <Text style={styles.nbaLabel}>PRÓXIMA ACCIÓN RECOMENDADA</Text>
+        <Text style={styles.nbaAction}>{nextActionConfig.label}</Text>
+        {intelligence.next_action_reason && (
+          <Text style={styles.nbaReason}>{intelligence.next_action_reason}</Text>
+        )}
+      </View>
+      <MaterialIcons name="arrow-forward" size={16} color={palette.gold} />
+    </Pressable>
+  );
+
+  const engagementBlock = intelligence.engagement_score > 0 && (
+    <View style={styles.engagementRow}>
+      <Text style={styles.engagementLabel}>ENGAGEMENT</Text>
+      <Animated.View style={[styles.engagementBar, engagementBarStyle]} />
+      <Text style={styles.engagementScore}>{intelligence.engagement_score}/100</Text>
+    </View>
+  );
+
+  const metricsRow = (
+    <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
+      <MetricCard
+        label="Racha"
+        value={`${Math.max(state.checkIns.length, protocolDay)}`}
+        numericValue={Math.max(state.checkIns.length, protocolDay)}
+        meta="dias de protocolo"
+        icon="local-fire-department"
+        entryDelay={0}
+        style={isDesktop ? styles.metricCardDesktop : undefined}
+      />
+      <MetricCard
+        label="Check-ins"
+        value={`${state.checkIns.length}`}
+        numericValue={state.checkIns.length}
+        meta={todayCheckIn ? 'hoy completo' : 'pendiente hoy'}
+        icon="fact-check"
+        entryDelay={60}
+        style={isDesktop ? styles.metricCardDesktop : undefined}
+      />
+      <MetricCard
+        label="Modulo"
+        value={`0${ACTIVE_MODULE.order}`}
+        meta={ACTIVE_MODULE.title.split(' ')[0].toLowerCase()}
+        icon="view-module"
+        entryDelay={120}
+        style={isDesktop ? styles.metricCardDesktop : undefined}
+      />
+      <MetricCard
+        label="Coherencia"
+        value={checkIn
+          ? `${Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)}/10`
+          : '--'}
+        numericValue={checkIn
+          ? Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)
+          : undefined}
+        numericSuffix="/10"
+        meta="estado del dia"
+        icon="verified-user"
+        entryDelay={180}
+        style={isDesktop ? styles.metricCardDesktop : undefined}
+      />
+    </View>
+  );
+
+  const estadoBlock = (
+    <View style={styles.stack}>
+      <View style={styles.sectionTopRow}>
+        <Text style={screen.sectionTitle}>Biometria</Text>
+        <StatusPill
+          label={todayCheckIn ? 'ACTUALIZADO' : 'SIN LECTURA'}
+          tone={todayCheckIn ? 'gold' : 'muted'}
+        />
+      </View>
+      <PremiumCard style={styles.meterCard}>
+        <StateMeter label="Energia" value={checkIn?.energy ?? 0} />
+        <StateMeter label="Enfoque / claridad" value={checkIn?.clarity ?? 0} />
+        <StateMeter label="Estres" value={checkIn?.stress ?? 0} inverted />
+      </PremiumCard>
+    </View>
+  );
+
+  const protocolBlock = (
+    <PremiumCard style={styles.protocolCard}>
+      <StatusPill label={`MODULO ${ACTIVE_MODULE.order} · ACTIVO`} />
+      <Text style={styles.protocolTitle}>{ACTIVE_MODULE.title}</Text>
+      <Text style={styles.protocolBody}>
+        Proxima accion: completa la leccion activa y ejecuta un bloque mercader de 90 minutos
+        sin mensajeria.
+      </Text>
+      <PrimaryButton
+        label="CONTINUAR LECCION"
+        icon="play-arrow"
+        onPress={() => router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })}
+      />
+    </PremiumCard>
+  );
+
+  const wellnessBlock = (
+    <PremiumCard style={styles.wellnessCard}>
+      <View style={styles.wellnessRow}>
+        <View style={styles.wellnessIconBox}>
+          <MaterialIcons name="spa" size={28} color={palette.purple} />
+        </View>
+        <View style={styles.wellnessBody}>
+          <Text style={styles.wellnessTitle}>MÓDULO BIENESTAR</Text>
+          <Text style={styles.wellnessSub}>Meditación · Respiración · Binaurales</Text>
+        </View>
+      </View>
+      <View style={styles.wellnessStats}>
+        <View style={styles.wellnessStat}>
+          <AnimatedNumber value={totalWellnessSessions} delay={300} style={styles.wellnessStatNum} />
+          <Text style={styles.wellnessStatLabel}>SESIONES</Text>
+        </View>
+        <View style={styles.wellnessStatDivider} />
+        <View style={styles.wellnessStat}>
+          <AnimatedNumber value={totalWellnessMinutes} delay={420} style={styles.wellnessStatNum} />
+          <Text style={styles.wellnessStatLabel}>MINUTOS</Text>
+        </View>
+        <View style={styles.wellnessStatDivider} />
+        <View style={styles.wellnessStat}>
+          <AnimatedNumber value={wellnessStreak} delay={540} style={styles.wellnessStatNum} />
+          <Text style={styles.wellnessStatLabel}>DÍAS/SEM</Text>
+        </View>
+      </View>
+      <PrimaryButton
+        label="ABRIR BIENESTAR"
+        icon="spa"
+        onPress={() => router.push('/bienestar' as never)}
+      />
+    </PremiumCard>
+  );
+
   return (
     <ScrollView
       style={screen.root}
-      contentContainerStyle={[screen.content, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={
+        isDesktop
+          ? styles.contentDesktop
+          : [screen.content, { paddingTop: insets.top + 16 }]
+      }
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
+
       <AppHeader title="POLARIS" />
 
-      {/* ── Editorial Hero ── */}
-      <EditorialPanel
-        eyebrow={`DIA ${protocolDay} · PROTOCOLO SOBERANO`}
-        title={`${greeting()},\n${state.profile.name}.`}
-        body={
-          intelligenceGreeting ??
-          (todayCheckIn
-            ? 'Check-in registrado. Ahora convierte tu estado en ejecucion medible.'
-            : 'Tu sala de mando espera lectura interna para calibrar el dia.')
-        }>
-        <Text style={styles.time}>
-          {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-        <PrimaryButton
-          label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'}
-          icon="assignment"
-          onPress={() => router.push('/checkin')}
-        />
-      </EditorialPanel>
-
-      {/* ── Anomaly Alert (only when detected) ── */}
-      {intelligence.anomaly_detected && intelligence.anomaly_type && (
-        <Pressable
-          onPress={() => router.push('/(tabs)/mentor')}
-          style={({ pressed }) => [styles.anomalyCard, pressed && { opacity: 0.85 }]}>
-          <MaterialIcons name="warning-amber" size={18} color={palette.gold} />
-          <View style={styles.anomalyTextBlock}>
-            <Text style={styles.anomalyTitle}>SEÑAL DETECTADA</Text>
-            <Text style={styles.anomalyBody}>
-              {intelligence.anomaly_type === 'mood_drop'
-                ? 'Bajón de energía detectado. Norman puede ayudarte a entender qué está pasando.'
-                : intelligence.anomaly_type === 'streak_break'
-                ? 'Racha rota. Hoy es el mejor día para retomar.'
-                : 'Llevas días sin conectar con tu mentor. ¿Cómo estás?'}
-            </Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
-        </Pressable>
-      )}
-
-      {/* ── Next Best Action (from ML engine) ── */}
-      {nextActionConfig && intelligence.next_action_urgency !== 'low' && (
-        <Pressable
-          onPress={() => router.push(nextActionConfig.screen as never)}
-          style={({ pressed }) => [styles.nbaCard, pressed && { opacity: 0.85 }]}>
-          <View style={styles.nbaBadge}>
-            <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.black} />
-          </View>
-          <View style={styles.nbaTextBlock}>
-            <Text style={styles.nbaLabel}>PRÓXIMA ACCIÓN RECOMENDADA</Text>
-            <Text style={styles.nbaAction}>{nextActionConfig.label}</Text>
-            {intelligence.next_action_reason && (
-              <Text style={styles.nbaReason}>{intelligence.next_action_reason}</Text>
-            )}
-          </View>
-          <MaterialIcons name="arrow-forward" size={16} color={palette.gold} />
-        </Pressable>
-      )}
-
-      {/* ── Engagement Score (subtle pill in metric grid header) ── */}
-      {intelligence.engagement_score > 0 && (
-        <View style={styles.engagementRow}>
-          <Text style={styles.engagementLabel}>ENGAGEMENT</Text>
-          <View style={[
-            styles.engagementBar,
-            { width: `${intelligence.engagement_score}%` as unknown as number },
-          ]} />
-          <Text style={styles.engagementScore}>{intelligence.engagement_score}/100</Text>
-        </View>
-      )}
-
-      {/* ── Protocol Progress ── */}
-      <ProgressCard
-        label="Progreso del protocolo"
-        value={`${progress}% · ${protocolDay}/90`}
-        progress={progress}
-      />
-
-      {/* ── Metric Grid ── */}
-      <View style={styles.grid}>
-        <MetricCard
-          label="Racha"
-          value={`${Math.max(state.checkIns.length, protocolDay)}`}
-          meta="dias de protocolo"
-          icon="local-fire-department"
-        />
-        <MetricCard
-          label="Check-ins"
-          value={`${state.checkIns.length}`}
-          meta={todayCheckIn ? 'hoy completo' : 'pendiente hoy'}
-          icon="fact-check"
-        />
-        <MetricCard
-          label="Modulo"
-          value={`0${ACTIVE_MODULE.order}`}
-          meta={ACTIVE_MODULE.title.split(' ')[0].toLowerCase()}
-          icon="view-module"
-        />
-        <MetricCard
-          label="Coherencia"
-          value={
-            checkIn
-              ? `${Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)}/10`
-              : '--'
-          }
-          meta="estado del dia"
-          icon="verified-user"
-        />
-      </View>
-
-      {/* ── Estado del dia ── */}
-      <GoldDivider label="ESTADO DEL DIA" />
-      <View style={styles.stack}>
-        <View style={styles.sectionTopRow}>
-          <Text style={screen.sectionTitle}>Biometria</Text>
-          <StatusPill
-            label={todayCheckIn ? 'ACTUALIZADO' : 'SIN LECTURA'}
-            tone={todayCheckIn ? 'gold' : 'muted'}
-          />
-        </View>
-        <PremiumCard style={styles.meterCard}>
-          <StateMeter label="Energia" value={checkIn?.energy ?? 0} />
-          <StateMeter label="Enfoque / claridad" value={checkIn?.clarity ?? 0} />
-          <StateMeter label="Estres" value={checkIn?.stress ?? 0} inverted />
-        </PremiumCard>
-      </View>
-
-      {/* ── Protocolo del dia ── */}
-      <GoldDivider label="HOY EN TU PROTOCOLO" />
-      <PremiumCard style={styles.protocolCard}>
-        <StatusPill label={`MODULO ${ACTIVE_MODULE.order} · ACTIVO`} />
-        <Text style={styles.protocolTitle}>{ACTIVE_MODULE.title}</Text>
-        <Text style={styles.protocolBody}>
-          Proxima accion: completa la leccion activa y ejecuta un bloque mercader de 90 minutos
-          sin mensajeria.
-        </Text>
-        <PrimaryButton
-          label="CONTINUAR LECCION"
-          icon="play-arrow"
-          onPress={() =>
-            router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })
-          }
-        />
-      </PremiumCard>
-
-      {/* ── Bienestar ── */}
-      <GoldDivider label="BIENESTAR" />
-      <PremiumCard style={styles.wellnessCard}>
-        <View style={styles.wellnessRow}>
-          <View style={styles.wellnessIconBox}>
-            <MaterialIcons name="spa" size={28} color={palette.purple} />
-          </View>
-          <View style={styles.wellnessBody}>
-            <Text style={styles.wellnessTitle}>MÓDULO BIENESTAR</Text>
-            <Text style={styles.wellnessSub}>Meditación · Respiración · Binaurales</Text>
-          </View>
-        </View>
-        <View style={styles.wellnessStats}>
-          <View style={styles.wellnessStat}>
-            <Text style={styles.wellnessStatNum}>{totalWellnessSessions}</Text>
-            <Text style={styles.wellnessStatLabel}>SESIONES</Text>
-          </View>
-          <View style={styles.wellnessStatDivider} />
-          <View style={styles.wellnessStat}>
-            <Text style={styles.wellnessStatNum}>{totalWellnessMinutes}</Text>
-            <Text style={styles.wellnessStatLabel}>MINUTOS</Text>
-          </View>
-          <View style={styles.wellnessStatDivider} />
-          <View style={styles.wellnessStat}>
-            <Text style={styles.wellnessStatNum}>{wellnessStreak}</Text>
-            <Text style={styles.wellnessStatLabel}>DÍAS/SEM</Text>
-          </View>
-        </View>
-        <PrimaryButton
-          label="ABRIR BIENESTAR"
-          icon="spa"
-          onPress={() => router.push('/bienestar' as never)}
-        />
-      </PremiumCard>
-
-      {/* ── Sesión Semanal Norman ── */}
-      {weeklySession && (
+      {isDesktop ? (
+        /* ══════════════════════════════════════════════════════════
+           DESKTOP LAYOUT — full-width, dos columnas en la parte inferior
+           ══════════════════════════════════════════════════════════ */
         <>
-          <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
-          <PremiumCard style={styles.normanCard}>
-            <View style={styles.normanHeader}>
-              <MaterialIcons name="psychology" size={20} color={palette.gold} />
-              <Text style={styles.normanLabel}>MENSAJE SEMANAL</Text>
+          {/* Fila superior: Hero + Engagement */}
+          <View style={styles.desktopTopRow}>
+            <View style={styles.desktopHeroCol}>{heroBlock}</View>
+            <View style={styles.desktopSideCol}>
+              {anomalyBlock}
+              {nbaBlock}
+              {engagementBlock}
+              <ProgressCard
+                label="Progreso del protocolo"
+                value={`${progress}% · ${protocolDay}/90`}
+                progress={progress}
+              />
             </View>
-            <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
-            <Pressable
-              onPress={() => router.push('/(tabs)/mentor')}
-              style={({ pressed }) => [styles.normanBtn, pressed && { opacity: 0.8 }]}>
-              <Text style={styles.normanBtnText}>RESPONDER A NORMAN</Text>
-              <MaterialIcons name="arrow-forward" size={14} color={palette.black} />
-            </Pressable>
+          </View>
+
+          {/* KPI strip — 4 columnas */}
+          {metricsRow}
+
+          {/* Cuerpo principal — dos columnas */}
+          <View style={styles.desktopBody}>
+            <View style={styles.desktopLeft}>
+              <GoldDivider label="ESTADO DEL DIA" />
+              {estadoBlock}
+              <GoldDivider label="BIENESTAR" />
+              {wellnessBlock}
+            </View>
+            <View style={styles.desktopRight}>
+              <GoldDivider label="HOY EN TU PROTOCOLO" />
+              {protocolBlock}
+              {weeklySession && (
+                <>
+                  <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
+                  <PremiumCard style={styles.normanCard}>
+                    <View style={styles.normanHeader}>
+                      <MaterialIcons name="psychology" size={20} color={palette.gold} />
+                      <Text style={styles.normanLabel}>MENSAJE SEMANAL</Text>
+                    </View>
+                    <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
+                    <Pressable
+                      onPress={() => router.push('/(tabs)/mentor')}
+                      style={({ pressed }) => [styles.normanBtn, pressed && { opacity: 0.8 }]}>
+                      <Text style={styles.normanBtnText}>RESPONDER A NORMAN</Text>
+                      <MaterialIcons name="arrow-forward" size={14} color={palette.black} />
+                    </Pressable>
+                  </PremiumCard>
+                </>
+              )}
+              <GoldDivider label="MI NORTE" />
+              <PremiumCard style={styles.northCard}>
+                <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
+                <Text style={styles.northBody}>
+                  {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
+                </Text>
+                <PrimaryButton
+                  label="EDITAR NORTE"
+                  icon="explore"
+                  onPress={() => router.push('/(tabs)/norte')}
+                />
+              </PremiumCard>
+            </View>
+          </View>
+        </>
+      ) : (
+        /* ══════════════════════════════════════════════════════════
+           MOBILE LAYOUT — columna única
+           ══════════════════════════════════════════════════════════ */
+        <>
+          {heroBlock}
+          {anomalyBlock}
+          {nbaBlock}
+          {engagementBlock}
+          <ProgressCard
+            label="Progreso del protocolo"
+            value={`${progress}% · ${protocolDay}/90`}
+            progress={progress}
+          />
+          {metricsRow}
+          <GoldDivider label="ESTADO DEL DIA" />
+          {estadoBlock}
+          <GoldDivider label="HOY EN TU PROTOCOLO" />
+          {protocolBlock}
+          <GoldDivider label="BIENESTAR" />
+          {wellnessBlock}
+          {weeklySession && (
+            <>
+              <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
+              <PremiumCard style={styles.normanCard}>
+                <View style={styles.normanHeader}>
+                  <MaterialIcons name="psychology" size={20} color={palette.gold} />
+                  <Text style={styles.normanLabel}>MENSAJE SEMANAL</Text>
+                </View>
+                <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/mentor')}
+                  style={({ pressed }) => [styles.normanBtn, pressed && { opacity: 0.8 }]}>
+                  <Text style={styles.normanBtnText}>RESPONDER A NORMAN</Text>
+                  <MaterialIcons name="arrow-forward" size={14} color={palette.black} />
+                </Pressable>
+              </PremiumCard>
+            </>
+          )}
+          <GoldDivider label="MI NORTE" />
+          <PremiumCard style={styles.northCard}>
+            <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
+            <Text style={styles.northBody}>
+              {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
+            </Text>
+            <PrimaryButton
+              label="EDITAR NORTE"
+              icon="explore"
+              onPress={() => router.push('/(tabs)/norte')}
+            />
           </PremiumCard>
         </>
       )}
-
-      {/* ── Mi Norte ── */}
-      <GoldDivider label="MI NORTE" />
-      <PremiumCard style={styles.northCard}>
-        <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
-        <Text style={styles.northBody}>
-          {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
-        </Text>
-        <PrimaryButton
-          label="EDITAR NORTE"
-          icon="explore"
-          onPress={() => router.push('/(tabs)/norte')}
-        />
-      </PremiumCard>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  // ── Desktop content container ──────────────────────────────────────────────
+  contentDesktop: {
+    paddingHorizontal: 40,
+    paddingTop: 32,
+    paddingBottom: 60,
+    gap: 24,
+  },
+  // Desktop top row: hero (60%) + side panel (40%)
+  desktopTopRow: {
+    flexDirection: 'row',
+    gap: 24,
+    alignItems: 'flex-start',
+  },
+  desktopHeroCol: {
+    flex: 3,
+  },
+  desktopSideCol: {
+    flex: 2,
+    gap: 16,
+  },
+  // Metric grid: 4 cols on desktop
+  gridDesktop: {
+    flexWrap: 'nowrap',
+  },
+  metricCardDesktop: {
+    flex: 1,
+    width: undefined,
+    minHeight: 120,
+  },
+  // Two-column body
+  desktopBody: {
+    flexDirection: 'row',
+    gap: 24,
+    alignItems: 'flex-start',
+  },
+  desktopLeft: {
+    flex: 3,
+    gap: 16,
+  },
+  desktopRight: {
+    flex: 2,
+    gap: 16,
+  },
+
+  // ── Shared ────────────────────────────────────────────────────────────────
   time: {
     color: palette.gold,
     fontFamily: Fonts.mono,
