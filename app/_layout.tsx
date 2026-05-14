@@ -131,14 +131,7 @@ export default function RootLayout() {
     }
   }, [ready]);
 
-  // Register Service Worker for PWA (web only)
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    if (!('serviceWorker' in navigator)) return;
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
-    });
-  }, []);
+  // SW registration moved to +html.tsx inline script (runs before React mounts)
 
   // Navigate to check-in when user taps the daily reminder notification
   useEffect(() => {
