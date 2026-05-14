@@ -131,7 +131,13 @@ export default function RootLayout() {
     }
   }, [ready]);
 
-  // SW registration moved to +html.tsx inline script (runs before React mounts)
+  // Register SW directly — useEffect already defers past page load,
+  // so window.addEventListener('load',...) would be a no-op (event already fired)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+  }, []);
 
   // Navigate to check-in when user taps the daily reminder notification
   useEffect(() => {

@@ -41,13 +41,6 @@ export default function Root({ children }: PropsWithChildren) {
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Michroma&family=Space+Mono&display=swap"
         />
 
-        {/* ── Service Worker: register early, before React mounts ─── */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js').catch(function(){});}`,
-          }}
-        />
-
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
