@@ -1,7 +1,8 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -16,7 +17,7 @@ import {
   screen,
   useScreen,
 } from '@/components/polaris';
-import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
@@ -27,12 +28,42 @@ function todayLabel() {
     .toUpperCase();
 }
 
+const CHECK_IN_TITLES = [
+  'LEE EL\nSISTEMA.',
+  'AUDITA\nTU ESTADO.',
+  'CALIBRA\nEL SISTEMA.',
+  'MIDE EL\nTERRENo.',
+  'ENTRA\nEN DATA.',
+  'REGISTRA\nLA SEÑAL.',
+  'VERIFICA\nTU BASE.',
+];
+
+function checkInTitle(streak: number): string {
+  const idx = streak % CHECK_IN_TITLES.length;
+  return CHECK_IN_TITLES[idx];
+}
+
 export default function CheckInScreen() {
   const sc = useScreen();
   const { isDesktop } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { todayCheckIn, saveCheckIn } = useLifeFlow();
+  const { todayCheckIn, saveCheckIn, state } = useLifeFlow();
+
+  // Streak data for protection warning
+  const streak = (() => {
+    const sorted = [...state.checkIns].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    const today = new Date(); today.setHours(0,0,0,0);
+    let s = 0; let cursor = new Date(today);
+    for (const ci of sorted) {
+      const d = new Date(ci.date); d.setHours(0,0,0,0);
+      if (d.getTime() === cursor.getTime()) { s++; cursor.setDate(cursor.getDate() - 1); }
+      else if (d.getTime() < cursor.getTime()) break;
+    }
+    return s;
+  })();
   const [energy, setEnergy] = useState(todayCheckIn?.energy ?? 7);
   const [clarity, setClarity] = useState(todayCheckIn?.clarity ?? 7);
   const [stress, setStress] = useState(todayCheckIn?.stress ?? 4);
@@ -44,12 +75,22 @@ export default function CheckInScreen() {
   const coherenceStrong = coherence >= 7;
   const coherenceLabel =
     coherence >= 8
-      ? 'SISTEMA EN ESTADO OPTIMO'
+      ? 'CAPACIDAD MAXIMA · EJECUTA SIN LIMITE'
       : coherence >= 6
-        ? 'SISTEMA OPERATIVO · CALIBRAR'
+        ? 'SISTEMA OPERATIVO · CALIBRA Y MUEVE'
         : coherence >= 4
-          ? 'SISTEMA BAJO · AJUSTA HOY'
-          : 'SISTEMA CRITICO · PRIORIZA RECUPERACION';
+          ? 'CARGA ALTA · UN FOCO, UNA ACCION'
+          : 'MODO RECUPERACION · PRIMERO EL SISTEMA';
+
+  // Stress as intelligence — never a failure
+  const stressReading =
+    stress >= 8
+      ? `Estrés ${stress}/10 — tu sistema reconoce un desafío real. Eso es información, no debilidad.`
+      : stress >= 6
+        ? `Estrés ${stress}/10 — carga moderada activa. Opera con claridad sobre tus prioridades.`
+        : stress <= 3
+          ? `Estrés ${stress}/10 — sistema en calma. Condiciones óptimas para trabajo profundo.`
+          : null;
 
   const submit = async () => {
     await saveCheckIn({
@@ -67,7 +108,7 @@ export default function CheckInScreen() {
   // ── Shared JSX blocks ──────────────────────────────────────────────────────
   const coherenceCard = (
     <PremiumCard style={styles.coherenceCard}>
-      <Text style={styles.coherenceEyebrow}>COHERENCIA DEL SISTEMA</Text>
+      <Text style={styles.coherenceEyebrow}>ÍNDICE DE CAPACIDAD HOY</Text>
       <View style={styles.coherenceRow}>
         <Text style={[styles.coherenceScore, coherenceStrong && styles.coherenceScoreStrong]}>
           {coherence}
@@ -88,16 +129,38 @@ export default function CheckInScreen() {
       <Text style={[styles.coherenceStatus, coherenceStrong && { color: palette.gold }]}>
         {coherenceLabel}
       </Text>
+      {stressReading ? (
+        <Text style={styles.stressReading}>{stressReading}</Text>
+      ) : null}
     </PremiumCard>
   );
 
+  const systemNeedSuggestions =
+    stress >= 7
+      ? ['Decomprimirme antes de arrancar', 'Espacio para procesar sin decidir', 'Un solo foco hoy']
+      : energy <= 4
+        ? ['Mínimo viable hoy — una acción', 'Descanso sin culpa esta tarde', 'Apagar lo no urgente']
+        : ['Claridad sobre mis prioridades', 'Foco sin interrupciones', 'Ejecutar sin analizar de más'];
+
   const systemNeedCard = (
     <PremiumCard style={styles.card}>
-      <Text style={styles.systemLabel}>QUE NECESITA TU SISTEMA HOY</Text>
+      <Text style={styles.systemLabel}>LECTURA DEL SISTEMA</Text>
+      {!systemNeed.trim() && (
+        <View style={styles.needSuggestions}>
+          {systemNeedSuggestions.map((s) => (
+            <Pressable
+              key={s}
+              onPress={() => setSystemNeed(s)}
+              style={({ pressed }) => [styles.needPill, pressed && { opacity: 0.7 }]}>
+              <Text style={styles.needPillText}>+ {s}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
       <PremiumInput
         value={systemNeed}
         onChangeText={setSystemNeed}
-        placeholder="Escribe una lectura honesta de lo que necesitas..."
+        placeholder="¿Qué necesita tu sistema para operar bien hoy?"
         multiline
         style={styles.textArea}
         accessibilityLabel="Que necesita tu sistema hoy"
@@ -125,7 +188,7 @@ export default function CheckInScreen() {
             <View style={styles.desktopLeft}>
               <GoldAccentCard>
                 <Text style={styles.dateLabel}>{todayLabel()}</Text>
-                <Text style={styles.introTitle}>LEE EL{'\n'}SISTEMA.</Text>
+                <Text style={styles.introTitle}>{checkInTitle(streak)}</Text>
                 <Text style={styles.introBody}>
                   Esta medicion calibra tu dashboard, mentor y score soberano. La honestidad aqui es
                   una ventaja competitiva.
@@ -191,7 +254,13 @@ export default function CheckInScreen() {
       {/* ── Intro ── */}
       <GoldAccentCard>
         <Text style={styles.dateLabel}>{todayLabel()}</Text>
-        <Text style={styles.introTitle}>LEE EL{'\n'}SISTEMA.</Text>
+        {streak >= 3 && (
+          <View style={styles.streakRow}>
+            <MaterialIcons name="local-fire-department" size={14} color={palette.gold} />
+            <Text style={styles.streakText}>Racha de {streak} días — no la rompas hoy</Text>
+          </View>
+        )}
+        <Text style={styles.introTitle}>{checkInTitle(streak)}</Text>
         <Text style={styles.introBody}>
           Esta medicion calibra tu dashboard, mentor y score soberano. La honestidad aqui es una
           ventaja competitiva.
@@ -209,7 +278,7 @@ export default function CheckInScreen() {
           icon="center-focus-strong"
         />
         <ScaleSelector
-          label="ESTRES"
+          label="CARGA DEL SISTEMA"
           value={stress}
           onChange={setStress}
           icon="device-thermostat"
@@ -236,6 +305,17 @@ const styles = StyleSheet.create({
   dateLabel: {
     ...typography.mono,
     color: palette.ash,
+  },
+  streakRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  streakText: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   introTitle: {
     color: palette.ivory,
@@ -301,11 +381,37 @@ const styles = StyleSheet.create({
     ...typography.mono,
     color: palette.smoke,
   },
+  stressReading: {
+    ...typography.caption,
+    color: palette.ash,
+    fontStyle: 'italic',
+    lineHeight: 18,
+    marginTop: 4,
+  },
 
   // System need
   systemLabel: {
     ...typography.label,
     color: palette.ash,
+  },
+  needSuggestions: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 6,
+  },
+  needPill: {
+    backgroundColor: 'rgba(201,160,0,0.08)',
+    borderColor: palette.gold + '44',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  needPillText: {
+    color: palette.gold,
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    lineHeight: 16,
   },
   textArea: {
     minHeight: 110,

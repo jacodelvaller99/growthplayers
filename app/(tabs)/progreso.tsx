@@ -23,7 +23,7 @@ import {
   screen,
   useScreen,
 } from '@/components/polaris';
-import { ACTIVE_MODULE } from '@/data/modules';
+import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -167,6 +167,63 @@ export default function ProgresoScreen() {
     { icon: 'workspace-premium' as const, label: 'SOBERANO\n90D', earned: protocolDay >= 90 },
   ];
 
+  // Archetype badges — earned by completing all lessons in a module with an arquetipo
+  const archetypes = useMemo(() => {
+    const completed = state.completedLessons ?? [];
+    return POLARIS_MODULES
+      .filter((m) => m.arquetipo)
+      .map((m) => {
+        const totalLessons = m.lessons.length;
+        const completedCount = m.lessons.filter((l) => completed.includes(l.id)).length;
+        const earned = totalLessons > 0 && completedCount >= totalLessons;
+        return {
+          id: m.id,
+          name: (m.arquetipo ?? '').toUpperCase(),
+          order: m.order,
+          earned,
+          completedCount,
+          totalLessons,
+        };
+      });
+  }, [state.completedLessons]);
+
+  // Transformation narrative
+  const narrativeBlock = useMemo(() => {
+    const completedLessonCount = (state.completedLessons ?? []).length;
+    const taskCount = Object.keys(state.completedTasks ?? {}).length;
+    const avgEnergy = Math.round(averages.energy ?? 0);
+
+    const lines: string[] = [];
+
+    if (protocolDay <= 3) {
+      lines.push(`Llevas ${protocolDay} día${protocolDay === 1 ? '' : 's'} en el protocolo. Esto acaba de comenzar — la mayoría abandona en los primeros 7 días. Tú no eres la mayoría.`);
+    } else if (protocolDay <= 7) {
+      lines.push(`${protocolDay} días. Estás cruzando la primera zona de filtro. Cada check-in es una declaración de quién eres — no de lo que sientes.`);
+    } else if (protocolDay <= 14) {
+      lines.push(`Día ${protocolDay}. Superaste el punto donde la mayoría desaparece. El hábito ya está grabándose en tu sistema nervioso.`);
+    } else if (protocolDay <= 30) {
+      lines.push(`${protocolDay} días. La neurociencia dice que a los 21 días una conducta empieza a volverse automática. Ya cruzaste ese umbral.`);
+    } else if (protocolDay <= 60) {
+      lines.push(`Día ${protocolDay} de 90. Estás en el arco de profundidad — donde los cambios dejan de ser visibles y empiezan a ser estructurales.`);
+    } else {
+      lines.push(`Día ${protocolDay} de 90. Eso no es disciplina — es quién eres ahora. El protocolo ya vive en ti.`);
+    }
+
+    if (state.northStar.identity && protocolDay >= 7) {
+      lines.push(`Tu identidad declarada: "${state.northStar.identity.slice(0, 100)}". Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);
+    } else if (completedLessonCount > 0) {
+      lines.push(`${completedLessonCount} lección${completedLessonCount === 1 ? '' : 'es'} completada${completedLessonCount === 1 ? '' : 's'}. Cada una reconfiguró algo — aunque no lo hayas notado todavía.`);
+    }
+    if (taskCount > 0) {
+      lines.push(`${taskCount} tarea${taskCount === 1 ? '' : 's'} de reflexión escritas. Eso es más autoconocimiento real que la mayoría acumula en un año.`);
+    }
+    if (avgEnergy >= 7 && state.checkIns.length >= 5) {
+      lines.push(`Tu energía promedio es ${avgEnergy}/10. El sistema está funcionando.`);
+    }
+
+    return lines.slice(0, 3);
+  }, [protocolDay, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy]);
+
   const toggleNotifications = async (value: boolean) => {
     if (value) {
       const granted = await requestNotificationPermissions();
@@ -306,6 +363,14 @@ export default function ProgresoScreen() {
           {/* ── ZONA 1: Top row ── */}
           <AppHeader title="PROGRESO" />
           <SovereignScore score={score} />
+          {narrativeBlock.length > 0 && (
+            <View style={styles.narrativeCard}>
+              <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
+              {narrativeBlock.map((line, i) => (
+                <Text key={i} style={styles.narrativeLine}>{line}</Text>
+              ))}
+            </View>
+          )}
 
           {/* ── ZONA 2: Middle two-column row ── */}
           <View style={deskStyles.desktopMiddle}>
@@ -351,6 +416,36 @@ export default function ProgresoScreen() {
               <View style={styles.achievementsGrid}>
                 {achievements.map((a) => (
                   <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
+                ))}
+              </View>
+
+              <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
+              <View style={styles.archetypeList}>
+                {archetypes.map((arch) => (
+                  <PremiumCard
+                    key={arch.id}
+                    style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
+                    <MaterialIcons
+                      name={arch.earned ? 'military-tech' : 'lock'}
+                      size={18}
+                      color={arch.earned ? palette.gold : palette.smoke}
+                    />
+                    <View style={styles.archetypeCopy}>
+                      <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
+                        {arch.name}
+                      </Text>
+                      <Text style={styles.archetypeProgress}>
+                        {arch.earned
+                          ? 'ARQUETIPO CONQUISTADO'
+                          : `${arch.completedCount}/${arch.totalLessons} LECCIONES`}
+                      </Text>
+                    </View>
+                    {arch.earned && (
+                      <View style={styles.archetypeCheck}>
+                        <MaterialIcons name="check-circle" size={14} color={palette.gold} />
+                      </View>
+                    )}
+                  </PremiumCard>
                 ))}
               </View>
             </View>
@@ -553,6 +648,16 @@ export default function ProgresoScreen() {
       {/* ── Sovereign Score ── */}
       <SovereignScore score={score} />
 
+      {/* ── Transformation Narrative ── */}
+      {narrativeBlock.length > 0 && (
+        <View style={styles.narrativeCard}>
+          <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
+          {narrativeBlock.map((line, i) => (
+            <Text key={i} style={styles.narrativeLine}>{line}</Text>
+          ))}
+        </View>
+      )}
+
       {/* ── Protocol Progress ── */}
       <ProgressCard
         label="Progreso · Protocolo Soberano 90D"
@@ -682,6 +787,37 @@ export default function ProgresoScreen() {
       <View style={styles.achievementsGrid}>
         {achievements.map((a) => (
           <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
+        ))}
+      </View>
+
+      {/* ── Archetype badges ── */}
+      <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
+      <View style={styles.archetypeList}>
+        {archetypes.map((arch) => (
+          <PremiumCard
+            key={arch.id}
+            style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
+            <MaterialIcons
+              name={arch.earned ? 'military-tech' : 'lock'}
+              size={18}
+              color={arch.earned ? palette.gold : palette.smoke}
+            />
+            <View style={styles.archetypeCopy}>
+              <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
+                {arch.name}
+              </Text>
+              <Text style={styles.archetypeProgress}>
+                {arch.earned
+                  ? 'ARQUETIPO CONQUISTADO'
+                  : `${arch.completedCount}/${arch.totalLessons} LECCIONES`}
+              </Text>
+            </View>
+            {arch.earned && (
+              <View style={styles.archetypeCheck}>
+                <MaterialIcons name="check-circle" size={14} color={palette.gold} />
+              </View>
+            )}
+          </PremiumCard>
         ))}
       </View>
 
@@ -957,6 +1093,29 @@ export default function ProgresoScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Transformation narrative
+  narrativeCard: {
+    backgroundColor: 'rgba(179,141,60,0.06)',
+    borderColor: 'rgba(179,141,60,0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  narrativeLabel: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+  },
+  narrativeLine: {
+    color: palette.ash,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
   // Hero profile card
   heroCard: {
     gap: spacing.lg,
@@ -1045,6 +1204,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+
+  // Archetype badges
+  archetypeList: {
+    gap: spacing.sm,
+  },
+  archetypeRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    opacity: 0.5,
+  },
+  archetypeRowEarned: {
+    opacity: 1,
+    borderColor: palette.gold + '55',
+  },
+  archetypeCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  archetypeName: {
+    color: palette.smoke,
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  archetypeNameEarned: {
+    color: palette.ivory,
+  },
+  archetypeProgress: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 9,
+  },
+  archetypeCheck: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Form

@@ -35,6 +35,7 @@ import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { analytics } from '@/lib/analytics';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
 import { db2, intel } from '@/lib/supabase';
+import { useWearableConnections, useWearableDaily } from '@/lib/wearables';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -44,9 +45,46 @@ function getOpeningMessage(params: {
   protocolDay: number;
   todayCheckIn: CheckIn | null;
   activeModuleTitle: string;
+  recentCheckIns: CheckIn[];
 }): string {
-  const { name, protocolDay, todayCheckIn, activeModuleTitle } = params;
+  const { name, protocolDay, todayCheckIn, activeModuleTitle, recentCheckIns } = params;
   const firstName = name.split(' ')[0] || name;
+
+  // ── Pattern: 3+ consecutive high-stress days ────────────────────────────────
+  const sorted = [...recentCheckIns].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+  const highStressStreak = sorted.slice(0, 5).filter((c) => c.stress >= 7).length;
+  const lowEnergyStreak  = sorted.slice(0, 5).filter((c) => c.energy <= 4).length;
+
+  if (highStressStreak >= 3) {
+    return `Llevas ${highStressStreak} días con el sistema nervioso en modo amenaza, ${firstName}. Antes de cualquier contenido — ¿qué evento de hace ${highStressStreak + 1} días no has terminado de digerir? ¿Cuántas decisiones tienes pendientes, no las que tomaste — las que estás evitando?`;
+  }
+  if (lowEnergyStreak >= 3) {
+    return `${lowEnergyStreak} días consecutivos con energía baja, ${firstName}. Esto no es cansancio — es carga acumulada sin descarga. ¿Cuándo fue la última vez que hiciste algo sin ningún propósito productivo? Empieza por eso.`;
+  }
+
+  // Day 1 special welcome — hooks identity from the first second
+  if (protocolDay <= 1) {
+    return `${firstName}. Llegaste. Esto no es un curso — es un espejo de alta definición. Aquí no te digo lo que quieres escuchar; te digo lo que necesitas ver. ¿Qué te trajo específicamente a este protocolo en este momento de tu vida? Esa respuesta es el punto de partida de todo.`;
+  }
+
+  // Milestone identity crystallization moments
+  if (protocolDay === 7) {
+    return `${firstName}. Una semana completa. Eso no es trivial — la mayoría abandona antes del día 3. Esta semana ya te puso en el 20% superior. Ahora la pregunta real: ¿qué has notado diferente en ti que todavía no le has dicho a nadie?`;
+  }
+  if (protocolDay === 14) {
+    return `Dos semanas, ${firstName}. Ya tienes datos reales de tu sistema — no suposiciones, datos. Mira tu check-in promedio de esta quincena. ¿Qué patrón te sorprendió más? No lo que esperabas ver — lo que no esperabas.`;
+  }
+  if (protocolDay === 30) {
+    return `Un mes completo, ${firstName}. Treinta días de datos, treinta días de decisiones, treinta días de construir quien eres en lugar de quien deberías ser. La mayoría nunca llega aquí. ¿Qué parte de ti de hace 30 días ya no existe?`;
+  }
+  if (protocolDay === 60) {
+    return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. La neurociencia dice que a los 66 días un comportamiento se vuelve automático. Estás a seis días de que esto sea quien eres, no lo que haces. ¿Qué quieres que sea automático en ti?`;
+  }
+  if (protocolDay === 90) {
+    return `${firstName}. Noventa días. Eres una persona diferente. No diferente en lo que dices — diferente en lo que haces cuando nadie mira. Eso es el protocolo funcionando. Una sola pregunta: comparado con quien eras en el Día 1 — ¿cuál es la diferencia más importante que has ganado?`;
+  }
 
   if (!todayCheckIn) {
     return `${firstName}, aún no has registrado tu check-in de hoy. Sin lectura del sistema, opero a ciegas. Tómate 2 minutos antes de avanzar — eso multiplica la calidad de cualquier decisión que tomemos juntos.`;
@@ -90,24 +128,36 @@ const BASE_PROMPTS: Array<{ label: string; icon: React.ComponentProps<typeof Mat
 
 const MODULE_PROMPTS: Record<number, Array<{ label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }>> = {
   0: [
-    { label: 'Explica el Metodo Polaris', icon: 'military-tech' },
-    { label: 'Como empiezo hoy', icon: 'play-arrow' },
+    { label: '¿Qué cambia primero en mí con el Método?', icon: 'military-tech' },
+    { label: '¿Qué hace diferente a alguien en el protocolo?', icon: 'play-arrow' },
   ],
   1: [
-    { label: 'Dame una practica de mentalidad', icon: 'fitness-center' },
-    { label: 'Como detecto mis creencias limitantes', icon: 'search' },
+    { label: '¿Cuál es mi creencia que más me limita hoy?', icon: 'fitness-center' },
+    { label: '¿Qué me diría mi versión de 5 años adelante?', icon: 'search' },
   ],
   2: [
-    { label: 'Como subir mi energia ahora', icon: 'bolt' },
-    { label: 'Practica de escritura terapeutica', icon: 'edit' },
+    { label: '¿Qué emoción estoy evitando sentir ahora?', icon: 'bolt' },
+    { label: 'Guíame con escritura terapéutica', icon: 'edit' },
   ],
   3: [
-    { label: 'Cual es mi proposito hoy', icon: 'explore' },
-    { label: 'Explicame las leyes universales', icon: 'hub' },
+    { label: '¿Qué me está enseñando esta crisis?', icon: 'explore' },
+    { label: '¿Cómo aplico C.A.D.A.V.R.A. hoy?', icon: 'hub' },
   ],
   4: [
-    { label: 'Como entrar en estado de Flow', icon: 'water' },
-    { label: 'Dame coherencia cardiaca', icon: 'favorite' },
+    { label: '¿Cómo entro en Flow en los próximos 30 min?', icon: 'water' },
+    { label: 'Protocolo de coherencia cardíaca ahora', icon: 'favorite' },
+  ],
+  5: [
+    { label: '¿Cuál es la llave que más necesito abrir?', icon: 'vpn-key' },
+    { label: '¿Mi relación con el dinero viene del miedo o del servicio?', icon: 'attach-money' },
+  ],
+  6: [
+    { label: 'Ayúdame a planear mi semana', icon: 'calendar-today' },
+    { label: '¿Qué actividad consume más tiempo sin impactar mis PERAS?', icon: 'hourglass-empty' },
+  ],
+  7: [
+    { label: '¿Cuál relación necesita mi atención ahora?', icon: 'people' },
+    { label: '¿Cómo sirvo mejor desde mis dones?', icon: 'volunteer-activism' },
   ],
 };
 
@@ -148,6 +198,11 @@ export default function MentorScreen() {
   const { intelligence } = useUserIntelligence(userId);
   const { addMemory, searchMemories } = useMentorMemory(userId);
 
+  // ── Wearable hooks ─────────────────────────────────────────────────────────
+  const { connections } = useWearableConnections();
+  const { today: latestWearable } = useWearableDaily(3);
+  const wearableProvider = connections.find((c) => c.is_active)?.provider ?? null;
+
   const [input, setInput]               = useState('');
   const [isStreaming, setIsStreaming]   = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -181,11 +236,54 @@ export default function MentorScreen() {
         protocolDay,
         todayCheckIn,
         activeModuleTitle: ACTIVE_MODULE.title,
+        recentCheckIns:    state.checkIns
+          .slice()
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 7),
       }),
     // recompute once todayCheckIn arrives from Supabase (was null at mount)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [todayCheckIn?.date, protocolDay],
+    [todayCheckIn?.date, protocolDay, state.checkIns.length],
   );
+
+  // Commitment primer — shown as a second opening bubble, rotating by week
+  const commitmentPrimer = useMemo(() => {
+    const firstName = state.profile.name.split(' ')[0] || state.profile.name;
+    if (protocolDay <= 7) {
+      return `Una pregunta antes de empezar, ${firstName}. Si no pudieras fallar y nadie te juzgara — ¿qué estarías construyendo diferente en tu vida ahora mismo? No me des la respuesta que crees que deberías dar. Dame la real.`;
+    }
+    if (protocolDay <= 14) {
+      return `¿Qué has notado diferente en ti desde que comenzaste el protocolo? No lo que has hecho — lo que eres diferente. Eso es lo que me importa rastrear contigo.`;
+    }
+    if (protocolDay <= 21) {
+      return `Semana tres, ${firstName}. Las primeras dos semanas son adrenalina. Esta es donde se filtra quien realmente quiere cambiar. ¿Qué hábito del protocolo ya se siente natural?`;
+    }
+    if (protocolDay <= 30) {
+      return `¿Cuál es el obstáculo interno que más aparece cuando intentas avanzar, ${firstName}? No el externo — el tuyo. Ese es el que vale la pena nombrar.`;
+    }
+    if (protocolDay <= 60) {
+      const week = Math.floor((protocolDay - 30) / 7) % 4;
+      const prompts = [
+        `${firstName}, ¿qué está en tu cabeza antes de que empiece a operar contigo hoy?`,
+        `¿Qué decisión has estado postergando esta semana, ${firstName}? Solo una.`,
+        `¿Dónde está tu energía puesta esta semana? ¿Coincide con tus prioridades reales?`,
+        `${firstName}, ¿qué es lo que más te está costando sostener del protocolo?`,
+      ];
+      return prompts[week];
+    }
+    if (protocolDay <= 90) {
+      const week = Math.floor((protocolDay - 60) / 7) % 4;
+      const endgamePrompts = [
+        `${firstName}, estás en el último tramo. ¿Qué parte de ti de hace 60 días todavía aparece cuando hay presión?`,
+        `¿Qué harás diferente cuando esto termine, ${firstName}? No el plan — la persona.`,
+        `En el día 90 vas a mirar atrás. ¿Qué quieres que ya sea automático en ti para ese momento?`,
+        `${firstName}, ¿cuál es la promesa que te hiciste al inicio que todavía no has cumplido del todo?`,
+      ];
+      return endgamePrompts[week];
+    }
+    return `${firstName}. Noventa días completados. ¿Cuál es el siguiente nivel que ya estás diseñando?`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [protocolDay]);
 
   // Gate: ≥ 3 mensajes de usuario sin suscripción
   const userMsgCount = useMemo(
@@ -260,6 +358,15 @@ export default function MentorScreen() {
       // ── Step 2: Build context with Intelligence fields ─────────────────────
       const relevantMemories = await memoriesPromise;
 
+      // Dynamic module progress (based on completed lessons)
+      const activeModLessons = ACTIVE_MODULE.lessons.length;
+      const activeModCompleted = ACTIVE_MODULE.lessons.filter(
+        (l) => (state.completedLessons ?? []).includes(l.id)
+      ).length;
+      const activeModProgress = activeModLessons > 0
+        ? Math.round((activeModCompleted / activeModLessons) * 100)
+        : 0;
+
       const ctx: MentorContext = {
         userName:             state.profile.name,
         role:                 state.profile.role,
@@ -268,9 +375,13 @@ export default function MentorScreen() {
         sovereignScore,
         tier,
         activeModuleTitle:    ACTIVE_MODULE.title,
-        activeModuleProgress: ACTIVE_MODULE.progress,
+        activeModuleProgress: activeModProgress,
         northStar:            state.northStar,
         todayCheckIn,
+        recentCheckIns:       state.checkIns
+          .slice()
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 14),
         messageCount:         userMsgCount,
         completedTasks:       Object.values(state.completedTasks ?? {}).map((t) => ({
           lessonId:    t.lessonId,
@@ -290,6 +401,12 @@ export default function MentorScreen() {
           importance:  m.importance,
           similarity:  m.similarity,
         })),
+        // Biometric enrichment (wearable)
+        biometricProvider:  wearableProvider,
+        biometricReadiness: latestWearable?.recovery_score ?? null,
+        biometricHrv:       latestWearable?.hrv_ms ?? null,
+        biometricRestingHr: latestWearable?.resting_hr ?? null,
+        biometricAnomaly:   intelligence.anomaly_type?.startsWith('biometric') ? intelligence.anomaly_type : null,
       };
 
       const history = state.mentorMessages.slice(-10).map((m) => ({
@@ -448,6 +565,23 @@ export default function MentorScreen() {
           ))}
         </View>
 
+        {/* ── Last session memory anchor ── */}
+        {state.mentorMessages.length >= 6 && (
+          <PremiumCard style={styles.memoryCard}>
+            <View style={styles.memoryHeader}>
+              <MaterialIcons name="history" size={12} color={palette.gold} />
+              <Text style={styles.memoryLabel}>ÚLTIMA SESIÓN</Text>
+            </View>
+            <Text style={styles.memoryText} numberOfLines={2}>
+              {state.mentorMessages
+                .filter((m) => m.role === 'user')
+                .slice(-2)
+                .map((m) => m.text.slice(0, 80))
+                .join(' · ')}
+            </Text>
+          </PremiumCard>
+        )}
+
         {/* ── Message Thread ── */}
         {displayMessages.length > 0 && (
           <>
@@ -489,6 +623,9 @@ export default function MentorScreen() {
             <GoldDivider label="CONVERSACION" />
             <View style={styles.thread}>
               <ChatBubble role="mentor">{openingMessage}</ChatBubble>
+              {commitmentPrimer ? (
+                <ChatBubble role="mentor">{commitmentPrimer}</ChatBubble>
+              ) : null}
             </View>
           </>
         )}
@@ -680,6 +817,30 @@ const styles = StyleSheet.create({
     color: palette.ash,
     fontSize: 13,
     fontStyle: 'italic',
+  },
+
+  // Memory summary card
+  memoryCard: {
+    gap: 6,
+    backgroundColor: 'rgba(201, 160, 0, 0.04)',
+    borderColor: palette.gold + '22',
+  },
+  memoryHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+  },
+  memoryLabel: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 8,
+    letterSpacing: 1.5,
+  },
+  memoryText: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 11,
+    lineHeight: 16,
   },
 
   // Paywall banner

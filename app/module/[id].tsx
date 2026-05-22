@@ -100,6 +100,16 @@ export default function ModuleDetailScreen() {
           <Text style={styles.heroNumber}>{String(module.order).padStart(2, '0')}</Text>
         </View>
         <Text style={styles.heroTitle}>{module.title}</Text>
+        {module.arquetipo ? (
+          <View style={styles.arquetipoRow}>
+            <MaterialIcons name="person" size={12} color={palette.gold} />
+            <Text style={styles.arquetipoText}>
+              {module.status === 'completed'
+                ? `Ya eres el ${module.arquetipo.toUpperCase()}`
+                : `Arquetipo: ${module.arquetipo}`}
+            </Text>
+          </View>
+        ) : null}
         <Text style={styles.heroBody}>{module.subtitle}</Text>
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
@@ -172,11 +182,42 @@ export default function ModuleDetailScreen() {
         })}
       </View>
 
-      <PrimaryButton
-        label={`CONTINUAR: ${activeLesson.title.toUpperCase()}`}
-        icon="play-arrow"
-        onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
-      />
+      {completedCount === module.lessons.length ? (
+        <View style={styles.completionBanner}>
+          <MaterialIcons name="emoji-events" size={20} color={palette.gold} />
+          <View style={styles.completionCopy}>
+            <Text style={styles.completionTitle}>MÓDULO COMPLETADO</Text>
+            <Text style={styles.completionBody}>
+              {module.arquetipo
+                ? `Ya eres el ${module.arquetipo.toUpperCase()}. Eso no se puede desaprender.`
+                : 'Has absorbido este módulo. Lleva lo aprendido al siguiente nivel.'}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <PrimaryButton
+          label={`CONTINUAR: ${activeLesson.title.toUpperCase()}`}
+          icon="play-arrow"
+          onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
+        />
+      )}
+
+      {/* Next module anticipation strip */}
+      {(() => {
+        const currentIdx = POLARIS_MODULES.findIndex((m) => m.id === module.id);
+        const nextMod = POLARIS_MODULES[currentIdx + 1] ?? null;
+        if (!nextMod || nextMod.status === 'coming_soon') return null;
+        return (
+          <View style={styles.nextModuleTeaser}>
+            <MaterialIcons name="lock" size={12} color={palette.smoke} />
+            <View style={styles.nextModuleCopy}>
+              <Text style={styles.nextModuleLabel}>SIGUIENTE MÓDULO</Text>
+              <Text style={styles.nextModuleTitle}>{nextMod.title}</Text>
+            </View>
+          </View>
+        );
+      })()}
+
       <SecondaryButton label="VOLVER" icon="arrow-back" onPress={() => router.back()} />
     </ScrollView>
   );
@@ -205,6 +246,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     lineHeight: 34,
     textTransform: 'uppercase',
+  },
+  arquetipoRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+  },
+  arquetipoText: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
   },
   heroBody: {
     ...typography.body,
@@ -294,5 +346,65 @@ const styles = StyleSheet.create({
     height: 28,
     justifyContent: 'center',
     width: 28,
+  },
+
+  // Next module teaser
+  nextModuleTeaser: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: palette.lineSoft,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    opacity: 0.6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  nextModuleCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  nextModuleLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 7,
+    letterSpacing: 2,
+  },
+  nextModuleTitle: {
+    color: palette.ash,
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+
+  // Module completion banner
+  completionBanner: {
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(201,160,0,0.06)',
+    borderColor: palette.gold + '55',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  completionCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  completionTitle: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  completionBody: {
+    ...typography.body,
+    color: palette.ivory,
+    fontSize: 13,
+    lineHeight: 20,
   },
 });
