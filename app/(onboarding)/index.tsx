@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { POLARIS_MODULES } from '@/data/modules';
 import { redeemAccessCode } from '@/lib/admin/actions';
 import { PRODUCT_LABELS } from '@/lib/admin/types';
 import {
@@ -22,33 +21,6 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import type { NorthStar } from '@/types/lifeflow';
 
-const programs = [
-  {
-    id: 'protocolo-soberano',
-    label: 'PROTOCOLO SOBERANO',
-    meta: '90 DIAS · EJECUCION INTEGRAL',
-    description:
-      'El sistema completo para operar tu vida con precision militar. Biometria, norte, modulos y mentor integrados.',
-    icon: 'military-tech' as const,
-  },
-  {
-    id: 'mercader',
-    label: 'MERCADER',
-    meta: 'TIEMPO · CAPITAL · FOCO',
-    description:
-      'Optimiza tus tres recursos fundamentales: atencion, energia y dinero. Para el operador de alto volumen.',
-    icon: 'trending-up' as const,
-  },
-  {
-    id: 'elite-os',
-    label: 'ELITE OPERATING SYSTEM',
-    meta: 'SISTEMA AVANZADO',
-    description:
-      'Para quienes dominan los fundamentos. Sistemas propios, leverage y delegacion de alta precision.',
-    icon: 'precision-manufacturing' as const,
-  },
-];
-
 const TOTAL_STEPS = 5;
 
 export default function OnboardingScreen() {
@@ -59,11 +31,19 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(state.profile.name);
   const [role, setRole] = useState(state.profile.role);
-  const [program, setProgram] = useState(state.activeProgramId);
+  const [painPoint, setPainPoint] = useState('');
   const [north, setNorth] = useState<NorthStar>(state.northStar);
   const [accessCode, setAccessCode] = useState('');
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
   const [codeMessage, setCodeMessage] = useState('');
+
+  const goToStep3 = () => {
+    // Pre-populate purpose with pain point if user hasn't set it yet
+    if (painPoint.trim() && !north.purpose.trim()) {
+      setNorth((n) => ({ ...n, purpose: painPoint.trim() }));
+    }
+    setStep(3);
+  };
 
   const handleApplyCode = async () => {
     if (!accessCode.trim()) return;
@@ -93,7 +73,7 @@ export default function OnboardingScreen() {
   const finish = async () => {
     await completeOnboarding({
       profile: { name: name.trim() || 'Juan Carlos', role: role.trim() || 'Empresario' },
-      activeProgramId: program,
+      activeProgramId: 'protocolo-soberano',
       northStar: north,
     });
     router.replace('/(tabs)/comando');
@@ -121,39 +101,50 @@ export default function OnboardingScreen() {
       {/* ─────────────────────────────────────────── STEP 0 — BIENVENIDA ── */}
       {step === 0 && (
         <View style={styles.welcomeWrap}>
+          {/* Brand mark + eyebrow */}
           <View style={styles.markWrap}>
-            <PolarisMark size={60} />
+            <PolarisMark size={72} />
           </View>
           <Text style={styles.eyebrow}>POLARIS GROWTH INSTITUTE</Text>
+
+          {/* Gold accent bar */}
+          <View style={styles.goldAccent} />
+
           <Text style={styles.welcomeTitle}>TU SALA{'\n'}DE MANDO{'\n'}PERSONAL.</Text>
           <Text style={styles.welcomeBody}>
-            Esta app no busca calmarte. Busca convertir tu estado interno en ejecucion visible,
-            medible y sostenida en el tiempo.
+            Esta app no es para todos. Es para quien ya sabe que la distancia entre donde está y
+            donde quiere estar no es de estrategia — es de sistema interno.
           </Text>
+
+          {/* Feature list — larger, clearer */}
           <View style={styles.featureList}>
-            {['Biometria diaria calibrada', 'Mentor IA contextualizado', 'Protocolo Soberano 90D', 'Score Soberano en tiempo real'].map(
-              (item) => (
-                <View key={item} style={styles.featureRow}>
-                  <MaterialIcons name="check" size={14} color={palette.gold} />
-                  <Text style={styles.featureText}>{item}</Text>
-                </View>
-              ),
-            )}
+            {[
+              { icon: 'monitor-heart' as const, label: 'Biometría diaria calibrada' },
+              { icon: 'psychology' as const, label: 'Mentor IA contextualizado' },
+              { icon: 'military-tech' as const, label: 'Protocolo Soberano 90D' },
+              { icon: 'insights' as const, label: 'Score Soberano en tiempo real' },
+            ].map(({ icon, label }) => (
+              <View key={label} style={styles.featureRow}>
+                <MaterialIcons name={icon} size={16} color={palette.gold} />
+                <Text style={styles.featureText}>{label}</Text>
+              </View>
+            ))}
           </View>
+
           <View style={styles.dividerLine} />
           <Text style={styles.legalNote}>
             Al continuar, aceptas que tus datos biométricos y de bienestar son usados exclusivamente
             para personalizar tu experiencia. No son consejo médico. Puedes exportar o eliminar
             tu cuenta en Perfil → Privacidad y Datos (RGPD/GDPR).
           </Text>
-          <PrimaryButton label="COMENZAR ACTIVACION" icon="arrow-forward" onPress={() => setStep(1)} />
+          <PrimaryButton label="COMENZAR ACTIVACIÓN" icon="arrow-forward" onPress={() => setStep(1)} />
         </View>
       )}
 
       {/* ─────────────────────────────────────────── STEP 1 — IDENTIDAD ── */}
       {step === 1 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 1 DE 4 · IDENTIDAD" />
+          <StatusPill label="PASO 1 · IDENTIDAD" />
           <Text style={styles.stepTitle}>OPERADOR{'\n'}SOBERANO.</Text>
           <Text style={styles.stepBody}>
             Define como opera el sistema. Tu nombre y rol aparecen en el perfil y contextualizan al mentor.
@@ -188,64 +179,47 @@ export default function OnboardingScreen() {
         </PremiumCard>
       )}
 
-      {/* ──────────────────────────────────────────── STEP 2 — PROGRAMA ── */}
+      {/* ──────────────────────────────────────────── STEP 2 — OBSTÁCULO ── */}
       {step === 2 && (
-        <View style={styles.stack}>
-          <StatusPill label="PASO 2 DE 4 · PROGRAMA" />
-          <Text style={styles.stepTitle}>SELECCIONA{'\n'}TU PROTOCOLO.</Text>
+        <PremiumCard style={styles.formCard}>
+          <StatusPill label="PASO 2 · TU SITUACIÓN" />
+          <Text style={styles.stepTitle}>DEFINE EL{'\n'}OBSTÁCULO.</Text>
           <Text style={styles.stepBody}>
-            El programa define los modulos, cadencia de check-ins y enfoque del mentor IA.
+            Una sola respuesta. Se especifico — la vaguedad protege el ego pero bloquea el cambio.
           </Text>
-          {programs.map((item) => (
-            <Pressable
-              key={item.id}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
-              onPress={() => setProgram(item.id)}
-              style={({ pressed }) => [pressed && { opacity: 0.85 }]}>
-              <PremiumCard style={[styles.programCard, program === item.id && styles.programCardActive]}>
-                <View style={styles.programTop}>
-                  <View style={[styles.programIconWrap, program === item.id && styles.programIconWrapActive]}>
-                    <MaterialIcons
-                      name={item.icon}
-                      size={20}
-                      color={program === item.id ? palette.black : palette.gold}
-                    />
-                  </View>
-                  <View style={styles.programTitleWrap}>
-                    <Text style={[styles.programTitle, program === item.id && styles.programTitleActive]}>
-                      {item.label}
-                    </Text>
-                    <Text style={[styles.programMeta, program === item.id && styles.programMetaActive]}>
-                      {item.meta}
-                    </Text>
-                  </View>
-                  {program === item.id && (
-                    <MaterialIcons name="check-circle" size={20} color={palette.black} />
-                  )}
-                </View>
-                <Text style={[styles.programDesc, program === item.id && styles.programDescActive]}>
-                  {item.description}
-                </Text>
-              </PremiumCard>
-            </Pressable>
-          ))}
+          <GoldDivider />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>¿QUÉ CAMBIA TODO EN 90 DÍAS?</Text>
+            <PremiumInput
+              value={painPoint}
+              onChangeText={setPainPoint}
+              placeholder={"Ej: Mi empresa genera $50K/mes pero yo trabajo 80 horas. No delego porque siento que nadie lo hace como yo..."}
+              multiline
+              style={styles.textArea}
+              accessibilityLabel="Tu mayor obstaculo"
+            />
+          </View>
+          <Text style={styles.hintText}>
+            Esta respuesta guia a Norman desde el primer mensaje. Sé más especifico de lo que crees necesario.
+          </Text>
           <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(1)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(3)} />
+            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={goToStep3} />
           </View>
-
-        </View>
+          <Pressable onPress={goToStep3} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+            <Text style={styles.skipText}>Completar después →</Text>
+          </Pressable>
+        </PremiumCard>
       )}
 
-      {/* ──────────────────────────────── STEP 3 — CÓDIGO DE ACCESO (NUEVO) ── */}
+      {/* ──────────────────────────────── STEP 3 — CÓDIGO DE ACCESO ── */}
       {step === 3 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 3 DE 5 · CÓDIGO DE ACCESO" />
-          <Text style={styles.stepTitle}>¿TIENES UN{'\n'}CÓDIGO?</Text>
+          <StatusPill label="PASO 3 · MEMBRESÍA" />
+          <Text style={styles.stepTitle}>ACTIVA TU{'\n'}MEMBRESÍA.</Text>
           <Text style={styles.stepBody}>
-            Si tienes un código de acceso de Polaris, ingrésalo aquí para activar tu membresía.
-            Si no tienes uno, puedes continuar sin él.
+            Tu coach te entregó un código al inscribirte. Ingrésalo aquí para desbloquear el acceso
+            completo al Protocolo Soberano. Si aún no lo tienes, continúa y actívalo después.
           </Text>
           <GoldDivider />
           <View style={styles.fieldGroup}>
@@ -290,14 +264,14 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────────────────── STEP 4 — MI NORTE ── */}
       {step === 4 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label={`PASO 4 DE 5 · MODULO ${POLARIS_MODULES[5].order}`} tone="gold" dot />
-          <Text style={styles.stepTitle}>DEFINE TU{'\n'}NORTE.</Text>
+          <StatusPill label="PASO 4 · MI NORTE" tone="gold" dot />
+          <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
-            Estas declaraciones guian al mentor y anclan tu protocolo diario. Puedes editarlas en cualquier momento.
+            Estas declaraciones guian cada decision del protocolo. El mentor las usa en cada sesion. Puedes editarlas después.
           </Text>
           <GoldDivider />
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>PROPOSITO PRINCIPAL</Text>
+            <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
             <PremiumInput
               value={north.purpose}
               onChangeText={(purpose) => setNorth({ ...north, purpose })}
@@ -308,7 +282,7 @@ export default function OnboardingScreen() {
             />
           </View>
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>DECLARACION DE IDENTIDAD</Text>
+            <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD</Text>
             <PremiumInput
               value={north.identity}
               onChangeText={(identity) => setNorth({ ...north, identity })}
@@ -331,7 +305,7 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(3)} />
-            <PrimaryButton label="ACTIVAR POLARIS" icon="check" onPress={finish} />
+            <PrimaryButton label="INICIAR EL PROTOCOLO" icon="military-tech" onPress={finish} />
           </View>
         </PremiumCard>
       )}
@@ -370,6 +344,13 @@ const styles = StyleSheet.create({
   eyebrow: {
     ...typography.label,
     color: palette.gold,
+    letterSpacing: 2,
+  },
+  goldAccent: {
+    width: 40,
+    height: 2,
+    backgroundColor: palette.gold,
+    borderRadius: 1,
   },
   welcomeTitle: {
     color: palette.ivory,
@@ -391,11 +372,12 @@ const styles = StyleSheet.create({
   featureRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   featureText: {
-    ...typography.mono,
-    color: palette.ivoryDim,
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 14,
   },
   dividerLine: {
     backgroundColor: palette.line,
@@ -464,6 +446,13 @@ const styles = StyleSheet.create({
     color: palette.smoke,
     fontSize: 12,
   },
+  hintText: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 11,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
   textArea: {
     minHeight: 88,
     paddingTop: spacing.md,
@@ -472,57 +461,5 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: spacing.md,
-  },
-
-  // ── Program cards
-  programCard: {
-    gap: spacing.md,
-  },
-  programCardActive: {
-    backgroundColor: palette.gold,
-    borderColor: palette.gold,
-  },
-  programTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  programIconWrap: {
-    alignItems: 'center',
-    backgroundColor: palette.goldLight,
-    borderRadius: radii.xs,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  programIconWrapActive: {
-    backgroundColor: 'rgba(0,0,0,0.15)',
-  },
-  programTitleWrap: {
-    flex: 1,
-    gap: 3,
-  },
-  programTitle: {
-    ...typography.section,
-    color: palette.ivory,
-  },
-  programTitleActive: {
-    color: palette.black,
-  },
-  programMeta: {
-    ...typography.mono,
-    color: palette.ash,
-  },
-  programMetaActive: {
-    color: palette.graphite,
-  },
-  programDesc: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  programDescActive: {
-    color: palette.graphite,
   },
 });

@@ -3,7 +3,7 @@ import { Michroma_400Regular, useFonts as useMichromaFonts } from '@expo-google-
 import { SpaceMono_400Regular, useFonts as useSpaceMonoFonts } from '@expo-google-fonts/space-mono';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
@@ -95,9 +95,39 @@ function MainStack() {
   );
 }
 
+// ─── AppShell — sidebar visibility based on current route ────────────────────
+// Must be a child component so useSegments() runs inside the navigation tree.
+function AppShell() {
+  const { isDesktop } = useBreakpoint();
+  const segments = useSegments();
+
+  // Hide sidebar during auth and onboarding flows for full-focus immersion.
+  const isImmersive =
+    (segments as string[])[0] === '(auth)' ||
+    (segments as string[])[0] === '(onboarding)';
+  const showSidebar = Platform.OS === 'web' && isDesktop && !isImmersive;
+
+  if (showSidebar) {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#080808' }}>
+        <DesktopSidebar />
+        <View style={{ flex: 1, backgroundColor: '#080808' }}>
+          <MainStack />
+          <StatusBar style="light" />
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View style={{ flex: 1, backgroundColor: '#080808' }}>
+      <MainStack />
+      <StatusBar style="light" />
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const router = useRouter();
-  const { isDesktop } = useBreakpoint();
 
   // ── On web, fonts are loaded via Google Fonts <link> tags in +html.tsx.
   // The @expo-google-fonts useFonts() tries to load binary files from
@@ -165,22 +195,8 @@ export default function RootLayout() {
         <SmartNotificationsInitializer />
         <OfflineBanner />
         <PWAInstallBanner />
-        {Platform.OS === 'web' && isDesktop ? (
-          /* ── Desktop: sidebar fijo + contenido full-width ── */
-          <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#080808' }}>
-            <DesktopSidebar />
-            <View style={{ flex: 1, backgroundColor: '#080808' }}>
-              <MainStack />
-              <StatusBar style="light" />
-            </View>
-          </View>
-        ) : (
-          /* ── Mobile / nativo: sin cambios ── */
-          <View style={{ flex: 1 }}>
-            <MainStack />
-            <StatusBar style="light" />
-          </View>
-        )}
+        {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
+        <AppShell />
         </ToastProvider>
       </LifeFlowProvider>
     </ThemeProvider>
