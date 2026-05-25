@@ -13,7 +13,8 @@ export default function Index() {
   }
 
   if (!isAuthenticated) {
-    return <Redirect href={'/(auth)' as never} />;
+    // Welcome screen first — cinematic brand entry before login/register form.
+    return <Redirect href={'/(auth)/welcome' as never} />;
   }
 
   return (

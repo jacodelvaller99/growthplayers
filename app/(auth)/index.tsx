@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -30,7 +30,11 @@ export default function AuthScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [mode, setMode]         = useState<AuthMode>('login');
+  // Read optional mode param passed from the welcome screen
+  const { mode: initialMode } = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<AuthMode>(
+    initialMode === 'register' ? 'register' : 'login',
+  );
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [accessCode, setAccessCode] = useState('');
