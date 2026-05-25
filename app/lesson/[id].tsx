@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -61,9 +62,21 @@ function TextAreaField({
     borderColor: interpolateColor(focused.value, [0, 1], [palette.lineSoft, palette.gold]),
   }));
 
+  const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0;
+  const wordHint =
+    wordCount === 0 ? null
+    : wordCount < 10 ? `${wordCount} palabras — profundiza más`
+    : wordCount < 30 ? `${wordCount} palabras — bien`
+    : `${wordCount} palabras`;
+
   return (
     <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{field.label}</Text>
+      <View style={styles.fieldLabelRow}>
+        <Text style={styles.fieldLabel}>{field.label}</Text>
+        {wordHint && multiline ? (
+          <Text style={[styles.wordCount, wordCount >= 30 && styles.wordCountGood]}>{wordHint}</Text>
+        ) : null}
+      </View>
       <Animated.View style={[styles.inputBox, animStyle]}>
         <TextInput
           multiline={multiline}
@@ -165,6 +178,490 @@ function TaskForm({
   );
 }
 
+// ─── Flow State Pre-Lesson Ritual ────────────────────────────────────────────
+
+const INTENTIONS = [
+  'Aplicar esto hoy mismo',
+  'Entender a profundidad',
+  'Resolver algo que me pesa',
+] as const;
+
+function FocusRitualModal({
+  visible,
+  lessonTitle,
+  onComplete,
+}: {
+  visible: boolean;
+  lessonTitle: string;
+  onComplete: () => void;
+}) {
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [intention, setIntention] = useState('');
+
+  const handleBreathDone = () => setStep(1);
+
+  const handleIntention = (val: string) => {
+    setIntention(val);
+    setStep(2);
+  };
+
+  const handleCommit = () => {
+    onComplete();
+    // Reset for next use
+    setTimeout(() => { setStep(0); setIntention(''); }, 500);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={ritualStyles.overlay}>
+        <View style={ritualStyles.card}>
+
+          {step === 0 && (
+            <>
+              <Text style={ritualStyles.eyebrow}>RITUAL DE ENFOQUE</Text>
+              <Text style={ritualStyles.headline}>RESPIRA.</Text>
+              <Text style={ritualStyles.body}>
+                Toma 3 respiraciones lentas.{'\n'}
+                Inhala 4 seg · retén 4 seg · exhala 6 seg.{'\n\n'}
+                Tu sistema nervioso entra en modo aprendizaje.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [ritualStyles.btn, pressed && { opacity: 0.85 }]}
+                onPress={handleBreathDone}>
+                <Text style={ritualStyles.btnText}>LISTO</Text>
+              </Pressable>
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <Text style={ritualStyles.eyebrow}>INTENCIÓN</Text>
+              <Text style={ritualStyles.headline}>¿QUÉ BUSCAS{'\n'}HOY?</Text>
+              <Text style={ritualStyles.lessonRef}>{lessonTitle}</Text>
+              {INTENTIONS.map((opt) => (
+                <Pressable
+                  key={opt}
+                  style={({ pressed }) => [ritualStyles.intentBtn, pressed && { opacity: 0.8 }]}
+                  onPress={() => handleIntention(opt)}>
+                  <Text style={ritualStyles.intentText}>{opt}</Text>
+                </Pressable>
+              ))}
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <Text style={ritualStyles.eyebrow}>COMPROMISO</Text>
+              <Text style={ritualStyles.headline}>ENTRA.{'\n'}COMPLETA.</Text>
+              <Text style={ritualStyles.body}>
+                Intención: <Text style={{ color: palette.gold }}>{intention}</Text>
+              </Text>
+              <Text style={ritualStyles.body}>
+                El cerebro transforma cuando cierra ciclos completos — no cuando consume fragmentos. Una lección. Un bloque de tiempo. Sin interrupciones.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [ritualStyles.btn, pressed && { opacity: 0.85 }]}
+                onPress={handleCommit}>
+                <Text style={ritualStyles.btnText}>ENTRO · ME COMPROMETO</Text>
+              </Pressable>
+            </>
+          )}
+
+          <Pressable onPress={onComplete} style={ritualStyles.skipBtn}>
+            <Text style={ritualStyles.skipText}>Saltar ritual →</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const ritualStyles = StyleSheet.create({
+  overlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: palette.graphite,
+    borderColor: palette.lineSoft,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 16,
+    maxWidth: 380,
+    padding: 32,
+    width: '100%',
+  },
+  eyebrow: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2,
+  },
+  headline: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    lineHeight: 34,
+    textTransform: 'uppercase',
+  },
+  lessonRef: {
+    color: palette.ash,
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  body: {
+    color: palette.ash,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  btn: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: 8,
+    paddingVertical: 14,
+  },
+  btnText: {
+    color: palette.black,
+    fontFamily: Fonts.mono,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  intentBtn: {
+    borderColor: palette.lineSoft,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  intentText: {
+    color: palette.ivory,
+    fontFamily: Fonts.sans,
+    fontSize: 15,
+  },
+  skipBtn: {
+    alignItems: 'center',
+  },
+  skipText: {
+    color: palette.smoke,
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+  },
+});
+
+// ─── Archetype Crystallization Modal ─────────────────────────────────────────
+
+function ArchetypeModal({
+  visible,
+  arquetipo,
+  moduleTitle,
+  keyEvidence,
+  onContinue,
+}: {
+  visible: boolean;
+  arquetipo: string;
+  moduleTitle: string;
+  keyEvidence: string | null;
+  onContinue: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={archStyles.overlay}>
+        <View style={archStyles.card}>
+          <Text style={archStyles.eyebrow}>MÓDULO COMPLETADO</Text>
+          <Text style={archStyles.headline}>Ya eres el</Text>
+          <Text style={archStyles.arquetipo}>{arquetipo.toUpperCase()}</Text>
+          <View style={archStyles.divider} />
+          <Text style={archStyles.moduleLabel}>{moduleTitle}</Text>
+          {keyEvidence ? (
+            <View style={archStyles.evidenceBox}>
+              <MaterialIcons name="format-quote" size={16} color={palette.gold} />
+              <Text style={archStyles.evidenceText}>{keyEvidence}</Text>
+            </View>
+          ) : null}
+          <Text style={archStyles.body}>
+            No es un certificado — es un rito de paso. Completaste las lecciones que la mayoría nunca
+            termina. Tu identidad cambió. Ya no puedes volver a quien eras antes de esto.
+          </Text>
+          <Text style={archStyles.bodySecondary}>
+            El siguiente módulo ya está desbloqueado.
+          </Text>
+          <Pressable
+            style={({ pressed }) => [archStyles.btn, pressed && { opacity: 0.85 }]}
+            onPress={onContinue}
+          >
+            <Text style={archStyles.btnText}>CONTINUAR EL PROTOCOLO</Text>
+            <MaterialIcons name="arrow-forward" size={18} color={palette.black} />
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Lesson Completion Celebration ────────────────────────────────────────────
+
+/**
+ * Shown after completing any lesson that is NOT the last in a module
+ * with an arquetipo. Luxury flash — auto-dismisses in 2.5 s or on tap.
+ *
+ * Design: luxury/refined — the score number is the hero, not a wall of text.
+ */
+function LessonCelebrationModal({
+  visible,
+  lessonIndex,
+  lessonTitle,
+  completedInModule,
+  totalInModule,
+  onContinue,
+}: {
+  visible: boolean;
+  lessonIndex: number;
+  lessonTitle: string;
+  completedInModule: number;
+  totalInModule: number;
+  onContinue: () => void;
+}) {
+  const opacity   = useSharedValue(0);
+  const scale     = useSharedValue(0.9);
+  const barWidth  = useSharedValue(0);
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity:   opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+  const barStyle = useAnimatedStyle(() => ({
+    width: `${barWidth.value}%` as unknown as number,
+  }));
+
+  useEffect(() => {
+    if (!visible) return;
+    opacity.value  = withTiming(1, { duration: 280 });
+    scale.value    = withTiming(1, { duration: 280 });
+    barWidth.value = withTiming(100, { duration: 2500 });
+
+    const timer = setTimeout(onContinue, 2600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const pct = totalInModule > 0 ? Math.round((completedInModule / totalInModule) * 100) : 0;
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <Pressable style={celebStyles.overlay} onPress={onContinue}>
+        <Animated.View style={[celebStyles.card, cardStyle]}>
+          {/* Eyebrow */}
+          <Text style={celebStyles.eyebrow}>LECCIÓN COMPLETADA</Text>
+
+          {/* Icon */}
+          <View style={celebStyles.iconWrap}>
+            <MaterialIcons name="check-circle" size={48} color={palette.gold} />
+          </View>
+
+          {/* Lesson label */}
+          <Text style={celebStyles.lessonNum}>
+            LECCIÓN {String(lessonIndex + 1).padStart(2, '0')}
+          </Text>
+          <Text style={celebStyles.lessonTitle}>{lessonTitle}</Text>
+
+          {/* Module progress */}
+          <View style={celebStyles.progressRow}>
+            <Text style={celebStyles.progressText}>
+              {completedInModule} <Text style={celebStyles.progressTotal}>/ {totalInModule}</Text>
+              {'  '}lecciones del módulo
+            </Text>
+            <Text style={celebStyles.progressPct}>{pct}%</Text>
+          </View>
+          <View style={celebStyles.progressBar}>
+            <View style={[celebStyles.progressFill, { width: `${pct}%` as unknown as number }]} />
+          </View>
+
+          {/* Micro identity line */}
+          <Text style={celebStyles.identity}>
+            {completedInModule >= totalInModule
+              ? 'Módulo absorbido. El siguiente ya está desbloqueado.'
+              : `Seguiste. Eso ya es parte de quien eres.`}
+          </Text>
+
+          {/* Auto-close timer bar */}
+          <View style={celebStyles.timerBar}>
+            <Animated.View style={[celebStyles.timerFill, barStyle]} />
+          </View>
+
+          {/* CTA */}
+          <Pressable
+            style={({ pressed }) => [celebStyles.btn, pressed && { opacity: 0.85 }]}
+            onPress={onContinue}>
+            <Text style={celebStyles.btnText}>SIGUIENTE →</Text>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const celebStyles = StyleSheet.create({
+  overlay: {
+    flex:            1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems:      'center',
+    justifyContent:  'center',
+    padding:         24,
+  },
+  card: {
+    backgroundColor: '#080808',
+    borderColor:     palette.gold,
+    borderRadius:    radii.md,
+    borderWidth:     1.5,
+    alignItems:      'center',
+    gap:             spacing.md,
+    padding:         spacing.xl + 4,
+    width:           '100%',
+    maxWidth:        360,
+  },
+  eyebrow: {
+    color:       palette.gold,
+    fontFamily:  Fonts.mono,
+    fontSize:    9,
+    letterSpacing: 3,
+  },
+  iconWrap: {
+    marginVertical: spacing.xs,
+  },
+  lessonNum: {
+    color:        palette.smoke,
+    fontFamily:   Fonts.mono,
+    fontSize:     10,
+    letterSpacing: 2,
+    marginBottom: -spacing.xs,
+  },
+  lessonTitle: {
+    color:        palette.ivory,
+    fontFamily:   Fonts.display,
+    fontSize:     20,
+    fontWeight:   '800',
+    letterSpacing: 0.4,
+    lineHeight:   26,
+    textAlign:    'center',
+    textTransform: 'uppercase',
+  },
+  progressRow: {
+    alignItems:     'center',
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    width:          '100%',
+    marginTop:       spacing.sm,
+  },
+  progressText: {
+    ...typography.mono,
+    color:     palette.ash,
+    fontSize:  11,
+  },
+  progressTotal: {
+    color: palette.smoke,
+  },
+  progressPct: {
+    color:       palette.gold,
+    fontFamily:  Fonts.mono,
+    fontSize:    12,
+    fontWeight:  '700',
+  },
+  progressBar: {
+    backgroundColor: palette.charcoal,
+    borderRadius:    2,
+    height:          4,
+    overflow:        'hidden',
+    width:           '100%',
+  },
+  progressFill: {
+    backgroundColor: palette.gold,
+    borderRadius:    2,
+    height:          4,
+  },
+  identity: {
+    ...typography.body,
+    color:     palette.smoke,
+    fontSize:  13,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  timerBar: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius:    2,
+    height:          2,
+    overflow:        'hidden',
+    width:           '100%',
+  },
+  timerFill: {
+    backgroundColor: palette.gold,
+    borderRadius:    2,
+    height:          2,
+  },
+  btn: {
+    alignItems:       'center',
+    borderColor:      palette.gold + '66',
+    borderRadius:     radii.sm,
+    borderWidth:      1,
+    minHeight:        44,
+    justifyContent:   'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical:   spacing.sm,
+    width:            '100%',
+    marginTop:         spacing.xs,
+  },
+  btnText: {
+    color:         palette.gold,
+    fontFamily:    Fonts.mono,
+    fontSize:      12,
+    fontWeight:    '700',
+    letterSpacing:  2,
+  },
+});
+
+// ─── Norman insight generator (variable reward after task save) ──────────────
+
+function generateNormanInsight(taskType: string, responses: Record<string, string>): string {
+  const allText = Object.values(responses).join(' ');
+  const wordCount = allText.split(/\s+/).filter(Boolean).length;
+
+  if (wordCount > 50) {
+    return `${wordCount} palabras. Eso no es ejercicio — es honestidad en papel. El cerebro que escribe así ya está en proceso de reescritura.`;
+  }
+  if (wordCount < 15 && taskType === 'reflection') {
+    return `La brevedad aquí es una señal. Lo que más duele cuesta más palabras, no menos. Considera volver a esto con más espacio.`;
+  }
+  if (/miedo|temor|temo/i.test(allText)) {
+    return `Nombraste el miedo. Eso ya es valentía que la mayoría no completa. El miedo nombrado pierde poder.`;
+  }
+  if (/familia|hijo|hija|padre|madre|esposa|esposo/i.test(allText)) {
+    return `Cuando el "por qué" incluye a alguien más, la motivación deja de ser opcional. Ese es tu combustible real.`;
+  }
+  if (/dinero|ingreso|empresa|negocio|ventas/i.test(allText)) {
+    return `El dinero fluye hacia quien está alineado con servir. ¿Estás sirviendo o persiguiendo? Esa pregunta vale más que cualquier estrategia.`;
+  }
+  if (/libertad|libre|tiempo/i.test(allText)) {
+    return `La libertad es la meta real detrás de todo lo demás. Quien la nombra ya la busca en el lugar correcto: adentro.`;
+  }
+  const defaults: Record<string, string> = {
+    reflection: 'El trabajo interno que acabas de hacer tiene más impacto que cualquier estrategia externa. Sin excepción.',
+    exercise: 'Los ejercicios no cambian nada en papel — lo cambian todo cuando se aplican. ¿Cuándo lo aplicas en las próximas 24 horas?',
+    action: 'La distancia entre insight y transformación es la acción. Acabas de recortarla.',
+  };
+  return defaults[taskType] ?? 'Tarea completada. El trabajo interior que hiciste es invisible pero real.';
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function LessonScreen() {
@@ -184,7 +681,28 @@ export default function LessonScreen() {
   );
   const [taskSaved, setTaskSaved] = useState(!!savedTask);
   const [editing, setEditing] = useState(false);
+  const [showArchetype, setShowArchetype] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [showRitual, setShowRitual] = useState(!isLessonCompleted);
+  const [normanInsight, setNormanInsight] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Module progress for celebration modal
+  const completedCountInModule = useMemo(() => {
+    if (!meta) return 0;
+    const completed = state.completedLessons ?? [];
+    return meta.mod.lessons.filter((l) => completed.includes(l.id)).length;
+  }, [meta, state.completedLessons]);
+
+  // Key evidence = first required field response of the first task in the module
+  const keyEvidence = useMemo(() => {
+    if (!meta) return null;
+    const firstLesson = meta.mod.lessons[0];
+    const firstTask = firstLesson ? (state.completedTasks ?? {})[firstLesson.id] : null;
+    if (!firstTask?.responses) return null;
+    const vals = Object.values(firstTask.responses).filter((v) => v.trim().length > 20);
+    return vals[0]?.slice(0, 160) ?? null;
+  }, [meta, state.completedTasks]);
 
   const handleFieldChange = useCallback((id: string, value: string) => {
     setResponses((prev) => ({ ...prev, [id]: value }));
@@ -218,6 +736,7 @@ export default function LessonScreen() {
     await saveLessonTask(lessonId, responses);
     setTaskSaved(true);
     setEditing(false);
+    setNormanInsight(generateNormanInsight(task.type, responses));
   };
 
   const handleCompleteLesson = async () => {
@@ -226,6 +745,26 @@ export default function LessonScreen() {
     analytics.lessonComplete(lessonId, Date.now() - lessonStartMs.current);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+    // Last lesson of a module with arquetipo → identity crystallization
+    if (meta?.isLastInModule && meta.mod.arquetipo) {
+      setShowArchetype(true);
+    } else {
+      // All other completions → celebration flash
+      setShowCelebration(true);
+    }
+  };
+
+  const handleCelebrationContinue = () => {
+    setShowCelebration(false);
+    if (meta?.next) {
+      router.replace(`/lesson/${meta.next.id}` as never);
+    } else {
+      router.replace('/(tabs)/programas' as never);
+    }
+  };
+
+  const handleArchetypeContinue = () => {
+    setShowArchetype(false);
     if (meta?.next) {
       router.replace(`/lesson/${meta.next.id}` as never);
     } else {
@@ -249,6 +788,11 @@ export default function LessonScreen() {
   return (
     <>
       <Stack.Screen options={{ title: lesson.title }} />
+      <FocusRitualModal
+        visible={showRitual}
+        lessonTitle={lesson.title}
+        onComplete={() => setShowRitual(false)}
+      />
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -319,6 +863,12 @@ export default function LessonScreen() {
                     </Text>
                   </View>
                 ))}
+                {normanInsight ? (
+                  <View style={styles.normanInsightBox}>
+                    <Text style={styles.normanInsightLabel}>NORMAN</Text>
+                    <Text style={styles.normanInsightText}>{normanInsight}</Text>
+                  </View>
+                ) : null}
                 <SecondaryButton
                   label="EDITAR RESPUESTAS"
                   icon="edit"
@@ -350,6 +900,17 @@ export default function LessonScreen() {
           </View>
         )}
 
+        {/* ── Next lesson anticipation teaser ── */}
+        {isLessonCompleted && meta.next && (
+          <View style={styles.nextLessonTeaser}>
+            <Text style={styles.nextLessonLabel}>PRÓXIMA LECCIÓN</Text>
+            <Text style={styles.nextLessonTitle}>{meta.next.title}</Text>
+            {meta.next.duration ? (
+              <Text style={styles.nextLessonMeta}>{meta.next.duration}</Text>
+            ) : null}
+          </View>
+        )}
+
         {/* ── Complete Button ── */}
         <View style={styles.completeSection}>
           {!canComplete && (
@@ -365,6 +926,26 @@ export default function LessonScreen() {
 
       </ScrollView>
     </KeyboardAvoidingView>
+
+    {/* Celebration flash — every non-archetype lesson completion */}
+    <LessonCelebrationModal
+      visible={showCelebration}
+      lessonIndex={lessonIndex}
+      lessonTitle={lesson.title}
+      completedInModule={completedCountInModule}
+      totalInModule={meta.mod.lessons.length}
+      onContinue={handleCelebrationContinue}
+    />
+
+    {meta?.isLastInModule && meta.mod.arquetipo ? (
+      <ArchetypeModal
+        visible={showArchetype}
+        arquetipo={meta.mod.arquetipo}
+        moduleTitle={meta.mod.title}
+        keyEvidence={keyEvidence}
+        onContinue={handleArchetypeContinue}
+      />
+    ) : null}
     </>
   );
 }
@@ -486,11 +1067,24 @@ const styles = StyleSheet.create({
   fieldWrap: {
     gap: spacing.sm,
   },
+  fieldLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   fieldLabel: {
     ...typography.body,
     color: palette.ivory,
     fontWeight: '600',
     lineHeight: 20,
+  },
+  wordCount: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 10,
+  },
+  wordCountGood: {
+    color: palette.gold,
   },
   inputBox: {
     borderRadius: radii.sm,
@@ -555,6 +1149,29 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
+  // Norman insight box
+  normanInsightBox: {
+    backgroundColor: 'rgba(179,141,60,0.08)',
+    borderColor: palette.gold,
+    borderLeftWidth: 2,
+    borderRadius: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  normanInsightLabel: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  normanInsightText: {
+    ...typography.body,
+    color: palette.ivoryDim,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
   // No task
   noTaskCard: {
     alignItems: 'center',
@@ -582,11 +1199,147 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Next lesson teaser
+  nextLessonTeaser: {
+    backgroundColor: 'rgba(201, 160, 0, 0.06)',
+    borderColor: palette.gold + '44',
+    borderLeftWidth: 3,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  nextLessonLabel: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 8,
+    letterSpacing: 2,
+  },
+  nextLessonTitle: {
+    color: palette.ivory,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  nextLessonMeta: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 10,
+  },
+
   // Error
   errorText: {
     ...typography.body,
     color: palette.ash,
     marginBottom: spacing.lg,
     textAlign: 'center',
+  },
+});
+
+// ─── Archetype modal styles ───────────────────────────────────────────────────
+const archStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  card: {
+    backgroundColor: '#0A0A0A',
+    borderColor: palette.gold,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 420,
+  },
+  eyebrow: {
+    ...typography.label,
+    color: palette.smoke,
+    letterSpacing: 2.5,
+    fontSize: 9,
+  },
+  headline: {
+    fontFamily: Fonts.display,
+    fontSize: 14,
+    color: palette.ash,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+  },
+  arquetipo: {
+    fontFamily: Fonts.display,
+    fontSize: 36,
+    color: palette.gold,
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: palette.gold,
+    width: '60%',
+    opacity: 0.4,
+  },
+  moduleLabel: {
+    ...typography.mono,
+    color: palette.ash,
+    textAlign: 'center',
+    fontSize: 11,
+  },
+  evidenceBox: {
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.md,
+    alignItems: 'flex-start',
+  },
+  evidenceText: {
+    ...typography.body,
+    color: palette.ivory,
+    flex: 1,
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  body: {
+    ...typography.body,
+    color: palette.smoke,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  bodySecondary: {
+    ...typography.mono,
+    color: palette.gold,
+    fontSize: 11,
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginTop: -4,
+  },
+  btn: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    width: '100%',
+    marginTop: spacing.sm,
+  },
+  btnText: {
+    ...typography.section,
+    color: palette.black,
+    fontSize: 11,
+    letterSpacing: 2,
   },
 });

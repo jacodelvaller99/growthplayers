@@ -648,6 +648,16 @@ export default function ProgresoScreen() {
       {/* ── Sovereign Score ── */}
       <SovereignScore score={score} />
 
+      {/* ── Share profile CTA ── */}
+      <Pressable
+        style={shareStyles.row}
+        onPress={() => router.push('/perfil' as never)}
+        accessibilityLabel="Ver y compartir tarjeta soberana">
+        <MaterialIcons name="share" size={16} color={palette.gold} />
+        <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
+        <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+      </Pressable>
+
       {/* ── Transformation Narrative ── */}
       {narrativeBlock.length > 0 && (
         <View style={styles.narrativeCard}>
@@ -1534,6 +1544,30 @@ const styles = StyleSheet.create({
     color: palette.gold,
     fontSize: 12,
     letterSpacing: 1,
+  },
+});
+
+// ─── Share row ────────────────────────────────────────────────────────────────
+const shareStyles = StyleSheet.create({
+  row: {
+    alignItems:      'center',
+    borderColor:     palette.gold + '44',
+    borderRadius:    radii.sm,
+    borderWidth:     1,
+    flexDirection:   'row',
+    gap:             spacing.sm,
+    justifyContent:  'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: 'rgba(179,141,60,0.05)',
+  },
+  label: {
+    color:       palette.gold,
+    flex:        1,
+    fontFamily:  Fonts.mono,
+    fontSize:    10,
+    letterSpacing: 2,
+    textAlign:   'center',
   },
 });
 
