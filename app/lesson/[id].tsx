@@ -687,6 +687,21 @@ export default function LessonScreen() {
   const [normanInsight, setNormanInsight] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Personal notes — stored as __notes key inside completedTasks responses
+  const [lessonNotes, setLessonNotes] = useState<string>(
+    savedTask?.responses?.__notes ?? '',
+  );
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  const handleSaveNotes = async () => {
+    // Merge notes into existing responses (or create a new entry)
+    const merged = { ...(savedTask?.responses ?? {}), __notes: lessonNotes };
+    await saveLessonTask(lessonId, merged);
+    setNotesSaved(true);
+    setTimeout(() => setNotesSaved(false), 2000);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   // Module progress for celebration modal
   const completedCountInModule = useMemo(() => {
     if (!meta) return 0;
@@ -899,6 +914,39 @@ export default function LessonScreen() {
             </Text>
           </View>
         )}
+
+        {/* ── Personal Notes ── */}
+        <View style={styles.notesCard}>
+          <View style={styles.notesHeader}>
+            <MaterialIcons name="edit-note" size={18} color={palette.ash} />
+            <Text style={styles.notesTitle}>NOTAS PERSONALES</Text>
+            {notesSaved && (
+              <View style={styles.notesSavedBadge}>
+                <MaterialIcons name="check" size={12} color={palette.success} />
+                <Text style={styles.notesSavedText}>Guardado</Text>
+              </View>
+            )}
+          </View>
+          <TextInput
+            multiline
+            style={styles.notesInput}
+            value={lessonNotes}
+            onChangeText={setLessonNotes}
+            placeholder="¿Qué te llevas de esta lección? ¿Qué aplicarás en las próximas 24 horas?"
+            placeholderTextColor={palette.smoke}
+            textAlignVertical="top"
+            onBlur={lessonNotes.trim().length > 0 ? handleSaveNotes : undefined}
+          />
+          {lessonNotes.trim().length > 0 && !notesSaved && (
+            <Pressable
+              style={styles.notesSaveBtn}
+              onPress={handleSaveNotes}
+              accessibilityLabel="Guardar notas">
+              <MaterialIcons name="save" size={14} color={palette.gold} />
+              <Text style={styles.notesSaveBtnText}>GUARDAR NOTAS</Text>
+            </Pressable>
+          )}
+        </View>
 
         {/* ── Next lesson anticipation teaser ── */}
         {isLessonCompleted && meta.next && (
@@ -1227,6 +1275,63 @@ const styles = StyleSheet.create({
     ...typography.mono,
     color: palette.ash,
     fontSize: 10,
+  },
+
+  // Personal notes
+  notesCard: {
+    borderColor:   palette.lineSoft,
+    borderRadius:  radii.md,
+    borderWidth:   1,
+    gap:           spacing.sm,
+    padding:       spacing.lg,
+  },
+  notesHeader: {
+    alignItems:   'center',
+    flexDirection: 'row',
+    gap:           spacing.sm,
+  },
+  notesTitle: {
+    ...typography.label,
+    color:        palette.ash,
+    flex:         1,
+    letterSpacing: 1.5,
+  },
+  notesSavedBadge: {
+    alignItems:   'center',
+    flexDirection: 'row',
+    gap:           3,
+  },
+  notesSavedText: {
+    color:       palette.success,
+    fontFamily:  Fonts.mono,
+    fontSize:    9,
+    letterSpacing: 1,
+  },
+  notesInput: {
+    backgroundColor: palette.graphiteLight,
+    borderColor:     palette.lineSoft,
+    borderRadius:    radii.sm,
+    borderWidth:     1,
+    color:           palette.ivory,
+    fontFamily:      Fonts.sans,
+    fontSize:        14,
+    lineHeight:      22,
+    minHeight:       80,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    textAlignVertical: 'top',
+  },
+  notesSaveBtn: {
+    alignItems:   'center',
+    alignSelf:    'flex-end',
+    flexDirection: 'row',
+    gap:           spacing.xs,
+  },
+  notesSaveBtnText: {
+    color:       palette.gold,
+    fontFamily:  Fonts.mono,
+    fontSize:    10,
+    letterSpacing: 1.5,
   },
 
   // Error

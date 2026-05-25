@@ -20,8 +20,10 @@ export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // speed=1 enables Vimeo's native playback-rate control (1×/1.5×/2× selector).
+  // transparent=0 forces a solid black background instead of transparent overlay.
   const vimeoEmbedUrl = vimeoId
-    ? `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&autopause=0`
+    ? `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&autopause=0&speed=1&transparent=0`
     : null;
 
   // ── WEB con Vimeo embed ──────────────────────────────────────────────────────
