@@ -38,6 +38,211 @@ import {
 } from '@/services/notifications';
 import type { NorthStar } from '@/types/lifeflow';
 
+// ─── Streak Calendar Component (42-day heatmap) ────────────────────────────
+
+/**
+ * Visual 42-day (6-week) heatmap grid.
+ * Gold cell = check-in done that day.
+ * Today has a gold ring indicator.
+ * Future days are fully hidden (opacity 0 — they exist for grid alignment only).
+ */
+function StreakCalendar({ checkIns }: { checkIns: Array<{ date: string }> }) {
+  const { days, checkinCount, checkinPct } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
+
+    // Align to Monday start of the current week
+    const dow = today.getDay(); // 0=Sun, 1=Mon ...
+    const daysFromMon = (dow + 6) % 7; // Mon=0 ... Sun=6
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - daysFromMon);
+
+    // Go back 5 more weeks from the Monday of this week
+    const start = new Date(startOfWeek);
+    start.setDate(start.getDate() - 35);
+
+    const checkinSet = new Set(checkIns.map((c) => c.date.slice(0, 10)));
+
+    // Count check-ins in the last 30 calendar days (backwards from today)
+    let cnt30 = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      if (checkinSet.has(d.toISOString().slice(0, 10))) cnt30++;
+    }
+
+    const gridDays: {
+      dateStr: string;
+      hasCheckin: boolean;
+      isToday: boolean;
+      isFuture: boolean;
+    }[] = [];
+
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = d.toISOString().slice(0, 10);
+      gridDays.push({
+        dateStr,
+        hasCheckin: checkinSet.has(dateStr),
+        isToday: dateStr === todayStr,
+        isFuture: d > today,
+      });
+    }
+
+    return {
+      days: gridDays,
+      checkinCount: cnt30,
+      checkinPct: Math.round((cnt30 / 30) * 100),
+    };
+  }, [checkIns]);
+
+  const weeks: (typeof days)[] = [];
+  for (let i = 0; i < 6; i++) {
+    weeks.push(days.slice(i * 7, (i + 1) * 7));
+  }
+
+  return (
+    <View style={calStyles.wrap}>
+      {/* Header row */}
+      <View style={calStyles.header}>
+        <Text style={calStyles.title}>RACHA · ÚLTIMOS 42 DÍAS</Text>
+        <View style={calStyles.statRow}>
+          <Text style={calStyles.statNum}>{checkinCount}</Text>
+          <Text style={calStyles.statLabel}>/ 30 días  ·  {checkinPct}%</Text>
+        </View>
+      </View>
+
+      {/* Day-of-week labels: Mon … Sun */}
+      <View style={calStyles.labelRow}>
+        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
+          <Text key={d} style={calStyles.dayLabel}>{d}</Text>
+        ))}
+      </View>
+
+      {/* 6-week grid */}
+      {weeks.map((week, wi) => (
+        <View key={wi} style={calStyles.weekRow}>
+          {week.map((day) => (
+            <View
+              key={day.dateStr}
+              style={[
+                calStyles.cell,
+                day.hasCheckin && calStyles.cellActive,
+                day.isToday && !day.hasCheckin && calStyles.cellToday,
+                day.isFuture && calStyles.cellFuture,
+              ]}
+            />
+          ))}
+        </View>
+      ))}
+
+      {/* Legend */}
+      <View style={calStyles.legend}>
+        <View style={[calStyles.legendDot, { backgroundColor: palette.charcoal }]} />
+        <Text style={calStyles.legendText}>Sin check-in</Text>
+        <View style={[calStyles.legendDot, { backgroundColor: palette.gold }]} />
+        <Text style={calStyles.legendText}>Check-in</Text>
+      </View>
+    </View>
+  );
+}
+
+const calStyles = StyleSheet.create({
+  wrap: {
+    backgroundColor: 'rgba(10,10,10,0.6)',
+    borderColor:     palette.lineSoft,
+    borderRadius:    radii.md,
+    borderWidth:     1,
+    gap:             spacing.sm,
+    padding:         spacing.lg,
+  },
+  header: {
+    alignItems:     'center',
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    marginBottom:    spacing.xs,
+  },
+  title: {
+    color:        palette.gold,
+    fontFamily:   Fonts.mono,
+    fontSize:     9,
+    letterSpacing: 2,
+  },
+  statRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  statNum: {
+    color:       palette.ivory,
+    fontFamily:  Fonts.display,
+    fontSize:    18,
+    fontWeight:  '800',
+    lineHeight:  22,
+  },
+  statLabel: {
+    color:      palette.ash,
+    fontFamily: Fonts.mono,
+    fontSize:   10,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    gap:           4,
+    marginBottom:  2,
+  },
+  dayLabel: {
+    color:     palette.smoke,
+    flex:      1,
+    fontFamily: Fonts.mono,
+    fontSize:   8,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  weekRow: {
+    flexDirection: 'row',
+    gap:           4,
+  },
+  cell: {
+    backgroundColor: palette.charcoal,
+    borderRadius:    3,
+    flex:            1,
+    aspectRatio:     1,
+    opacity:         0.5,
+  },
+  cellActive: {
+    backgroundColor: palette.gold,
+    opacity:         1,
+  },
+  cellToday: {
+    borderColor: palette.gold,
+    borderWidth: 1.5,
+    opacity:     0.9,
+  },
+  cellFuture: {
+    opacity: 0.15,
+  },
+  legend: {
+    alignItems:    'center',
+    flexDirection: 'row',
+    gap:            spacing.sm,
+    marginTop:      spacing.xs,
+  },
+  legendDot: {
+    borderRadius: 2,
+    height:       8,
+    width:        8,
+  },
+  legendText: {
+    color:       palette.smoke,
+    fontFamily:  Fonts.mono,
+    fontSize:    9,
+    letterSpacing: 0.5,
+    marginRight:  spacing.sm,
+  },
+});
+
 export default function ProgresoScreen() {
   const sc = useScreen();
   const router = useRouter();
@@ -713,6 +918,11 @@ export default function ProgresoScreen() {
             <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
           </PremiumCard>
         </>
+      )}
+
+      {/* ── 42-Day Streak Heatmap ── */}
+      {state.checkIns.length > 0 && (
+        <StreakCalendar checkIns={state.checkIns} />
       )}
 
       {/* ── Intelligence DNA Dashboard ── */}
