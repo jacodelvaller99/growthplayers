@@ -31,6 +31,8 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
+import { useWearableConnections } from '@/lib/wearables';
+import { LIVE_SESSION, getNextSession, formatSessionDate } from '@/data/live-sessions';
 
 function greeting() {
   const hour = new Date().getHours();
@@ -49,6 +51,9 @@ export default function DashboardScreen() {
   const { intelligence, engagementTier } = useUserIntelligence(userId);
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   const checkIn = todayCheckIn ?? latestCheckIn;
+
+  const { isConnected: isWearableConnected } = useWearableConnections();
+  const hasWearable = isWearableConnected('whoop') || isWearableConnected('oura');
 
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
 
@@ -168,6 +173,18 @@ export default function DashboardScreen() {
     </Pressable>
   );
 
+  // North Star daily anchor — identity primer before metrics
+  const northAnchorStrip = state.northStar.dailyReminder ? (
+    <Pressable
+      onPress={() => router.push('/(tabs)/norte')}
+      style={({ pressed }) => [styles.northAnchor, pressed && { opacity: 0.8 }]}>
+      <MaterialIcons name="north" size={12} color={palette.gold} />
+      <Text style={styles.northAnchorText} numberOfLines={2}>
+        {state.northStar.dailyReminder}
+      </Text>
+    </Pressable>
+  ) : null;
+
   const engagementBlock = intelligence.engagement_score > 0 && (
     <View style={styles.engagementRow}>
       <Text style={styles.engagementLabel}>ENGAGEMENT</Text>
@@ -205,7 +222,7 @@ export default function DashboardScreen() {
         style={isDesktop ? styles.metricCardDesktop : undefined}
       />
       <MetricCard
-        label="Coherencia"
+        label="Capacidad"
         value={checkIn
           ? `${Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)}/10`
           : '--'}
@@ -213,7 +230,7 @@ export default function DashboardScreen() {
           ? Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)
           : undefined}
         numericSuffix="/10"
-        meta="estado del dia"
+        meta="operativa hoy"
         icon="verified-user"
         entryDelay={180}
         style={isDesktop ? styles.metricCardDesktop : undefined}
@@ -235,6 +252,20 @@ export default function DashboardScreen() {
         <StateMeter label="Enfoque / claridad" value={checkIn?.clarity ?? 0} />
         <StateMeter label="Estres" value={checkIn?.stress ?? 0} inverted />
       </PremiumCard>
+      {!hasWearable && protocolDay >= 3 && (
+        <Pressable
+          onPress={() => router.push('/perfil/wearables' as never)}
+          style={({ pressed }) => [styles.wearableCta, pressed && { opacity: 0.8 }]}>
+          <MaterialIcons name="watch" size={16} color={palette.gold} />
+          <View style={styles.wearableCtaCopy}>
+            <Text style={styles.wearableCtaTitle}>CONECTA TU WEARABLE</Text>
+            <Text style={styles.wearableCtaSub}>
+              WHOOP u Oura — HRV, recuperación y sueño automáticos
+            </Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+        </Pressable>
+      )}
     </View>
   );
 
@@ -289,6 +320,99 @@ export default function DashboardScreen() {
     </PremiumCard>
   );
 
+  // ── Live Session Card ────────────────────────────────────────────────────────
+  const liveSession = getNextSession(LIVE_SESSION);
+  const liveSessionBlock = (
+    <Pressable
+      style={({ pressed }) => [
+        styles.liveCard,
+        liveSession.isOngoing && styles.liveCardOngoing,
+        pressed && { opacity: 0.9 },
+      ]}
+      onPress={() => {
+        if (typeof window !== 'undefined') {
+          window.open(LIVE_SESSION.joinUrl, '_blank');
+        } else {
+          const Linking = require('expo-linking');
+          Linking.openURL(LIVE_SESSION.joinUrl);
+        }
+      }}
+      accessibilityLabel="Unirse a la sesión en vivo">
+      {/* Live indicator */}
+      <View style={styles.liveTopRow}>
+        <View style={[styles.liveDotWrap, liveSession.isOngoing && styles.liveDotOngoing]}>
+          <View style={[styles.liveDot, liveSession.isOngoing && styles.liveDotActive]} />
+          <Text style={[styles.liveLabel, liveSession.isOngoing && styles.liveLabelActive]}>
+            {liveSession.isOngoing ? 'EN VIVO AHORA' : 'PRÓXIMA SESIÓN'}
+          </Text>
+        </View>
+        <MaterialIcons
+          name={liveSession.isOngoing ? 'videocam' : 'event'}
+          size={16}
+          color={liveSession.isOngoing ? palette.danger : palette.gold}
+        />
+      </View>
+
+      {/* Session info */}
+      <Text style={styles.liveTitle}>{LIVE_SESSION.title}</Text>
+      <Text style={styles.liveSub}>{LIVE_SESSION.subtitle}</Text>
+
+      {/* Countdown */}
+      <View style={styles.liveCountdownRow}>
+        {liveSession.isOngoing ? (
+          <Text style={styles.liveCountdownOngoing}>Sesión en curso · ÚNETE AHORA</Text>
+        ) : (
+          <>
+            <MaterialIcons name="schedule" size={13} color={palette.smoke} />
+            <Text style={styles.liveCountdown}>
+              {formatSessionDate(liveSession.date, liveSession.isToday, liveSession.daysUntil)}
+              {' · '}{LIVE_SESSION.time} COT
+              {liveSession.daysUntil === 0 && liveSession.minutesUntil > 0
+                ? `  · en ${liveSession.minutesUntil < 60
+                    ? `${liveSession.minutesUntil} min`
+                    : `${Math.floor(liveSession.minutesUntil / 60)}h ${liveSession.minutesUntil % 60}m`}`
+                : ''}
+            </Text>
+          </>
+        )}
+      </View>
+
+      {/* Join CTA */}
+      <View style={[styles.liveBtn, liveSession.isOngoing && styles.liveBtnOngoing]}>
+        <MaterialIcons
+          name={liveSession.isOngoing ? 'videocam' : 'open-in-new'}
+          size={15}
+          color={liveSession.isOngoing ? '#fff' : palette.black}
+        />
+        <Text style={[styles.liveBtnText, liveSession.isOngoing && styles.liveBtnTextOngoing]}>
+          {liveSession.isOngoing ? 'UNIRME A LA SESIÓN' : `AGENDAR · ${LIVE_SESSION.durationMinutes} MIN`}
+        </Text>
+      </View>
+    </Pressable>
+  );
+
+  // ── Community Teaser ─────────────────────────────────────────────────────────
+  const communityBlock = (
+    <Pressable
+      style={({ pressed }) => [styles.communityCard, pressed && { opacity: 0.85 }]}
+      onPress={() => router.push('/bienestar/comunidad' as never)}
+      accessibilityLabel="Ver comunidad de Operadores Soberanos">
+      <View style={styles.communityHeader}>
+        <View style={styles.communityIconBox}>
+          <MaterialIcons name="groups" size={22} color={palette.gold} />
+        </View>
+        <View style={styles.communityCopy}>
+          <Text style={styles.communityTitle}>OPERADORES SOBERANOS</Text>
+          <Text style={styles.communitySub}>Comunidad del Protocolo</Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
+      </View>
+      <Text style={styles.communityBody}>
+        Comparte insights, celebra victorias y mantén la accountability con otros en el protocolo.
+      </Text>
+    </Pressable>
+  );
+
   return (
     <ScrollView
       style={sc.root}
@@ -310,6 +434,7 @@ export default function DashboardScreen() {
            ══════════════════════════════════════════════════════════ */
         <>
           {/* Fila superior: Hero + Engagement */}
+          {northAnchorStrip}
           <View style={styles.desktopTopRow}>
             <View style={styles.desktopHeroCol}>{heroBlock}</View>
             <View style={styles.desktopSideCol}>
@@ -317,8 +442,8 @@ export default function DashboardScreen() {
               {nbaBlock}
               {engagementBlock}
               <ProgressCard
-                label="Progreso del protocolo"
-                value={`${progress}% · ${protocolDay}/90`}
+                label={protocolDay >= 60 ? 'ARC DE TRANSFORMACION · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACION · PROFUNDIDAD' : 'ARC DE TRANSFORMACION · BASE'}
+                value={`${progress}% · Día ${protocolDay} de 90`}
                 progress={progress}
               />
             </View>
@@ -338,13 +463,20 @@ export default function DashboardScreen() {
             <View style={styles.desktopRight}>
               <GoldDivider label="HOY EN TU PROTOCOLO" />
               {protocolBlock}
+              <GoldDivider label="SESIÓN EN VIVO" />
+              {liveSessionBlock}
+              <GoldDivider label="COMUNIDAD" />
+              {communityBlock}
               {weeklySession && (
                 <>
                   <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
                   <PremiumCard style={styles.normanCard}>
                     <View style={styles.normanHeader}>
                       <MaterialIcons name="psychology" size={20} color={palette.gold} />
-                      <Text style={styles.normanLabel}>MENSAJE SEMANAL</Text>
+                      <Text style={styles.normanLabel}>DESPACHO DE NORMAN — SEMANA {weeklySession.week_number}</Text>
+                      <View style={styles.normanNewBadge}>
+                        <Text style={styles.normanNewText}>ESTA SEMANA</Text>
+                      </View>
                     </View>
                     <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
                     <Pressable
@@ -377,12 +509,13 @@ export default function DashboardScreen() {
            ══════════════════════════════════════════════════════════ */
         <>
           {heroBlock}
+          {northAnchorStrip}
           {anomalyBlock}
           {nbaBlock}
           {engagementBlock}
           <ProgressCard
-            label="Progreso del protocolo"
-            value={`${progress}% · ${protocolDay}/90`}
+            label={protocolDay >= 60 ? 'ARC DE TRANSFORMACION · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACION · PROFUNDIDAD' : 'ARC DE TRANSFORMACION · BASE'}
+            value={`${progress}% · Día ${protocolDay} de 90`}
             progress={progress}
           />
           {metricsRow}
@@ -392,13 +525,20 @@ export default function DashboardScreen() {
           {protocolBlock}
           <GoldDivider label="BIENESTAR" />
           {wellnessBlock}
+          <GoldDivider label="SESIÓN EN VIVO" />
+          {liveSessionBlock}
+          <GoldDivider label="COMUNIDAD" />
+          {communityBlock}
           {weeklySession && (
             <>
               <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
               <PremiumCard style={styles.normanCard}>
                 <View style={styles.normanHeader}>
                   <MaterialIcons name="psychology" size={20} color={palette.gold} />
-                  <Text style={styles.normanLabel}>MENSAJE SEMANAL</Text>
+                  <Text style={styles.normanLabel}>DESPACHO DE NORMAN — SEMANA {weeklySession.week_number}</Text>
+                  <View style={styles.normanNewBadge}>
+                    <Text style={styles.normanNewText}>ESTA SEMANA</Text>
+                  </View>
                 </View>
                 <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
                 <Pressable
@@ -474,6 +614,56 @@ const styles = StyleSheet.create({
   desktopRight: {
     flex: 2,
     gap: 16,
+  },
+
+  // ── North anchor strip ───────────────────────────────────────────────────
+  northAnchor: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(179,141,60,0.07)',
+    borderColor: 'rgba(179,141,60,0.25)',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  northAnchorText: {
+    color: palette.gold,
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+
+  // Wearable CTA
+  wearableCta: {
+    alignItems: 'center',
+    borderColor: palette.gold + '33',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: 'rgba(201,160,0,0.05)',
+  },
+  wearableCtaCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  wearableCtaTitle: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  wearableCtaSub: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 10,
   },
 
   // ── Shared ────────────────────────────────────────────────────────────────
@@ -586,10 +776,25 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   normanLabel: {
+    flex: 1,
     fontFamily: Fonts.display,
     fontSize: 11,
     color: palette.gold,
     letterSpacing: 2,
+  },
+  normanNewBadge: {
+    backgroundColor: palette.gold + '22',
+    borderColor: palette.gold + '55',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  normanNewText: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 8,
+    letterSpacing: 1,
   },
   normanMessage: {
     ...typography.body,
@@ -727,5 +932,148 @@ const styles = StyleSheet.create({
     fontSize: 10,
     width: 48,
     textAlign: 'right',
+  },
+
+  // ── Live Session Card ───────────────────────────────────────────────────────
+  liveCard: {
+    backgroundColor:  'rgba(10,10,10,0.85)',
+    borderColor:      palette.gold + '55',
+    borderRadius:     radii.md,
+    borderWidth:      1.5,
+    gap:              spacing.md,
+    padding:          spacing.lg,
+  },
+  liveCardOngoing: {
+    borderColor: palette.danger,
+    borderWidth: 2,
+  },
+  liveTopRow: {
+    alignItems:    'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  liveDotWrap: {
+    alignItems:   'center',
+    flexDirection: 'row',
+    gap:           spacing.xs,
+  },
+  liveDotOngoing: {},
+  liveDot: {
+    backgroundColor: palette.gold,
+    borderRadius:    4,
+    height:          6,
+    width:           6,
+  },
+  liveDotActive: {
+    backgroundColor: palette.danger,
+  },
+  liveLabel: {
+    color:        palette.gold,
+    fontFamily:   Fonts.mono,
+    fontSize:     9,
+    letterSpacing: 2,
+  },
+  liveLabelActive: {
+    color: palette.danger,
+  },
+  liveTitle: {
+    color:         palette.ivory,
+    fontFamily:    Fonts.display,
+    fontSize:      18,
+    fontWeight:    '800',
+    letterSpacing:  1,
+    textTransform: 'uppercase',
+  },
+  liveSub: {
+    ...typography.mono,
+    color:   palette.smoke,
+    fontSize: 10,
+    marginTop: -spacing.xs,
+  },
+  liveCountdownRow: {
+    alignItems:   'center',
+    flexDirection: 'row',
+    gap:           spacing.xs,
+  },
+  liveCountdown: {
+    ...typography.body,
+    color:    palette.ash,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  liveCountdownOngoing: {
+    color:       palette.danger,
+    fontFamily:  Fonts.mono,
+    fontSize:    11,
+    letterSpacing: 1.5,
+  },
+  liveBtn: {
+    alignItems:      'center',
+    backgroundColor: palette.gold,
+    borderRadius:    radii.sm,
+    flexDirection:   'row',
+    gap:              spacing.sm,
+    justifyContent:  'center',
+    minHeight:        44,
+    paddingVertical:  spacing.sm,
+  },
+  liveBtnOngoing: {
+    backgroundColor: palette.danger,
+  },
+  liveBtnText: {
+    color:        palette.black,
+    fontFamily:   Fonts.mono,
+    fontSize:     11,
+    fontWeight:   '700',
+    letterSpacing: 2,
+  },
+  liveBtnTextOngoing: {
+    color: '#fff',
+  },
+
+  // ── Community Teaser Card ───────────────────────────────────────────────────
+  communityCard: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderColor:     palette.lineSoft,
+    borderRadius:    radii.md,
+    borderWidth:     1,
+    gap:             spacing.md,
+    padding:         spacing.lg,
+  },
+  communityHeader: {
+    alignItems:   'center',
+    flexDirection: 'row',
+    gap:           spacing.md,
+  },
+  communityIconBox: {
+    alignItems:      'center',
+    backgroundColor: 'rgba(179,141,60,0.10)',
+    borderRadius:    radii.sm,
+    height:          40,
+    justifyContent:  'center',
+    width:           40,
+    flexShrink:      0,
+  },
+  communityCopy: {
+    flex: 1,
+    gap:  2,
+  },
+  communityTitle: {
+    color:         palette.ivory,
+    fontFamily:    Fonts.display,
+    fontSize:      13,
+    fontWeight:    '700',
+    letterSpacing:  1.5,
+  },
+  communitySub: {
+    ...typography.mono,
+    color:   palette.smoke,
+    fontSize: 10,
+  },
+  communityBody: {
+    ...typography.body,
+    color:    palette.ash,
+    fontSize: 13,
+    lineHeight: 20,
   },
 });
