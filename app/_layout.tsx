@@ -77,6 +77,9 @@ function MainStack() {
       <Stack.Screen name="bienestar/cuerpo" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />
       <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
       <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="admin/index" options={{ headerShown: false }} />

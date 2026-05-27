@@ -91,6 +91,13 @@ const BLOCKS_EXTENDED = [
   { id: 'comunidad',   icon: 'group' as const,                label: 'COMUNIDAD',   route: '/bienestar/comunidad' },
 ];
 
+// Herramientas emocionales del curso (Docs 3.2, 3.4 y 4.3)
+const BLOCKS_EMOCIONAL = [
+  { id: 'grito',       icon: 'record-voice-over' as const, label: 'GRITO',       route: '/bienestar/grito' },
+  { id: 'tapping',     icon: 'touch-app' as const,         label: 'TAPPING',     route: '/bienestar/tapping' },
+  { id: 'consciencia', icon: 'psychology' as const,        label: 'CONSCIENCIA', route: '/bienestar/consciencia' },
+];
+
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Buenos días';
@@ -298,6 +305,20 @@ export default function BienestarHub() {
                 ))}
               </View>
 
+              {/* LIBERACIÓN EMOCIONAL grid */}
+              <GoldDivider label="LIBERACIÓN EMOCIONAL" />
+              <View style={desktopStyles.blocksGrid}>
+                {BLOCKS_EMOCIONAL.map((block) => (
+                  <Pressable
+                    key={block.route}
+                    onPress={() => router.push(block.route as never)}
+                    style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
+                    <MaterialIcons name={block.icon} size={28} color={palette.ash} />
+                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
             </View>
             {/* ──────────────── RIGHT COLUMN ──────────────── */}
             <View style={desktopStyles.right}>
@@ -465,6 +486,22 @@ export default function BienestarHub() {
       <GoldDivider label="SALUD & COMUNIDAD" />
       <View style={styles.grid}>
         {BLOCKS_EXTENDED.map((b) => (
+          <Pressable
+            key={b.id}
+            onPress={() => router.push(b.route as never)}
+            style={({ pressed }) => [styles.gridCard, pressed && { opacity: 0.75 }]}>
+            <View style={styles.gridIcon}>
+              <MaterialIcons name={b.icon} size={22} color={palette.ash} />
+            </View>
+            <Text style={styles.gridLabel}>{b.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* ── Herramientas emocionales ── */}
+      <GoldDivider label="LIBERACIÓN EMOCIONAL" />
+      <View style={styles.grid}>
+        {BLOCKS_EMOCIONAL.map((b) => (
           <Pressable
             key={b.id}
             onPress={() => router.push(b.route as never)}

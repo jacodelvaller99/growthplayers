@@ -132,18 +132,18 @@ function mentorReply(text: string, state: LifeFlowState, latest: CheckIn | null)
   const stress  = latest?.stress  ?? 5;
 
   if (lower.includes('norte'))
-    return `Tu norte hoy: ${state.northStar.purpose} — Traduccion operativa: una accion visible, una conversacion pendiente y cero fuga de atencion.`;
+    return `Tu norte hoy: ${state.northStar.purpose} — Traducción operativa: una acción visible, una conversación pendiente y cero fuga de atención.`;
   if (lower.includes('practica'))
     return stress >= 7
-      ? 'Practica: 6 minutos de respiracion nasal, luego escribe la decision que estas evitando.'
-      : 'Practica: bloque de 45 minutos con una sola salida medible. Al terminar registra friccion, energia y siguiente movimiento.';
+      ? 'Práctica: 6 minutos de respiración nasal, luego escribe la decisión que estás evitando.'
+      : 'Práctica: bloque de 45 minutos con una sola salida medible. Al terminar registra fricción, energía y siguiente movimiento.';
   if (lower.includes('ordena') || lower.includes('dia'))
-    return `Orden del dia: 1) Check-in completo. 2) Leccion activa del modulo ${ACTIVE_MODULE.order}. 3) Bloque mercader profundo. 4) Cierre con evidencia.`;
+    return `Orden del día: 1) Check-in completo. 2) Lección activa del módulo ${ACTIVE_MODULE.order}. 3) Bloque mercader profundo. 4) Cierre con evidencia.`;
   if (energy <= 5)
-    return 'Tu sistema esta bajo de energia. Reduce amplitud: una prioridad, recuperacion activa y una decision cerrada.';
+    return 'Tu sistema está bajo de energía. Reduce amplitud: una prioridad, recuperación activa y una decisión cerrada.';
   if (clarity <= 5)
-    return 'La claridad esta baja. Escribe tres opciones, elimina dos y ejecuta la que tenga mayor retorno con menor friccion.';
-  return 'Estado util para ejecucion. Mantente en modo mercader: protege atencion, convierte tiempo en avance visible.';
+    return 'La claridad está baja. Escribe tres opciones, elimina dos y ejecuta la que tenga mayor retorno con menor fricción.';
+  return 'Estado útil para ejecución. Mantente en modo mercader: protege atención, convierte tiempo en avance visible.';
 }
 
 // ─── Migrate persisted state → ensure all fields exist ───────────────────────

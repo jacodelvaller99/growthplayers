@@ -79,7 +79,7 @@ export default function CheckInScreen() {
       : coherence >= 6
         ? 'SISTEMA OPERATIVO · CALIBRA Y MUEVE'
         : coherence >= 4
-          ? 'CARGA ALTA · UN FOCO, UNA ACCION'
+          ? 'CARGA ALTA · UN FOCO, UNA ACCIÓN'
           : 'MODO RECUPERACION · PRIMERO EL SISTEMA';
 
   // Stress as intelligence — never a failure
@@ -190,15 +190,15 @@ export default function CheckInScreen() {
                 <Text style={styles.dateLabel}>{todayLabel()}</Text>
                 <Text style={styles.introTitle}>{checkInTitle(streak)}</Text>
                 <Text style={styles.introBody}>
-                  Esta medicion calibra tu dashboard, mentor y score soberano. La honestidad aqui es
+                  Esta medición calibra tu dashboard, mentor y score soberano. La honestidad aquí es
                   una ventaja competitiva.
                 </Text>
               </GoldAccentCard>
 
-              <GoldDivider label="BIOMETRIA" />
+              <GoldDivider label="BIOMETRÍA" />
 
               <PremiumCard style={styles.card}>
-                <ScaleSelector label="ENERGIA" value={energy} onChange={setEnergy} icon="bolt" />
+                <ScaleSelector label="ENERGÍA" value={energy} onChange={setEnergy} icon="bolt" />
                 <ScaleSelector
                   label="CLARIDAD MENTAL"
                   value={clarity}
@@ -206,7 +206,7 @@ export default function CheckInScreen() {
                   icon="center-focus-strong"
                 />
                 <ScaleSelector
-                  label="ESTRES"
+                  label="ESTRÉS"
                   value={stress}
                   onChange={setStress}
                   icon="device-thermostat"
@@ -262,15 +262,15 @@ export default function CheckInScreen() {
         )}
         <Text style={styles.introTitle}>{checkInTitle(streak)}</Text>
         <Text style={styles.introBody}>
-          Esta medicion calibra tu dashboard, mentor y score soberano. La honestidad aqui es una
+          Esta medición calibra tu dashboard, mentor y score soberano. La honestidad aquí es una
           ventaja competitiva.
         </Text>
       </GoldAccentCard>
 
       {/* ── Biometrics ── */}
-      <GoldDivider label="BIOMETRIA" />
+      <GoldDivider label="BIOMETRÍA" />
       <PremiumCard style={styles.card}>
-        <ScaleSelector label="ENERGIA" value={energy} onChange={setEnergy} icon="bolt" />
+        <ScaleSelector label="ENERGÍA" value={energy} onChange={setEnergy} icon="bolt" />
         <ScaleSelector
           label="CLARIDAD MENTAL"
           value={clarity}

@@ -33,9 +33,18 @@ export default function NorteScreen() {
   );
 
   const isNorteEmpty = !purpose.trim() && !identity.trim();
+  const [saved, setSaved] = useState(false);
 
-  const save = () =>
-    updateNorthStar({
+  // Norte completeness — 4 fields, each contributes 25%
+  const norteScore = [
+    purpose.trim().length > 0,
+    identity.trim().length > 0,
+    dailyReminder.trim().length > 0,
+    nonNegotiables.trim().length > 0,
+  ].filter(Boolean).length * 25;
+
+  const save = async () => {
+    await updateNorthStar({
       purpose,
       identity,
       dailyReminder,
@@ -44,6 +53,9 @@ export default function NorteScreen() {
         .map((item) => item.trim())
         .filter(Boolean),
     });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
 
   // ── Desktop layout ────────────────────────────────────────────────────────
   if (isDesktop) {
@@ -60,9 +72,14 @@ export default function NorteScreen() {
             {/* ── Left column: preview ── */}
             <View style={styles.desktopLeft}>
               <GoldAccentCard>
-                <StatusPill label="DIRECCION MAESTRA" dot />
+                <View style={styles.northHeader}>
+                  <StatusPill label="DIRECCIÓN MAESTRA" dot />
+                  <Text style={[styles.norteScore, norteScore === 100 && styles.norteScoreFull]}>
+                    {norteScore}% DEFINIDO
+                  </Text>
+                </View>
                 <Text style={styles.purposeStatement}>
-                  {purpose || 'Define tu proposito principal'}
+                  {purpose || 'Define tu propósito principal'}
                 </Text>
                 <Text style={styles.identityStatement}>
                   {identity || 'Define tu identidad'}
@@ -109,29 +126,41 @@ export default function NorteScreen() {
               <GoldDivider label="EDITAR NORTE" />
               <PremiumCard style={styles.form}>
                 <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>PROPOSITO PRINCIPAL</Text>
+                  <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
                   <PremiumInput
                     value={purpose}
                     onChangeText={setPurpose}
                     multiline
                     style={styles.textArea}
-                    placeholder="¿Por que operas a este nivel?"
-                    accessibilityLabel="Proposito principal"
+                    placeholder="¿Por qué operas a este nivel?"
+                    accessibilityLabel="Propósito principal"
                   />
                 </View>
                 <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>DECLARACION DE IDENTIDAD</Text>
+                  <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD</Text>
                   <PremiumInput
                     value={identity}
                     onChangeText={setIdentity}
                     multiline
                     style={styles.textArea}
                     placeholder="Soy alguien que..."
-                    accessibilityLabel="Declaracion de identidad"
+                    accessibilityLabel="Declaración de identidad"
                   />
                 </View>
                 <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LINEA</Text>
+                  <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LÍNEA</Text>
+                  {!nonNegotiables.trim() && (
+                    <View style={styles.promptSuggestions}>
+                      {['Mi salud es primero', 'No trabajo los domingos', 'Tiempo con familia intocable', 'Sin deudas por consumo'].map((s) => (
+                        <Pressable
+                          key={s}
+                          onPress={() => setNonNegotiables((prev) => prev ? `${prev}\n${s}` : s)}
+                          style={({ pressed }) => [styles.suggestionPill, pressed && { opacity: 0.7 }]}>
+                          <Text style={styles.suggestionText}>+ {s}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                   <PremiumInput
                     value={nonNegotiables}
                     onChangeText={setNonNegotiables}
@@ -152,7 +181,16 @@ export default function NorteScreen() {
                     accessibilityLabel="Recordatorio diario"
                   />
                 </View>
-                <PrimaryButton label="GUARDAR NORTE" icon="check" onPress={save} />
+                <PrimaryButton
+                  label={saved ? 'NORTE DECLARADO ✓' : 'GUARDAR NORTE'}
+                  icon={saved ? 'check-circle' : 'check'}
+                  onPress={save}
+                />
+                {saved ? (
+                  <Text style={styles.savedToast}>
+                    Declarado. El protocolo ahora opera hacia este norte.
+                  </Text>
+                ) : null}
               </PremiumCard>
             </View>
           </View>
@@ -177,8 +215,13 @@ export default function NorteScreen() {
 
       {/* ── Purpose Display ── */}
       <GoldAccentCard>
-        <StatusPill label="DIRECCION MAESTRA" dot />
-        <Text style={styles.purposeStatement}>{purpose || 'Define tu proposito principal'}</Text>
+        <View style={styles.northHeader}>
+          <StatusPill label="DIRECCIÓN MAESTRA" dot />
+          <Text style={[styles.norteScore, norteScore === 100 && styles.norteScoreFull]}>
+            {norteScore}% DEFINIDO
+          </Text>
+        </View>
+        <Text style={styles.purposeStatement}>{purpose || 'Define tu propósito principal'}</Text>
         <Text style={styles.identityStatement}>{identity || 'Define tu identidad'}</Text>
       </GoldAccentCard>
 
@@ -223,29 +266,41 @@ export default function NorteScreen() {
       <GoldDivider label="EDITAR NORTE" />
       <PremiumCard style={styles.form}>
         <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>PROPOSITO PRINCIPAL</Text>
+          <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
           <PremiumInput
             value={purpose}
             onChangeText={setPurpose}
             multiline
             style={styles.textArea}
-            placeholder="¿Por que operas a este nivel?"
-            accessibilityLabel="Proposito principal"
+            placeholder="¿Por qué operas a este nivel?"
+            accessibilityLabel="Propósito principal"
           />
         </View>
         <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>DECLARACION DE IDENTIDAD</Text>
+          <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD</Text>
           <PremiumInput
             value={identity}
             onChangeText={setIdentity}
             multiline
             style={styles.textArea}
             placeholder="Soy alguien que..."
-            accessibilityLabel="Declaracion de identidad"
+            accessibilityLabel="Declaración de identidad"
           />
         </View>
         <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LINEA</Text>
+          <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LÍNEA</Text>
+          {!nonNegotiables.trim() && (
+            <View style={styles.promptSuggestions}>
+              {['Mi salud es primero', 'No trabajo los domingos', 'Tiempo con familia intocable', 'Sin deudas por consumo'].map((s) => (
+                <Pressable
+                  key={s}
+                  onPress={() => setNonNegotiables((prev) => prev ? `${prev}\n${s}` : s)}
+                  style={({ pressed }) => [styles.suggestionPill, pressed && { opacity: 0.7 }]}>
+                  <Text style={styles.suggestionText}>+ {s}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
           <PremiumInput
             value={nonNegotiables}
             onChangeText={setNonNegotiables}
@@ -266,7 +321,16 @@ export default function NorteScreen() {
             accessibilityLabel="Recordatorio diario"
           />
         </View>
-        <PrimaryButton label="GUARDAR NORTE" icon="check" onPress={save} />
+        <PrimaryButton
+          label={saved ? 'NORTE DECLARADO ✓' : 'GUARDAR NORTE'}
+          icon={saved ? 'check-circle' : 'check'}
+          onPress={save}
+        />
+        {saved ? (
+          <Text style={styles.savedToast}>
+            Declarado. El protocolo ahora opera hacia este norte.
+          </Text>
+        ) : null}
       </PremiumCard>
     </ScrollView>
     </KeyboardAvoidingView>
@@ -298,6 +362,22 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
+  // North header
+  northHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  norteScore: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  norteScoreFull: {
+    color: palette.gold,
+  },
+
   // Purpose display
   purposeStatement: {
     color: palette.ivory,
@@ -325,6 +405,15 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: palette.ivoryDim,
     fontStyle: 'italic',
+  },
+
+  savedToast: {
+    color: palette.gold,
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 
   // Non-negotiables
@@ -372,6 +461,27 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: spacing.md,
     textAlignVertical: 'top',
+  },
+
+  // Non-negotiables suggestion pills
+  promptSuggestions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  suggestionPill: {
+    backgroundColor: 'rgba(201,160,0,0.08)',
+    borderColor: palette.gold + '44',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  suggestionText: {
+    color: palette.gold,
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    lineHeight: 16,
   },
 
   // Empty state CTA

@@ -364,7 +364,7 @@ export default function ProgresoScreen() {
   const achievements = [
     { icon: 'local-fire-department' as const, label: 'RACHA\n7D', earned: protocolDay >= 7 },
     { icon: 'verified' as const, label: 'PRIMER\nMES', earned: protocolDay >= 30 },
-    { icon: 'bolt' as const, label: 'ENERGIA\n8+', earned: (averages.energy ?? 0) >= 8 },
+    { icon: 'bolt' as const, label: 'ENERGÍA\n8+', earned: (averages.energy ?? 0) >= 8 },
     { icon: 'stars' as const, label: 'SCORE\n600', earned: score >= 600 },
     { icon: 'fact-check' as const, label: '10 CHECK\nINS', earned: state.checkIns.length >= 10 },
     { icon: 'emoji-events' as const, label: 'ELITE\n800', earned: score >= 800 },
@@ -612,7 +612,7 @@ export default function ProgresoScreen() {
 
               <GoldDivider label="BIOMETRÍA PROMEDIO (7D)" />
               <PremiumCard style={styles.sparklineCard}>
-                <WeeklySparkline label="ENERGIA" values={energyValues} color={palette.gold} />
+                <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.gold} />
                 <View style={styles.sparklineDivider} />
                 <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
               </PremiumCard>
@@ -840,11 +840,11 @@ export default function ProgresoScreen() {
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroBadge}>
               <MaterialIcons name="calendar-today" size={11} color={palette.gold} />
-              <Text style={styles.heroBadgeText}>DIA {protocolDay}</Text>
+              <Text style={styles.heroBadgeText}>DÍA {protocolDay}</Text>
             </View>
             <View style={styles.heroBadge}>
               <MaterialIcons name="view-module" size={11} color={palette.gold} />
-              <Text style={styles.heroBadgeText}>MODULO {ACTIVE_MODULE.order}</Text>
+              <Text style={styles.heroBadgeText}>MÓDULO {ACTIVE_MODULE.order}</Text>
             </View>
           </View>
         </View>
@@ -913,7 +913,7 @@ export default function ProgresoScreen() {
         <>
           <GoldDivider label="ULTIMOS 7 DIAS" />
           <PremiumCard style={styles.sparklineCard}>
-            <WeeklySparkline label="ENERGIA" values={energyValues} color={palette.gold} />
+            <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.gold} />
             <View style={styles.sparklineDivider} />
             <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
           </PremiumCard>

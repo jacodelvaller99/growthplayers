@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -183,6 +183,7 @@ export default function MentorScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { initialPrompt } = useLocalSearchParams<{ initialPrompt?: string }>();
   const {
     state,
     todayCheckIn,
@@ -227,6 +228,8 @@ export default function MentorScreen() {
   };
 
   const scrollRef = useRef<ScrollView>(null);
+  // Flag to track auto-send from quick chips (set after submit is defined)
+  const pendingInitialPrompt = useRef(initialPrompt ?? null);
 
   // Opening message — recomputes when check-in loads (async from Supabase)
   const openingMessage = useMemo(
@@ -463,6 +466,17 @@ export default function MentorScreen() {
     }
   };
 
+  // ── Auto-send prompt from home screen quick chips ───────────────────────────
+  // Placed after `submit` so it's available in closure without TDZ error
+  useEffect(() => {
+    const prompt = pendingInitialPrompt.current;
+    if (!prompt) return;
+    pendingInitialPrompt.current = null;
+    const timer = setTimeout(() => submit(prompt), 800);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
@@ -499,13 +513,13 @@ export default function MentorScreen() {
 
         {/* ── Operative Context ── */}
         <PremiumCard style={styles.contextCard}>
-          <StatusPill label={`MODULO ${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title}`} />
+          <StatusPill label={`MÓDULO ${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title}`} />
           <Text style={styles.contextTitle}>CONTEXTO OPERATIVO</Text>
           {todayCheckIn ? (
             <View style={styles.metricsRow}>
               <View style={styles.metricPill}>
                 <MaterialIcons name="bolt" size={12} color={palette.gold} />
-                <Text style={styles.metricPillText}>ENERGIA {todayCheckIn.energy}/10</Text>
+                <Text style={styles.metricPillText}>ENERGÍA {todayCheckIn.energy}/10</Text>
               </View>
               <View style={styles.metricPill}>
                 <MaterialIcons name="center-focus-strong" size={12} color={palette.gold} />
@@ -513,7 +527,7 @@ export default function MentorScreen() {
               </View>
               <View style={styles.metricPill}>
                 <MaterialIcons name="device-thermostat" size={12} color={palette.gold} />
-                <Text style={styles.metricPillText}>ESTRES {todayCheckIn.stress}/10</Text>
+                <Text style={styles.metricPillText}>ESTRÉS {todayCheckIn.stress}/10</Text>
               </View>
             </View>
           ) : (
