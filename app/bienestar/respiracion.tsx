@@ -191,7 +191,7 @@ function BreathPlayer({
     <View style={player.root}>
       {/* Header */}
       <View style={player.header}>
-        <Pressable onPress={onExit} style={player.backBtn}>
+        <Pressable onPress={onExit} style={player.backBtn} accessibilityLabel="Salir de la sesión" accessibilityRole="button">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={player.titleText}>{technique.title}</Text>
@@ -325,7 +325,7 @@ export default function RespiracionScreen() {
 
       {/* Header */}
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Volver" accessibilityRole="button">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>RESPIRACIÓN</Text>
@@ -378,8 +378,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -467,8 +467,8 @@ const player = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   backBtn: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -591,11 +591,15 @@ const player = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.sm,
+    minHeight: 48,
+    minWidth: 110,
+    justifyContent: 'center',
   },
   pauseBtnText: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
   },
   stopBtn: {
     flexDirection: 'row',
@@ -606,11 +610,14 @@ const player = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.sm,
+    minHeight: 48,
+    minWidth: 110,
+    justifyContent: 'center',
   },
   stopBtnText: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 12,
+    fontSize: 13,
   },
   doneBox: {
     alignItems: 'center',

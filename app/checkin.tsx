@@ -404,13 +404,15 @@ const styles = StyleSheet.create({
     borderColor: palette.gold + '44',
     borderRadius: radii.sm,
     borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   needPillText: {
     color: palette.gold,
     fontFamily: Fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
   },
   textArea: {

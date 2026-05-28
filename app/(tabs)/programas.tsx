@@ -90,12 +90,13 @@ export default function ProgramasScreen() {
           onPress={() => {
             if (isComingSoon) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-              showToast('Este módulo se publica próximamente');
+              showToast(`Módulo ${module.order} en construcción — completa los anteriores mientras tanto`);
               return;
             }
             if (isLocked) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-              showToast('Completa el módulo anterior para desbloquear este');
+              const prevModule = POLARIS_MODULES[idx - 1];
+              showToast(prevModule ? `Termina "${prevModule.title}" para abrir este` : 'Completa el módulo anterior para desbloquear este');
               return;
             }
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -243,12 +244,12 @@ export default function ProgramasScreen() {
           <View style={styles.heroStats}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatNum}>{completedCount}</Text>
-              <Text style={styles.heroStatMeta}>MODULOS{'\n'}COMPLETADOS</Text>
+              <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}COMPLETADOS</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStat}>
               <Text style={styles.heroStatNum}>{POLARIS_MODULES.length}</Text>
-              <Text style={styles.heroStatMeta}>MODULOS{'\n'}TOTALES</Text>
+              <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}TOTALES</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStat}>
@@ -265,7 +266,7 @@ export default function ProgramasScreen() {
         />
 
         {/* ── Module List ── */}
-        <GoldDivider label="MODULOS" />
+        <GoldDivider label="MÓDULOS" />
         <View style={styles.list}>
           {POLARIS_MODULES.map((module, idx) => {
             const isComingSoon = module.status === 'coming_soon';
@@ -496,7 +497,8 @@ const styles = StyleSheet.create({
   progressTrack: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     flex: 1,
-    height: 2,
+    height: 4,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: {

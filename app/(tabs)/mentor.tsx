@@ -725,15 +725,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chatsBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+    minWidth: 64,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: 'rgba(212,175,55,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chatsBtnText: {
     fontFamily: Fonts.display,
-    fontSize: 9,
+    fontSize: 11,
     color: palette.gold,
     letterSpacing: 1.5,
   },
@@ -808,19 +812,19 @@ const styles = StyleSheet.create({
   },
   metricPill: {
     alignItems: 'center',
-    backgroundColor: palette.goldLight,
-    borderColor: palette.line,
+    backgroundColor: 'rgba(255,200,4,0.18)',
+    borderColor: palette.gold + '44',
     borderRadius: radii.sm,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 4,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   metricPillText: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 8,
+    fontSize: 11,
   },
   noCheckin: {
     ...typography.mono,
@@ -847,7 +851,7 @@ const styles = StyleSheet.create({
   memoryLabel: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1.5,
   },
   memoryText: {
@@ -903,7 +907,8 @@ const styles = StyleSheet.create({
     color: palette.ash,
     flex: 1,
     flexWrap: 'wrap',
-    fontSize: 8,
+    fontSize: 11,
+    lineHeight: 16,
   },
 
   // Load more
@@ -916,14 +921,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.md,
-    minHeight: 36,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    minHeight: 48,
+    minWidth: 120,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   loadMoreText: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 8,
+    fontSize: 11,
+    letterSpacing: 1,
   },
 
   // Thread

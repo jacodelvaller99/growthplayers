@@ -197,11 +197,11 @@ export default function ConscienciaScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Volver" accessibilityRole="button">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>ESCALA DE CONSCIENCIA</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <GoldAccentCard>
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 14 },
 
   eyebrow: { ...typography.mono, color: palette.goldMuted, fontSize: 10, letterSpacing: 2 },

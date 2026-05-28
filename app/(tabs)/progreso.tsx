@@ -647,7 +647,7 @@ export default function ProgresoScreen() {
                     </View>
                     {arch.earned && (
                       <View style={styles.archetypeCheck}>
-                        <MaterialIcons name="check-circle" size={14} color={palette.gold} />
+                        <MaterialIcons name="check-circle" size={20} color={palette.gold} />
                       </View>
                     )}
                   </PremiumCard>
@@ -1034,7 +1034,7 @@ export default function ProgresoScreen() {
             </View>
             {arch.earned && (
               <View style={styles.archetypeCheck}>
-                <MaterialIcons name="check-circle" size={14} color={palette.gold} />
+                <MaterialIcons name="check-circle" size={20} color={palette.gold} />
               </View>
             )}
           </PremiumCard>
@@ -1118,7 +1118,7 @@ export default function ProgresoScreen() {
         <View style={styles.b2bFeatures}>
           {['Dashboard de equipo', 'Licencias múltiples', 'Soporte prioritario'].map((f) => (
             <View key={f} style={styles.b2bFeatureRow}>
-              <MaterialIcons name="check-circle" size={14} color={palette.gold} />
+              <MaterialIcons name="check-circle" size={20} color={palette.gold} />
               <Text style={styles.b2bFeatureText}>{f}</Text>
             </View>
           ))}
@@ -1326,7 +1326,7 @@ const styles = StyleSheet.create({
   narrativeLabel: {
     color: palette.gold,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
   },
   narrativeLine: {
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 8,
+    fontSize: 10,
   },
 
   // Grid
@@ -1843,7 +1843,7 @@ const dnaStyles = StyleSheet.create({
   },
   tierText: {
     fontFamily: Fonts.display,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1.5,
   },
   gaugeRow: {
@@ -1854,21 +1854,21 @@ const dnaStyles = StyleSheet.create({
   gaugeLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1.5,
-    width: 82,
+    width: 90,
   },
   gaugeTrack: {
     backgroundColor: palette.charcoal,
     borderRadius: 2,
     flex: 1,
-    height: 6,
+    height: 8,
     overflow: 'hidden',
   },
   gaugeFill: {
     backgroundColor: palette.gold,
     borderRadius: 2,
-    height: 6,
+    height: 8,
   },
   gaugeValue: {
     ...typography.mono,
@@ -1880,7 +1880,7 @@ const dnaStyles = StyleSheet.create({
   sectionLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 2,
     marginBottom: 2,
     marginTop: spacing.sm,
@@ -1900,13 +1900,13 @@ const dnaStyles = StyleSheet.create({
     backgroundColor: palette.charcoal,
     borderRadius: 2,
     flex: 1,
-    height: 4,
+    height: 6,
     overflow: 'hidden',
   },
   affinityFill: {
     backgroundColor: palette.lineSoft,
     borderRadius: 2,
-    height: 4,
+    height: 6,
   },
   affinityPct: {
     ...typography.mono,

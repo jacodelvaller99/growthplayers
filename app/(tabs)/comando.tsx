@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -36,7 +36,7 @@ import { LIVE_SESSION, getNextSession, formatSessionDate } from '@/data/live-ses
 
 function greeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'BUENOS DIAS';
+  if (hour < 12) return 'BUENOS DÍAS';
   if (hour < 18) return 'BUENAS TARDES';
   return 'BUENAS NOCHES';
 }
@@ -117,13 +117,13 @@ export default function DashboardScreen() {
 
   const heroBlock = (
     <EditorialPanel
-      eyebrow={`DIA ${protocolDay} · PROTOCOLO SOBERANO`}
+      eyebrow={`DÍA ${protocolDay} · PROTOCOLO SOBERANO`}
       title={`${greeting()},\n${state.profile.name}.`}
       body={
         intelligenceGreeting ??
         (todayCheckIn
-          ? 'Check-in registrado. Ahora convierte tu estado en ejecucion medible.'
-          : 'Tu sala de mando espera lectura interna para calibrar el dia.')
+          ? 'Check-in registrado. Ahora convierte tu estado en ejecución medible.'
+          : 'Tu sala de mando espera lectura interna para calibrar el día.')
       }>
       <Text style={styles.time}>
         {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
@@ -199,7 +199,7 @@ export default function DashboardScreen() {
         label="Racha"
         value={`${Math.max(state.checkIns.length, protocolDay)}`}
         numericValue={Math.max(state.checkIns.length, protocolDay)}
-        meta="dias de protocolo"
+        meta="días de protocolo"
         icon="local-fire-department"
         entryDelay={0}
         style={isDesktop ? styles.metricCardDesktop : undefined}
@@ -214,7 +214,7 @@ export default function DashboardScreen() {
         style={isDesktop ? styles.metricCardDesktop : undefined}
       />
       <MetricCard
-        label="Modulo"
+        label="Módulo"
         value={`0${ACTIVE_MODULE.order}`}
         meta={ACTIVE_MODULE.title.split(/[\s:]/)[0].toLowerCase()}
         icon="view-module"
@@ -241,17 +241,30 @@ export default function DashboardScreen() {
   const estadoBlock = (
     <View style={styles.stack}>
       <View style={styles.sectionTopRow}>
-        <Text style={screen.sectionTitle}>Biometria</Text>
+        <Text style={screen.sectionTitle}>Biometría</Text>
         <StatusPill
           label={todayCheckIn ? 'ACTUALIZADO' : 'SIN LECTURA'}
           tone={todayCheckIn ? 'gold' : 'muted'}
         />
       </View>
-      <PremiumCard style={styles.meterCard}>
-        <StateMeter label="Energia" value={checkIn?.energy ?? 0} />
-        <StateMeter label="Enfoque / claridad" value={checkIn?.clarity ?? 0} />
-        <StateMeter label="Estres" value={checkIn?.stress ?? 0} inverted />
-      </PremiumCard>
+      {checkIn ? (
+        <PremiumCard style={styles.meterCard}>
+          <StateMeter label="Energía" value={checkIn.energy} />
+          <StateMeter label="Enfoque / claridad" value={checkIn.clarity} />
+          <StateMeter label="Estrés" value={checkIn.stress} inverted />
+        </PremiumCard>
+      ) : (
+        <Pressable
+          onPress={() => router.push('/checkin')}
+          style={({ pressed }) => [styles.estadoEmpty, pressed && { opacity: 0.8 }]}>
+          <MaterialIcons name="assignment" size={20} color={palette.smoke} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.estadoEmptyTitle}>SIN LECTURA HOY</Text>
+            <Text style={styles.estadoEmptySub}>Registra tu check-in para calibrar el sistema</Text>
+          </View>
+          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+        </Pressable>
+      )}
       {!hasWearable && protocolDay >= 3 && (
         <Pressable
           onPress={() => router.push('/perfil/wearables' as never)}
@@ -271,14 +284,14 @@ export default function DashboardScreen() {
 
   const protocolBlock = (
     <PremiumCard style={styles.protocolCard}>
-      <StatusPill label={`MODULO ${ACTIVE_MODULE.order} · ACTIVO`} />
+      <StatusPill label={`MÓDULO ${ACTIVE_MODULE.order} · ACTIVO`} />
       <Text style={styles.protocolTitle}>{ACTIVE_MODULE.title}</Text>
       <Text style={styles.protocolBody}>
-        Proxima accion: completa la leccion activa y ejecuta un bloque mercader de 90 minutos
-        sin mensajeria.
+        Próxima acción: completa la lección activa y ejecuta un bloque mercader de 90 minutos
+        sin mensajería.
       </Text>
       <PrimaryButton
-        label="CONTINUAR LECCION"
+        label="CONTINUAR LECCIÓN"
         icon="play-arrow"
         onPress={() => router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })}
       />
@@ -296,28 +309,155 @@ export default function DashboardScreen() {
           <Text style={styles.wellnessSub}>Meditación · Respiración · Binaurales</Text>
         </View>
       </View>
-      <View style={styles.wellnessStats}>
-        <View style={styles.wellnessStat}>
-          <AnimatedNumber value={totalWellnessSessions} delay={300} style={styles.wellnessStatNum} />
-          <Text style={styles.wellnessStatLabel}>SESIONES</Text>
+      {totalWellnessSessions > 0 && (
+        <View style={styles.wellnessStats}>
+          <View style={styles.wellnessStat}>
+            <AnimatedNumber value={totalWellnessSessions} delay={300} style={styles.wellnessStatNum} />
+            <Text style={styles.wellnessStatLabel}>SESIONES</Text>
+          </View>
+          <View style={styles.wellnessStatDivider} />
+          <View style={styles.wellnessStat}>
+            <AnimatedNumber value={totalWellnessMinutes} delay={420} style={styles.wellnessStatNum} />
+            <Text style={styles.wellnessStatLabel}>MINUTOS</Text>
+          </View>
+          <View style={styles.wellnessStatDivider} />
+          <View style={styles.wellnessStat}>
+            <AnimatedNumber value={wellnessStreak} delay={540} style={styles.wellnessStatNum} />
+            <Text style={styles.wellnessStatLabel}>DÍAS/SEM</Text>
+          </View>
         </View>
-        <View style={styles.wellnessStatDivider} />
-        <View style={styles.wellnessStat}>
-          <AnimatedNumber value={totalWellnessMinutes} delay={420} style={styles.wellnessStatNum} />
-          <Text style={styles.wellnessStatLabel}>MINUTOS</Text>
-        </View>
-        <View style={styles.wellnessStatDivider} />
-        <View style={styles.wellnessStat}>
-          <AnimatedNumber value={wellnessStreak} delay={540} style={styles.wellnessStatNum} />
-          <Text style={styles.wellnessStatLabel}>DÍAS/SEM</Text>
-        </View>
-      </View>
+      )}
       <PrimaryButton
         label="ABRIR BIENESTAR"
         icon="spa"
         onPress={() => router.push('/bienestar' as never)}
       />
     </PremiumCard>
+  );
+
+  // ── Norman Quick Panel — chips predictivos por módulo + estado ───────────────
+  const normanChips = useMemo(() => {
+    type Chip = { label: string; icon: React.ComponentProps<typeof MaterialIcons>['name']; prompt: string };
+    const hour = new Date().getHours();
+    const mo = ACTIVE_MODULE.order ?? 0;
+
+    // Pool contextual (máx 2) — se insertan primero si aplican
+    const ctx: Chip[] = [];
+    if (!todayCheckIn) {
+      ctx.push({ label: '¿Cómo está mi sistema?', icon: 'monitor-heart', prompt: 'Aún no registré mi check-in de hoy. ¿Cómo debo calibrar y preparar mi sistema antes de avanzar?' });
+    }
+    if (checkIn && checkIn.stress >= 7) {
+      ctx.push({ label: 'Bajar tensión ahora', icon: 'self-improvement', prompt: `Mi estrés está en ${checkIn.stress}/10. Dame un protocolo inmediato de regulación del sistema nervioso que pueda aplicar ahora mismo.` });
+    } else if (checkIn && checkIn.energy <= 3) {
+      ctx.push({ label: 'Recuperar energía', icon: 'bolt', prompt: `Mi energía está en ${checkIn.energy}/10. ¿Cuál es la acción de mínimo esfuerzo y máximo impacto para este estado hoy?` });
+    }
+    if (ctx.length < 2) {
+      if (hour >= 5 && hour < 10) {
+        ctx.push({ label: 'Apertura del día', icon: 'wb-sunny', prompt: 'Estoy iniciando mi día. Dame una intención específica y una acción mercader concreta para las próximas 3 horas.' });
+      } else if (hour >= 20) {
+        ctx.push({ label: 'Cierre del día', icon: 'nights-stay', prompt: 'Estoy cerrando el día. Ayúdame a revisar qué avancé, qué evité y cómo preparo el sistema para mañana.' });
+      }
+    }
+
+    // Chips por módulo activo (siempre 2 relevantes al contenido actual)
+    const byModule: Record<number, [Chip, Chip]> = {
+      0: [{ label: '¿Qué cambia primero en mí?', icon: 'military-tech', prompt: '¿Qué es lo primero que debe cambiar en mi sistema interno para que el Método Polaris funcione?' },
+          { label: 'Acción del Método hoy', icon: 'play-arrow', prompt: 'Estoy en el módulo inicial del Método Polaris. ¿Qué acción concreta me recomiendas ejecutar hoy?' }],
+      1: [{ label: 'Mi creencia más limitante', icon: 'fitness-center', prompt: '¿Cuál es la creencia limitante que más me está frenando hoy? Ayúdame a identificarla y a reformularla.' },
+          { label: 'Mi yo en 5 años', icon: 'search', prompt: '¿Qué me diría mi versión de 5 años adelante sobre las decisiones que estoy tomando hoy?' }],
+      2: [{ label: '¿Qué emoción evito sentir?', icon: 'bolt', prompt: '¿Qué emoción estoy evitando sentir ahora mismo? Guíame a nombrarla y a procesarla desde el Método.' },
+          { label: 'Escritura terapéutica', icon: 'edit', prompt: 'Guíame con una práctica de escritura terapéutica del Método Polaris para liberar lo que tengo acumulado.' }],
+      3: [{ label: '¿Qué me enseña esta crisis?', icon: 'explore', prompt: '¿Qué está intentando enseñarme la situación difícil que enfrento ahora? ¿Cómo la veo desde el protocolo?' },
+          { label: 'Aplicar C.A.D.A.V.R.A.', icon: 'hub', prompt: '¿Cómo aplico el marco C.A.D.A.V.R.A. a mi situación actual? Dame los pasos específicos.' }],
+      4: [{ label: 'Entrar en Flow ahora', icon: 'water', prompt: '¿Cómo entro en estado de Flow en los próximos 30 minutos? Dame el protocolo de entrada específico para mi estado actual.' },
+          { label: 'Coherencia cardíaca', icon: 'favorite', prompt: 'Guíame en un protocolo de coherencia cardíaca ahora mismo. Necesito regular mi sistema nervioso autónomo.' }],
+      5: [{ label: 'Mis llaves de éxito', icon: 'vpn-key', prompt: '¿Cuál es la llave maestra que más necesito abrir en esta fase del protocolo para desbloquear mi siguiente nivel?' },
+          { label: 'Mi relación con el dinero', icon: 'attach-money', prompt: '¿Mi relación actual con el dinero viene del miedo o del servicio? Ayúdame a identificar el patrón real.' }],
+      6: [{ label: 'Planear mi semana', icon: 'calendar-today', prompt: 'Ayúdame a planear mi semana desde el modelo Polaris. ¿Cuáles son mis 3 prioridades de alto impacto?' },
+          { label: 'Mis PERAS esta semana', icon: 'hourglass-empty', prompt: '¿Qué actividad de mi semana consume más tiempo sin impactar mis PERAS? Ayúdame a identificarla y eliminarla.' }],
+      7: [{ label: 'Relación que necesito atender', icon: 'people', prompt: '¿Cuál relación clave en mi vida necesita mi atención ahora? ¿Qué acción concreta tomo esta semana?' },
+          { label: 'Servir desde mis dones', icon: 'volunteer-activism', prompt: '¿Cómo sirvo mejor a mi equipo y entorno desde mis dones naturales? ¿Dónde estoy operando fuera de ellos?' }],
+    };
+
+    const modChips: Chip[] = (byModule[mo] ?? byModule[0]);
+
+    // Siempre: analizar coherencia como chip de cierre
+    const base: Chip[] = [
+      { label: 'Analizar coherencia', icon: 'psychology', prompt: 'Analiza mi coherencia interna hoy. ¿Estoy actuando desde mis valores o desde el miedo? Dame un diagnóstico específico.' },
+      { label: 'Recordar mi norte', icon: 'north', prompt: '¿Por qué empecé el protocolo? Recuérdame mi propósito y dame una perspectiva de largo plazo que me ancore hoy.' },
+    ];
+
+    return [...ctx, ...modChips, ...base].slice(0, 4);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayCheckIn, checkIn?.stress, checkIn?.energy, protocolDay, ACTIVE_MODULE.order]);
+
+  const normanPanelLine = useMemo(() => {
+    const first = state.profile.name.split(' ')[0] || state.profile.name;
+    if (!todayCheckIn) return `Sin lectura de hoy, ${first}. ¿Cómo entra tu sistema al protocolo?`;
+    if (checkIn && checkIn.stress >= 8) return `Tensión alta detectada. ¿Qué lo está generando — nómbralo.`;
+    if (checkIn && checkIn.energy <= 3) return `Energía baja hoy. Cambiamos el protocolo: una acción de alto impacto.`;
+    const hour = new Date().getHours();
+    if (hour < 10) return `Es el momento de apertura. ¿Cuál es tu intención para las próximas 3 horas?`;
+    if (hour >= 20) return `Es hora de cierre. ¿Qué avanzaste hoy y qué preparas para mañana?`;
+    return `Día ${protocolDay} — ${ACTIVE_MODULE.title.split(':')[0]}. ¿En qué trabajamos?`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayCheckIn, checkIn?.stress, checkIn?.energy, protocolDay]);
+
+  const normanQuickPanel = (
+    <View style={styles.normanQP}>
+      {/* Header */}
+      <View style={styles.normanQPHeader}>
+        <View style={styles.normanQPAvatar}>
+          <MaterialIcons name="psychology" size={18} color={palette.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.normanQPName}>NORMAN · MENTOR IA</Text>
+          <Text style={styles.normanQPMeta}>Protocolo Soberano · Día {protocolDay}</Text>
+        </View>
+        <View style={styles.normanQPOnline} />
+        <Pressable
+          onPress={() => router.push('/(tabs)/mentor' as never)}
+          style={({ pressed }) => [styles.normanQPOpen, pressed && { opacity: 0.75 }]}
+          accessibilityLabel="Abrir mentor">
+          <MaterialIcons name="open-in-new" size={13} color={palette.black} />
+        </Pressable>
+      </View>
+
+      {/* Context line */}
+      <Text style={styles.normanQPLine}>{normanPanelLine}</Text>
+
+      {/* Chips — 2 × 2 */}
+      <View style={styles.normanQPChips}>
+        {normanChips.map((chip) => (
+          <Pressable
+            key={chip.label}
+            style={({ pressed }) => [styles.normanChip, pressed && { opacity: 0.75 }]}
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/mentor',
+                params: { initialPrompt: chip.prompt },
+              } as never)
+            }>
+            <MaterialIcons name={chip.icon} size={12} color={palette.gold} />
+            <Text style={styles.normanChipText} numberOfLines={2}>{chip.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Weekly dispatch — folded inline when available */}
+      {weeklySession && (
+        <View style={styles.normanWeeklySnippet}>
+          <Text style={styles.normanWeeklyLabel}>DESPACHO · SEMANA {weeklySession.week_number}</Text>
+          <Text style={styles.normanWeeklyText} numberOfLines={4}>{weeklySession.ai_message}</Text>
+          <Pressable
+            onPress={() => router.push('/(tabs)/mentor' as never)}
+            style={({ pressed }) => [styles.normanWeeklyBtn, pressed && { opacity: 0.75 }]}>
+            <Text style={styles.normanWeeklyBtnText}>RESPONDER A NORMAN</Text>
+            <MaterialIcons name="arrow-forward" size={12} color={palette.gold} />
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 
   // ── Live Session Card ────────────────────────────────────────────────────────
@@ -419,7 +559,7 @@ export default function DashboardScreen() {
       contentContainerStyle={
         isDesktop
           ? styles.contentDesktop
-          : [sc.content, { paddingTop: insets.top + 16 }]
+          : [sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]
       }
       showsVerticalScrollIndicator={false}
       bounces
@@ -442,7 +582,7 @@ export default function DashboardScreen() {
               {nbaBlock}
               {engagementBlock}
               <ProgressCard
-                label={protocolDay >= 60 ? 'ARC DE TRANSFORMACION · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACION · PROFUNDIDAD' : 'ARC DE TRANSFORMACION · BASE'}
+                label={protocolDay >= 60 ? 'ARC DE TRANSFORMACIÓN · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACIÓN · PROFUNDIDAD' : 'ARC DE TRANSFORMACIÓN · BASE'}
                 value={`${progress}% · Día ${protocolDay} de 90`}
                 progress={progress}
               />
@@ -455,39 +595,20 @@ export default function DashboardScreen() {
           {/* Cuerpo principal — dos columnas */}
           <View style={styles.desktopBody}>
             <View style={styles.desktopLeft}>
-              <GoldDivider label="ESTADO DEL DIA" />
+              <GoldDivider label="ESTADO DEL DÍA" />
               {estadoBlock}
               <GoldDivider label="BIENESTAR" />
               {wellnessBlock}
             </View>
             <View style={styles.desktopRight}>
+              <GoldDivider label="NORMAN · MENTOR IA" />
+              {normanQuickPanel}
               <GoldDivider label="HOY EN TU PROTOCOLO" />
               {protocolBlock}
               <GoldDivider label="SESIÓN EN VIVO" />
               {liveSessionBlock}
               <GoldDivider label="COMUNIDAD" />
               {communityBlock}
-              {weeklySession && (
-                <>
-                  <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
-                  <PremiumCard style={styles.normanCard}>
-                    <View style={styles.normanHeader}>
-                      <MaterialIcons name="psychology" size={20} color={palette.gold} />
-                      <Text style={styles.normanLabel}>DESPACHO DE NORMAN — SEMANA {weeklySession.week_number}</Text>
-                      <View style={styles.normanNewBadge}>
-                        <Text style={styles.normanNewText}>ESTA SEMANA</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
-                    <Pressable
-                      onPress={() => router.push('/(tabs)/mentor')}
-                      style={({ pressed }) => [styles.normanBtn, pressed && { opacity: 0.8 }]}>
-                      <Text style={styles.normanBtnText}>RESPONDER A NORMAN</Text>
-                      <MaterialIcons name="arrow-forward" size={14} color={palette.black} />
-                    </Pressable>
-                  </PremiumCard>
-                </>
-              )}
               <GoldDivider label="MI NORTE" />
               <PremiumCard style={styles.northCard}>
                 <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
@@ -512,14 +633,16 @@ export default function DashboardScreen() {
           {northAnchorStrip}
           {anomalyBlock}
           {nbaBlock}
+          <GoldDivider label="NORMAN · MENTOR IA" />
+          {normanQuickPanel}
           {engagementBlock}
           <ProgressCard
-            label={protocolDay >= 60 ? 'ARC DE TRANSFORMACION · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACION · PROFUNDIDAD' : 'ARC DE TRANSFORMACION · BASE'}
+            label={protocolDay >= 60 ? 'ARC DE TRANSFORMACIÓN · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACIÓN · PROFUNDIDAD' : 'ARC DE TRANSFORMACIÓN · BASE'}
             value={`${progress}% · Día ${protocolDay} de 90`}
             progress={progress}
           />
           {metricsRow}
-          <GoldDivider label="ESTADO DEL DIA" />
+          <GoldDivider label="ESTADO DEL DÍA" />
           {estadoBlock}
           <GoldDivider label="HOY EN TU PROTOCOLO" />
           {protocolBlock}
@@ -529,27 +652,6 @@ export default function DashboardScreen() {
           {liveSessionBlock}
           <GoldDivider label="COMUNIDAD" />
           {communityBlock}
-          {weeklySession && (
-            <>
-              <GoldDivider label={`SEMANA ${weeklySession.week_number} · NORMAN`} />
-              <PremiumCard style={styles.normanCard}>
-                <View style={styles.normanHeader}>
-                  <MaterialIcons name="psychology" size={20} color={palette.gold} />
-                  <Text style={styles.normanLabel}>DESPACHO DE NORMAN — SEMANA {weeklySession.week_number}</Text>
-                  <View style={styles.normanNewBadge}>
-                    <Text style={styles.normanNewText}>ESTA SEMANA</Text>
-                  </View>
-                </View>
-                <Text style={styles.normanMessage}>{weeklySession.ai_message}</Text>
-                <Pressable
-                  onPress={() => router.push('/(tabs)/mentor')}
-                  style={({ pressed }) => [styles.normanBtn, pressed && { opacity: 0.8 }]}>
-                  <Text style={styles.normanBtnText}>RESPONDER A NORMAN</Text>
-                  <MaterialIcons name="arrow-forward" size={14} color={palette.black} />
-                </Pressable>
-              </PremiumCard>
-            </>
-          )}
           <GoldDivider label="MI NORTE" />
           <PremiumCard style={styles.northCard}>
             <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
@@ -616,6 +718,91 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
+  // ── Norman Quick Panel ──────────────────────────────────────────────────────
+  normanQP: {
+    backgroundColor: palette.charcoal,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.md,
+    borderLeftWidth: 3,
+    borderLeftColor: palette.gold,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  normanQPHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  normanQPAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(200,160,80,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  normanQPName: {
+    ...typography.label,
+    color: palette.ivory,
+    fontSize: 11,
+    letterSpacing: 2,
+  },
+  normanQPMeta: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 10,
+    marginTop: 1,
+  },
+  normanQPOnline: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: palette.success,
+  },
+  normanQPOpen: {
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    padding: 6,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  normanQPLine: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  normanQPChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  normanChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    width: '48%',
+    minHeight: 44,
+  },
+  normanChipText: {
+    ...typography.label,
+    color: palette.ash,
+    fontSize: 11,
+    flex: 1,
+    lineHeight: 16,
+  },
+
   // ── North anchor strip ───────────────────────────────────────────────────
   northAnchor: {
     alignItems: 'center',
@@ -626,7 +813,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    minHeight: 44,
   },
   northAnchorText: {
     color: palette.gold,
@@ -647,8 +835,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     backgroundColor: 'rgba(201,160,0,0.05)',
+    minHeight: 52,
   },
   wearableCtaCopy: {
     flex: 1,
@@ -657,7 +846,7 @@ const styles = StyleSheet.create({
   wearableCtaTitle: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
   },
   wearableCtaSub: {
@@ -754,7 +943,7 @@ const styles = StyleSheet.create({
   wellnessStatLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 7,
+    fontSize: 9,
     letterSpacing: 1,
   },
   wellnessStatDivider: {
@@ -764,58 +953,6 @@ const styles = StyleSheet.create({
   },
   northCard: {
     gap: spacing.lg,
-  },
-  normanCard: {
-    gap: spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: palette.gold,
-  },
-  normanHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  normanLabel: {
-    flex: 1,
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    color: palette.gold,
-    letterSpacing: 2,
-  },
-  normanNewBadge: {
-    backgroundColor: palette.gold + '22',
-    borderColor: palette.gold + '55',
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  normanNewText: {
-    color: palette.gold,
-    fontFamily: Fonts.mono,
-    fontSize: 8,
-    letterSpacing: 1,
-  },
-  normanMessage: {
-    ...typography.body,
-    color: palette.ash,
-    lineHeight: 22,
-    fontStyle: 'italic',
-  },
-  normanBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    paddingVertical: 10,
-  },
-  normanBtnText: {
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    color: palette.black,
-    letterSpacing: 1.5,
   },
   northTitle: {
     color: palette.ivory,
@@ -852,13 +989,14 @@ const styles = StyleSheet.create({
   anomalyTitle: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
   },
   anomalyBody: {
     ...typography.body,
     color: palette.ash,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 19,
   },
 
   // ── Next best action card ───────────────────────────────────────────────────
@@ -889,7 +1027,7 @@ const styles = StyleSheet.create({
   nbaLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 8,
+    fontSize: 10,
     letterSpacing: 1.5,
   },
   nbaAction: {
@@ -914,23 +1052,23 @@ const styles = StyleSheet.create({
   engagementLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 7,
+    fontSize: 9,
     letterSpacing: 1.5,
-    width: 80,
+    width: 84,
   },
   engagementBar: {
     backgroundColor: palette.gold,
     borderRadius: 2,
     flex: 1,
-    height: 3,
+    height: 4,
     maxWidth: '60%',
     opacity: 0.6,
   },
   engagementScore: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 10,
-    width: 48,
+    fontSize: 11,
+    width: 52,
     textAlign: 'right',
   },
 
@@ -1075,5 +1213,67 @@ const styles = StyleSheet.create({
     color:    palette.ash,
     fontSize: 13,
     lineHeight: 20,
+  },
+
+  // ── Biometrics empty state ──────────────────────────────────────────────────
+  estadoEmpty: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: palette.lineSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  estadoEmptyTitle: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 11,
+    letterSpacing: 1.5,
+  },
+  estadoEmptySub: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 2,
+  },
+
+  // ── Norman weekly dispatch (inline) ────────────────────────────────────────
+  normanWeeklySnippet: {
+    borderTopWidth: 1,
+    borderTopColor: palette.lineSoft,
+    paddingTop: spacing.md,
+    gap: spacing.sm,
+  },
+  normanWeeklyLabel: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  normanWeeklyText: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  normanWeeklyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  normanWeeklyBtnText: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
 });

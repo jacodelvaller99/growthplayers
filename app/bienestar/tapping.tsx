@@ -193,11 +193,11 @@ export default function TappingScreen() {
         contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
         keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Volver" accessibilityRole="button">
             <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
           </Pressable>
           <Text style={styles.title}>TAPPING EFT</Text>
-          <View style={{ width: 36 }} />
+          <View style={{ width: 44 }} />
         </View>
 
         <GoldAccentCard>
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 16 },
 
   eyebrow: { ...typography.mono, color: palette.goldMuted, fontSize: 10, letterSpacing: 2 },
@@ -406,10 +406,11 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
 
-  intensityRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  intensityRow: { flexDirection: 'row', gap: 4, flexWrap: 'nowrap' },
   intensityBtn: {
-    width: 32,
-    height: 32,
+    flex: 1,
+    height: 44,
+    minWidth: 28,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: palette.line,
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   intensityBtnActive: { backgroundColor: palette.gold, borderColor: palette.gold },
-  intensityNum: { ...typography.mono, color: palette.ash, fontSize: 12 },
+  intensityNum: { ...typography.mono, color: palette.ash, fontSize: 13 },
   intensityNumActive: { color: palette.black, fontWeight: '700' },
   intensityHint: { ...typography.caption, color: palette.smoke, fontStyle: 'italic' },
 
