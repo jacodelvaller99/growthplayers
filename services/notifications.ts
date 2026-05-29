@@ -4,15 +4,22 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-// ─── Mensajes rotativos (1 por día de la semana) ──────────────────────────────
+// ─── Mensajes rotativos — 14 mensajes para 2 semanas de variedad ─────────────
 const DAILY_MESSAGES = [
-  'Tu sistema espera lectura. El check-in de hoy define tu ejecución.',
-  'El mercader no negocia con el ruido. Check-in primero.',
-  'Antes de decidir, mide tu estado. 2 minutos de check-in valen más que 2 horas de caos.',
-  'Energía, claridad, estrés, sueño — los cuatro indicadores que rigen tu día.',
-  'El guerrero conoce su estado antes de entrar a batalla. Haz check-in.',
-  'Día nuevo, lectura nueva. Tu norte te espera adentro.',
-  'El protocolo no es motivación. Es sistema. Check-in ahora.',
+  'El guerrero no espera sentirse bien para actuar. Lee tu sistema ahora.',
+  '2 minutos de honestidad hoy valen más que 2 horas de reactividad. Check-in.',
+  'Tu energía de ayer ya es historia. ¿Cómo estás hoy, de verdad?',
+  'El protocolo opera con datos, no con suposiciones. Lee el sistema.',
+  'Antes de hablar con el mundo, habla contigo. Check-in primero.',
+  'Quien no mide, no puede mejorar. 2 minutos — ahora.',
+  'El norte que declaraste sigue ahí. ¿Tu estado de hoy lo apoya?',
+  'Sin lectura del sistema, el mentor opera a ciegas. Haz check-in.',
+  'Los que más logran no son los más motivados — son los más consistentes.',
+  'Este momento define el día. Abre el protocolo.',
+  'Estrés, energía, sueño — esos números hablan. ¿Estás escuchando?',
+  'El check-in no es rutina. Es el momento de verte sin excusas.',
+  'Un operador soberano conoce su estado antes de ejecutar. ¿Sabes el tuyo?',
+  'La consistencia no se siente heroica. Se ve en el historial. Check-in.',
 ];
 
 // ─── Config del handler ───────────────────────────────────────────────────────

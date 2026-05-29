@@ -99,7 +99,7 @@ export const POLARIS_MODULES: PolarisModule[] = [
     ],
   },
 
-  // ── MÓDULOS 5–9: COMING SOON ─────────────────────────────────────────────────
+  // ── MÓDULOS 5–7: COMING SOON (lecciones pre-cargadas para cuando se activen) ──
   {
     id: 'modulo-5',
     order: 5,
@@ -110,7 +110,16 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'coming_soon',
     progress: 0,
     skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/bde6664a?md=74caeed013094614a12f51428fb125b1',
-    lessons: [],
+    lessons: [
+      { id: 'm5-1', order: 1, title: 'Los 7 Niveles de Consciencia', status: 'locked' },
+      { id: 'm5-2', order: 2, title: 'Llave 1 — La Intención Correcta', status: 'locked' },
+      { id: 'm5-3', order: 3, title: 'Llave 2 — Libera tu Pasado con el Dinero', status: 'locked' },
+      { id: 'm5-4', order: 4, title: 'Llave 3 — El Presente: Saber Vivir con lo que Tienes', status: 'locked' },
+      { id: 'm5-5', order: 5, title: 'Llave 4 — El Futuro: Sueña sin Límites', status: 'locked' },
+      { id: 'm5-6', order: 6, title: 'Llave 5 — El Camino: RECREO y CLASES', status: 'locked' },
+      { id: 'm5-7', order: 7, title: 'Llave 6 — El Servicio Incondicional', status: 'locked' },
+      { id: 'm5-8', order: 8, title: 'Llave 7 — La Administración', status: 'locked' },
+    ],
   },
   {
     id: 'modulo-6',
@@ -122,7 +131,11 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'coming_soon',
     progress: 0,
     skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/08c3550a?md=3c89b47dd9bb4deeb4391ead90d3c73e',
-    lessons: [],
+    lessons: [
+      { id: 'm6-1', order: 1, title: 'Planeación Semanal Polaris', status: 'locked' },
+      { id: 'm6-2', order: 2, title: 'Planeación Diaria: Las 6 Preguntas', status: 'locked' },
+      { id: 'm6-3', order: 3, title: 'Cierre del Día: Las 4 Preguntas', status: 'locked' },
+    ],
   },
   {
     id: 'modulo-7',
@@ -134,7 +147,11 @@ export const POLARIS_MODULES: PolarisModule[] = [
     status: 'coming_soon',
     progress: 0,
     skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/c11b3c52?md=15e609aca14a4090b38f3579d428c46a',
-    lessons: [],
+    lessons: [
+      { id: 'm7-1', order: 1, title: 'Los 3 Personajes Internos', status: 'locked' },
+      { id: 'm7-2', order: 2, title: 'La Gran Obra: Integración', status: 'locked' },
+      { id: 'm7-3', order: 3, title: 'Relaciones desde el Escultor', status: 'locked' },
+    ],
   },
   {
     id: 'modulo-8',

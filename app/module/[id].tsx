@@ -75,7 +75,7 @@ export default function ModuleDetailScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      <AppHeader title={`MODULO ${String(module.order).padStart(2, '0')}`} />
+      <AppHeader title={`MÓDULO ${String(module.order).padStart(2, '0')}`} />
 
       {/* ── Module Hero ── */}
       <PremiumCard style={styles.hero}>

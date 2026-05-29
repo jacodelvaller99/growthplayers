@@ -200,7 +200,7 @@ export default function OnboardingScreen() {
             />
           </View>
           <Text style={styles.hintText}>
-            Esta respuesta guia a Norman desde el primer mensaje. Sé más especifico de lo que crees necesario.
+            Esta respuesta guía a tu mentor desde el primer mensaje. Sé más específico de lo que crees necesario.
           </Text>
           <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(1)} />
@@ -267,7 +267,7 @@ export default function OnboardingScreen() {
           <StatusPill label="PASO 4 · MI NORTE" tone="gold" dot />
           <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
-            Estas declaraciones guian cada decision del protocolo. El mentor las usa en cada sesion. Puedes editarlas después.
+            Estas declaraciones guían cada decisión del protocolo. El mentor las usa en cada sesión. Puedes editarlas después.
           </Text>
           <GoldDivider />
           <View style={styles.fieldGroup}>

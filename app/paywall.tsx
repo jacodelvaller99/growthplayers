@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -121,25 +122,39 @@ export default function PaywallScreen() {
       <AppHeader title="POLARIS PREMIUM" />
 
       <PremiumCard style={styles.hero}>
-        <Text style={styles.eyebrow}>ACCESO COMPLETO</Text>
-        <Text style={styles.title}>DESBLOQUEA TODO EL SISTEMA</Text>
+        <Text style={styles.eyebrow}>PROTOCOLO SOBERANO</Text>
+        <Text style={styles.title}>¿ESTÁS LISTO{'\n'}PARA COMPROMETERTE?</Text>
         <Text style={styles.body}>
-          Mentor con IA ilimitado, todos los módulos del Protocolo Soberano y análisis de biometría avanzada.
+          No es solo una suscripción. Es la decisión de operar tu vida con la misma seriedad con que operarías una empresa de alto rendimiento.
         </Text>
       </PremiumCard>
 
       <View style={styles.featuresCard}>
         {[
-          'Mentor Polaris sin límites',
-          '9 módulos del Protocolo Soberano',
-          'Análisis biométrico con wearables',
-          'Score soberano y engine de inteligencia',
-        ].map((feat) => (
+          { feat: 'Norman sin límites — tu mentor IA personalizado', icon: 'psychology' },
+          { feat: '9 semanas del Protocolo Soberano completo', icon: 'military-tech' },
+          { feat: 'Biometría avanzada con WHOOP y Oura', icon: 'favorite' },
+          { feat: 'Intelligence Engine — detecta tus patrones', icon: 'insights' },
+        ].map(({ feat, icon }) => (
           <View key={feat} style={styles.featureRow}>
-            <View style={styles.featureDot} />
+            <MaterialIcons name={icon as any} size={14} color={palette.gold} />
             <Text style={styles.featureText}>{feat}</Text>
           </View>
         ))}
+      </View>
+
+      <PremiumCard style={styles.socialProof}>
+        <Text style={styles.socialProofText}>
+          "El método que usé para pasar de 60 a 20 horas de trabajo semanales sin perder ingresos." — Operador activo
+        </Text>
+      </PremiumCard>
+
+      {/* Risk reversal */}
+      <View style={styles.guaranteeRow}>
+        <MaterialIcons name="verified-user" size={18} color={palette.success} />
+        <Text style={styles.guaranteeText}>
+          7 días de garantía total. Si no es para ti, devolvemos cada centavo — sin preguntas.
+        </Text>
       </View>
 
       {/* Package selector — only shown when RC offerings loaded */}
@@ -185,10 +200,10 @@ export default function PaywallScreen() {
           purchasing
             ? 'PROCESANDO...'
             : packages.length === 0
-            ? 'OBTENER ACCESO PREMIUM'
-            : `COMENZAR — ${selected?.product.priceString ?? ''}`
+            ? 'COMPROMETERSE CON EL PROTOCOLO'
+            : `ME COMPROMETO — ${selected?.product.priceString ?? ''}`
         }
-        icon={purchasing ? undefined : 'workspace-premium'}
+        icon={purchasing ? undefined : 'military-tech'}
         onPress={handlePurchase}
         disabled={isLoading || packages.length === 0}
       />
@@ -259,6 +274,18 @@ const styles = StyleSheet.create({
   featureText: {
     ...typography.body,
     color: palette.ivory,
+    flex: 1,
+  },
+
+  socialProof: {
+    gap: 4,
+  },
+  socialProofText: {
+    ...typography.body,
+    color: palette.ash,
+    fontStyle: 'italic',
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   packagesRow: {
@@ -335,6 +362,25 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: palette.smoke,
     textDecorationLine: 'underline',
+  },
+
+  guaranteeRow: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(77, 170, 87, 0.08)',
+    borderColor: palette.success + '44',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  guaranteeText: {
+    ...typography.body,
+    color: palette.success,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
   },
 
   legal: {
