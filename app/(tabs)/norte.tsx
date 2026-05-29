@@ -206,7 +206,7 @@ export default function NorteScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
     <ScrollView
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   norteScore: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
   },
   norteScoreFull: {
@@ -398,8 +398,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   reminderLabel: {
-    ...typography.label,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.ash,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase' as const,
+    lineHeight: 15,
   },
   reminderText: {
     ...typography.body,
@@ -436,7 +441,7 @@ const styles = StyleSheet.create({
     ...typography.section,
     color: palette.ivory,
     flex: 1,
-    fontWeight: '400',
+    fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'none',
   },
@@ -449,8 +454,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   fieldLabel: {
-    ...typography.label,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.ash,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase' as const,
+    lineHeight: 15,
   },
   textArea: {
     minHeight: 78,

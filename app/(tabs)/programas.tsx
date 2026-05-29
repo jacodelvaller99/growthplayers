@@ -225,7 +225,7 @@ export default function ProgramasScreen() {
     <View style={styles.root}>
       <ScrollView
         style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         bounces
         overScrollMode="never"
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   heroStatMeta: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 8,
+    fontSize: 11,
     textAlign: 'center',
   },
   heroStatDivider: {
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   moduleLessons: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
   },
   progressWrap: {
     alignItems: 'center',
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   progressPct: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 9,
+    fontSize: 11,
   },
 
   // Coming soon overlay
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   skoolLinkText: {
     ...typography.mono,
     color: palette.gold,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.5,
   },
 

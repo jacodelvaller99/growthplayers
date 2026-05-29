@@ -781,10 +781,10 @@ const styles = StyleSheet.create({
   },
   editorialTitle: {
     color: palette.ivory,
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.display,  // GrandisExtended-Bold
     fontSize: 28,
-    fontWeight: '400',      // Michroma is single-weight
-    letterSpacing: 2.5,     // Extended brand spacing
+    fontWeight: '700',
+    letterSpacing: 2.0,
     lineHeight: 36,
     textTransform: 'uppercase',
   },
@@ -823,10 +823,10 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     color: palette.ivory,
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.display,  // GrandisExtended-Bold
     fontSize: 26,
-    fontWeight: '400',   // Michroma single-weight
-    letterSpacing: 2,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   metricMeta: {
     ...typography.mono,

@@ -167,7 +167,7 @@ const calStyles = StyleSheet.create({
   title: {
     color:        palette.gold,
     fontFamily:   Fonts.mono,
-    fontSize:     9,
+    fontSize:     11,
     letterSpacing: 2,
   },
   statRow: {
@@ -185,7 +185,7 @@ const calStyles = StyleSheet.create({
   statLabel: {
     color:      palette.ash,
     fontFamily: Fonts.mono,
-    fontSize:   10,
+    fontSize:   11,
   },
   labelRow: {
     flexDirection: 'row',
@@ -196,7 +196,7 @@ const calStyles = StyleSheet.create({
     color:     palette.smoke,
     flex:      1,
     fontFamily: Fonts.mono,
-    fontSize:   8,
+    fontSize:   11,
     letterSpacing: 0.5,
     textAlign: 'center',
   },
@@ -237,7 +237,7 @@ const calStyles = StyleSheet.create({
   legendText: {
     color:       palette.smoke,
     fontFamily:  Fonts.mono,
-    fontSize:    9,
+    fontSize:    11,
     letterSpacing: 0.5,
     marginRight:  spacing.sm,
   },
@@ -817,7 +817,7 @@ export default function ProgresoScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
     <ScrollView
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // Grid
@@ -1457,7 +1457,7 @@ const styles = StyleSheet.create({
   archetypeProgress: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 9,
+    fontSize: 11,
   },
   archetypeCheck: {
     alignItems: 'center',
@@ -1548,7 +1548,7 @@ const styles = StyleSheet.create({
   tierLabel: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   tierName: {
@@ -1571,7 +1571,7 @@ const styles = StyleSheet.create({
   tierUpgradeText: {
     ...typography.label,
     color: palette.black,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '700',
   },
 
@@ -1698,7 +1698,7 @@ const styles = StyleSheet.create({
   gdprBtnTitle: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   gdprBtnMeta: {
@@ -1720,7 +1720,7 @@ const styles = StyleSheet.create({
   gdprDeleteTitle: {
     ...typography.label,
     color: palette.danger,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
 
@@ -1833,7 +1833,7 @@ const dnaStyles = StyleSheet.create({
     ...typography.label,
     color: palette.ash,
     flex: 1,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   tierBadge: {
@@ -1843,7 +1843,7 @@ const dnaStyles = StyleSheet.create({
   },
   tierText: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   gaugeRow: {
@@ -1854,7 +1854,7 @@ const dnaStyles = StyleSheet.create({
   gaugeLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
     width: 90,
   },
@@ -1873,14 +1873,14 @@ const dnaStyles = StyleSheet.create({
   gaugeValue: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'right',
     width: 44,
   },
   sectionLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
     marginBottom: 2,
     marginTop: spacing.sm,
@@ -1911,7 +1911,7 @@ const dnaStyles = StyleSheet.create({
   affinityPct: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     textAlign: 'right',
     width: 32,
   },

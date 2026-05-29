@@ -744,15 +744,18 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   normanQPName: {
-    ...typography.label,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.ivory,
     fontSize: 11,
     letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+    lineHeight: 15,
   },
   normanQPMeta: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 1,
   },
   normanQPOnline: {
@@ -844,15 +847,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   wearableCtaTitle: {
-    ...typography.label,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.gold,
     fontSize: 11,
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+    lineHeight: 15,
   },
   wearableCtaSub: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // ── Shared ────────────────────────────────────────────────────────────────
@@ -911,10 +917,13 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   wellnessTitle: {
-    ...typography.section,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.ivory,
     fontSize: 13,
     letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+    lineHeight: 18,
   },
   wellnessSub: {
     ...typography.body,
@@ -943,7 +952,7 @@ const styles = StyleSheet.create({
   wellnessStatLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
   },
   wellnessStatDivider: {
@@ -987,10 +996,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   anomalyTitle: {
-    ...typography.label,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.gold,
     fontSize: 11,
     letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+    lineHeight: 15,
   },
   anomalyBody: {
     ...typography.body,
@@ -1027,13 +1039,17 @@ const styles = StyleSheet.create({
   nbaLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   nbaAction: {
-    ...typography.section,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.ivory,
     fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+    lineHeight: 16,
   },
   nbaReason: {
     ...typography.body,
@@ -1052,7 +1068,7 @@ const styles = StyleSheet.create({
   engagementLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     width: 84,
   },
@@ -1108,7 +1124,7 @@ const styles = StyleSheet.create({
   liveLabel: {
     color:        palette.gold,
     fontFamily:   Fonts.mono,
-    fontSize:     9,
+    fontSize:     11,
     letterSpacing: 2,
   },
   liveLabelActive: {
@@ -1125,7 +1141,7 @@ const styles = StyleSheet.create({
   liveSub: {
     ...typography.mono,
     color:   palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     marginTop: -spacing.xs,
   },
   liveCountdownRow: {
@@ -1206,7 +1222,7 @@ const styles = StyleSheet.create({
   communitySub: {
     ...typography.mono,
     color:   palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
   },
   communityBody: {
     ...typography.body,
@@ -1228,10 +1244,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   estadoEmptyTitle: {
-    ...typography.label,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.smoke,
     fontSize: 11,
     letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+    lineHeight: 15,
   },
   estadoEmptySub: {
     ...typography.body,
@@ -1251,7 +1270,7 @@ const styles = StyleSheet.create({
   normanWeeklyLabel: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
   },
   normanWeeklyText: {
@@ -1271,9 +1290,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   normanWeeklyBtnText: {
-    ...typography.label,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     color: palette.gold,
     fontSize: 11,
     letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+    lineHeight: 15,
   },
 });

@@ -485,7 +485,7 @@ export default function MentorScreen() {
       keyboardVerticalOffset={insets.top}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }, styles.content]}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }, styles.content]}
         showsVerticalScrollIndicator={false}
         bounces
         overScrollMode="never"
@@ -718,7 +718,7 @@ export default function MentorScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: 32,
+    // paddingBottom is set dynamically via insets.bottom + 24
   },
   onlineBlock: {
     alignItems: 'flex-end',
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   memoryLabel: {
     ...typography.label,
     color: palette.gold,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   memoryText: {
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
