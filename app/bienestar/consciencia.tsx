@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 14 },
 
-  eyebrow: { ...typography.mono, color: palette.goldMuted, fontSize: 10, letterSpacing: 2 },
+  eyebrow: { fontFamily: Fonts.display, color: palette.goldMuted, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' as const },
   heroText: {
     fontFamily: Fonts.display,
     color: palette.ivory,
@@ -304,8 +304,8 @@ const styles = StyleSheet.create({
   zoneBar: { flexDirection: 'row', height: 28, borderRadius: radii.sm, overflow: 'hidden' },
   zoneFuerza: { backgroundColor: palette.charcoal, alignItems: 'center', justifyContent: 'center' },
   zonePoder: { backgroundColor: 'rgba(201,160,0,0.2)', borderWidth: 1, borderColor: palette.gold + '44', alignItems: 'center', justifyContent: 'center' },
-  zoneLabel: { ...typography.mono, color: palette.ash, fontSize: 9, letterSpacing: 1.5 },
-  zoneStatus: { ...typography.mono, fontSize: 11, textAlign: 'center', letterSpacing: 0.5 },
+  zoneLabel: { fontFamily: Fonts.display, color: palette.ash, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase' as const },
+  zoneStatus: { fontFamily: Fonts.display, fontSize: 11, textAlign: 'center', letterSpacing: 1.5, textTransform: 'uppercase' as const },
 
   grid: {
     flexDirection: 'row',
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   detailCard: { gap: spacing.md },
   detailHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   detailHz: { fontFamily: Fonts.display, color: palette.gold, fontSize: 40, fontWeight: '800', letterSpacing: -1 },
-  detailZone: { ...typography.mono, fontSize: 11, letterSpacing: 1.5 },
+  detailZone: { fontFamily: Fonts.display, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase' as const },
   detailName: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 24, fontWeight: '800', letterSpacing: 0.5 },
   detailDesc: { ...typography.body, color: palette.ash, lineHeight: 22 },
   adviceRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },

@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 16 },
 
-  eyebrow: { ...typography.mono, color: palette.goldMuted, fontSize: 10, letterSpacing: 2 },
+  eyebrow: { fontFamily: Fonts.display, color: palette.goldMuted, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' as const },
   heroText: {
     fontFamily: Fonts.display,
     color: palette.ivory,
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
 
   card: { gap: spacing.md },
-  cardLabel: { ...typography.label, color: palette.ash },
+  cardLabel: { ...typography.label, color: palette.ash, fontSize: 11 },
 
   emotionInput: {
     ...typography.body,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: spacing.lg,
   },
-  primaryBtnText: { fontFamily: Fonts.sans, color: palette.black, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
+  primaryBtnText: { fontFamily: Fonts.display, color: palette.black, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
 
   progressBar: {
     height: 3,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   progressFill: { height: '100%', backgroundColor: palette.gold, borderRadius: 2 },
-  progressText: { ...typography.mono, color: palette.smoke, fontSize: 10, textAlign: 'right', marginBottom: spacing.lg },
+  progressText: { ...typography.mono, color: palette.smoke, fontSize: 11, textAlign: 'right', marginBottom: spacing.lg },
 
   pointHeader: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
   pointName: {
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 48,
   },
-  nextBtnText: { fontFamily: Fonts.sans, color: palette.black, fontWeight: '700', fontSize: 13, letterSpacing: 1 },
+  nextBtnText: { fontFamily: Fonts.display, color: palette.black, fontWeight: '700', fontSize: 13, letterSpacing: 1.5 },
 
   resultBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: 4 },
   resultText: { ...typography.body, color: palette.success, flex: 1, lineHeight: 20 },

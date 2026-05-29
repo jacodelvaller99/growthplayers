@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 16 },
 
-  eyebrow: { ...typography.mono, color: palette.goldMuted, fontSize: 10, letterSpacing: 2 },
+  eyebrow: { fontFamily: Fonts.display, color: palette.goldMuted, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' as const },
   heroText: {
     fontFamily: Fonts.display,
     color: palette.ivory,
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: spacing.lg,
   },
-  primaryBtnText: { fontFamily: Fonts.sans, color: palette.black, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
+  primaryBtnText: { fontFamily: Fonts.display, color: palette.black, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
 
   centeredPhase: {
     flex: 1,
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.lg,
   },
-  phaseEyebrow: { ...typography.mono, color: palette.goldMuted, fontSize: 10, letterSpacing: 2, textAlign: 'center' },
+  phaseEyebrow: { fontFamily: Fonts.display, color: palette.goldMuted, fontSize: 11, letterSpacing: 2, textAlign: 'center', textTransform: 'uppercase' as const },
   phaseTitle: {
     fontFamily: Fonts.display,
     color: palette.ivory,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   timerTextWrap: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   timerText: { fontFamily: Fonts.display, color: palette.gold, fontSize: 36, fontWeight: '800', letterSpacing: -1 },
 
-  instructionLabel: { ...typography.label, color: palette.goldMuted, marginBottom: 4 },
+  instructionLabel: { ...typography.label, color: palette.goldMuted, fontSize: 11, marginBottom: 4 },
   instrRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   instrNum: { ...typography.mono, color: palette.goldMuted, fontSize: 12, minWidth: 18 },
   instrText: { ...typography.body, color: palette.ash, flex: 1, lineHeight: 20 },
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   },
   modalityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modalityLabel: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 16, fontWeight: '700', letterSpacing: 0.5 },
-  modalityReps: { ...typography.mono, color: palette.goldMuted, fontSize: 10 },
+  modalityReps: { fontFamily: Fonts.display, color: palette.goldMuted, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase' as const },
   modalitySub: { ...typography.body, color: palette.ash, lineHeight: 20 },
   modalityArrow: { alignSelf: 'flex-end' },
 

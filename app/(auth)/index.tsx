@@ -327,6 +327,7 @@ const styles = StyleSheet.create({
   brand: {
     ...typography.label,
     color: palette.gold,
+    fontSize: 11,
     letterSpacing: 2,
   },
   title: {
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
   modeTabText: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   modeTabTextActive: {
@@ -375,6 +376,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...typography.label,
     color: palette.ash,
+    fontSize: 11,
   },
 
   feedbackBox: {

@@ -448,6 +448,7 @@ const styles = StyleSheet.create({
   cardCycles: {
     ...typography.label,
     color: palette.smoke,
+    fontSize: 11,
   },
 });
 
@@ -599,7 +600,7 @@ const player = StyleSheet.create({
     ...typography.label,
     color: palette.gold,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   stopBtn: {
     flexDirection: 'row',

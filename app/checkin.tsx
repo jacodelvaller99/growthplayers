@@ -313,9 +313,9 @@ const styles = StyleSheet.create({
   },
   streakText: {
     color: palette.gold,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
-    letterSpacing: 0.5,
+    letterSpacing: 1.5,
   },
   introTitle: {
     color: palette.ivory,
@@ -346,6 +346,7 @@ const styles = StyleSheet.create({
   coherenceEyebrow: {
     ...typography.label,
     color: palette.ash,
+    fontSize: 11,
   },
   coherenceRow: {
     alignItems: 'flex-end',
@@ -378,7 +379,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   coherenceStatus: {
-    ...typography.mono,
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
     color: palette.smoke,
   },
   stressReading: {
@@ -393,6 +397,7 @@ const styles = StyleSheet.create({
   systemLabel: {
     ...typography.label,
     color: palette.ash,
+    fontSize: 11,
   },
   needSuggestions: {
     flexDirection: 'row' as const,
@@ -411,7 +416,7 @@ const styles = StyleSheet.create({
   },
   needPillText: {
     color: palette.gold,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontSize: 12,
     lineHeight: 16,
   },
