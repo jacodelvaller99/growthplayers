@@ -148,13 +148,13 @@ export default function WelcomeScreen() {
       {/* ── CTAs ── */}
       <Animated.View style={[styles.actions, ctaStyle]}>
         <PrimaryButton
-          label="ACTIVAR ACCESO"
+          label="ENTRAR AL SISTEMA"
           icon="arrow-forward"
           onPress={goRegister}
         />
 
         <Pressable style={styles.loginRow} onPress={goLogin} accessibilityRole="button">
-          <Text style={styles.loginText}>Ya soy operador</Text>
+          <Text style={styles.loginText}>Ya tengo cuenta</Text>
           <MaterialIcons name="arrow-forward" size={13} color={palette.smoke} />
         </Pressable>
       </Animated.View>

@@ -2,8 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { usePathname, useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { palette } from '@/constants/theme';
+import { palette, Fonts } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { PolarisLogo } from '@/components/PolarisLogo';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -27,12 +28,9 @@ export function DesktopSidebar() {
   return (
     <View style={styles.sidebar}>
 
-      {/* ── Logo ── */}
+      {/* ── Logo oficial — Manual de Marca Polaris (Orgánico Studio 2024) ── */}
       <View style={styles.logoArea}>
-        <View style={styles.logoMark}>
-          <View style={styles.markNorth} />
-          <View style={styles.markStem} />
-        </View>
+        <PolarisLogo variant="star" size={28} color={palette.gold} />
         <View>
           <Text style={styles.logoText}>POLARIS</Text>
           <Text style={styles.logoSub}>GROWTH INSTITUTE</Text>
@@ -100,17 +98,17 @@ export function DesktopSidebar() {
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 260,
-    backgroundColor: '#0C0C0C',
+    width: 240,
+    backgroundColor: '#0A0A0A',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,0.04)',
+    borderRightColor: 'rgba(255,255,255,0.05)',
     paddingTop: 32,
     paddingBottom: 28,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     flexDirection: 'column',
   },
 
-  // Logo
+  // Logo — usa SVG oficial del Manual de Marca
   logoArea: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -118,45 +116,22 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  logoMark: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  markNorth: {
-    position: 'absolute',
-    top: 0,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderBottomWidth: 16,
-    borderStyle: 'solid',
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: palette.gold,
-  },
-  markStem: {
-    width: 2,
-    height: 10,
-    backgroundColor: 'rgba(237,186,1,0.3)',
-    marginTop: 'auto' as unknown as number,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   logoText: {
     fontSize: 14,
     color: '#F4F0E8',
-    fontWeight: '800',
-    letterSpacing: 4,
+    fontFamily: Fonts.display,       // GrandisExtended-Bold
+    fontWeight: '700',
+    letterSpacing: 3.5,
     lineHeight: 17,
   },
   logoSub: {
     fontSize: 7,
-    color: '#3A3A3A',
-    letterSpacing: 2,
-    marginTop: 1,
+    color: '#444444',
+    fontFamily: Fonts.displayLight,  // GrandisExtended-Light
+    letterSpacing: 2.5,
+    marginTop: 2,
   },
 
   // Profile card
@@ -228,12 +203,18 @@ const styles = StyleSheet.create({
     backgroundColor: palette.gold,
     borderRadius: 1,
   },
-  navLabel:       { fontSize: 10, color: '#3A3A3A', letterSpacing: 1.5, fontWeight: '700' },
+  navLabel: {
+    fontSize: 10,
+    color: '#3A3A3A',
+    letterSpacing: 1.8,
+    fontFamily: Fonts.displayMedium,  // GrandisExtended-Medium
+    fontWeight: '500',
+  },
   navLabelActive: { color: '#F4F0E8' },
 
   // Footer
   footer:        { gap: 5 },
   footerDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginBottom: 14 },
-  footerName:    { color: '#2A2A2A', fontSize: 10, letterSpacing: 0.5, fontWeight: '600' },
-  footerTagline: { color: '#1E1E1E', fontSize: 8, letterSpacing: 1 },
+  footerName:    { color: '#2A2A2A', fontSize: 10, letterSpacing: 0.5, fontFamily: Fonts.displayMedium, fontWeight: '500' },
+  footerTagline: { color: '#1A1A1A', fontSize: 8, letterSpacing: 1.2, fontFamily: Fonts.displayLight },
 });

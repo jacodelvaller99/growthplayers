@@ -33,18 +33,59 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="preconnect" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
         <link rel="dns-prefetch" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
 
-        {/* ── Web Fonts: una sola request (era 3 round-trips → ahora 1) ── */}
+        {/* ── Web Fonts: Inter + Space Mono (Google Fonts) ──────────────── */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Michroma&family=Space+Mono&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Space+Mono&display=swap"
         />
 
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: `body{margin:0;background:#080808;overflow-x:hidden;}*{box-sizing:border-box;}#root{background:#080808;}`,
+            __html: `
+body{margin:0;background:#080808;overflow-x:hidden;}
+*{box-sizing:border-box;}
+#root{background:#080808;}
+
+/* ── GrandisExtended — Manual de Marca Polaris (Orgánico Studio 2024) ── */
+@font-face {
+  font-family: 'GrandisExtended';
+  src: url('/assets/fonts/GrandisExtended-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GrandisExtended';
+  src: url('/assets/fonts/GrandisExtended-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GrandisExtended';
+  src: url('/assets/fonts/GrandisExtended-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GrandisExtended';
+  src: url('/assets/fonts/GrandisExtended-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GrandisExtended';
+  src: url('/assets/fonts/GrandisExtended-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+            `,
           }}
         />
 

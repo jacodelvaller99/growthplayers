@@ -1,6 +1,6 @@
 import { Inter_400Regular, Inter_700Bold, useFonts as useInterFonts } from '@expo-google-fonts/inter';
-import { Michroma_400Regular, useFonts as useMichromaFonts } from '@expo-google-fonts/michroma';
 import { SpaceMono_400Regular, useFonts as useSpaceMonoFonts } from '@expo-google-fonts/space-mono';
+import { useFonts as useLocalFonts } from 'expo-font';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -139,14 +139,21 @@ export default function RootLayout() {
   const isWeb = Platform.OS === 'web';
 
   const [interLoaded, interError]         = useInterFonts(isWeb ? {} : { Inter_400Regular, Inter_700Bold });
-  const [michromaLoaded, michromaError]   = useMichromaFonts(isWeb ? {} : { Michroma_400Regular });
   const [spaceMonoLoaded, spaceMonoError] = useSpaceMonoFonts(isWeb ? {} : { SpaceMono_400Regular });
+  // GrandisExtended — brand font from Manual de Marca Polaris (Orgánico Studio 2024)
+  const [grandisLoaded, grandisError]     = useLocalFonts(isWeb ? {} : {
+    'GrandisExtended-Black':   require('../assets/fonts/GrandisExtended-Black.ttf'),
+    'GrandisExtended-Bold':    require('../assets/fonts/GrandisExtended-Bold.ttf'),
+    'GrandisExtended-Medium':  require('../assets/fonts/GrandisExtended-Medium.ttf'),
+    'GrandisExtended-Regular': require('../assets/fonts/GrandisExtended-Regular.ttf'),
+    'GrandisExtended-Light':   require('../assets/fonts/GrandisExtended-Light.ttf'),
+  });
 
   // A font is "done" when loaded OR errored (fall back to system/CSS fonts).
   const fontsDone = isWeb
     ? true
     : (interLoaded    || !!interError)    &&
-      (michromaLoaded || !!michromaError) &&
+      (grandisLoaded  || !!grandisError)  &&
       (spaceMonoLoaded || !!spaceMonoError);
 
   // Hard timeout: render after 4 s regardless — no failure can permanently block the app.

@@ -68,9 +68,9 @@ export function BottomNavigation() {
         tabBarInactiveTintColor: palette.smoke,
         tabBarButton: HapticTab,
         tabBarLabelStyle: {
-          fontFamily: Fonts.display,
+          fontFamily: Fonts.displayMedium, // GrandisExtended-Medium (Manual de Marca)
           fontSize: 10,
-          letterSpacing: 1.2,
+          letterSpacing: 1.5,
           textTransform: 'uppercase',
           marginTop: 2,
         },

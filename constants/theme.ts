@@ -88,28 +88,34 @@ export const Colors = {
 };
 
 // ─── Polaris Typography ───────────────────────────────────────────────────────
-// Display/Headings: Michroma (Google Fonts — brand approved)
+// Display/Headings: GrandisExtended (Manual de Marca Polaris — Orgánico Studio 2024)
 // Body:             Inter
 // Mono/Data:        Space Mono
+// Fallback chain:   GrandisExtended → Poppins → Arial (Manual de Marca, p.escala)
 export const Fonts = {
-  sans:         Platform.select({ web: "'Inter', sans-serif",        default: 'Inter_400Regular'    }),
-  sansBold:     Platform.select({ web: "'Inter', sans-serif",        default: 'Inter_700Bold'       }),
-  display:      Platform.select({ web: "'Michroma', sans-serif",     default: 'Michroma_400Regular' }),
-  displayFallback: Platform.select({ web: "'Inter', sans-serif",     default: 'Inter_700Bold'       }),
-  mono:         Platform.select({ web: "'Space Mono', monospace",    default: 'SpaceMono_400Regular'}),
+  sans:            Platform.select({ web: "'Inter', sans-serif",                             default: 'Inter_400Regular'             }),
+  sansBold:        Platform.select({ web: "'Inter', sans-serif",                             default: 'Inter_700Bold'                }),
+  display:         Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Bold'         }),
+  displayMedium:   Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Medium'       }),
+  displayRegular:  Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Regular'      }),
+  displayLight:    Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Light'        }),
+  displayBlack:    Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Black'        }),
+  displayFallback: Platform.select({ web: "'Poppins', 'Arial', sans-serif",                  default: 'Inter_700Bold'                }),
+  mono:            Platform.select({ web: "'Space Mono', monospace",                         default: 'SpaceMono_400Regular'         }),
 };
 
 // ─── Typography scale ─────────────────────────────────────────────────────────
-// Michroma is a single-weight display typeface — hierarchy via size + spacing.
-// Brand rule: UPPERCASE for all Michroma headings/labels.
+// GrandisExtended has multiple weights — use them for hierarchy.
+// Brand rule: UPPERCASE for all GrandisExtended display headings/labels.
+// Weight scale: Black(900) > Bold(700) > Medium(500) > Regular(400) > Light(300)
 export const typography = {
   // Editorial hero — splash screens, player full screens
   hero: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayBlack,
     fontSize:   34,
     lineHeight: 40,
-    fontWeight: '400' as const,
-    letterSpacing: 2.5,
+    fontWeight: '900' as const,
+    letterSpacing: 2.0,
     textTransform: 'uppercase' as const,
   },
   // Major screen title (header bars)
@@ -117,26 +123,26 @@ export const typography = {
     fontFamily: Fonts.display,
     fontSize:   20,
     lineHeight: 26,
-    fontWeight: '400' as const,
-    letterSpacing: 2,
+    fontWeight: '700' as const,
+    letterSpacing: 1.5,
     textTransform: 'uppercase' as const,
   },
   // Card headings, section titles
   section: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayMedium,
     fontSize:   11,
     lineHeight: 16,
-    fontWeight: '400' as const,
-    letterSpacing: 2.5,
+    fontWeight: '500' as const,
+    letterSpacing: 2.0,
     textTransform: 'uppercase' as const,
   },
   // Micro labels, pills, tags
   label: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayRegular,
     fontSize:   9,
     lineHeight: 13,
     fontWeight: '400' as const,
-    letterSpacing: 2,
+    letterSpacing: 1.8,
     textTransform: 'uppercase' as const,
   },
   // Body copy — comfortable reading

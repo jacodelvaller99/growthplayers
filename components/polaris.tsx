@@ -31,18 +31,14 @@ import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@
 
 import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 import { calcSovereignTier } from '@/lib/utils';
+import { PolarisLogo } from './PolarisLogo';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
-// ─── Polaris Mark ────────────────────────────────────────────────────────────
+// ─── Polaris Mark — usa el SVG oficial del Manual de Marca ───────────────────
 
 export function PolarisMark({ size = 34 }: { size?: number }) {
-  return (
-    <View style={[styles.mark, { width: size, height: size }]}>
-      <View style={styles.markNorth} />
-      <View style={styles.markCross} />
-    </View>
-  );
+  return <PolarisLogo variant="star" size={size} color={palette.gold} />;
 }
 
 // ─── App Header ──────────────────────────────────────────────────────────────
