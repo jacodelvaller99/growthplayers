@@ -33,6 +33,10 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="preconnect" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
         <link rel="dns-prefetch" href="https://bizbbtiyftfjufxinwsu.supabase.co" />
 
+        {/* ── GrandisExtended preload — critical fonts first (reduces FOIT) ─── */}
+        <link rel="preload" href="/assets/fonts/GrandisExtended-Bold.ttf"   as="font" type="font/ttf" crossOrigin="anonymous" />
+        <link rel="preload" href="/assets/fonts/GrandisExtended-Medium.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+
         {/* ── Web Fonts: Inter + Space Mono (Google Fonts) ──────────────── */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
