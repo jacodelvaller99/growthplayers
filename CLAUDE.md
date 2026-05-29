@@ -24,6 +24,7 @@ npm test                              # Jest — all tests
 npm run test:watch                    # Watch mode
 npm run test:coverage                 # Coverage report
 npx jest path/to/__tests__/file.test.ts  # Single test file
+# Coverage is collected from: lib/utils.ts, lib/mentor.ts, hooks/use-lifeflow.tsx, components/polaris.tsx
 
 # Web build & deploy
 npx expo export --platform web        # Outputs to dist/
@@ -51,6 +52,8 @@ EXPO_PUBLIC_REVENUECAT_KEY=        # Subscriptions
 ```
 
 All are `EXPO_PUBLIC_*` (inlined at build time, client-side only). Defined in `app/config/env.ts`.
+
+> **Install note:** always use `npm install --legacy-peer-deps` (required by peer dep conflicts in react-native-purchases + expo 54).
 
 ## Architecture
 
@@ -145,7 +148,9 @@ Static content lives in `data/`:
 
 **Typography hierarchy:** Always use `Fonts.display` (not string literals) for headings. All display text must have `fontWeight: '700'` or higher (GrandisExtended supports 300–900). Minimum 11pt for any visible label.
 
-**Supabase queries:** Use the typed `db` helper from `lib/supabase.ts` for the intelligence/admin schema. Raw `supabase` client for the main app tables.
+**Supabase clients:** `lib/supabase.ts` exports two clients — `supabase` (main app tables: profiles, check_ins, mentor_messages, etc.) and `intel` (intelligence/admin schema: user_intelligence, user_events, ml_dashboard). Always use `intel` for the ML pipeline tables and `db` (typed helper) for strongly-typed queries.
+
+**Local storage namespace:** `storage/local.ts` uses the key prefix `lifeflow:v2`. If you change the shape of `LifeFlowState`, increment the version suffix to bust cached state on existing installs.
 
 **Subscription gating:** Check `isSubscribed` from `useLifeFlow()` or `useSubscription()` hook. Free tier gets limited mentor messages and locked modules. RevenueCat is the source of truth; Supabase `subscription_tier` is synced via webhook.
 
