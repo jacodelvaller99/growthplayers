@@ -63,7 +63,7 @@ function MainStack() {
       <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
       <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar" options={{ headerShown: false }} />
+      <Stack.Screen name="bienestar/index" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/binaurales" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/meditacion" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/respiracion" options={{ headerShown: false }} />
