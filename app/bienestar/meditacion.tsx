@@ -28,17 +28,23 @@ function haptic(type: 'light' | 'medium' | 'success') {
 }
 
 const CATEGORY_COLOR: Record<string, string> = {
-  mañana:  palette.ash,
-  noche:   palette.ash,
-  enfoque: palette.ash,
-  estrés:  palette.ash,
+  mañana:    palette.ash,
+  noche:     palette.ash,
+  enfoque:   palette.ash,
+  estrés:    palette.ash,
+  identidad: palette.ash,
+  decisión:  palette.ash,
+  energía:   palette.ash,
 };
 
 const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
-  mañana:  'wb-sunny',
-  noche:   'bedtime',
-  enfoque: 'psychology',
-  estrés:  'spa',
+  mañana:    'wb-sunny',
+  noche:     'bedtime',
+  enfoque:   'psychology',
+  estrés:    'spa',
+  identidad: 'fingerprint',
+  decisión:  'alt-route',
+  energía:   'bolt',
 };
 
 // ─── Circular timer ───────────────────────────────────────────────────────────
