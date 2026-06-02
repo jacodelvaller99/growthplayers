@@ -166,7 +166,7 @@ export default function CursosScreen() {
           onPress={handleGrant}
           disabled={!selectedUser || saving}>
           {saving ? (
-            <ActivityIndicator color={palette.black} size="small" />
+            <ActivityIndicator color={palette.ink} size="small" />
           ) : (
             <Text style={s.grantBtnText}>DAR ACCESO</Text>
           )}
@@ -221,7 +221,7 @@ const s = StyleSheet.create({
   dropdownItem: { padding: spacing.md, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   dropdownName: { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   grantBtn: { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.lg },
-  grantBtnText: { ...typography.section, color: palette.black },
+  grantBtnText: { ...typography.section, color: palette.ink },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', padding: spacing.md },
   accessRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   accessDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: palette.success },

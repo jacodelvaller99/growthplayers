@@ -362,7 +362,7 @@ export default function PerfilSoberanoScreen() {
         <MaterialIcons
           name={copied ? 'check' : 'share'}
           size={18}
-          color={palette.black}
+          color={palette.ink}
         />
         <Text style={styles.shareCTAText}>
           {sharing
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     width: 68,
   },
   avatarInitials: {
-    color: palette.black,
+    color: palette.ink,
     fontFamily: Fonts.display,
     fontSize: 24,
     fontWeight: '800',
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   shareCTAText: {
-    color: palette.black,
+    color: palette.ink,
     fontFamily: Fonts.mono,
     fontSize: 12,
     fontWeight: '700',

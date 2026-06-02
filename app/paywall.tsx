@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   bestValueText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 7,
     letterSpacing: 1,
   },

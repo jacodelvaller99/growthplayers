@@ -320,5 +320,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  premiumBtnText: { ...typography.label, color: palette.black, fontWeight: '700' },
+  premiumBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
 });

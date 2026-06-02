@@ -160,7 +160,7 @@ export default function DashboardScreen() {
       onPress={() => router.push(nextActionConfig.screen as never)}
       style={({ pressed }) => [styles.nbaCard, pressed && { opacity: 0.85 }]}>
       <View style={styles.nbaBadge}>
-        <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.black} />
+        <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.ink} />
       </View>
       <View style={styles.nbaTextBlock}>
         <Text style={styles.nbaLabel}>PRÓXIMA ACCIÓN RECOMENDADA</Text>
@@ -419,7 +419,7 @@ export default function DashboardScreen() {
           onPress={() => router.push('/(tabs)/mentor' as never)}
           style={({ pressed }) => [styles.normanQPOpen, pressed && { opacity: 0.75 }]}
           accessibilityLabel="Abrir mentor">
-          <MaterialIcons name="open-in-new" size={13} color={palette.black} />
+          <MaterialIcons name="open-in-new" size={13} color={palette.ink} />
         </Pressable>
       </View>
 

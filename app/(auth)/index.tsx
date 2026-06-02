@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   modeTabTextActive: {
-    color: palette.black,
+    color: palette.ink,
   },
 
   form: {

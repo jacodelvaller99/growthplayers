@@ -153,7 +153,7 @@ export default function InteligenciaScreen() {
           onPress={handleRecalcAll}
           disabled={recalcLoading}>
           {recalcLoading ? (
-            <ActivityIndicator color={palette.black} size="small" />
+            <ActivityIndicator color={palette.ink} size="small" />
           ) : (
             <Text style={s.recalcText}>RECALCULAR TODO</Text>
           )}
@@ -265,7 +265,7 @@ const s = StyleSheet.create({
   backBtn: { padding: spacing.xs },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   recalcBtn: { backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  recalcText: { ...typography.label, color: palette.black, fontSize: 9 },
+  recalcText: { ...typography.label, color: palette.ink, fontSize: 9 },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
   kpiRow: { flexDirection: 'row', justifyContent: 'space-around' },
   kpiBlock: { alignItems: 'center' },

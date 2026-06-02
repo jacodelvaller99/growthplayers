@@ -155,7 +155,7 @@ export default function HabitosScreen() {
               >
                 <View style={[styles.habitCheck, habit.completedToday && styles.habitCheckDone]}>
                   {habit.completedToday && (
-                    <MaterialIcons name="check" size={16} color={palette.black} />
+                    <MaterialIcons name="check" size={16} color={palette.ink} />
                   )}
                 </View>
                 <View style={styles.habitInfo}>
@@ -200,7 +200,7 @@ export default function HabitosScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: palette.black },
+  root:           { flex: 1, backgroundColor: palette.ink },
   header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:        { padding: 8 },
   title:          { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },

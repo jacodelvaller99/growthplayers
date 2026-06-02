@@ -258,7 +258,7 @@ const s = StyleSheet.create({
   planBadgeText: {
     fontFamily: Fonts.sansBold,
     fontSize: 9,
-    color: palette.black,
+    color: palette.ink,
     fontWeight: '700',
     letterSpacing: 1,
   },
@@ -337,7 +337,7 @@ const s = StyleSheet.create({
   codeBtnText: {
     fontFamily: Fonts.display,
     fontSize: 11,
-    color: palette.black,
+    color: palette.ink,
     letterSpacing: 2,
   },
   resultBanner: {

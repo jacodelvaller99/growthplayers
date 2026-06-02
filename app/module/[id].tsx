@@ -172,7 +172,7 @@ export default function ModuleDetailScreen() {
                     <MaterialIcons
                       name="chevron-right"
                       size={18}
-                      color={isActive ? palette.black : palette.ash}
+                      color={isActive ? palette.ink : palette.ash}
                     />
                   </View>
                 )}
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     textTransform: 'none',
   },
   lessonTitleActive: {
-    color: palette.black,
+    color: palette.ink,
   },
   lessonMeta: {
     ...typography.mono,

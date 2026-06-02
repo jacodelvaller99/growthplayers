@@ -132,7 +132,7 @@ export default function ProgramasScreen() {
                 <MaterialIcons
                   name={isComingSoon || isLocked ? 'lock' : 'chevron-right'}
                   size={20}
-                  color={isActive ? palette.black : palette.gold}
+                  color={isActive ? palette.ink : palette.gold}
                 />
               </View>
             </View>
@@ -328,7 +328,7 @@ export default function ProgramasScreen() {
                         <MaterialIcons
                           name={isComingSoon || isLocked ? 'lock' : 'chevron-right'}
                           size={20}
-                          color={isActive ? palette.black : palette.gold}
+                          color={isActive ? palette.ink : palette.gold}
                         />
                       </View>
                     </View>
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     color: palette.smoke,
   },
   moduleNumberActive: {
-    color: palette.black,
+    color: palette.ink,
   },
   moduleTitle: {
     ...typography.title,

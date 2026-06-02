@@ -188,14 +188,14 @@ export default function NutricionScreen() {
                 style={[styles.optionRow, answers.dietType === d.id && styles.optionRowActive]}
               >
                 <View style={[styles.optionIcon, answers.dietType === d.id && styles.optionIconActive]}>
-                  <MaterialIcons name={d.icon as any} size={20} color={answers.dietType === d.id ? palette.black : palette.gold} />
+                  <MaterialIcons name={d.icon as any} size={20} color={answers.dietType === d.id ? palette.ink : palette.gold} />
                 </View>
                 <View style={styles.optionText}>
-                  <Text style={[styles.optionLabel, answers.dietType === d.id && { color: palette.black }]}>{d.label}</Text>
+                  <Text style={[styles.optionLabel, answers.dietType === d.id && { color: palette.ink }]}>{d.label}</Text>
                   <Text style={[styles.optionDesc,  answers.dietType === d.id && { color: 'rgba(0,0,0,0.6)' }]}>{d.desc}</Text>
                 </View>
                 {answers.dietType === d.id && (
-                  <MaterialIcons name="check-circle" size={20} color={palette.black} />
+                  <MaterialIcons name="check-circle" size={20} color={palette.ink} />
                 )}
               </Pressable>
             ))}
@@ -260,8 +260,8 @@ export default function NutricionScreen() {
                     onPress={() => setAnswers(prev => ({ ...prev, goal: g.id }))}
                     style={[styles.goalCard, selected && styles.goalCardActive]}
                   >
-                    <MaterialIcons name={g.icon as any} size={28} color={selected ? palette.black : palette.gold} />
-                    <Text style={[styles.goalLabel, selected && { color: palette.black }]}>{g.label}</Text>
+                    <MaterialIcons name={g.icon as any} size={28} color={selected ? palette.ink : palette.gold} />
+                    <Text style={[styles.goalLabel, selected && { color: palette.ink }]}>{g.label}</Text>
                   </Pressable>
                 );
               })}
@@ -281,11 +281,11 @@ export default function NutricionScreen() {
                 style={[styles.calRow, answers.calories === c.id && styles.calRowActive]}
               >
                 <View style={styles.calLeft}>
-                  <Text style={[styles.calLabel, answers.calories === c.id && { color: palette.black }]}>{c.label}</Text>
+                  <Text style={[styles.calLabel, answers.calories === c.id && { color: palette.ink }]}>{c.label}</Text>
                   <Text style={[styles.calDesc,  answers.calories === c.id && { color: 'rgba(0,0,0,0.6)' }]}>{c.desc}</Text>
                 </View>
                 {answers.calories === c.id && (
-                  <MaterialIcons name="check-circle" size={20} color={palette.black} />
+                  <MaterialIcons name="check-circle" size={20} color={palette.ink} />
                 )}
               </Pressable>
             ))}
@@ -308,7 +308,7 @@ export default function NutricionScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:             { flex: 1, backgroundColor: palette.black },
+  root:             { flex: 1, backgroundColor: palette.ink },
   header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:          { padding: 8 },
   title:            { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   chip:             { paddingHorizontal: 16, paddingVertical: 10, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.graphite },
   chipActive:       { backgroundColor: palette.gold, borderColor: palette.gold },
   chipText:         { fontFamily: Fonts.sans, fontSize: 13, color: palette.ash },
-  chipTextActive:   { color: palette.black, fontWeight: '600' },
+  chipTextActive:   { color: palette.ink, fontWeight: '600' },
 
   goalGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   goalCard:         { width: '47%', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'transparent' },
@@ -349,11 +349,11 @@ const styles = StyleSheet.create({
 
   nextBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center', marginTop: spacing.lg },
   nextBtnDisabled:  { backgroundColor: palette.graphite },
-  nextBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.black, letterSpacing: 2 },
+  nextBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
   successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: 16 },
   successTitle:     { fontFamily: Fonts.display, fontSize: 22, color: palette.gold, letterSpacing: 2 },
   successSub:       { ...typography.body, color: palette.ash, textAlign: 'center', lineHeight: 22 },
   doneBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: 14, paddingHorizontal: 32, marginTop: 8 },
-  doneBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.black, letterSpacing: 2 },
+  doneBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 });

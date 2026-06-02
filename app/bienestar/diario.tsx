@@ -96,7 +96,7 @@ export default function DiarioScreen() {
               <MaterialIcons
                 name={t.icon}
                 size={16}
-                color={type === t.id ? palette.black : palette.ash}
+                color={type === t.id ? palette.ink : palette.ash}
               />
               <Text style={[styles.typeBtnText, type === t.id && styles.typeBtnTextActive]}>
                 {t.label}
@@ -122,10 +122,10 @@ export default function DiarioScreen() {
             onPress={save}
             disabled={!text.trim() || saving}>
             {saving ? (
-              <ActivityIndicator size="small" color={palette.black} />
+              <ActivityIndicator size="small" color={palette.ink} />
             ) : saved ? (
               <>
-                <MaterialIcons name="check" size={16} color={palette.black} />
+                <MaterialIcons name="check" size={16} color={palette.ink} />
                 <Text style={styles.saveBtnText}>GUARDADO</Text>
               </>
             ) : (
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   typeBtnActive: { backgroundColor: palette.gold, borderColor: palette.gold },
   typeBtnText: { ...typography.label, color: palette.ash },
-  typeBtnTextActive: { color: palette.black },
+  typeBtnTextActive: { color: palette.ink },
 
   inputCard: { gap: spacing.md },
   input: {
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 48,
   },
-  saveBtnText: { ...typography.label, color: palette.black, fontWeight: '700' },
+  saveBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
   savedBanner: {
     flexDirection: 'row',
     alignItems: 'center',

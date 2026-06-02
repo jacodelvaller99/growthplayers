@@ -227,7 +227,7 @@ export default function GritoScreen() {
         </PremiumCard>
 
         <Pressable style={styles.primaryBtn} onPress={startActivation}>
-          <MaterialIcons name="play-arrow" size={20} color={palette.black} />
+          <MaterialIcons name="play-arrow" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>COMENZAR</Text>
         </Pressable>
       </ScrollView>
@@ -340,7 +340,7 @@ export default function GritoScreen() {
         </PremiumCard>
 
         <Pressable style={styles.primaryBtn} onPress={finish}>
-          <MaterialIcons name="check" size={20} color={palette.black} />
+          <MaterialIcons name="check" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>COMPLETAR SESIÓN</Text>
         </Pressable>
 
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: spacing.lg,
   },
-  primaryBtnText: { fontFamily: Fonts.display, color: palette.black, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
+  primaryBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
 
   centeredPhase: {
     flex: 1,

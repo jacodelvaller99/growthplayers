@@ -342,7 +342,7 @@ export function WeeklySparkline({
 export function AchievementBadge({ icon, label, earned }: { icon: IconName; label: string; earned: boolean }) {
   return (
     <View style={[styles.badge, !earned && styles.badgeEarned]}>
-      <MaterialIcons name={icon} size={22} color={earned ? palette.black : palette.smoke} />
+      <MaterialIcons name={icon} size={22} color={earned ? palette.ink : palette.smoke} />
       <Text style={[styles.badgeLabel, !earned && styles.badgeLabelDim]}>{label}</Text>
     </View>
   );
@@ -468,7 +468,7 @@ export function PrimaryButton({ label, icon, onPress, disabled }: { label: strin
         onPressOut={disabled ? undefined : handlePressOut}
         style={styles.primaryButton}>
         <Text style={styles.primaryButtonText}>{label}</Text>
-        {icon ? <MaterialIcons name={icon} color={palette.black} size={18} /> : null}
+        {icon ? <MaterialIcons name={icon} color={palette.ink} size={18} /> : null}
       </Pressable>
     </Animated.View>
   );
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
   },
   badgeLabel: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     textAlign: 'center',
   },
   badgeLabelDim: {
@@ -992,7 +992,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   scaleStepTextActive: {
-    color: palette.black,
+    color: palette.ink,
   },
 
   // Buttons
@@ -1008,7 +1008,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     ...typography.section,
-    color: palette.black,
+    color: palette.ink,
     letterSpacing: 2.5,
     fontSize: 10,
   },
@@ -1091,7 +1091,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   userChatText: {
-    color: palette.black,
+    color: palette.ink,
     fontFamily: Fonts.sansBold,
   },
 

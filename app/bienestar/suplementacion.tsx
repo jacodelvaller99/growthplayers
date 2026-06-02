@@ -104,8 +104,8 @@ export default function SuplementacionScreen() {
             onPress={() => { setActiveTab(tab.id); setSavedStack(null); }}
             style={[styles.tab, activeTab === tab.id && styles.tabActive]}
           >
-            <MaterialIcons name={tab.icon as any} size={16} color={activeTab === tab.id ? palette.black : palette.ash} />
-            <Text style={[styles.tabText, activeTab === tab.id && { color: palette.black }]}>{tab.label}</Text>
+            <MaterialIcons name={tab.icon as any} size={16} color={activeTab === tab.id ? palette.ink : palette.ash} />
+            <Text style={[styles.tabText, activeTab === tab.id && { color: palette.ink }]}>{tab.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -136,7 +136,7 @@ export default function SuplementacionScreen() {
           <MaterialIcons
             name={savedStack === activeTab ? 'check-circle' : 'bookmark-add'}
             size={18}
-            color={savedStack === activeTab ? palette.black : palette.black}
+            color={savedStack === activeTab ? palette.ink : palette.black}
           />
           <Text style={styles.saveBtnText}>
             {savedStack === activeTab ? 'STACK GUARDADO' : 'GUARDAR ESTE STACK'}
@@ -152,7 +152,7 @@ export default function SuplementacionScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:          { flex: 1, backgroundColor: palette.black },
+  root:          { flex: 1, backgroundColor: palette.ink },
   header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:       { padding: 8 },
   title:         { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
 
   saveBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.sm },
   saveBtnSaved:  { backgroundColor: 'rgba(212,175,55,0.3)', borderWidth: 1, borderColor: palette.gold },
-  saveBtnText:   { fontFamily: Fonts.display, fontSize: 13, color: palette.black, letterSpacing: 2 },
+  saveBtnText:   { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
 
   footnote:      { ...typography.caption, color: palette.smoke, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
 });

@@ -746,7 +746,7 @@ export default function ProgresoScreen() {
                     value={notificationsOn}
                     onValueChange={toggleNotifications}
                     trackColor={{ false: palette.charcoal, true: palette.gold }}
-                    thumbColor={notificationsOn ? palette.black : palette.ash}
+                    thumbColor={notificationsOn ? palette.ink : palette.ash}
                   />
                 </View>
                 <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.md }]}>
@@ -760,7 +760,7 @@ export default function ProgresoScreen() {
                     value={mlConsent}
                     onValueChange={handleMlConsentToggle}
                     trackColor={{ false: palette.charcoal, true: palette.gold }}
-                    thumbColor={mlConsent ? palette.black : palette.ash}
+                    thumbColor={mlConsent ? palette.ink : palette.ash}
                   />
                 </View>
               </PremiumCard>
@@ -1124,7 +1124,7 @@ export default function ProgresoScreen() {
           ))}
         </View>
         <Pressable style={styles.b2bBtn}>
-          <MaterialIcons name="arrow-forward" size={16} color={palette.black} />
+          <MaterialIcons name="arrow-forward" size={16} color={palette.ink} />
           <Text style={styles.b2bBtnText}>SOLICITAR INFORMACIÓN</Text>
         </Pressable>
       </PremiumCard>
@@ -1212,7 +1212,7 @@ export default function ProgresoScreen() {
             value={notificationsOn}
             onValueChange={toggleNotifications}
             trackColor={{ false: palette.charcoal, true: palette.gold }}
-            thumbColor={notificationsOn ? palette.black : palette.ash}
+            thumbColor={notificationsOn ? palette.ink : palette.ash}
           />
         </View>
         <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.md }]}>
@@ -1226,7 +1226,7 @@ export default function ProgresoScreen() {
             value={mlConsent}
             onValueChange={handleMlConsentToggle}
             trackColor={{ false: palette.charcoal, true: palette.gold }}
-            thumbColor={mlConsent ? palette.black : palette.ash}
+            thumbColor={mlConsent ? palette.ink : palette.ash}
           />
         </View>
       </PremiumCard>
@@ -1359,7 +1359,7 @@ const styles = StyleSheet.create({
     width: 72,
   },
   avatarText: {
-    color: palette.black,
+    color: palette.ink,
     fontFamily: Fonts.display,
     fontSize: 26,
     fontWeight: '800',
@@ -1581,7 +1581,7 @@ const styles = StyleSheet.create({
   },
   tierUpgradeText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1653,7 +1653,7 @@ const styles = StyleSheet.create({
   },
   b2bBtnText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontWeight: '700',
     fontSize: 11,
   },

@@ -238,7 +238,7 @@ export default function CodigosScreen() {
           onPress={handleCreate}
           disabled={saving}>
           {saving ? (
-            <ActivityIndicator color={palette.black} size="small" />
+            <ActivityIndicator color={palette.ink} size="small" />
           ) : (
             <Text style={s.submitText}>GENERAR CÓDIGO</Text>
           )}
@@ -295,7 +295,7 @@ const s = StyleSheet.create({
   optText: { ...typography.caption, color: palette.ash, fontSize: 11 },
   optTextActive: { color: palette.gold },
   submitBtn: { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.lg },
-  submitText: { ...typography.section, color: palette.black },
+  submitText: { ...typography.section, color: palette.ink },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', padding: spacing.md },
 });
 

@@ -239,7 +239,7 @@ export default function OnboardingScreen() {
                 onPress={handleApplyCode}
                 disabled={!accessCode.trim() || codeStatus === 'checking'}>
                 {codeStatus === 'checking' ? (
-                  <ActivityIndicator color={palette.black} size="small" />
+                  <ActivityIndicator color={palette.ink} size="small" />
                 ) : (
                   <Text style={styles.applyBtnText}>APLICAR</Text>
                 )}
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   },
   applyBtnText: {
     ...typography.section,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 10,
   },
   codeMsg: {

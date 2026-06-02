@@ -284,7 +284,7 @@ function MeditationPlayer({
       <View style={player.controls}>
         {!running && !paused && !done && (
           <Pressable style={player.startBtn} onPress={startSession}>
-            <MaterialIcons name="play-arrow" size={28} color={palette.black} />
+            <MaterialIcons name="play-arrow" size={28} color={palette.ink} />
             <Text style={player.startBtnText}>INICIAR SESIÓN</Text>
           </Pressable>
         )}
@@ -303,7 +303,7 @@ function MeditationPlayer({
         {paused && !done && (
           <View style={player.controlRow}>
             <Pressable style={player.startBtn} onPress={handleResume}>
-              <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+              <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
               <Text style={player.startBtnText}>REANUDAR</Text>
             </Pressable>
             <Pressable style={player.stopBtn} onPress={handleStop}>
@@ -314,7 +314,7 @@ function MeditationPlayer({
         )}
         {done && (
           <Pressable style={player.startBtn} onPress={onExit}>
-            <MaterialIcons name="check" size={22} color={palette.black} />
+            <MaterialIcons name="check" size={22} color={palette.ink} />
             <Text style={player.startBtnText}>COMPLETADO</Text>
           </Pressable>
         )}
@@ -572,7 +572,7 @@ const player = StyleSheet.create({
   },
   startBtnText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 14,
     fontWeight: '700',
   },

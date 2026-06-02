@@ -23,6 +23,11 @@ export const palette = {
   charcoal:       cv('--c-surface-3',  '#222222'),   // hover state, subtle separators
   overlay:        cv('--c-overlay',    '#1C1C1C'),   // overlays
 
+  // ── Ink — CONSTANT dark, never themed. For text/icons that sit on gold or
+  //    light surfaces (e.g. button labels on gold). Using palette.black here
+  //    would flip to cream in light mode and vanish.
+  ink:            '#0A0A0A',
+
   // ── Brand accent (Philippine Yellow — constant across themes) ─────────────────
   gold:           '#FFC804',   // CTA buttons, active states, key metrics ONLY
   goldLight:      'rgba(255, 200, 4, 0.12)',   // tinted backgrounds

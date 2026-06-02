@@ -86,7 +86,7 @@ export default function PWAInstallBanner() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: palette.graphite,
     borderColor: palette.line,
     borderRadius: radii.md,
     borderWidth: 1,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   },
   dismissText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 9,
   },
   arrow: {

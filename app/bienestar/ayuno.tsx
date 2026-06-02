@@ -153,11 +153,11 @@ export default function AyunoScreen() {
                 style={[styles.protocolRow, selectedProtocol.label === p.label && styles.protocolRowActive]}
               >
                 <View style={styles.protocolLeft}>
-                  <Text style={[styles.protocolLabel, selectedProtocol.label === p.label && { color: palette.black }]}>
+                  <Text style={[styles.protocolLabel, selectedProtocol.label === p.label && { color: palette.ink }]}>
                     {p.label}
                   </Text>
                 </View>
-                <Text style={[styles.protocolDesc, selectedProtocol.label === p.label && { color: palette.black }]}>
+                <Text style={[styles.protocolDesc, selectedProtocol.label === p.label && { color: palette.ink }]}>
                   {p.description}
                 </Text>
               </Pressable>
@@ -222,7 +222,7 @@ export default function AyunoScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:             { flex: 1, backgroundColor: palette.black },
+  root:             { flex: 1, backgroundColor: palette.ink },
   header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:          { padding: 8 },
   title:            { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
@@ -258,15 +258,15 @@ const styles = StyleSheet.create({
 
   ctaBtn:           { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center', marginTop: 8 },
   ctaBtnEnd:        { backgroundColor: 'rgba(212,175,55,0.2)', borderWidth: 1, borderColor: palette.gold },
-  ctaBtnText:       { fontFamily: Fonts.display, fontSize: 14, color: palette.black, letterSpacing: 2 },
+  ctaBtnText:       { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  modalBox:         { backgroundColor: '#111111', borderRadius: radii.md, padding: spacing.lg, borderWidth: 1, borderColor: palette.gold, maxWidth: 440, width: '100%', alignItems: 'center' },
+  modalBox:         { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, borderWidth: 1, borderColor: palette.gold, maxWidth: 440, width: '100%', alignItems: 'center' },
   modalTitle:       { fontFamily: Fonts.display, fontSize: 16, color: palette.gold, letterSpacing: 2, marginBottom: 12 },
   modalBody:        { fontSize: 14, color: palette.ash, lineHeight: 22, textAlign: 'center' },
   modalActions:     { flexDirection: 'row', gap: 12, marginTop: spacing.lg, width: '100%' },
   modalCancel:      { flex: 1, padding: 12, backgroundColor: palette.graphite, borderRadius: radii.sm, alignItems: 'center' },
   modalCancelText:  { color: palette.ash, fontSize: 13 },
   modalConfirm:     { flex: 2, padding: 12, backgroundColor: palette.gold, borderRadius: radii.sm, alignItems: 'center' },
-  modalConfirmText: { fontFamily: Fonts.display, color: palette.black, fontSize: 12, letterSpacing: 1 },
+  modalConfirmText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 12, letterSpacing: 1 },
 });

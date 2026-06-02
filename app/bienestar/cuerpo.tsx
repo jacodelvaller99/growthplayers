@@ -237,7 +237,7 @@ export default function CuerpoScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:               { flex: 1, backgroundColor: palette.black },
+  root:               { flex: 1, backgroundColor: palette.ink },
   header:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:            { padding: 8 },
   title:              { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
 
   saveBtn:            { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center' },
   saveBtnDisabled:    { backgroundColor: palette.graphite },
-  saveBtnText:        { fontFamily: Fonts.display, fontSize: 13, color: palette.black, letterSpacing: 2 },
+  saveBtnText:        { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
 
   sparklineContainer: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 6, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm },
   sparkColumn:        { flex: 1, alignItems: 'center', gap: 4 },

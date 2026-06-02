@@ -548,9 +548,9 @@ export default function MentorScreen() {
               router.push('/paywall');
             }}
             style={({ pressed }) => [styles.paywallBanner, pressed && { opacity: 0.85 }]}>
-            <MaterialIcons name="lock" size={16} color={palette.black} />
+            <MaterialIcons name="lock" size={16} color={palette.ink} />
             <Text style={styles.paywallText}>DESBLOQUEAR MENTOR PREMIUM</Text>
-            <MaterialIcons name="chevron-right" size={16} color={palette.black} />
+            <MaterialIcons name="chevron-right" size={16} color={palette.ink} />
           </Pressable>
         )}
 
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   threadsSheet: {
-    backgroundColor: '#111111',
+    backgroundColor: palette.graphite,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderTopWidth: 1,
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
   },
   paywallText: {
     ...typography.section,
-    color: palette.black,
+    color: palette.ink,
     flex: 1,
     textAlign: 'center',
   },

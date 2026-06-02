@@ -271,7 +271,7 @@ export default function MembresiasScreen() {
           <Pressable
             style={s.activateBtn}
             onPress={() => setActivateOpen(true)}>
-            <MaterialIcons name="add" size={16} color={palette.black} />
+            <MaterialIcons name="add" size={16} color={palette.ink} />
             <Text style={s.activateBtnText}>ACTIVAR</Text>
           </Pressable>
         </View>
@@ -478,11 +478,11 @@ export default function MembresiasScreen() {
                   onPress={handleActivate}
                   disabled={!selectedUser || saving}>
                   {saving ? (
-                    <ActivityIndicator color={palette.black} size="small" />
+                    <ActivityIndicator color={palette.ink} size="small" />
                   ) : (
                     <>
                       <Text style={modal.submitText}>ACTIVAR MEMBRESÍA</Text>
-                      <MaterialIcons name="arrow-forward" size={14} color={palette.black} />
+                      <MaterialIcons name="arrow-forward" size={14} color={palette.ink} />
                     </>
                   )}
                 </Pressable>
@@ -585,7 +585,7 @@ export default function MembresiasScreen() {
                 onPress={handleRowAction}
                 disabled={actionSaving}>
                 {actionSaving ? (
-                  <ActivityIndicator color={palette.black} size="small" />
+                  <ActivityIndicator color={palette.ink} size="small" />
                 ) : (
                   <Text style={modal.submitText}>
                     {actionType === 'cancel' ? 'SÍ, CANCELAR' : 'CONFIRMAR'}
@@ -621,7 +621,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  activateBtnText: { ...typography.label, color: palette.black, fontSize: 9 },
+  activateBtnText: { ...typography.label, color: palette.ink, fontSize: 9 },
   filterRow:   { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   filterChip:  { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
   filterChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
@@ -787,7 +787,7 @@ const modal = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   submitBtnDisabled: { opacity: 0.4 },
-  submitText:    { ...typography.section, color: palette.black },
+  submitText:    { ...typography.section, color: palette.ink },
 });
 
 const tb = StyleSheet.create({

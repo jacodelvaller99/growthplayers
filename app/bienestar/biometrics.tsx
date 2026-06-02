@@ -424,5 +424,5 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     marginTop: spacing.sm,
   },
-  connectBtnText: { ...typography.label, color: palette.black, fontWeight: '700' },
+  connectBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
 });

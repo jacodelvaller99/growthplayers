@@ -246,7 +246,7 @@ function BreathPlayer({
       {/* CTA */}
       {!running && !paused && !done && (
         <Pressable style={player.startBtn} onPress={startSession}>
-          <MaterialIcons name="play-arrow" size={24} color={palette.black} />
+          <MaterialIcons name="play-arrow" size={24} color={palette.ink} />
           <Text style={player.startBtnText}>INICIAR</Text>
         </Pressable>
       )}
@@ -273,7 +273,7 @@ function BreathPlayer({
       {paused && !done && (
         <View style={player.controlRow}>
           <Pressable style={player.startBtn} onPress={handleResume}>
-            <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+            <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
             <Text style={player.startBtnText}>REANUDAR</Text>
           </Pressable>
           <Pressable style={player.stopBtn} onPress={() => { setPaused(false); scaleAnim.setValue(1); storeStop(); }}>
@@ -579,7 +579,7 @@ const player = StyleSheet.create({
   },
   startBtnText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 14,
     fontWeight: '700',
   },

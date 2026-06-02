@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#c9a000',
   },
   btnText: {
-    color: palette.black,
+    color: palette.ink,
     fontFamily: Fonts.display,
     fontSize: 14,
     fontWeight: '700',

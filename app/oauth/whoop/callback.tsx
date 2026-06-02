@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   card: {
-    backgroundColor: '#111111',
+    backgroundColor: palette.graphite,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#1e1e1e',

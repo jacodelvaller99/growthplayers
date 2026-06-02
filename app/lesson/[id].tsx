@@ -329,7 +329,7 @@ const ritualStyles = StyleSheet.create({
     paddingVertical: 14,
   },
   btnText: {
-    color: palette.black,
+    color: palette.ink,
     fontFamily: Fonts.mono,
     fontSize: 13,
     fontWeight: '700',
@@ -399,7 +399,7 @@ function ArchetypeModal({
             onPress={onContinue}
           >
             <Text style={archStyles.btnText}>CONTINUAR EL PROTOCOLO</Text>
-            <MaterialIcons name="arrow-forward" size={18} color={palette.black} />
+            <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />
           </Pressable>
         </View>
       </View>
@@ -520,7 +520,7 @@ const celebStyles = StyleSheet.create({
     padding:         24,
   },
   card: {
-    backgroundColor: '#080808',
+    backgroundColor: palette.black,
     borderColor:     palette.gold,
     borderRadius:    radii.md,
     borderWidth:     1.5,
@@ -1001,7 +1001,7 @@ export default function LessonScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: palette.black },
+  flex: { flex: 1, backgroundColor: palette.ink },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1 },
   content: {
     gap: spacing.lg,
@@ -1353,7 +1353,7 @@ const archStyles = StyleSheet.create({
     padding: spacing.xl,
   },
   card: {
-    backgroundColor: '#0A0A0A',
+    backgroundColor: palette.black,
     borderColor: palette.gold,
     borderRadius: radii.md,
     borderWidth: 1.5,
@@ -1443,7 +1443,7 @@ const archStyles = StyleSheet.create({
   },
   btnText: {
     ...typography.section,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 11,
     letterSpacing: 2,
   },

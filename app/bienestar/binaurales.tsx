@@ -424,7 +424,7 @@ function BinauralPlayer({
                 <MaterialIcons
                   name={a.icon as React.ComponentProps<typeof MaterialIcons>['name']}
                   size={16}
-                  color={ambience === a.id ? palette.black : palette.ash}
+                  color={ambience === a.id ? palette.ink : palette.ash}
                 />
                 <Text style={[play.ambienceBtnText, ambience === a.id && play.ambienceBtnTextActive]}>
                   {a.label}
@@ -450,7 +450,7 @@ function BinauralPlayer({
       {/* CTA */}
       {!running && !paused && !done && (
         <Pressable style={play.startBtn} onPress={startSession}>
-          <MaterialIcons name="play-arrow" size={24} color={palette.black} />
+          <MaterialIcons name="play-arrow" size={24} color={palette.ink} />
           <Text style={play.startBtnText}>INICIAR {timerMinutes} MIN</Text>
         </Pressable>
       )}
@@ -469,7 +469,7 @@ function BinauralPlayer({
       {paused && !done && (
         <View style={play.controlRow}>
           <Pressable style={play.startBtn} onPress={resumeSession}>
-            <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+            <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
             <Text style={play.startBtnText}>REANUDAR</Text>
           </Pressable>
           <Pressable style={play.stopBtn} onPress={stopSession}>
@@ -632,13 +632,13 @@ export default function BinauralesScreen() {
         <Pressable
           onPress={() => { setMixerMode(false); haptic('light'); }}
           style={[styles.modeBtn, !mixerMode && styles.modeBtnActive]}>
-          <MaterialIcons name="queue-music" size={16} color={!mixerMode ? palette.black : palette.ash} />
+          <MaterialIcons name="queue-music" size={16} color={!mixerMode ? palette.ink : palette.ash} />
           <Text style={[styles.modeBtnText, !mixerMode && styles.modeBtnTextActive]}>BÁSICO</Text>
         </Pressable>
         <Pressable
           onPress={() => { setMixerMode(true); haptic('light'); }}
           style={[styles.modeBtn, mixerMode && styles.modeBtnActive]}>
-          <MaterialIcons name="tune" size={16} color={mixerMode ? palette.black : palette.ash} />
+          <MaterialIcons name="tune" size={16} color={mixerMode ? palette.ink : palette.ash} />
           <Text style={[styles.modeBtnText, mixerMode && styles.modeBtnTextActive]}>MEZCLADOR</Text>
         </Pressable>
       </View>
@@ -742,7 +742,7 @@ export default function BinauralesScreen() {
                     icon: activeMixer.icon as string,
                   } as BinauralPreset);
                 }}>
-                <MaterialIcons name="play-arrow" size={22} color={palette.black} />
+                <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
                 <Text style={styles.mixerStartText}>LANZAR SESIÓN</Text>
               </Pressable>
             </PremiumCard>
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   modeBtnTextActive: {
-    color: palette.black,
+    color: palette.ink,
     fontWeight: '700',
   },
 
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
   },
   mixerStartText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1110,7 +1110,7 @@ const play = StyleSheet.create({
     fontSize: 10,
   },
   ambienceBtnTextActive: {
-    color: palette.black,
+    color: palette.ink,
   },
   volCard: {
     gap: spacing.lg,
@@ -1140,7 +1140,7 @@ const play = StyleSheet.create({
   },
   startBtnText: {
     ...typography.label,
-    color: palette.black,
+    color: palette.ink,
     fontSize: 14,
     fontWeight: '700',
   },

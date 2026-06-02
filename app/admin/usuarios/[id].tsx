@@ -716,5 +716,5 @@ const mo = StyleSheet.create({
   cancelText: { ...typography.label, color: palette.ash },
   sendBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm, backgroundColor: palette.gold },
   sendBtnDisabled: { opacity: 0.4 },
-  sendText: { ...typography.label, color: palette.black },
+  sendText: { ...typography.label, color: palette.ink },
 });

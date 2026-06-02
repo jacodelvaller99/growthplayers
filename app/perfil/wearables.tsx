@@ -114,7 +114,7 @@ const metricStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingVertical: spacing.md,
-    backgroundColor: '#0d0d0d',
+    backgroundColor: palette.black,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: '#1a1a1a',
@@ -134,7 +134,7 @@ function ScoreBar({ value, color }: { value: number | null; color: string }) {
 }
 
 const barStyles = StyleSheet.create({
-  track: { height: 3, backgroundColor: '#1a1a1a', borderRadius: 2, overflow: 'hidden', width: '100%' },
+  track: { height: 3, backgroundColor: palette.graphite, borderRadius: 2, overflow: 'hidden', width: '100%' },
   fill:  { height: '100%', borderRadius: 2 },
 });
 
@@ -246,7 +246,7 @@ const connStyles = StyleSheet.create({
   iconWrap: {
     width: 48, height: 48,
     borderRadius: radii.md,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: palette.graphite,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
@@ -266,7 +266,7 @@ const connStyles = StyleSheet.create({
   barLabel: { ...typography.mono, color: palette.ash, fontSize: 10, letterSpacing: 1 },
   noData: {
     paddingVertical: spacing.md,
-    backgroundColor: '#0d0d0d',
+    backgroundColor: palette.black,
     borderRadius: radii.sm,
     alignItems: 'center',
   },
@@ -323,9 +323,9 @@ function DisconnectedCard({
         accessibilityRole="button"
         accessibilityLabel={`Conectar ${provider.name}`}>
         {isConnecting
-          ? <ActivityIndicator size="small" color={palette.black} />
+          ? <ActivityIndicator size="small" color={palette.ink} />
           : <>
-              <MaterialIcons name="link" size={18} color={palette.black} />
+              <MaterialIcons name="link" size={18} color={palette.ink} />
               <Text style={discStyles.connectText}>
                 CONECTAR {provider.name.toUpperCase()}
               </Text>
@@ -350,7 +350,7 @@ const discStyles = StyleSheet.create({
   name: { ...typography.section, color: palette.ash, fontSize: 15 },
   sub:  { ...typography.mono,    color: palette.smoke, fontSize: 10, marginTop: 2 },
   offBadge: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: palette.graphite,
     paddingHorizontal: spacing.sm, paddingVertical: 5,
     borderRadius: radii.sm,
   },
@@ -376,7 +376,7 @@ const discStyles = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 13,
     fontWeight: '800',
-    color: palette.black,
+    color: palette.ink,
     letterSpacing: 1,
   },
 });

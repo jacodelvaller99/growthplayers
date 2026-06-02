@@ -431,9 +431,9 @@ export default function BienestarHub() {
                   onPress={saveJournal}
                   disabled={!journalText.trim() || saving}>
                   {saving
-                    ? <ActivityIndicator size="small" color={palette.black} />
+                    ? <ActivityIndicator size="small" color={palette.ink} />
                     : journalSaved
-                      ? <MaterialIcons name="check" size={18} color={palette.black} />
+                      ? <MaterialIcons name="check" size={18} color={palette.ink} />
                       : <Text style={styles.journalBtnText}>GUARDAR</Text>
                   }
                 </Pressable>
@@ -604,9 +604,9 @@ export default function BienestarHub() {
           onPress={saveJournal}
           disabled={!journalText.trim() || saving}>
           {saving
-            ? <ActivityIndicator size="small" color={palette.black} />
+            ? <ActivityIndicator size="small" color={palette.ink} />
             : journalSaved
-              ? <MaterialIcons name="check" size={18} color={palette.black} />
+              ? <MaterialIcons name="check" size={18} color={palette.ink} />
               : <Text style={styles.journalBtnText}>GUARDAR</Text>
           }
         </Pressable>
@@ -733,7 +733,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   journalBtnDisabled: { opacity: 0.4 },
-  journalBtnText: { ...typography.label, color: palette.black, fontWeight: '700' },
+  journalBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
 });
 
 // ─── Desktop-only styles ──────────────────────────────────────────────────────

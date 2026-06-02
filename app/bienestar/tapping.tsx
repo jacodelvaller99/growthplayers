@@ -238,7 +238,7 @@ export default function TappingScreen() {
           style={[styles.primaryBtn, !emotion.trim() && { opacity: 0.5 }]}
           onPress={() => { haptic('light'); setScreen('tapping'); }}
           disabled={!emotion.trim()}>
-          <MaterialIcons name="play-arrow" size={20} color={palette.black} />
+          <MaterialIcons name="play-arrow" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>INICIAR SECUENCIA</Text>
         </Pressable>
       </ScrollView>
@@ -294,7 +294,7 @@ export default function TappingScreen() {
           )}
           <Pressable style={[styles.nextBtn, pointIdx === 0 && { marginLeft: 'auto' }]} onPress={nextPoint}>
             <Text style={styles.nextBtnText}>{isLast ? 'FINALIZAR' : 'SIGUIENTE PUNTO'}</Text>
-            <MaterialIcons name="arrow-forward" size={18} color={palette.black} />
+            <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />
           </Pressable>
         </View>
       </ScrollView>
@@ -339,7 +339,7 @@ export default function TappingScreen() {
         </GoldAccentCard>
 
         <Pressable style={styles.primaryBtn} onPress={finish}>
-          <MaterialIcons name="check" size={20} color={palette.black} />
+          <MaterialIcons name="check" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>GUARDAR SESIÓN</Text>
         </Pressable>
       </ScrollView>
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   },
   intensityBtnActive: { backgroundColor: palette.gold, borderColor: palette.gold },
   intensityNum: { ...typography.mono, color: palette.ash, fontSize: 13 },
-  intensityNumActive: { color: palette.black, fontWeight: '700' },
+  intensityNumActive: { color: palette.ink, fontWeight: '700' },
   intensityHint: { ...typography.caption, color: palette.smoke, fontStyle: 'italic' },
 
   primaryBtn: {
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: spacing.lg,
   },
-  primaryBtnText: { fontFamily: Fonts.display, color: palette.black, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
+  primaryBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
 
   progressBar: {
     height: 3,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 48,
   },
-  nextBtnText: { fontFamily: Fonts.display, color: palette.black, fontWeight: '700', fontSize: 13, letterSpacing: 1.5 },
+  nextBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 13, letterSpacing: 1.5 },
 
   resultBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: 4 },
   resultText: { ...typography.body, color: palette.success, flex: 1, lineHeight: 20 },
