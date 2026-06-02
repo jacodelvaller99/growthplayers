@@ -105,48 +105,35 @@ export default function AuthScreen() {
     setLoading(true);
     setError(null);
     try {
-      // Validar código — SELECT directo (sin RPC)
+      // Validar + consumir el código de forma ATÓMICA vía RPC SECURITY DEFINER.
+      // El cliente ya NO lee ni escribe access_codes directamente (cierra el hueco
+      // de enumeración de códigos y el double-spend). La RPC incrementa uses_count
+      // con guarda de concurrencia y devuelve el estado del canje.
       const code = accessCode.trim().toUpperCase();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: rows, error: selectErr } = await (supabase as any)
-        .from('access_codes')
-        .select('id, max_uses, uses_count, is_active, expires_at')
-        .ilike('code', code)
-        .limit(1);
+      const { data: status, error: rpcErr } = await (supabase as any)
+        .rpc('redeem_access_code', { p_code: code });
 
-      if (selectErr || !rows || rows.length === 0) {
-        setError('Código de acceso inválido. Verifica que esté bien escrito.');
+      if (rpcErr) {
+        setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
         return;
       }
-
-      const row = rows[0];
-      if (!row.is_active) {
-        setError('Código inactivo. Contacta a tu coach.');
-        return;
-      }
-      if (row.expires_at && new Date(row.expires_at) < new Date()) {
-        setError('Este código ha vencido. Solicita uno nuevo a tu coach.');
-        return;
-      }
-      if (row.max_uses !== -1 && row.uses_count >= row.max_uses) {
-        setError('Este código ya fue usado. Solicita uno nuevo a tu coach.');
+      if (status !== 'ok') {
+        const msg: Record<string, string> = {
+          invalid:   'Código de acceso inválido. Verifica que esté bien escrito.',
+          inactive:  'Código inactivo. Contacta a tu coach.',
+          expired:   'Este código ha vencido. Solicita uno nuevo a tu coach.',
+          exhausted: 'Este código ya fue usado. Solicita uno nuevo a tu coach.',
+        };
+        setError(msg[String(status)] ?? 'Código de acceso inválido. Verifica que esté bien escrito.');
         return;
       }
 
-      // Código válido — crear cuenta
+      // Código válido y consumido — crear cuenta.
       const { error: err } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
       });
-
-      // Consumir el código (incrementar uses_count)
-      if (!err) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
-          .from('access_codes')
-          .update({ uses_count: row.uses_count + 1 })
-          .eq('id', row.id);
-      }
       if (err) {
         setError(err.message);
         return;
