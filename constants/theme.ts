@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { cv } from './themeColors';
 
 // ─── Brand Identity ──────────────────────────────────────────────────────────────
 export const BRAND = {
@@ -14,34 +15,34 @@ export const BRAND = {
 // Smoky Black        #0F0F0F  PANTONE Black 6 C — background
 // Dark Silver        #6D6D6D  PANTONE 424 C — secondary text
 export const palette = {
-  // ── Base backgrounds (depth layers, darkest → lightest) ──────────────────────
-  black:          '#090909',   // base canvas — deepest black
-  blackDeep:      '#050505',   // absolute dark (player fullscreens)
-  graphite:       '#111111',   // card/panel background (was #171717)
-  graphiteLight:  '#181818',   // elevated surface (modals, drawers)
-  charcoal:       '#222222',   // hover state, subtle separators
-  overlay:        '#1C1C1C',   // overlays
+  // ── Base backgrounds — themeable (var on web · hex on native) ────────────────
+  black:          cv('--c-bg',         '#090909'),   // base canvas
+  blackDeep:      cv('--c-bg-deep',    '#050505'),   // absolute dark (player fullscreens)
+  graphite:       cv('--c-surface',    '#111111'),   // card/panel background
+  graphiteLight:  cv('--c-surface-2',  '#181818'),   // elevated surface (modals, drawers)
+  charcoal:       cv('--c-surface-3',  '#222222'),   // hover state, subtle separators
+  overlay:        cv('--c-overlay',    '#1C1C1C'),   // overlays
 
-  // ── Brand accent (Philippine Yellow — used sparingly, intentionally) ─────────
+  // ── Brand accent (Philippine Yellow — constant across themes) ─────────────────
   gold:           '#FFC804',   // CTA buttons, active states, key metrics ONLY
   goldLight:      'rgba(255, 200, 4, 0.12)',   // tinted backgrounds
   goldMuted:      'rgba(255, 200, 4, 0.60)',   // secondary gold usage
   goldDim:        '#EDBA01',   // slightly darker variant
   goldGlow:       'rgba(255, 200, 4, 0.08)',   // glow effects
 
-  // ── Text hierarchy (NEVER pure white — reduces halo effect) ─────────────────
-  ivory:          '#EBEBEB',   // primary text (was #F5F0E6 — now neutral off-white)
-  ivoryWarm:      '#F0EBE0',   // warm off-white for special headings
-  ivoryDim:       'rgba(235, 235, 235, 0.55)', // dimmed text
-  ash:            '#AAAAAA',   // secondary text (was #C9C9C9 — now more muted)
-  smoke:          '#666666',   // tertiary/placeholder text (was #6D6D6D)
-  muted:          '#444444',   // disabled, locked states
+  // ── Text hierarchy — themeable ───────────────────────────────────────────────
+  ivory:          cv('--c-text',       '#EBEBEB'),   // primary text
+  ivoryWarm:      cv('--c-text-warm',  '#F0EBE0'),   // warm off-white for special headings
+  ivoryDim:       cv('--c-text-dim',   'rgba(235, 235, 235, 0.55)'), // dimmed text
+  ash:            cv('--c-text-2',     '#AAAAAA'),   // secondary text
+  smoke:          cv('--c-text-3',     '#666666'),   // tertiary/placeholder text
+  muted:          cv('--c-text-faint', '#444444'),   // disabled, locked states
 
-  // ── Borders (almost invisible — luxury is in what you DON'T see) ──────────────
-  line:           'rgba(255, 255, 255, 0.07)',  // DEFAULT card border (was yellow-tinted!)
-  lineSoft:       'rgba(255, 255, 255, 0.05)',  // extra-subtle separators
-  lineHard:       'rgba(255, 255, 255, 0.13)',  // focus, emphasis borders
-  lineFocus:      'rgba(255, 255, 255, 0.20)',  // input focus rings
+  // ── Borders — themeable ──────────────────────────────────────────────────────
+  line:           cv('--c-border',       'rgba(255, 255, 255, 0.07)'),  // DEFAULT card border
+  lineSoft:       cv('--c-border-soft',  'rgba(255, 255, 255, 0.05)'),  // extra-subtle separators
+  lineHard:       cv('--c-border-hard',  'rgba(255, 255, 255, 0.13)'),  // focus, emphasis borders
+  lineFocus:      cv('--c-border-focus', 'rgba(255, 255, 255, 0.20)'),  // input focus rings
   lineGold:       'rgba(255, 200, 4, 0.30)',    // gold borders (use sparingly)
   lineGoldSubtle: 'rgba(255, 200, 4, 0.15)',    // very subtle gold accent
 

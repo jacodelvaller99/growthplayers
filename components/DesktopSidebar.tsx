@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { palette, Fonts } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { PolarisLogo } from '@/components/PolarisLogo';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -40,6 +41,7 @@ export function DesktopSidebar() {
   const router   = useRouter();
   const pathname = usePathname();
   const { state, protocolDay } = useLifeFlow();
+  const { mode, setMode, canToggle } = useAppTheme();
 
   const streak   = Math.max(state.checkIns.length, protocolDay);
   const initial  = (state.profile.name ?? 'U')[0].toUpperCase();
@@ -59,7 +61,7 @@ export function DesktopSidebar() {
         <MaterialIcons
           name={item.icon}
           size={20}
-          color={isActive ? palette.gold : '#3A3A3A'}
+          color={isActive ? palette.gold : palette.muted}
         />
         <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
           {item.label}
@@ -99,6 +101,33 @@ export function DesktopSidebar() {
         </View>
       </View>
 
+      {/* ── Toggle de tema OSCURO/CLARO (solo web) ── */}
+      {canToggle && (
+        <View style={styles.themeToggle}>
+          {(['dark', 'light'] as ThemeMode[]).map((m) => {
+            const on = mode === m;
+            return (
+              <TouchableOpacity
+                key={m}
+                onPress={() => setMode(m)}
+                style={[styles.themeBtn, on && styles.themeBtnOn]}
+                accessibilityRole="button"
+                accessibilityLabel={m === 'dark' ? 'Tema oscuro' : 'Tema claro'}
+              >
+                <MaterialIcons
+                  name={m === 'dark' ? 'dark-mode' : 'light-mode'}
+                  size={14}
+                  color={on ? '#0A0A0A' : palette.smoke}
+                />
+                <Text style={[styles.themeBtnText, on && styles.themeBtnTextOn]}>
+                  {m === 'dark' ? 'OSCURO' : 'CLARO'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
       {/* ── Tarjeta de usuario (abajo) ── */}
       <TouchableOpacity
         style={styles.userCard}
@@ -125,9 +154,9 @@ export function DesktopSidebar() {
 const styles = StyleSheet.create({
   sidebar: {
     width: 240,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: palette.graphite,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,0.05)',
+    borderRightColor: palette.lineSoft,
     paddingTop: 28,
     paddingBottom: 18,
     paddingHorizontal: 16,
@@ -143,11 +172,11 @@ const styles = StyleSheet.create({
     paddingBottom: 22,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: palette.lineSoft,
   },
   logoText: {
     fontSize: 14,
-    color: '#F4F0E8',
+    color: palette.ivoryWarm,
     fontFamily: Fonts.display,       // GrandisExtended-Bold
     fontWeight: '700',
     letterSpacing: 3,
@@ -155,7 +184,7 @@ const styles = StyleSheet.create({
   },
   logoSub: {
     fontSize: 7,
-    color: '#444444',
+    color: palette.muted,
     fontFamily: Fonts.displayLight,  // GrandisExtended-Light
     letterSpacing: 2.5,
     marginTop: 2,
@@ -167,7 +196,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.mono,
     fontSize: 9.5,
     letterSpacing: 2,
-    color: '#444444',
+    color: palette.muted,
     textTransform: 'uppercase',
     paddingHorizontal: 10,
     paddingTop: 14,
@@ -202,7 +231,7 @@ const styles = StyleSheet.create({
   },
   navLabel: {
     fontSize: 11,
-    color: '#3A3A3A',
+    color: palette.muted,
     letterSpacing: 1.5,
     fontFamily: Fonts.displayMedium,  // GrandisExtended-Medium
     fontWeight: '500',
@@ -245,6 +274,35 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
+  // Theme toggle (OSCURO/CLARO)
+  themeToggle: {
+    flexDirection: 'row',
+    marginTop: 14,
+    padding: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.graphite,
+  },
+  themeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    minHeight: 30,
+    borderRadius: 999,
+    paddingVertical: 6,
+  },
+  themeBtnOn: { backgroundColor: palette.gold },
+  themeBtnText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    color: palette.smoke,
+  },
+  themeBtnTextOn: { color: '#0A0A0A', fontWeight: '700' },
+
   // User card
   userCard: {
     marginTop: 14,
@@ -254,8 +312,8 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: '#111111',
+    borderColor: palette.line,
+    backgroundColor: palette.charcoal,
   },
   avatarCircle: {
     width: 38,
@@ -268,7 +326,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#0A0A0A', fontWeight: '800', fontSize: 15, fontFamily: Fonts.display },
   userInfo: { flex: 1, minWidth: 0 },
-  userName: { color: '#F4F0E8', fontSize: 12.5, fontWeight: '600', marginBottom: 2 },
+  userName: { color: palette.ivoryWarm, fontSize: 12.5, fontWeight: '600', marginBottom: 2 },
   userTier: {
     color: palette.gold,
     fontSize: 9,

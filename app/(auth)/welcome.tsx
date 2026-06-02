@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     flex: 1.05,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0A0A0A',
+    backgroundColor: palette.blackDeep,
     paddingHorizontal: 48,
     position: 'relative',
     overflow: 'hidden',

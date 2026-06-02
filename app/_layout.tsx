@@ -18,6 +18,7 @@ import OfflineBanner from '@/components/OfflineBanner';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
 import { DesktopSidebar } from '@/components/DesktopSidebar';
 import { ToastProvider } from '@/context/ToastContext';
+import { AppThemeProvider } from '@/hooks/use-app-theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -198,17 +199,19 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={SovereignTheme}>
-      <LifeFlowProvider>
-        <ToastProvider>
-        <AnalyticsInitializer />
-        <SmartNotificationsInitializer />
-        <OfflineBanner />
-        <PWAInstallBanner />
-        {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
-        <AppShell />
-        </ToastProvider>
-      </LifeFlowProvider>
-    </ThemeProvider>
+    <AppThemeProvider>
+      <ThemeProvider value={SovereignTheme}>
+        <LifeFlowProvider>
+          <ToastProvider>
+          <AnalyticsInitializer />
+          <SmartNotificationsInitializer />
+          <OfflineBanner />
+          <PWAInstallBanner />
+          {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
+          <AppShell />
+          </ToastProvider>
+        </LifeFlowProvider>
+      </ThemeProvider>
+    </AppThemeProvider>
   );
 }
