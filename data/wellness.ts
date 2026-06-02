@@ -817,6 +817,60 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
       // After 30 cycles, hold — handled specially in the component
     ],
   },
+  {
+    id: 'fisiologica',
+    title: 'SUSPIRO FISIOLÓGICO',
+    subtitle: 'Reset rápido de estrés',
+    description: 'Doble inhalación nasal · Exhalación larga por boca',
+    benefit: 'Reinfla los alvéolos y descarga CO2 de golpe. Baja el estrés en 1-2 respiraciones.',
+    cycles: 5,
+    icon: 'air',
+    phases: [
+      { label: 'INHALA', duration: 2, scale: 1.25 },
+      { label: 'INHALA', duration: 1, scale: 1.45 },
+      { label: 'EXHALA', duration: 6, scale: 0.7 },
+    ],
+  },
+  {
+    id: 'nadi-shodhana',
+    title: 'RESPIRACIÓN ALTERNA',
+    subtitle: 'Equilibrio y claridad',
+    description: 'Inhala · Retén · Exhala alternando fosas nasales',
+    benefit: 'Equilibra los dos hemisferios. Ordena la mente y afina la claridad.',
+    cycles: 6,
+    icon: 'sync',
+    phases: [
+      { label: 'INHALA', duration: 4, scale: 1.4 },
+      { label: 'RETÉN',  duration: 4, scale: 1.4 },
+      { label: 'EXHALA', duration: 6, scale: 0.7 },
+    ],
+  },
+  {
+    id: '2-1',
+    title: 'EXHALACIÓN 2:1',
+    subtitle: 'Calma parasimpática',
+    description: 'Inhala 4s · Exhala 8s',
+    benefit: 'La exhalación larga activa el nervio vago. Frena el ritmo cardíaco y relaja.',
+    cycles: 6,
+    icon: 'waves',
+    phases: [
+      { label: 'INHALA', duration: 4, scale: 1.4 },
+      { label: 'EXHALA', duration: 8, scale: 0.7 },
+    ],
+  },
+  {
+    id: 'tummo',
+    title: 'TUMMO SIMPLE',
+    subtitle: 'Calor y energía interna',
+    description: 'Inhala fuerte · Exhala con fuerza',
+    benefit: 'Respiración tibetana del calor interno. Genera energía y enciende el cuerpo.',
+    cycles: 4,
+    icon: 'whatshot',
+    phases: [
+      { label: 'INHALA', duration: 2, scale: 1.5 },
+      { label: 'EXHALA', duration: 2, scale: 0.7 },
+    ],
+  },
 ];
 
 // ─── Binaural Presets ─────────────────────────────────────────────────────────
