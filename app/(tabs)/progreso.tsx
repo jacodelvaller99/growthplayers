@@ -1476,6 +1476,10 @@ const styles = StyleSheet.create({
   northLabel: {
     ...typography.label,
     color: palette.ash,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
   textarea: {
     minHeight: 80,
@@ -1499,7 +1503,10 @@ const styles = StyleSheet.create({
   settingTitle: {
     ...typography.label,
     color: palette.ivory,
-    letterSpacing: 1,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
   settingMeta: {
     ...typography.mono,
@@ -1522,6 +1529,8 @@ const styles = StyleSheet.create({
   signOutText: {
     ...typography.label,
     color: palette.danger,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
     letterSpacing: 2,
   },
@@ -1548,6 +1557,8 @@ const styles = StyleSheet.create({
   tierLabel: {
     ...typography.label,
     color: palette.ash,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1.5,
   },
@@ -1601,6 +1612,8 @@ const styles = StyleSheet.create({
   b2bTitle: {
     ...typography.section,
     color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 12,
     letterSpacing: 2,
   },
@@ -1658,6 +1671,10 @@ const styles = StyleSheet.create({
   systemLabel: {
     ...typography.label,
     color: palette.ash,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
   systemValue: {
     color: palette.ivory,
@@ -1698,6 +1715,8 @@ const styles = StyleSheet.create({
   gdprBtnTitle: {
     ...typography.label,
     color: palette.gold,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1.5,
   },
@@ -1720,6 +1739,8 @@ const styles = StyleSheet.create({
   gdprDeleteTitle: {
     ...typography.label,
     color: palette.danger,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1.5,
   },
@@ -1775,7 +1796,7 @@ const shareStyles = StyleSheet.create({
     color:       palette.gold,
     flex:        1,
     fontFamily:  Fonts.mono,
-    fontSize:    10,
+    fontSize:    11,
     letterSpacing: 2,
     textAlign:   'center',
   },
@@ -1833,6 +1854,8 @@ const dnaStyles = StyleSheet.create({
     ...typography.label,
     color: palette.ash,
     flex: 1,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1.5,
   },
@@ -1854,6 +1877,8 @@ const dnaStyles = StyleSheet.create({
   gaugeLabel: {
     ...typography.label,
     color: palette.smoke,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1.5,
     width: 90,
@@ -1880,6 +1905,8 @@ const dnaStyles = StyleSheet.create({
   sectionLabel: {
     ...typography.label,
     color: palette.smoke,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
     letterSpacing: 2,
     marginBottom: 2,
