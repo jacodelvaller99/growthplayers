@@ -5,7 +5,26 @@
 > Es la misma personalidad de Norman, pero hablada — clonada y duplicada para todo el contenido guiado.
 
 **Estado de infraestructura hoy:** ❌ No existe ninguna capa de voz narrada en la app.
-El único audio actual es el **motor binaural** (genera tonos, no voz). Todo lo de abajo es a construir.
+El único audio actual es el **motor binaural** (genera tonos, no voz). La parte de **audio** está por construir; los **guiones** ya están casi todos escritos (ver abajo).
+
+---
+
+## ✅ Estado de avance (decisiones tomadas + contenido producido)
+
+**Decisiones del cliente:** voz **sintética** que represente a Norman · motor **Suno** (música/ambiente) + se sugiere un TTS para voz hablada · arrancar por **todo** · **redactar guiones ya**.
+
+**Contenido de guión YA producido y en GitHub (commits 2374099 → a3f510e):**
+
+| Bloque | Antes | Ahora | Segmentos de voz |
+|--------|-------|-------|------------------|
+| Meditación guiada | 5 | **40** ✅ | 286 fases |
+| Guiones de Sueño | 0 escritos | **9 completos** ✅ | 208 segmentos |
+| Respiración | 4 | **8** ✅ | 8 técnicas |
+| Frases diarias | 30 | **89** ✅ | 89 frases |
+| Grito / Tapping / Ayuno | ya tenían guión | sin cambio | ~39 |
+| **TOTAL guión listo para producir voz** | | | **~630 segmentos** |
+
+**Pendiente (refinamiento, opcional):** +6 piezas de Sueño (objetivo 15) · Tapping temático ×2 · y toda la **fase técnica de audio** (F0): elegir TTS, generar los .mp3, bucket Supabase, instalar expo-audio, player de 3 capas.
 
 ---
 
