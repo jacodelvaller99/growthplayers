@@ -20,6 +20,7 @@ interface NavItem {
 // OPERACIÓN = núcleo del día a día · ACCESO RÁPIDO = prácticas puntuales
 const NAV_OPERACION: NavItem[] = [
   { label: 'INICIO',    icon: 'radar',               route: '/(tabs)/comando',   match: 'comando'   },
+  { label: 'MENTORÍA',  icon: 'route',               route: '/mentoria',         match: 'mentoria'  },
   { label: 'PROGRAMA',  icon: 'view-module',         route: '/(tabs)/programas', match: 'programas' },
   { label: 'MENTOR',    icon: 'chat-bubble-outline', route: '/(tabs)/mentor',    match: 'mentor'    },
   { label: 'PROGRESO',  icon: 'insights',            route: '/(tabs)/progreso',  match: 'progreso'  },
@@ -47,8 +48,10 @@ export function DesktopSidebar() {
   const initial  = (state.profile.name ?? 'U')[0].toUpperCase();
   const tier     = TIER_LABEL[state.subscriptionTier] ?? 'OPERADOR';
 
+  // Match by path segment (not substring) so '/mentoria' no activa 'mentor'.
+  const segments = (pathname ?? '').split('/').filter(Boolean);
   const renderItem = (item: NavItem) => {
-    const isActive = !!pathname?.includes(item.match);
+    const isActive = segments.includes(item.match);
     return (
       <TouchableOpacity
         key={item.route}

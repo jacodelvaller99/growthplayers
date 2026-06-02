@@ -25,6 +25,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
+import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -553,6 +554,31 @@ export default function DashboardScreen() {
     </Pressable>
   );
 
+  // ── Bienvenida contextual de mentoría (semana actual + CTA) ──────────────────
+  const mentoriaBlock = (
+    <Pressable
+      style={styles.mentoriaCard}
+      onPress={() => router.push('/mentoria' as never)}
+      accessibilityRole="button"
+      accessibilityLabel="Abrir mi mentoría"
+    >
+      <View style={styles.mentoriaStripe} />
+      <View style={styles.mentoriaBody}>
+        <View style={styles.mentoriaHead}>
+          <MaterialIcons name="route" size={15} color={palette.gold} />
+          <Text style={styles.mentoriaEyebrow}>
+            MENTORÍA · SEMANA {currentWeekNumber(protocolDay)} DE {TOTAL_WEEKS}
+          </Text>
+        </View>
+        <Text style={styles.mentoriaTitle}>{currentWeek(protocolDay).phase}</Text>
+        <Text style={styles.mentoriaFocus} numberOfLines={2}>
+          {currentWeek(protocolDay).focus}
+        </Text>
+      </View>
+      <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
+    </Pressable>
+  );
+
   return (
     <ScrollView
       style={sc.root}
@@ -592,6 +618,9 @@ export default function DashboardScreen() {
           {/* KPI strip — 4 columnas */}
           {metricsRow}
 
+          {/* Mentoría contextual */}
+          {mentoriaBlock}
+
           {/* Cuerpo principal — dos columnas */}
           <View style={styles.desktopBody}>
             <View style={styles.desktopLeft}>
@@ -630,6 +659,7 @@ export default function DashboardScreen() {
            ══════════════════════════════════════════════════════════ */
         <>
           {heroBlock}
+          {mentoriaBlock}
           {northAnchorStrip}
           {anomalyBlock}
           {nbaBlock}
@@ -1193,6 +1223,47 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     gap:             spacing.md,
     padding:         spacing.lg,
+  },
+
+  // Mentoría contextual card
+  mentoriaCard: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             spacing.md,
+    backgroundColor: palette.graphite,
+    borderColor:     palette.lineGoldSubtle,
+    borderRadius:    radii.md,
+    borderWidth:     1,
+    paddingVertical: spacing.md,
+    paddingRight:    spacing.md,
+    overflow:        'hidden',
+    minHeight:       72,
+  },
+  mentoriaStripe: {
+    width:           3,
+    alignSelf:       'stretch',
+    backgroundColor: palette.gold,
+  },
+  mentoriaBody: { flex: 1, gap: 3, paddingLeft: spacing.md },
+  mentoriaHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  mentoriaEyebrow: {
+    fontFamily:    Fonts.mono,
+    fontSize:      10,
+    color:         palette.gold,
+    letterSpacing: 1,
+  },
+  mentoriaTitle: {
+    fontFamily:    Fonts.display,
+    fontWeight:    '700',
+    fontSize:      15,
+    color:         palette.ivory,
+    letterSpacing: 0.3,
+  },
+  mentoriaFocus: {
+    ...typography.body,
+    fontSize:   12.5,
+    color:      palette.ash,
+    lineHeight: 17,
   },
   communityHeader: {
     alignItems:   'center',
