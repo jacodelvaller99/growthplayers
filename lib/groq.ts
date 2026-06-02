@@ -25,6 +25,7 @@ const MODEL = 'llama-3.3-70b-versatile'; // qwen3-32b daba 413 (payload too larg
 export async function streamGroq(
   messages: ChatMessage[],
   onChunk: (delta: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   const response = await fetch(`${GROQ_BASE}/chat/completions`, {
     method: 'POST',
@@ -40,6 +41,7 @@ export async function streamGroq(
       max_tokens: 1024,
       top_p: 0.9,
     }),
+    signal,
   });
 
   if (!response.ok) {
@@ -47,5 +49,5 @@ export async function streamGroq(
     throw new Error(`Groq API ${response.status}: ${body}`);
   }
 
-  return parseSSEStream(response, onChunk);
+  return parseSSEStream(response, onChunk, signal);
 }

@@ -24,6 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldAccentCard, GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
@@ -225,6 +226,11 @@ export default function GritoScreen() {
             </View>
           ))}
         </PremiumCard>
+
+        <SafetyWarning
+          tone="danger"
+          body="Practica en un espacio seguro y privado. Puede liberar emociones intensas. No sustituye atención psicológica. Si atraviesas una crisis, busca ayuda profesional."
+        />
 
         <Pressable style={styles.primaryBtn} onPress={startActivation}>
           <MaterialIcons name="play-arrow" size={20} color={palette.ink} />

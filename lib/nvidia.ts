@@ -19,6 +19,7 @@ export type ChatMessage = { role: string; content: string };
 export async function streamNvidia(
   messages: ChatMessage[],
   onChunk: (delta: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   const response = await fetch(`${NVIDIA_BASE}/chat/completions`, {
     method: 'POST',
@@ -35,6 +36,7 @@ export async function streamNvidia(
       max_tokens: 16384,
       chat_template_kwargs: { thinking: false },
     }),
+    signal,
   });
 
   if (!response.ok) {
@@ -42,7 +44,7 @@ export async function streamNvidia(
     throw new Error(`NVIDIA API ${response.status}: ${body}`);
   }
 
-  return parseSSEStream(response, onChunk);
+  return parseSSEStream(response, onChunk, signal);
 }
 
 // ─── Shared SSE parser (también usada por openai.ts) ─────────────────────────
@@ -50,6 +52,7 @@ export async function streamNvidia(
 export async function parseSSEStream(
   response: Response,
   onChunk: (delta: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('Response body is null');
@@ -58,12 +61,16 @@ export async function parseSSEStream(
   let buffer = '';
   let full = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      // Cancelación cooperativa: si el usuario abortó, devolvemos lo acumulado.
+      if (signal?.aborted) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
 
     // Último elemento puede ser incompleto → lo guardamos en buffer
     buffer = lines.pop() ?? '';
@@ -85,6 +92,15 @@ export async function parseSSEStream(
         // fragmento malformado – se ignora
       }
     }
+    }
+  } catch (err) {
+    // Si fue cancelación del usuario (abort), devolvemos el texto parcial acumulado.
+    if (signal?.aborted || (err as Error)?.name === 'AbortError') {
+      return full;
+    }
+    throw err;
+  } finally {
+    try { reader.releaseLock(); } catch { /* noop */ }
   }
 
   return full;

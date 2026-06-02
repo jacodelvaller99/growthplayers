@@ -15,6 +15,7 @@ import { LESSON_TASKS } from '@/data/tasks';
 import { supabase, db } from '@/lib/supabase';
 import { ENV } from '@/app/config/env';
 import { calcProtocolDay } from '@/lib/utils';
+import { enqueueWrite, initOfflineFlush } from '@/lib/offlineQueue';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -329,7 +330,17 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   const [isLoaded, setIsLoaded]           = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSubscribed, setIsSubscribed]   = useState(false);
+  // uidRef: lectura síncrona dentro de callbacks/async (evita closures stale).
+  // userId (estado): lo que se expone por contexto → reactivo, fuerza re-render
+  // en los consumidores cuando cambia el usuario (login/logout).
   const uidRef = useRef<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const applyUid = (uid: string | null) => { uidRef.current = uid; setUserId(uid); };
+
+  // ── Outbox offline ───────────────────────────────────────────────────────────
+  // Reintenta escrituras idempotentes del core-loop (check-in, lecciones) que
+  // fallaron sin red: una vez al abrir la app y cada vez que vuelve la conexión.
+  useEffect(() => initOfflineFlush(), []);
 
   // ── Init ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -358,14 +369,17 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       let uid = session?.user?.id ?? null;
 
-      // Dev bypass: sign in anonymously when Supabase URL is placeholder
-      if (!uid && IS_PLACEHOLDER_URL) {
+      // Dev bypass: sign in anonymously SOLO en desarrollo y solo si la URL de
+      // Supabase es placeholder. El gate `__DEV__` garantiza que un build de
+      // producción mal configurado (env faltante → IS_PLACEHOLDER_URL true) NUNCA
+      // meta a un usuario con sesión anónima sin credenciales; fallaría visible.
+      if (!uid && IS_PLACEHOLDER_URL && __DEV__) {
         const { data, error } = await supabase.auth.signInAnonymously();
         if (!error && data.user) uid = data.user.id;
       }
 
       if (uid) {
-        uidRef.current = uid;
+        applyUid(uid);
         if (mounted) setIsAuthenticated(true);
 
         // Realtime: reflect tier changes from DB instantly (must be set up after uid is known)
@@ -453,7 +467,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(!!uid);
 
         if (uid && uid !== uidRef.current) {
-          uidRef.current = uid;
+          applyUid(uid);
           const remote = await loadUserData(uid);
           if (remote && mounted) {
             setState(remote);
@@ -461,7 +475,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           }
         }
         if (!uid) {
-          uidRef.current = null;
+          applyUid(null);
         }
       },
     );
@@ -592,22 +606,21 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         (checkIn.energy + checkIn.clarity + (10 - checkIn.stress) + checkIn.sleep) / 4 * 100,
       );
 
+      const checkInPayload = {
+        user_id:         uid,
+        date:            dateStr,
+        energy:          checkIn.energy,
+        clarity:         checkIn.clarity,
+        stress:          checkIn.stress,
+        sleep:           checkIn.sleep,
+        system_need:     checkIn.systemNeed,
+        sovereign_score: newScore,
+      };
       try {
-        await db.checkins().upsert(
-          {
-            user_id:         uid,
-            date:            dateStr,
-            energy:          checkIn.energy,
-            clarity:         checkIn.clarity,
-            stress:          checkIn.stress,
-            sleep:           checkIn.sleep,
-            system_need:     checkIn.systemNeed,
-            sovereign_score: newScore,
-          },
-          { onConflict: 'user_id,date' },
-        );
+        await db.checkins().upsert(checkInPayload, { onConflict: 'user_id,date' });
       } catch (e) {
-        console.warn('[Supabase] saveCheckIn:', e);
+        console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
+        await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });
       }
 
       // Also update profile with latest score
@@ -695,20 +708,19 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       const uid = uidRef.current;
       if (!uid) return;
 
+      const taskPayload = {
+        user_id:      uid,
+        lesson_id:    lessonId,
+        lesson_title: template.title,
+        module_id:    lessonId.split('-')[0],
+        responses:    responses,
+        completed_at: completed.completedAt,
+      };
       try {
-        await db.tasks().upsert(
-          {
-            user_id:      uid,
-            lesson_id:    lessonId,
-            lesson_title: template.title,
-            module_id:    lessonId.split('-')[0],
-            responses:    responses,
-            completed_at: completed.completedAt,
-          },
-          { onConflict: 'user_id,lesson_id' },
-        );
+        await db.tasks().upsert(taskPayload, { onConflict: 'user_id,lesson_id' });
       } catch (e) {
-        console.warn('[Supabase] saveLessonTask:', e);
+        console.warn('[Supabase] saveLessonTask (encolado para reintento):', e);
+        await enqueueWrite({ table: 'lesson_tasks', payload: taskPayload, onConflict: 'user_id,lesson_id' });
       }
     },
     [persist, state],
@@ -726,18 +738,17 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       const uid = uidRef.current;
       if (!uid) return;
 
+      const completedPayload = {
+        user_id:      uid,
+        lesson_id:    lessonId,
+        module_id:    lessonId.split('-')[0],
+        completed_at: new Date().toISOString(),
+      };
       try {
-        await db.completed().upsert(
-          {
-            user_id:      uid,
-            lesson_id:    lessonId,
-            module_id:    lessonId.split('-')[0],
-            completed_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,lesson_id' },
-        );
+        await db.completed().upsert(completedPayload, { onConflict: 'user_id,lesson_id' });
       } catch (e) {
-        console.warn('[Supabase] markLessonComplete:', e);
+        console.warn('[Supabase] markLessonComplete (encolado para reintento):', e);
+        await enqueueWrite({ table: 'completed_lessons', payload: completedPayload, onConflict: 'user_id,lesson_id' });
       }
     },
     [persist, state],
@@ -852,7 +863,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         console.warn('[Supabase] clearData:', e);
       }
       await supabase.auth.signOut();
-      uidRef.current = null;
+      applyUid(null);
     }
     await removeLocal(STATE_KEY);
     setState(defaultState);
@@ -896,7 +907,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
     await removeLocal(STATE_KEY);
     setState(defaultState);
-    uidRef.current = null;
+    applyUid(null);
   }, []);
 
   const exportData = useCallback(async (): Promise<string> => {
@@ -945,7 +956,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    uidRef.current = null;
+    applyUid(null);
     await removeLocal(STATE_KEY);
     setState(defaultState);
   }, []);
@@ -959,7 +970,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isSubscribed,
         protocolDay,
-        userId: uidRef.current,
+        userId,
         latestCheckIn,
         todayCheckIn,
         averages,

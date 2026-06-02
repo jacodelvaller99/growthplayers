@@ -19,6 +19,7 @@ import PWAInstallBanner from '@/components/PWAInstallBanner';
 import { DesktopSidebar } from '@/components/DesktopSidebar';
 import { ToastProvider } from '@/context/ToastContext';
 import { AppThemeProvider } from '@/hooks/use-app-theme';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -82,6 +83,9 @@ function MainStack() {
       <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />
+      <Stack.Screen name="legal/privacidad" options={{ headerShown: false }} />
+      <Stack.Screen name="legal/terminos" options={{ headerShown: false }} />
+      <Stack.Screen name="legal/salud" options={{ headerShown: false }} />
       <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
       <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="admin/index" options={{ headerShown: false }} />
@@ -200,19 +204,21 @@ export default function RootLayout() {
   }
 
   return (
-    <AppThemeProvider>
-      <ThemeProvider value={SovereignTheme}>
-        <LifeFlowProvider>
-          <ToastProvider>
-          <AnalyticsInitializer />
-          <SmartNotificationsInitializer />
-          <OfflineBanner />
-          <PWAInstallBanner />
-          {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
-          <AppShell />
-          </ToastProvider>
-        </LifeFlowProvider>
-      </ThemeProvider>
-    </AppThemeProvider>
+    <ErrorBoundary>
+      <AppThemeProvider>
+        <ThemeProvider value={SovereignTheme}>
+          <LifeFlowProvider>
+            <ToastProvider>
+            <AnalyticsInitializer />
+            <SmartNotificationsInitializer />
+            <OfflineBanner />
+            <PWAInstallBanner />
+            {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
+            <AppShell />
+            </ToastProvider>
+          </LifeFlowProvider>
+        </ThemeProvider>
+      </AppThemeProvider>
+    </ErrorBoundary>
   );
 }

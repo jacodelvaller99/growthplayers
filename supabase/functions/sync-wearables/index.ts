@@ -531,34 +531,44 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { user_id, provider, batch, action, code } = body;
+    const { user_id: bodyUserId, provider, batch, action, code } = body;
+
+    // ── AUTH (SEC-P0) ──────────────────────────────────────────────────────────
+    // Resolvemos la identidad UNA vez y la reutilizamos en cada modo:
+    //  • service_role (cron / Edge) → puede targetear cualquier user_id y el batch.
+    //  • JWT de usuario → forzado a su propio id; nunca puede sincronizar a otro.
+    //  • sin auth → 401.
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const isServiceRole = token.length > 0 && token === SERVICE_ROLE_KEY;
+
+    let authedUserId: string | null = null;
+    if (token && !isServiceRole) {
+      const { data: { user }, error: authErr } = await adminSupabase.auth.getUser(token);
+      if (!authErr && user) authedUserId = user.id;
+    }
 
     // ── OAuth connect action ───────────────────────────────────────────────────
     if (action === 'connect') {
       if (!provider || !code) return json({ error: 'Missing provider or code' }, 400);
-
-      // Get the authenticated user from the JWT
-      const authHeader = req.headers.get('Authorization') ?? '';
-      const { data: { user }, error: authErr } = await adminSupabase.auth.getUser(
-        authHeader.replace('Bearer ', '')
-      );
-      if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+      if (!authedUserId) return json({ error: 'Unauthorized' }, 401);
 
       if (provider === 'oura') {
-        await connectOura(user.id, code);
+        await connectOura(authedUserId, code);
       } else if (provider === 'whoop') {
-        await connectWhoop(user.id, code);
+        await connectWhoop(authedUserId, code);
       } else {
         return json({ error: 'Unknown provider' }, 400);
       }
 
       // Kick off initial sync
-      await syncUser(user.id, provider);
+      await syncUser(authedUserId, provider);
       return json({ ok: true, provider });
     }
 
-    // Batch mode: sync all active connections
+    // Batch mode: sync all active connections — SOLO service_role (cron diario).
     if (batch === 'all') {
+      if (!isServiceRole) return json({ error: 'Unauthorized' }, 401);
       const { data: connections } = await adminSupabase
         .from('wearable_connections')
         .select('user_id, provider')
@@ -585,11 +595,19 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, processed: userIds.length });
     }
 
-    // Single user mode
-    if (user_id) {
-      await syncUser(user_id, provider);
-      return json({ ok: true, user_id, provider: provider ?? 'all' });
+    // Single user mode.
+    //  • service_role puede targetear el user_id del body (uso servidor-a-servidor).
+    //  • un JWT de usuario queda forzado a su propio id; se ignora cualquier body.user_id.
+    if (isServiceRole && bodyUserId) {
+      await syncUser(bodyUserId, provider);
+      return json({ ok: true, user_id: bodyUserId, provider: provider ?? 'all' });
     }
+    if (authedUserId) {
+      await syncUser(authedUserId, provider);
+      return json({ ok: true, user_id: authedUserId, provider: provider ?? 'all' });
+    }
+    // Se pidió sincronizar pero sin auth válida que respalde la identidad.
+    if (bodyUserId) return json({ error: 'Unauthorized' }, 401);
 
     return json({ error: 'Missing user_id or batch' }, 400);
 

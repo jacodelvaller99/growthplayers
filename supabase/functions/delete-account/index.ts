@@ -27,21 +27,49 @@ Deno.serve(async (req: Request) => {
 
   try {
     // ── Step 1: Delete all user data in parallel ─────────────────────────────
+    // Borrado EXPLÍCITO de toda tabla con datos del usuario (derecho de supresión /
+    // GDPR Art. 17). Aunque casi todas tienen ON DELETE CASCADE sobre auth.users,
+    // las borramos a mano como defensa en profundidad: si en prod hubiera drift de
+    // schema (un FK sin CASCADE), igual no queda PII. allSettled tolera no-ops.
     await Promise.allSettled([
+      // Core loop + lecciones
       adminSupabase.from('mentor_messages').delete().eq('user_id', userId),
+      adminSupabase.from('mentor_conversations').delete().eq('user_id', userId),
+      adminSupabase.from('mentor_threads').delete().eq('user_id', userId),
+      adminSupabase.from('mentor_memories').delete().eq('user_id', userId),
       adminSupabase.from('daily_checkins').delete().eq('user_id', userId),
+      adminSupabase.from('check_ins').delete().eq('user_id', userId),
+      adminSupabase.from('north_stars').delete().eq('user_id', userId),
       adminSupabase.from('completed_lessons').delete().eq('user_id', userId),
       adminSupabase.from('lesson_tasks').delete().eq('user_id', userId),
+      adminSupabase.from('weekly_sessions').delete().eq('user_id', userId),
+      // Bienestar + journaling
       adminSupabase.from('wellness_sessions').delete().eq('user_id', userId),
       adminSupabase.from('journal_entries').delete().eq('user_id', userId),
-      adminSupabase.from('user_events').delete().eq('user_id', userId),
-      adminSupabase.from('user_intelligence').delete().eq('user_id', userId),
-      adminSupabase.from('mentor_memories').delete().eq('user_id', userId),
-      adminSupabase.from('mentor_conversations').delete().eq('user_id', userId),
-      adminSupabase.from('smart_notifications').delete().eq('user_id', userId),
+      // Hábitos / salud / nutrición
+      adminSupabase.from('habits').delete().eq('user_id', userId),
+      adminSupabase.from('habit_logs').delete().eq('user_id', userId),
+      adminSupabase.from('fasting_sessions').delete().eq('user_id', userId),
+      adminSupabase.from('nutrition_profiles').delete().eq('user_id', userId),
+      adminSupabase.from('supplement_stacks').delete().eq('user_id', userId),
+      adminSupabase.from('body_measurements').delete().eq('user_id', userId),
+      // Wearables / biometría
       adminSupabase.from('wearable_connections').delete().eq('user_id', userId),
       adminSupabase.from('wearable_daily').delete().eq('user_id', userId),
       adminSupabase.from('wearable_timeseries').delete().eq('user_id', userId),
+      // Comunidad (UGC)
+      adminSupabase.from('community_posts').delete().eq('user_id', userId),
+      adminSupabase.from('community_reactions').delete().eq('user_id', userId),
+      // Inteligencia / analytics / notificaciones
+      adminSupabase.from('user_intelligence').delete().eq('user_id', userId),
+      adminSupabase.from('user_events').delete().eq('user_id', userId),
+      adminSupabase.from('smart_notifications').delete().eq('user_id', userId),
+      // Acceso / membresías
+      adminSupabase.from('user_course_access').delete().eq('user_id', userId),
+      adminSupabase.from('user_memberships').delete().eq('user_id', userId),
+      adminSupabase.from('access_code_uses').delete().eq('user_id', userId),
+      adminSupabase.from('org_members').delete().eq('user_id', userId),
+      // Perfiles (al final: otras tablas referencian profiles(id))
       adminSupabase.from('user_profiles').delete().eq('user_id', userId),
       // profiles table uses id = auth.uid()
       adminSupabase.from('profiles').delete().eq('id', userId),

@@ -113,7 +113,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     title: 'Respiración 4-7-8',
     durationMinutes: 4,
     category: 'estrés',
-    description: 'Técnica de respiración para calmar el sistema nervioso en minutos.',
+    description: 'Técnica de respiración para ayudar a calmar el sistema nervioso.',
     ambientType: 'white',
     phases: [
       { text: 'Posición cómoda.\nLengua en el paladar superior.', duration: 20 },
@@ -674,7 +674,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     title: 'Ancla en la Tormenta',
     durationMinutes: 7,
     category: 'estrés',
-    description: 'Corta el pico de ansiedad y devuelve el control en minutos.',
+    description: 'Una ancla para momentos de tensión alta; te ayuda a recuperar la calma.',
     ambientType: 'brown',
     phases: [
       { text: 'La ansiedad llegó.\nNo la combatas. Obsérvala.', duration: 40 },
@@ -766,7 +766,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     title: '4 · 7 · 8',
     subtitle: 'Calma profunda',
     description: 'Inhala 4s · Retén 7s · Exhala 8s',
-    benefit: 'Activa el parasimpático. Reduce ansiedad en minutos.',
+    benefit: 'Respiración pensada para bajar revoluciones y favorecer la calma.',
     cycles: 4,
     icon: 'air',
     phases: [
@@ -795,7 +795,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     title: '5 · 5',
     subtitle: 'Coherencia cardíaca',
     description: 'Inhala 5s · Exhala 5s',
-    benefit: 'Sincroniza corazón y cerebro. Estado de flow.',
+    benefit: 'Ritmo de respiración para entrar en foco sostenido.',
     cycles: 6,
     icon: 'favorite',
     phases: [

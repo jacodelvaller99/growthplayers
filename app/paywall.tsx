@@ -149,11 +149,11 @@ export default function PaywallScreen() {
         </Text>
       </PremiumCard>
 
-      {/* Risk reversal */}
+      {/* Cancel anytime — store-compliant (no false refund promise) */}
       <View style={styles.guaranteeRow}>
         <MaterialIcons name="verified-user" size={18} color={palette.success} />
         <Text style={styles.guaranteeText}>
-          7 días de garantía total. Si no es para ti, devolvemos cada centavo — sin preguntas.
+          Cancela cuando quieras desde tu cuenta de App Store / Google Play. Los reembolsos se gestionan según las políticas de la tienda.
         </Text>
       </View>
 
@@ -208,6 +208,11 @@ export default function PaywallScreen() {
         disabled={isLoading || packages.length === 0}
       />
 
+      {/* Auto-renew disclosure — required by App Store / Google Play */}
+      <Text style={styles.autoRenew}>
+        La suscripción se renueva automáticamente al precio indicado salvo que la canceles al menos 24 h antes del fin del período. Gestiónala en los ajustes de tu cuenta de la tienda.
+      </Text>
+
       {/* Restore — required by Apple App Store guidelines */}
       <Pressable
         style={[styles.restoreBtn, isLoading && { opacity: 0.5 }]}
@@ -223,9 +228,21 @@ export default function PaywallScreen() {
       <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
 
       <Text style={styles.legal}>
-        Al continuar aceptas los Términos de Uso y la Política de Privacidad de Polaris Growth Institute.
+        Al continuar aceptas los{' '}
+        <Text style={styles.legalLink} onPress={() => router.push('/legal/terminos' as never)}>
+          Términos de Uso
+        </Text>
+        , la{' '}
+        <Text style={styles.legalLink} onPress={() => router.push('/legal/privacidad' as never)}>
+          Política de Privacidad
+        </Text>{' '}
+        y el{' '}
+        <Text style={styles.legalLink} onPress={() => router.push('/legal/salud' as never)}>
+          Descargo de Salud
+        </Text>{' '}
+        de Polaris Growth Institute.
         {Platform.OS === 'ios'
-          ? ' El pago se realizará a través de tu cuenta de Apple ID. La suscripción se renueva automáticamente.'
+          ? ' El pago se realizará a través de tu cuenta de Apple ID.'
           : ' El pago se realizará a través de Google Play.'}
       </Text>
     </ScrollView>
@@ -383,6 +400,15 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  autoRenew: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 10,
+    lineHeight: 15,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
   legal: {
     ...typography.caption,
     color: palette.smoke,
@@ -393,5 +419,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
     opacity: 0.7,
+  },
+  legalLink: {
+    color: palette.gold,
+    textDecorationLine: 'underline',
   },
 });

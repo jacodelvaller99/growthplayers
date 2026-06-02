@@ -15,7 +15,8 @@ import { corsHeaders, adminSupabase, json } from '../_shared/supabase.ts';
 
 // ─── OpenAI Embeddings ────────────────────────────────────────────────────────
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
+const OPENAI_API_KEY    = Deno.env.get('OPENAI_API_KEY')!;
+const SERVICE_ROLE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIMS  = 1536;
 
@@ -68,7 +69,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid JSON body' }, 400, origin);
   }
 
-  const { memory_id, content, search_query, user_id, limit = 5 } = body as {
+  const { memory_id, content, search_query, user_id: bodyUserId, limit = 5 } = body as {
     memory_id?:    string;
     content?:      string;
     search_query?: string;
@@ -76,8 +77,32 @@ Deno.serve(async (req: Request) => {
     limit?:        number;
   };
 
-  if (!user_id) {
-    return json({ error: 'user_id is required' }, 400, origin);
+  // ── AUTH (SEC-P0-2) ─────────────────────────────────────────────────────────
+  // Esta función corre con service_role y accede a mentor_memories (PII sensible).
+  // Sin auth, cualquiera podía pasar un user_id ajeno y leer/escribir memorias de
+  // otro usuario. Exigimos un JWT de usuario válido y FORZAMOS user_id = auth.uid().
+  // Escotilla service_role: llamadas servidor-a-servidor (cron/Edge) usan body.user_id.
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  if (!token) {
+    return json({ error: 'Unauthorized' }, 401, origin);
+  }
+
+  let user_id: string;
+  if (token === SERVICE_ROLE_KEY) {
+    // Llamada de confianza (service_role): el body define el usuario objetivo.
+    if (!bodyUserId) {
+      return json({ error: 'user_id is required for service-role calls' }, 400, origin);
+    }
+    user_id = bodyUserId;
+  } else {
+    const { data: userData, error: authError } = await adminSupabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return json({ error: 'Unauthorized' }, 401, origin);
+    }
+    // La identidad la define el JWT; se ignora cualquier user_id del body.
+    user_id = userData.user.id;
   }
 
   // ── MODE B: SEARCH ─────────────────────────────────────────────────────────

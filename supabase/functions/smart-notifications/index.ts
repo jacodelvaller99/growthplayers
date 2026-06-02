@@ -15,6 +15,8 @@
 
 import { corsHeaders, adminSupabase, json } from '../_shared/supabase.ts';
 
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface UserIntelligenceRow {
@@ -307,6 +309,17 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405, origin);
+  }
+
+  // ── AUTH (SEC-P0) ─────────────────────────────────────────────────────────────
+  // Esta función solo se invoca servidor-a-servidor (calculate-intelligence y el
+  // cron horario), ambos con service_role. Envía push notifications y lee perfiles
+  // de TODOS los usuarios → jamás debe ser invocable por un cliente. Exigimos el
+  // service_role key; cualquier otra cosa (JWT de usuario, anon, sin token) → 401.
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (token !== SERVICE_ROLE_KEY) {
+    return json({ error: 'Unauthorized' }, 401, origin);
   }
 
   let body: Record<string, unknown> = {};

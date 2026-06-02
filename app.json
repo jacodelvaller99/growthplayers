@@ -51,7 +51,13 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#FFC804"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

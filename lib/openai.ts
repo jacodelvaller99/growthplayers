@@ -17,6 +17,7 @@ const MODEL = 'gpt-4o-mini';
 export async function streamOpenAI(
   messages: ChatMessage[],
   onChunk: (delta: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   const response = await fetch(`${OPENAI_BASE}/chat/completions`, {
     method: 'POST',
@@ -31,6 +32,7 @@ export async function streamOpenAI(
       max_tokens: 512,
       temperature: 0.7,
     }),
+    signal,
   });
 
   if (!response.ok) {
@@ -38,5 +40,5 @@ export async function streamOpenAI(
     throw new Error(`OpenAI API ${response.status}: ${body}`);
   }
 
-  return parseSSEStream(response, onChunk);
+  return parseSSEStream(response, onChunk, signal);
 }

@@ -80,7 +80,7 @@ function getOpeningMessage(params: {
     return `Un mes completo, ${firstName}. Treinta días de datos, treinta días de decisiones, treinta días de construir quien eres en lugar de quien deberías ser. La mayoría nunca llega aquí. ¿Qué parte de ti de hace 30 días ya no existe?`;
   }
   if (protocolDay === 60) {
-    return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. La neurociencia dice que a los 66 días un comportamiento se vuelve automático. Estás a seis días de que esto sea quien eres, no lo que haces. ¿Qué quieres que sea automático en ti?`;
+    return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. Los estudios sobre formación de hábitos sugieren que un comportamiento tarda semanas en volverse automático. Estás construyendo el tuyo, día a día. ¿Qué quieres que sea automático en ti?`;
   }
   if (protocolDay === 90) {
     return `${firstName}. Noventa días. Eres una persona diferente. No diferente en lo que dices — diferente en lo que haces cuando nadie mira. Eso es el protocolo funcionando. Una sola pregunta: comparado con quien eras en el Día 1 — ¿cuál es la diferencia más importante que has ganado?`;
@@ -206,6 +206,8 @@ export default function MentorScreen() {
 
   const [input, setInput]               = useState('');
   const [isStreaming, setIsStreaming]   = useState(false);
+  // Controla la petición de streaming en curso para poder cancelarla / hacer timeout.
+  const abortRef = useRef<AbortController | null>(null);
   const [streamingText, setStreamingText] = useState('');
   const [pendingUserMsg, setPendingUserMsg] = useState<MentorMessage | null>(null);
   const [loadingMore, setLoadingMore]   = useState(false);
@@ -344,6 +346,13 @@ export default function MentorScreen() {
     setIsStreaming(true);
     scrollToBottom();
 
+    // AbortController + timeout: permite cancelar y evita que una respuesta
+    // colgada deje el chat bloqueado indefinidamente.
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 45_000); // 45s tope
+
+    let fullText = '';
     try {
       const streak = computeStreak(state.checkIns);
       const sovereignScore = Math.round(
@@ -418,12 +427,11 @@ export default function MentorScreen() {
       }));
 
       // ── Step 3: Stream response ────────────────────────────────────────────
-      let fullText = '';
       await streamMentorResponse(ctx, clean, history, (delta) => {
         fullText += delta;
         setStreamingText(fullText);
         scrollToBottom(false);
-      });
+      }, controller.signal);
 
       const mentorMsg: MentorMessage = {
         id:        `m-${Date.now()}`,
@@ -456,14 +464,41 @@ export default function MentorScreen() {
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err) {
-      console.error('[Mentor] streaming error:', err);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const aborted = controller.signal.aborted || (err as Error)?.name === 'AbortError';
+      console.warn('[Mentor] streaming interrumpido:', aborted ? 'cancelado/timeout' : err);
+
+      if (aborted && !fullText.trim()) {
+        // Cancelado/timeout antes de cualquier respuesta → no perdemos lo que
+        // escribió: devolvemos su texto al input para que pueda reenviarlo.
+        setInput(clean);
+      } else {
+        // Error real, o cancelación con texto parcial: NO descartamos el intercambio.
+        // Guardamos el mensaje del usuario + lo que se alcanzó a generar (o un aviso).
+        const mentorMsg: MentorMessage = {
+          id:        `m-${Date.now()}`,
+          role:      'mentor',
+          text:      fullText.trim()
+            ? `${fullText.trim()}${aborted ? '\n\n_(respuesta interrumpida)_' : ''}`
+            : 'No pude completar la respuesta. Revisa tu conexión e inténtalo de nuevo.',
+          createdAt: new Date().toISOString(),
+        };
+        try { await addMentorMessages(userMsg, mentorMsg); } catch { /* noop */ }
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     } finally {
+      clearTimeout(timeoutId);
+      abortRef.current = null;
       setPendingUserMsg(null);
       setStreamingText('');
       setIsStreaming(false);
       scrollToBottom();
     }
+  };
+
+  // ── Cancelar el streaming en curso ──────────────────────────────────────────
+  const cancelStream = () => {
+    abortRef.current?.abort();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   // ── Auto-send prompt from home screen quick chips ───────────────────────────
@@ -510,6 +545,15 @@ export default function MentorScreen() {
             </View>
           }
         />
+
+        {/* ── Divulgación de IA (persistente) ── */}
+        <View style={styles.aiDisclosure} accessibilityRole="text">
+          <MaterialIcons name="smart-toy" size={13} color={palette.smoke} />
+          <Text style={styles.aiDisclosureText}>
+            Norman es un mentor de IA. Acompaña tu desarrollo, pero no sustituye atención médica
+            ni psicológica profesional.
+          </Text>
+        </View>
 
         {/* ── Operative Context ── */}
         <PremiumCard style={styles.contextCard}>
@@ -695,18 +739,16 @@ export default function MentorScreen() {
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Enviar mensaje"
+          accessibilityLabel={isStreaming ? 'Detener respuesta' : 'Enviar mensaje'}
           style={({ pressed }) => [
             styles.sendButton,
-            isStreaming && styles.sendButtonDisabled,
-            pressed && !isStreaming && { opacity: 0.8, transform: [{ scale: 0.95 }] },
+            pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
           ]}
-          onPress={() => submit()}
-          disabled={isStreaming}>
+          onPress={() => (isStreaming ? cancelStream() : submit())}>
           <MaterialIcons
-            name={isStreaming ? 'hourglass-empty' : 'arrow-upward'}
+            name={isStreaming ? 'stop' : 'arrow-upward'}
             size={22}
-            color={isStreaming ? palette.smoke : palette.black}
+            color={palette.black}
           />
         </Pressable>
       </View>
@@ -795,6 +837,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: palette.smoke,
     marginTop: 2,
+  },
+
+  // AI disclosure (persistente)
+  aiDisclosure: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  aiDisclosureText: {
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    lineHeight: 15,
+    color: palette.smoke,
   },
 
   // Context card

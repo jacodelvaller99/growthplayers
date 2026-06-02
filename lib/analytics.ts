@@ -28,7 +28,8 @@ export type EventType =
   | 'button_tap'
   | 'module_view'
   | 'paywall_hit'
-  | 'subscription_start';
+  | 'subscription_start'
+  | 'app_crash';
 
 interface QueuedEvent {
   event_type: EventType;

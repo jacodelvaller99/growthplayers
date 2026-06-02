@@ -38,6 +38,18 @@ import {
 } from '@/services/notifications';
 import type { NorthStar } from '@/types/lifeflow';
 
+// ─── Legal links (in-app policy screens) ───────────────────────────────────
+const LEGAL_LINKS: {
+  route: string;
+  title: string;
+  meta: string;
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+}[] = [
+  { route: '/legal/terminos',   title: 'TÉRMINOS DE USO',       meta: 'Condiciones del servicio y suscripciones', icon: 'gavel' },
+  { route: '/legal/privacidad', title: 'POLÍTICA DE PRIVACIDAD', meta: 'Cómo tratamos y protegemos tus datos',      icon: 'privacy-tip' },
+  { route: '/legal/salud',      title: 'DESCARGO DE SALUD',      meta: 'Bienestar y educación, no consejo médico',  icon: 'health-and-safety' },
+];
+
 // ─── Streak Calendar Component (42-day heatmap) ────────────────────────────
 
 /**
@@ -407,7 +419,7 @@ export default function ProgresoScreen() {
     } else if (protocolDay <= 14) {
       lines.push(`Día ${protocolDay}. Superaste el punto donde la mayoría desaparece. El hábito ya está grabándose en tu sistema nervioso.`);
     } else if (protocolDay <= 30) {
-      lines.push(`${protocolDay} días. La neurociencia dice que a los 21 días una conducta empieza a volverse automática. Ya cruzaste ese umbral.`);
+      lines.push(`${protocolDay} días. Los estudios sobre formación de hábitos sugieren que, alrededor de esta etapa, una conducta empieza a volverse automática. Ya cruzaste ese umbral.`);
     } else if (protocolDay <= 60) {
       lines.push(`Día ${protocolDay} de 90. Estás en el arco de profundidad — donde los cambios dejan de ser visibles y empiezan a ser estructurales.`);
     } else {
@@ -797,6 +809,28 @@ export default function ProgresoScreen() {
                     <Text style={styles.gdprBtnMeta}>Elimina tu cuenta y todos los datos de forma permanente</Text>
                   </View>
                 </Pressable>
+              </PremiumCard>
+
+              {/* Legal */}
+              <PremiumCard style={[styles.gdprCard, deskStyles.desktopAccountCard]}>
+                <Text style={styles.gdprIntro}>
+                  Documentos legales de Polaris Growth Institute.
+                </Text>
+                {LEGAL_LINKS.map((link) => (
+                  <Pressable
+                    key={link.route}
+                    style={styles.gdprBtn}
+                    onPress={() => router.push(link.route as never)}
+                    accessibilityRole="button"
+                    accessibilityLabel={link.title}>
+                    <MaterialIcons name={link.icon} size={18} color={palette.gold} />
+                    <View style={styles.gdprBtnBody}>
+                      <Text style={styles.gdprBtnTitle}>{link.title}</Text>
+                      <Text style={styles.gdprBtnMeta}>{link.meta}</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+                  </Pressable>
+                ))}
               </PremiumCard>
             </View>
           </View>
@@ -1264,6 +1298,26 @@ export default function ProgresoScreen() {
             <Text style={styles.gdprBtnMeta}>Elimina tu cuenta y todos los datos de forma permanente</Text>
           </View>
         </Pressable>
+      </PremiumCard>
+
+      {/* ── Legal ── */}
+      <GoldDivider label="LEGAL" />
+      <PremiumCard style={styles.gdprCard}>
+        {LEGAL_LINKS.map((link) => (
+          <Pressable
+            key={link.route}
+            style={styles.gdprBtn}
+            onPress={() => router.push(link.route as never)}
+            accessibilityRole="button"
+            accessibilityLabel={link.title}>
+            <MaterialIcons name={link.icon} size={18} color={palette.gold} />
+            <View style={styles.gdprBtnBody}>
+              <Text style={styles.gdprBtnTitle}>{link.title}</Text>
+              <Text style={styles.gdprBtnMeta}>{link.meta}</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+          </Pressable>
+        ))}
       </PremiumCard>
 
       {/* ── Sistema ── */}

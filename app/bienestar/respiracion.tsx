@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -335,6 +336,10 @@ export default function RespiracionScreen() {
       <Text style={styles.intro}>
         Controla tu sistema nervioso con precisión. Elige una técnica.
       </Text>
+
+      <SafetyWarning
+        body="No realices estos ejercicios mientras conduces, en el agua, o de pie. Si estás embarazada, tienes epilepsia, problemas cardíacos o respiratorios, consulta a tu médico antes. Si sientes mareo intenso, detente."
+      />
 
       <GoldDivider label="TÉCNICAS" />
 

@@ -18,6 +18,17 @@ import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMUNITY_ENABLED — gate de lanzamiento.
+// El feed permite contenido generado por usuarios (UGC). Las tiendas (Apple 1.2)
+// exigen moderación: filtrar contenido objetable, reportar, bloquear usuarios y un
+// EULA de tolerancia cero. Hasta tener ese sistema (reportes/bloqueos persistidos +
+// cola de moderación admin), la comunidad queda en "Próximamente" para no exponer
+// UGC sin control. Para reactivar: poner en true una vez la moderación esté lista.
+// Ver tarea de backlog "Comunidad: moderación UGC (reportar/bloquear/EULA)".
+// ─────────────────────────────────────────────────────────────────────────────
+const COMMUNITY_ENABLED: boolean = false;
+
 interface Post {
   id:          string;
   user_id:     string;
@@ -109,7 +120,7 @@ export default function ComunidadScreen() {
     }
   };
 
-  useEffect(() => { loadPosts(); }, [userId]);
+  useEffect(() => { if (COMMUNITY_ENABLED) loadPosts(); }, [userId]);
 
   const handleRefresh = () => { setRefreshing(true); loadPosts(); };
 
@@ -152,6 +163,32 @@ export default function ComunidadScreen() {
     } catch { /* silencioso */ }
     setSubmitting(false);
   };
+
+  // ── Gate de lanzamiento: comunidad en "Próximamente" hasta tener moderación ──
+  if (!COMMUNITY_ENABLED) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
+          </Pressable>
+          <Text style={styles.title}>COMUNIDAD</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <View style={styles.soonWrap}>
+          <View style={styles.soonIcon}>
+            <MaterialIcons name="group" size={48} color={palette.gold} />
+          </View>
+          <Text style={styles.soonTitle}>PRÓXIMAMENTE</Text>
+          <Text style={styles.soonBody}>
+            Estamos construyendo un espacio de comunidad seguro, con moderación y
+            herramientas de cuidado para la tribu. Muy pronto vas a poder compartir
+            tu proceso aquí.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -275,6 +312,11 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line },
 
   feed:            { paddingHorizontal: spacing.md },
+
+  soonWrap:        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.md },
+  soonIcon:        { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(212,175,55,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(212,175,55,0.3)', marginBottom: spacing.sm },
+  soonTitle:       { fontFamily: Fonts.display, fontSize: 18, color: palette.ivory, letterSpacing: 3 },
+  soonBody:        { fontFamily: Fonts.sans, fontSize: 14, color: palette.ash, lineHeight: 22, textAlign: 'center', maxWidth: 320 },
 
   loadingState:    { paddingVertical: 40, alignItems: 'center' },
   loadingText:     { ...typography.caption, color: palette.ash },

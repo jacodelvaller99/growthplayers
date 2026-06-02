@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldAccentCard, GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 
 // ─── Haptic ───────────────────────────────────────────────────────────────────
@@ -132,8 +133,8 @@ const LEVELS: Level[] = [
   {
     hz: 500,
     name: 'Amor',
-    description: 'Reverencia, la emoción que sana. El amor incondicional trasciende el ego.',
-    actionAdvice: 'Desde aquí tu presencia sana. Sé intencional con quién y qué recibes este estado.',
+    description: 'Reverencia, la emoción que más expande. El amor incondicional trasciende el ego.',
+    actionAdvice: 'Desde aquí tu presencia inspira. Sé intencional con quién y qué recibes este estado.',
     zone: 'poder',
   },
   {
@@ -214,6 +215,11 @@ export default function ConscienciaScreen() {
           Encima de 200 Hz: Poder — expansión, creatividad, atracción.
         </Text>
       </GoldAccentCard>
+
+      <SafetyWarning
+        title="HERRAMIENTA DE AUTOEXPLORACIÓN"
+        body="Esta es una herramienta de autoexploración, no un diagnóstico ni tratamiento."
+      />
 
       {/* Zone bar */}
       <ZoneBar selected={selected} levels={LEVELS} />

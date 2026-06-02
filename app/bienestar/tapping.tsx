@@ -24,6 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldAccentCard, GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
@@ -209,6 +210,10 @@ export default function TappingScreen() {
             El Tapping activa los meridianos energéticos del cuerpo para liberar patrones emocionales bloqueados.
           </Text>
         </GoldAccentCard>
+
+        <SafetyWarning
+          body="El tapping es una herramienta de autorregulación, no un tratamiento médico ni psicológico. Si tienes una condición de salud mental, consúltala con un profesional."
+        />
 
         <GoldDivider label="CONFIGURA TU SESIÓN" />
         <PremiumCard style={styles.card}>

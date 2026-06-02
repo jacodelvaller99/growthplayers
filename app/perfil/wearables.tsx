@@ -84,7 +84,7 @@ const PROVIDERS: {
     id:          'oura',
     name:        'Oura Ring',
     subtitle:    'Readiness · Sueño · FC · HRV',
-    description: 'El anillo Oura mide readiness, calidad de sueño y frecuencia cardíaca en reposo con alta precisión clínica.',
+    description: 'El anillo Oura mide readiness, calidad de sueño y frecuencia cardíaca en reposo con alta precisión para dispositivos de consumo.',
     icon:        'circle',
     metrics:     ['Readiness', 'HRV', 'Sueño', 'FC Reposo'],
   },
@@ -431,7 +431,9 @@ export default function WearablesScreen() {
     // ── NATIVE: in-app browser ─────────────────────────────────────────────
     setConnecting(provider);
     try {
-      const result = await WebBrowser.openAuthSessionAsync(url, 'growthplayers://oauth');
+      // El return scheme debe coincidir con `scheme` en app.json ("polaris"),
+      // o en nativo el navegador no devuelve el control a la app tras el OAuth.
+      const result = await WebBrowser.openAuthSessionAsync(url, 'polaris://oauth');
 
       if (result.type === 'success' && result.url) {
         const parsed = new URL(result.url);

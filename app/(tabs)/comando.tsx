@@ -78,7 +78,7 @@ export default function DashboardScreen() {
       return 'Tu consistencia puede estar en riesgo. ¿Qué bloqueó tu práctica?';
     }
     if (engagementTier === 'excellent') {
-      return '¡Excelente racha! Tu disciplina está generando resultados medibles.';
+      return '¡Excelente racha! Tu disciplina está construyendo constancia.';
     }
     return null;
   })();
