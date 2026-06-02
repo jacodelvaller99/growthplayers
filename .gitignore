@@ -54,3 +54,4 @@ supabase/.temp/
 .env
 .env.local
 .env.*.local
+.design-ref/
