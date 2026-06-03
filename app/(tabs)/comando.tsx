@@ -3,10 +3,12 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedNumber } from '@/components/AnimatedNumber';
@@ -26,7 +28,8 @@ import {
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
+import { calcSovereignScore, calcSovereignTier } from '@/lib/utils';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
@@ -41,6 +44,96 @@ function greeting() {
   if (hour < 18) return 'BUENAS TARDES';
   return 'BUENAS NOCHES';
 }
+
+const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+const DAYS_ES = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+function todayLabel() {
+  const d = new Date();
+  return `${DAYS_ES[d.getDay()]} · ${d.getDate()} ${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// ─── Circular score ring (SVG) — mirrors design ScoreRing ────────────────────
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+function ScoreRing({
+  value,
+  max = 1000,
+  size = 132,
+  stroke = 8,
+  sub,
+}: {
+  value: number;
+  max?: number;
+  size?: number;
+  stroke?: number;
+  sub?: string;
+}) {
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(1, value / max));
+
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withTiming(pct, { duration: 900 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pct]);
+
+  const dashProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference * (1 - progress.value),
+  }));
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={palette.charcoal}
+          strokeWidth={stroke}
+        />
+        <AnimatedCircle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={palette.gold}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          animatedProps={dashProps}
+        />
+      </Svg>
+      <View style={ringStyles.center}>
+        <AnimatedNumber value={value} delay={120} style={ringStyles.big} />
+        {sub ? <Text style={ringStyles.sub}>{sub}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+const ringStyles = StyleSheet.create({
+  center: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  big: {
+    color: palette.gold,
+    fontFamily: Fonts.display,
+    fontSize: 44,
+    fontWeight: '800',
+    lineHeight: 48,
+    letterSpacing: -1,
+  },
+  sub: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 10,
+    marginTop: 2,
+  },
+});
 
 export default function DashboardScreen() {
   const sc = useScreen();
@@ -113,6 +206,96 @@ export default function DashboardScreen() {
   const engagementBarStyle = useAnimatedStyle(() => ({
     width: `${engagementWidth.value}%` as unknown as number,
   }));
+
+  // ── Sovereign Score (real) + tier + weekly delta ─────────────────────────────
+  const averages = useMemo(() => {
+    const ci = state.checkIns;
+    const avg = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0);
+    return {
+      energy:  avg(ci.map((c) => c.energy)),
+      clarity: avg(ci.map((c) => c.clarity)),
+      stress:  ci.length ? avg(ci.map((c) => c.stress)) : 5,
+      sleep:   avg(ci.map((c) => c.sleep)),
+    };
+  }, [state.checkIns]);
+
+  const wellnessByType = useMemo(() => {
+    const sessions = state.wellnessSessions ?? [];
+    return {
+      meditation: sessions.filter((s) => s.type === 'meditation').length,
+      breathing:  sessions.filter((s) => s.type === 'breathing').length,
+      binaural:   sessions.filter((s) => s.type === 'binaural').length,
+    };
+  }, [state.wellnessSessions]);
+
+  const sovereignScore = useMemo(
+    () =>
+      calcSovereignScore({
+        energy:           averages.energy,
+        clarity:          averages.clarity,
+        stress:           averages.stress,
+        sleep:            averages.sleep,
+        streak:           state.checkIns.length,
+        completedLessons: (state.completedLessons ?? []).length,
+        completedTasks:   Object.keys(state.completedTasks ?? {}).length,
+        wellnessMeditation: wellnessByType.meditation,
+        wellnessBreathing:  wellnessByType.breathing,
+        wellnessBinaural:   wellnessByType.binaural,
+      }),
+    [averages, state.checkIns.length, state.completedLessons, state.completedTasks, wellnessByType],
+  );
+  const sovereignTier = calcSovereignTier(sovereignScore);
+
+  // Weekly score gain — real contribution from check-ins logged in the last 7 days.
+  // Each check-in adds its coherence-derived points to the composite score.
+  const weeklyScoreDelta = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const recent = state.checkIns.filter((c) => new Date(c.date).getTime() >= weekAgo);
+    const points = recent.reduce(
+      (acc, c) => acc + Math.round(((c.energy + c.clarity + (10 - c.stress) + c.sleep) / 4) * 2),
+      0,
+    );
+    return points;
+  }, [state.checkIns]);
+
+  // Today's coherence (0–10) — same formula as the check-in screen.
+  const coherenceToday = checkIn
+    ? Math.round((checkIn.energy + checkIn.clarity + (11 - checkIn.stress) + checkIn.sleep) / 4)
+    : 0;
+
+  // Next lesson — first non-completed lesson in the active module.
+  const nextLesson = useMemo(() => {
+    const done = new Set(state.completedLessons ?? []);
+    const lesson = ACTIVE_MODULE.lessons.find((l) => !done.has(l.id)) ?? ACTIVE_MODULE.lessons[0];
+    const total = ACTIVE_MODULE.lessons.length || 1;
+    const completedInModule = ACTIVE_MODULE.lessons.filter((l) => done.has(l.id)).length;
+    return {
+      lesson,
+      moduleLabel: `MÓDULO ${ACTIVE_MODULE.order} · ${(ACTIVE_MODULE.arquetipo ?? ACTIVE_MODULE.title.split(/[\s:]/)[0]).toUpperCase()}`,
+      lessonTitle: lesson ? `L${lesson.order} · ${lesson.title}` : ACTIVE_MODULE.title,
+      pct: Math.round((completedInModule / total) * 100),
+    };
+  }, [state.completedLessons]);
+
+  // Latest Norman insight — last mentor message (preview line on the Norman card),
+  // falling back to a contextual prompt when the user hasn't chatted yet.
+  const normanInsight = useMemo(() => {
+    const lastMentor = [...state.mentorMessages].reverse().find((m) => m.role === 'mentor');
+    if (lastMentor?.text?.trim()) return lastMentor.text.trim();
+    const first = state.profile.name.split(' ')[0] || state.profile.name;
+    if (!todayCheckIn) return `Sin lectura de hoy, ${first}. Calibra tu sistema antes de avanzar.`;
+    if (checkIn && checkIn.stress >= 8) return 'Tensión alta detectada. Hoy: una guerra, no diez. Define el objetivo único.';
+    if (checkIn && checkIn.energy <= 3) return 'Energía baja hoy. Cambiamos el protocolo: una sola acción de alto impacto.';
+    return `Día ${protocolDay} — ${ACTIVE_MODULE.title.split(':')[0]}. ¿En qué trabajamos hoy?`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.mentorMessages, todayCheckIn, checkIn?.stress, checkIn?.energy, protocolDay]);
+
+  // Quick-access wellness tiles (design "ACCESO RÁPIDO" grid).
+  const quickAccess: { icon: React.ComponentProps<typeof MaterialIcons>['name']; label: string; route: string }[] = [
+    { icon: 'air', label: 'Respiración', route: '/bienestar/respiracion' },
+    { icon: 'self-improvement', label: 'Meditación', route: '/bienestar/meditacion' },
+    { icon: 'menu-book', label: 'Diario', route: '/bienestar/diario' },
+  ];
 
   // ── Shared JSX blocks (idénticos en mobile y desktop) ─────────────────────
 
@@ -579,6 +762,163 @@ export default function DashboardScreen() {
     </Pressable>
   );
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // MOBILE-ONLY BLOCKS — composición fiel al diseño "CENTRO DE COMANDO"
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Header: fecha mono + título display + botón explore → norte
+  const mHeader = (
+    <View style={mob.header}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={mob.headerDate}>{todayLabel()}</Text>
+        <Text style={mob.headerTitle}>CENTRO DE COMANDO</Text>
+      </View>
+      <Pressable
+        onPress={() => router.push('/(tabs)/norte')}
+        accessibilityRole="button"
+        accessibilityLabel="Ir a Mi Norte"
+        style={({ pressed }) => [mob.headerAction, pressed && { opacity: 0.7 }]}>
+        <MaterialIcons name="explore" size={20} color={palette.gold} />
+      </Pressable>
+    </View>
+  );
+
+  // Score Soberano — ring + eyebrow + descripción + delta semanal
+  const mScoreCard = (
+    <View style={mob.scoreCard}>
+      <ScoreRing value={sovereignScore} max={1000} size={132} stroke={8} sub={`/ ${sovereignTier}`} />
+      <View style={{ flex: 1 }}>
+        <Text style={mob.eyebrow}>SCORE SOBERANO</Text>
+        <Text style={mob.scoreDesc}>Capacidad operativa compuesta de los últimos 14 días.</Text>
+        {weeklyScoreDelta > 0 && (
+          <View style={mob.deltaRow}>
+            <MaterialIcons name="trending-up" size={16} color={palette.success} />
+            <Text style={mob.deltaText}>+{weeklyScoreDelta} esta semana</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  // Check-in: hecho → COHERENCIA DE HOY · pendiente → CALIBRAR SISTEMA HOY
+  const mCheckinCard = todayCheckIn ? (
+    <Pressable
+      onPress={() => router.push('/checkin')}
+      accessibilityRole="button"
+      accessibilityLabel="Revisar coherencia de hoy"
+      style={({ pressed }) => [mob.checkinDoneCard, pressed && { opacity: 0.9 }]}>
+      <View style={mob.rowBetween}>
+        <Text style={[mob.eyebrow, { color: palette.gold }]}>COHERENCIA DE HOY</Text>
+        <MaterialIcons name="check-circle" size={20} color={palette.gold} />
+      </View>
+      <View style={mob.coherenceRow}>
+        <Text style={mob.coherenceNum}>{coherenceToday}</Text>
+        <Text style={mob.coherenceMax}>/ 10</Text>
+        <Text style={mob.coherenceStatus}>SISTEMA EN LÍNEA</Text>
+      </View>
+      <View style={mob.track}>
+        <View style={[mob.trackFill, { width: `${coherenceToday * 10}%` }]} />
+      </View>
+    </Pressable>
+  ) : (
+    <Pressable
+      onPress={() => router.push('/checkin')}
+      accessibilityRole="button"
+      accessibilityLabel="Calibrar sistema hoy"
+      style={({ pressed }) => [mob.checkinCta, pressed && { opacity: 0.9 }]}>
+      <View style={mob.checkinCtaIcon}>
+        <MaterialIcons name="monitor-heart" size={24} color={palette.gold} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={mob.checkinCtaTitle}>CALIBRAR SISTEMA HOY</Text>
+        <Text style={mob.checkinCtaSub}>Aún no lees tu estado de hoy</Text>
+      </View>
+      <MaterialIcons name="arrow-forward" size={22} color={palette.gold} />
+    </Pressable>
+  );
+
+  // Norman — avatar + nombre + ACTIVO + chip CONSULTAR + insight (borde-izq oro)
+  const mNormanCard = (
+    <Pressable
+      onPress={() => router.push('/(tabs)/mentor')}
+      accessibilityRole="button"
+      accessibilityLabel="Consultar a Norman"
+      style={({ pressed }) => [mob.normanCard, pressed && { opacity: 0.9 }]}>
+      <View style={mob.normanTop}>
+        <View style={mob.normanAvatar}>
+          <MaterialIcons name="psychology" size={22} color={palette.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={mob.normanName}>NORMAN · MENTOR IA</Text>
+          <View style={mob.normanStatusRow}>
+            <View style={mob.normanDot} />
+            <Text style={mob.normanStatusText}>ACTIVO</Text>
+          </View>
+        </View>
+        <View style={mob.normanChip}>
+          <Text style={mob.normanChipText}>CONSULTAR</Text>
+        </View>
+      </View>
+      <Text style={mob.normanInsight} numberOfLines={4}>{normanInsight}</Text>
+    </Pressable>
+  );
+
+  // Próxima lección — section label + card (thumbnail + play + módulo + título + %)
+  const mNextLessonBlock = (
+    <View style={mob.section}>
+      <View style={mob.sectionLabelRow}>
+        <Text style={mob.sectionLabel}>PRÓXIMA LECCIÓN</Text>
+        <View style={mob.sectionRule} />
+      </View>
+      <Pressable
+        onPress={() =>
+          router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })
+        }
+        accessibilityRole="button"
+        accessibilityLabel={`Abrir lección: ${nextLesson.lessonTitle}`}
+        style={({ pressed }) => [mob.lessonCard, pressed && { opacity: 0.92 }]}>
+        <View style={mob.lessonThumb}>
+          <View style={mob.lessonPlay}>
+            <MaterialIcons name="play-arrow" size={28} color={palette.ink} />
+          </View>
+          <Text style={mob.lessonModule}>{nextLesson.moduleLabel}</Text>
+        </View>
+        <View style={mob.lessonBody}>
+          <Text style={mob.lessonTitle} numberOfLines={2}>{nextLesson.lessonTitle}</Text>
+          <View style={mob.lessonProgressRow}>
+            <View style={[mob.track, { flex: 1 }]}>
+              <View style={[mob.trackFill, { width: `${nextLesson.pct}%` }]} />
+            </View>
+            <Text style={mob.lessonPct}>{nextLesson.pct}%</Text>
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+
+  // Acceso rápido — grid 3: Respiración / Meditación / Diario
+  const mQuickAccessBlock = (
+    <View style={mob.section}>
+      <View style={mob.sectionLabelRow}>
+        <Text style={mob.sectionLabel}>ACCESO RÁPIDO</Text>
+        <View style={mob.sectionRule} />
+      </View>
+      <View style={mob.quickGrid}>
+        {quickAccess.map((q) => (
+          <Pressable
+            key={q.label}
+            onPress={() => router.push(q.route as never)}
+            accessibilityRole="button"
+            accessibilityLabel={q.label}
+            style={({ pressed }) => [mob.quickTile, pressed && { opacity: 0.85 }]}>
+            <MaterialIcons name={q.icon} size={24} color={palette.gold} />
+            <Text style={mob.quickLabel}>{q.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+
   return (
     <ScrollView
       style={sc.root}
@@ -592,7 +932,7 @@ export default function DashboardScreen() {
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
 
-      <AppHeader title="POLARIS" />
+      {isDesktop && <AppHeader title="POLARIS" />}
 
       {isDesktop ? (
         /* ══════════════════════════════════════════════════════════
@@ -655,27 +995,34 @@ export default function DashboardScreen() {
         </>
       ) : (
         /* ══════════════════════════════════════════════════════════
-           MOBILE LAYOUT — columna única
+           MOBILE LAYOUT — "CENTRO DE COMANDO" (fiel al diseño)
            ══════════════════════════════════════════════════════════ */
         <>
-          {heroBlock}
-          {mentoriaBlock}
+          {/* Núcleo del diseño */}
+          {mHeader}
+          {mScoreCard}
+          {mCheckinCard}
+
+          {/* Señales en tiempo real (solo cuando aplican) */}
           {northAnchorStrip}
           {anomalyBlock}
           {nbaBlock}
-          <GoldDivider label="NORMAN · MENTOR IA" />
-          {normanQuickPanel}
-          {engagementBlock}
-          <ProgressCard
-            label={protocolDay >= 60 ? 'ARC DE TRANSFORMACIÓN · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACIÓN · PROFUNDIDAD' : 'ARC DE TRANSFORMACIÓN · BASE'}
-            value={`${progress}% · Día ${protocolDay} de 90`}
-            progress={progress}
-          />
-          {metricsRow}
-          <GoldDivider label="ESTADO DEL DÍA" />
-          {estadoBlock}
+
+          {/* Norman */}
+          {mNormanCard}
+
+          {/* Próxima lección + acceso rápido */}
+          {mNextLessonBlock}
+          {mQuickAccessBlock}
+
+          {/* Contenido extendido (datos reales, debajo del fold del diseño) */}
+          <GoldDivider label="MENTORÍA" />
+          {mentoriaBlock}
           <GoldDivider label="HOY EN TU PROTOCOLO" />
           {protocolBlock}
+          <GoldDivider label="ESTADO DEL DÍA" />
+          {estadoBlock}
+          {metricsRow}
           <GoldDivider label="BIENESTAR" />
           {wellnessBlock}
           <GoldDivider label="SESIÓN EN VIVO" />
@@ -1368,5 +1715,342 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase' as const,
     lineHeight: 15,
+  },
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// MOBILE design styles — "CENTRO DE COMANDO" (tokens only, fiel al handoff)
+// ════════════════════════════════════════════════════════════════════════════
+const mob = StyleSheet.create({
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerDate: {
+    ...typography.mono,
+    color: palette.gold,
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 7,
+  },
+  headerTitle: {
+    fontFamily: Fonts.display,
+    color: palette.ivory,
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    lineHeight: 28,
+    textTransform: 'uppercase',
+  },
+  headerAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: palette.charcoal,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+
+  // Shared eyebrow (mono, like .eyebrow)
+  eyebrow: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  // Shared progress track
+  track: {
+    height: 6,
+    borderRadius: radii.pill,
+    backgroundColor: palette.charcoal,
+    overflow: 'hidden',
+  },
+  trackFill: {
+    height: '100%',
+    borderRadius: radii.pill,
+    backgroundColor: palette.gold,
+  },
+
+  // Score Soberano card
+  scoreCard: {
+    ...surfaces.premiumCard,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xl,
+    paddingVertical: 26,
+    paddingHorizontal: 22,
+  },
+  scoreDesc: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 12.5,
+    lineHeight: 19,
+    marginTop: spacing.sm,
+  },
+  deltaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  deltaText: {
+    ...typography.mono,
+    color: palette.success,
+    fontSize: 12,
+  },
+
+  // Check-in — done state
+  checkinDoneCard: {
+    ...surfaces.premiumCard,
+    borderColor: palette.lineGold,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  coherenceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+  },
+  coherenceNum: {
+    fontFamily: Fonts.display,
+    color: palette.gold,
+    fontSize: 40,
+    fontWeight: '800',
+    lineHeight: 44,
+  },
+  coherenceMax: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 14,
+  },
+  coherenceStatus: {
+    ...typography.mono,
+    color: palette.success,
+    fontSize: 11,
+    letterSpacing: 1,
+    marginLeft: 'auto',
+  },
+
+  // Check-in — CTA state
+  checkinCta: {
+    ...surfaces.premiumCard,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    padding: spacing.lg,
+  },
+  checkinCtaIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: radii.md,
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  checkinCtaTitle: {
+    fontFamily: Fonts.display,
+    color: palette.ivory,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    lineHeight: 18,
+  },
+  checkinCtaSub: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 12,
+    marginTop: 3,
+  },
+
+  // Norman card
+  normanCard: {
+    ...surfaces.premiumCard,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  normanTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  normanAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  normanName: {
+    ...typography.mono,
+    color: palette.ivory,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  normanStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 3,
+  },
+  normanDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: palette.success,
+  },
+  normanStatusText: {
+    ...typography.mono,
+    color: palette.success,
+    fontSize: 9.5,
+    letterSpacing: 1,
+  },
+  normanChip: {
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    backgroundColor: palette.goldLight,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  normanChipText: {
+    fontFamily: Fonts.sansBold,
+    color: palette.gold,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  normanInsight: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+    lineHeight: 20,
+    borderLeftWidth: 2,
+    borderLeftColor: palette.lineGold,
+    paddingLeft: spacing.md,
+    fontStyle: 'italic',
+  },
+
+  // Section label (mono + rule line)
+  section: {
+    gap: spacing.md,
+  },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sectionLabel: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  sectionRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: palette.line,
+  },
+
+  // Próxima lección card
+  lessonCard: {
+    ...surfaces.premiumCard,
+    padding: 0,
+    overflow: 'hidden',
+  },
+  lessonThumb: {
+    height: 96,
+    backgroundColor: palette.graphiteLight,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lessonPlay: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: palette.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lessonModule: {
+    ...typography.mono,
+    position: 'absolute',
+    top: 12,
+    left: 14,
+    color: palette.gold,
+    fontSize: 9.5,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  lessonBody: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  lessonTitle: {
+    fontFamily: Fonts.display,
+    color: palette.ivory,
+    fontSize: 13.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    lineHeight: 18,
+    textTransform: 'uppercase',
+  },
+  lessonProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  lessonPct: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 10,
+  },
+
+  // Acceso rápido grid
+  quickGrid: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  quickTile: {
+    ...surfaces.premiumCard,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
+    minHeight: 76,
+  },
+  quickLabel: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 9.5,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
 });

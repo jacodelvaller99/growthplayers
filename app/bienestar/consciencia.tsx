@@ -2,7 +2,7 @@
  * Mapa de Niveles de Consciencia (Dr. David Hawkins)
  * Basado en Doc 3.4 del curso Polaris (Capuozzo 2.0)
  *
- * Herramienta de autoevaluación emocional:
+ * Herramienta de autoexploración emocional:
  * — Debajo de 200: operando desde la Fuerza (contracción)
  * — Encima de 200: operando desde el Poder (expansión)
  */
@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldAccentCard, GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import { useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 
@@ -113,7 +113,7 @@ const LEVELS: Level[] = [
     hz: 310,
     name: 'Voluntad',
     description: 'Optimismo, intención. La energía se organiza y fluye hacia el objetivo.',
-    actionAdvice: 'Tu sistema quiere ejecutar. Prioriza una cosa y muévete. El impulso es tuyo — no lo desperdices.',
+    actionAdvice: 'Tu sistema quiere ejecutar. Prioriza una cosa y muévete. El impulso es tuyo — no lo desperdicies.',
     zone: 'poder',
   },
   {
@@ -153,132 +153,117 @@ const LEVELS: Level[] = [
   },
 ];
 
-// ─── Zone bar ─────────────────────────────────────────────────────────────────
-function ZoneBar({ selected, levels }: { selected: Level | null; levels: Level[] }) {
-  const powerCount = levels.filter(l => l.zone === 'poder').length;
-  const powerPercent = (powerCount / levels.length) * 100;
-
-  return (
-    <View style={styles.zoneBarWrap}>
-      <View style={styles.zoneBar}>
-        <View style={[styles.zoneFuerza, { width: `${100 - powerPercent}%` as `${number}%` }]}>
-          <Text style={styles.zoneLabel}>FUERZA</Text>
-        </View>
-        <View style={[styles.zonePoder, { width: `${powerPercent}%` as `${number}%` }]}>
-          <Text style={styles.zoneLabel}>PODER</Text>
-        </View>
-      </View>
-      {selected && (
-        <Text style={[styles.zoneStatus, { color: selected.zone === 'poder' ? palette.gold : palette.smoke }]}>
-          {selected.zone === 'poder'
-            ? `${selected.hz} Hz — Operando desde el PODER ↑`
-            : `${selected.hz} Hz — Zona de Fuerza → Sube sobre 200`}
-        </Text>
-      )}
-    </View>
-  );
-}
+// Default to the threshold level (Valentía · 200 Hz) so the screen reads complete on load.
+const DEFAULT_INDEX = LEVELS.findIndex((l) => l.hz === 200);
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ConscienciaScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [selected, setSelected] = useState<Level | null>(null);
+  const [selIdx, setSelIdx] = useState<number>(DEFAULT_INDEX);
 
-  const select = useCallback((level: Level) => {
-    setSelected(level);
+  const selected = LEVELS[selIdx];
+  const isPower = selected.zone === 'poder';
+  const next = selIdx < LEVELS.length - 1 ? LEVELS[selIdx + 1] : null;
+
+  const select = useCallback((idx: number) => {
+    setSelIdx(idx);
     haptic();
   }, []);
 
   return (
     <ScrollView
       style={sc.root}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}>
+      contentContainerStyle={[
+        sc.content,
+        { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 },
+      ]}
+      showsVerticalScrollIndicator={false}>
 
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Volver" accessibilityRole="button">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
+          <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>ESCALA DE CONSCIENCIA</Text>
-        <View style={{ width: 44 }} />
+        <View style={styles.backBtn} />
       </View>
 
-      <GoldAccentCard>
-        <Text style={styles.eyebrow}>DR. DAVID HAWKINS</Text>
-        <Text style={styles.heroText}>
-          ¿Desde dónde{'\n'}estás operando?
+      {/* Intro gold card */}
+      <View style={styles.introCard}>
+        <Text style={styles.introTitle}>¿DESDE DÓNDE OPERAS?</Text>
+        <Text style={styles.introBody}>
+          Mapa de Hawkins. Bajo 200 gastas FUERZA; desde 200 generas PODER.
         </Text>
-        <Text style={styles.heroSub}>
-          Debajo de 200 Hz: Fuerza — contracción, reactividad, gasto energético.{'\n'}
-          Encima de 200 Hz: Poder — expansión, creatividad, atracción.
-        </Text>
-      </GoldAccentCard>
+        <View style={styles.zoneBar}>
+          <View style={styles.zoneFuerza} />
+          <View style={styles.zonePoder} />
+        </View>
+        <View style={styles.zoneLabels}>
+          <Text style={styles.zoneLabelFuerza}>FUERZA · &lt;200</Text>
+          <Text style={styles.zoneLabelPoder}>PODER · ≥200</Text>
+        </View>
+      </View>
 
       <SafetyWarning
         title="HERRAMIENTA DE AUTOEXPLORACIÓN"
         body="Esta es una herramienta de autoexploración, no un diagnóstico ni tratamiento."
       />
 
-      {/* Zone bar */}
-      <ZoneBar selected={selected} levels={LEVELS} />
+      <Text style={styles.sectionLabel}>NIVELES</Text>
 
-      <GoldDivider label="SELECCIONA TU ESTADO PREDOMINANTE" />
-
-      {/* Level grid */}
+      {/* Level grid — 4 columns */}
       <View style={styles.grid}>
-        {LEVELS.map((level) => {
-          const isSelected = selected?.hz === level.hz;
+        {LEVELS.map((level, i) => {
+          const isSelected = i === selIdx;
           const isPoder = level.zone === 'poder';
           return (
             <Pressable
               key={level.hz}
-              onPress={() => select(level)}
-              style={({ pressed }) => [
-                styles.levelCard,
-                isPoder && styles.levelCardPoder,
-                isSelected && styles.levelCardSelected,
-                pressed && { opacity: 0.75 },
-              ]}>
-              <Text style={[styles.levelHz, isSelected && { color: palette.gold }]}>{level.hz}</Text>
-              <Text style={[styles.levelName, isSelected && { color: palette.ivory }]}>{level.name}</Text>
+              onPress={() => select(i)}
+              style={[
+                styles.cell,
+                isPoder && styles.cellPower,
+                isSelected && styles.cellSelected,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`${level.hz} Hz, ${level.name}`}>
+              <Text style={[styles.cellHz, { color: isPoder ? palette.gold : palette.ivory }]}>{level.hz}</Text>
+              <Text style={styles.cellName} numberOfLines={1}>{level.name}</Text>
             </Pressable>
           );
         })}
       </View>
 
       {/* Detail panel */}
-      {selected && (
-        <>
-          <GoldDivider label="LECTURA DEL NIVEL" />
-          <PremiumCard style={styles.detailCard}>
-            <View style={styles.detailHeader}>
-              <Text style={styles.detailHz}>{selected.hz} Hz</Text>
-              <Text style={[styles.detailZone, { color: selected.zone === 'poder' ? palette.gold : palette.smoke }]}>
-                {selected.zone === 'poder' ? '↑ PODER' : '↓ FUERZA'}
+      <View style={[styles.detailCard, isPower && styles.detailCardPower]}>
+        <View style={styles.detailHeader}>
+          <Text style={styles.detailHz}>{selected.hz}</Text>
+          <Text style={styles.detailHzUnit}>Hz</Text>
+          <Text style={styles.detailName}>{selected.name}</Text>
+        </View>
+        <Text style={styles.detailDesc}>{selected.description}</Text>
+
+        {next && (
+          <View style={styles.howToRise}>
+            <Text style={styles.howToRiseLabel}>CÓMO SUBIR</Text>
+            <View style={styles.howToRiseRow}>
+              <MaterialIcons name="arrow-upward" size={20} color={palette.gold} />
+              <Text style={styles.howToRiseText}>
+                Hacia <Text style={styles.howToRiseStrong}>{next.name}</Text> ({next.hz} Hz) — suelta el nivel actual sin juzgarlo.
               </Text>
             </View>
-            <Text style={styles.detailName}>{selected.name}</Text>
-            <Text style={styles.detailDesc}>{selected.description}</Text>
-
-            <GoldDivider label="CÓMO SUBIR" />
-            <View style={styles.adviceRow}>
-              <MaterialIcons name="arrow-upward" size={14} color={palette.gold} />
-              <Text style={styles.adviceText}>{selected.actionAdvice}</Text>
-            </View>
-          </PremiumCard>
-        </>
-      )}
-
-      {!selected && (
-        <PremiumCard style={styles.hintCard}>
-          <MaterialIcons name="touch-app" size={20} color={palette.smoke} />
-          <Text style={styles.hintText}>
-            Toca el nivel que mejor describe tu estado emocional predominante hoy.
-          </Text>
-        </PremiumCard>
-      )}
+            <Text style={styles.adviceText}>{selected.actionAdvice}</Text>
+          </View>
+        )}
+        {!next && (
+          <View style={styles.howToRise}>
+            <Text style={styles.howToRiseLabel}>EL CIMA DE LA ESCALA</Text>
+            <Text style={styles.adviceText}>{selected.actionAdvice}</Text>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -291,66 +276,88 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.graphite,
+  },
   title: { ...typography.title, color: palette.ivory, fontSize: 14 },
 
-  eyebrow: { fontFamily: Fonts.display, color: palette.goldMuted, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' as const },
-  heroText: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 34,
-    marginVertical: spacing.sm,
+  // Intro card
+  introCard: {
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
-  heroSub: { ...typography.body, color: palette.ash, lineHeight: 20, fontSize: 13 },
+  introTitle: { fontFamily: Fonts.display, color: palette.gold, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
+  introBody: { ...typography.caption, color: palette.ivory, fontSize: 13, lineHeight: 20 },
+  zoneBar: { flexDirection: 'row', height: 12, borderRadius: radii.pill, overflow: 'hidden' },
+  zoneFuerza: { flex: 1, backgroundColor: palette.danger, opacity: 0.6 },
+  zonePoder: { flex: 1, backgroundColor: palette.gold },
+  zoneLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  zoneLabelFuerza: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10 },
+  zoneLabelPoder: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 10 },
 
-  zoneBarWrap: { marginVertical: spacing.lg, gap: spacing.sm },
-  zoneBar: { flexDirection: 'row', height: 28, borderRadius: radii.sm, overflow: 'hidden' },
-  zoneFuerza: { backgroundColor: palette.charcoal, alignItems: 'center', justifyContent: 'center' },
-  zonePoder: { backgroundColor: 'rgba(201,160,0,0.2)', borderWidth: 1, borderColor: palette.gold + '44', alignItems: 'center', justifyContent: 'center' },
-  zoneLabel: { fontFamily: Fonts.display, color: palette.ash, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase' as const },
-  zoneStatus: { fontFamily: Fonts.display, fontSize: 11, textAlign: 'center', letterSpacing: 1.5, textTransform: 'uppercase' as const },
+  sectionLabel: { ...typography.label, color: palette.gold, fontSize: 11, letterSpacing: 1.8 },
 
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  levelCard: {
+  // Grid — 4 columns
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  cell: {
+    width: '22.5%',
+    flexGrow: 1,
+    minWidth: 72,
     backgroundColor: palette.graphite,
     borderWidth: 1,
     borderColor: palette.line,
     borderRadius: radii.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    minWidth: 90,
-    flex: 1,
-    gap: 2,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
-  levelCardPoder: {
-    borderColor: palette.gold + '30',
-    backgroundColor: 'rgba(201,160,0,0.05)',
+  cellPower: {
+    borderColor: palette.lineGold,
+    backgroundColor: palette.goldLight,
   },
-  levelCardSelected: {
+  cellSelected: {
     borderColor: palette.gold,
-    backgroundColor: 'rgba(201,160,0,0.12)',
+    borderWidth: 2,
   },
-  levelHz: { fontFamily: Fonts.mono, color: palette.smoke, fontSize: 11, letterSpacing: 1 },
-  levelName: { ...typography.body, color: palette.ash, fontSize: 12, textAlign: 'center' },
+  cellHz: { fontFamily: Fonts.display, fontSize: 14, fontWeight: '700' },
+  cellName: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 8, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.2 },
 
-  detailCard: { gap: spacing.md },
-  detailHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Detail
+  detailCard: {
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.md,
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  detailCardPower: {
+    borderColor: palette.lineGold,
+  },
+  detailHeader: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   detailHz: { fontFamily: Fonts.display, color: palette.gold, fontSize: 40, fontWeight: '800', letterSpacing: -1 },
-  detailZone: { fontFamily: Fonts.display, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase' as const },
-  detailName: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 24, fontWeight: '800', letterSpacing: 0.5 },
-  detailDesc: { ...typography.body, color: palette.ash, lineHeight: 22 },
-  adviceRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  adviceText: { ...typography.body, color: palette.ivory, flex: 1, lineHeight: 22 },
+  detailHzUnit: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11 },
+  detailName: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 18, fontWeight: '800', letterSpacing: 0.5, marginLeft: 'auto' },
+  detailDesc: { ...typography.body, color: palette.ivory, lineHeight: 22 },
 
-  hintCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  hintText: { ...typography.body, color: palette.smoke, flex: 1, fontStyle: 'italic', lineHeight: 20 },
+  howToRise: {
+    marginTop: spacing.xs,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.line,
+    gap: spacing.sm,
+  },
+  howToRiseLabel: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
+  howToRiseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  howToRiseText: { ...typography.caption, color: palette.ash, fontSize: 13, flex: 1, lineHeight: 20 },
+  howToRiseStrong: { color: palette.gold, fontFamily: Fonts.sansBold },
+  adviceText: { ...typography.caption, color: palette.smoke, fontSize: 12, lineHeight: 19, fontStyle: 'italic' },
 });

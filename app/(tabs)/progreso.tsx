@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import Svg, { Circle, Path, Polyline } from 'react-native-svg';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,7 +19,6 @@ import {
   ProgressCard,
   SecondaryButton,
   SovereignScore,
-  StatusPill,
   WeeklySparkline,
   screen,
   useScreen,
@@ -255,6 +255,181 @@ const calStyles = StyleSheet.create({
   },
 });
 
+// ─── Mini Sparkline (line + filled area, SVG — cross-platform) ──────────────
+function MiniSparkline({
+  data,
+  width = 300,
+  height = 64,
+  color = palette.gold,
+  showDots = false,
+}: {
+  data: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+  showDots?: boolean;
+}) {
+  if (data.length < 2) {
+    return <View style={{ height }} />;
+  }
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const span = max - min || 1;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - 6 - ((v - min) / span) * (height - 12);
+    return { x, y };
+  });
+  const linePoints = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const areaPath =
+    `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} ` +
+    pts.slice(1).map((p) => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') +
+    ` L${width},${height} L0,${height} Z`;
+
+  return (
+    <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <Path d={areaPath} fill={color} fillOpacity={0.14} />
+      <Polyline
+        points={linePoints}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {showDots && pts.map((p, i) => (
+        <Circle key={i} cx={p.x} cy={p.y} r={2.5} fill={color} />
+      ))}
+    </Svg>
+  );
+}
+
+// ─── Score Ring (circular progress, SVG) ────────────────────────────────────
+function ScoreRing({
+  value,
+  max,
+  size = 92,
+  stroke = 7,
+  display,
+  sub,
+}: {
+  value: number;
+  max: number;
+  size?: number;
+  stroke?: number;
+  display: string;
+  sub?: string;
+}) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(1, max > 0 ? value / max : 0));
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+        <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={palette.charcoal} strokeWidth={stroke} />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={palette.gold}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+        />
+      </Svg>
+      <Text style={ringStyles.value}>{display}</Text>
+      {sub ? <Text style={ringStyles.sub}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+const ringStyles = StyleSheet.create({
+  value: {
+    color: palette.gold,
+    fontFamily: Fonts.display,
+    fontSize: 26,
+    fontWeight: '800',
+    lineHeight: 30,
+  },
+  sub: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 10,
+    marginTop: 2,
+  },
+});
+
+// ─── Weekly Metric Card (icon + label + avg + trend + sparkline) ────────────
+function WeeklyMetricCard({
+  label,
+  icon,
+  data,
+  avg,
+  unit = '/10',
+  trend,
+  trendUp,
+  color = palette.gold,
+}: {
+  label: string;
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+  data: number[];
+  avg: string;
+  unit?: string;
+  trend?: string;
+  trendUp?: boolean;
+  color?: string;
+}) {
+  return (
+    <View style={wmStyles.card}>
+      <View style={wmStyles.head}>
+        <MaterialIcons name={icon} size={16} color={palette.gold} />
+        <Text style={wmStyles.label}>{label}</Text>
+      </View>
+      <View style={wmStyles.valueRow}>
+        <Text style={wmStyles.value}>{avg}</Text>
+        <Text style={wmStyles.unit}>{unit}</Text>
+        {trend ? (
+          <Text style={[wmStyles.trend, { color: trendUp === false ? palette.ash : palette.success }]}>
+            {trend}
+          </Text>
+        ) : null}
+      </View>
+      <View style={wmStyles.spark}>
+        <MiniSparkline data={data} width={140} height={34} color={color} />
+      </View>
+    </View>
+  );
+}
+
+const wmStyles = StyleSheet.create({
+  card: {
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    width: '47.8%',
+    flexGrow: 1,
+    gap: 8,
+  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  label: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    flex: 1,
+  },
+  valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  value: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 24, fontWeight: '700' },
+  unit: { ...typography.mono, color: palette.ash, fontSize: 11 },
+  trend: { ...typography.mono, fontSize: 10, marginLeft: 'auto' },
+  spark: { height: 34, marginTop: 2 },
+});
+
 export default function ProgresoScreen() {
   const sc = useScreen();
   const router = useRouter();
@@ -372,6 +547,61 @@ export default function ProgresoScreen() {
   const energyValues = last7.length ? last7.map((c) => c.energy) : [0, 0, 0, 0, 0, 0, 0];
   const clarityValues = last7.length ? last7.map((c) => c.clarity) : [0, 0, 0, 0, 0, 0, 0];
 
+  // ── Design analytics: real chronological series from check-ins ──────────────
+  // state.checkIns is ordered newest-first; reverse a recent slice to chronological.
+  const analytics = useMemo(() => {
+    const recent = (n: number) => state.checkIns.slice(0, n).slice().reverse();
+
+    // Daily "estado" score 0–100 from the same formula that drives the Sovereign Score
+    const estado = (c: { energy: number; clarity: number; stress: number; sleep: number }) =>
+      Math.round(((c.energy + c.clarity + (10 - c.stress) + c.sleep) / 4) * 10);
+
+    const last14 = recent(14);
+    const score14 = last14.map(estado);
+    const week = recent(7);
+
+    const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+    // % change between the first and second half of the series (rounded)
+    const pctTrend = (xs: number[]) => {
+      if (xs.length < 2) return null;
+      const half = Math.max(1, Math.floor(xs.length / 2));
+      const first = avg(xs.slice(0, half));
+      const last = avg(xs.slice(-half));
+      if (first === 0) return null;
+      return Math.round(((last - first) / first) * 100);
+    };
+
+    return {
+      score14,
+      scoreDelta: score14.length >= 2 ? score14[score14.length - 1] - score14[0] : 0,
+      energy:    week.map((c) => c.energy),
+      clarity:   week.map((c) => c.clarity),
+      load:      week.map((c) => c.stress),
+      coherence: week.map((c) => Math.round((c.energy + c.clarity) / 2)),
+      energyTrend:    pctTrend(week.map((c) => c.energy)),
+      clarityTrend:   pctTrend(week.map((c) => c.clarity)),
+      loadTrend:      pctTrend(week.map((c) => c.stress)),
+      coherenceTrend: pctTrend(week.map((c) => Math.round((c.energy + c.clarity) / 2))),
+      hasWeek: week.length >= 2,
+    };
+  }, [state.checkIns]);
+
+  // Real check-in streak (consecutive days back from today with a check-in)
+  const checkinStreak = useMemo(() => {
+    if (!state.checkIns.length) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const set = new Set(state.checkIns.map((c) => c.date.slice(0, 10)));
+    let s = 0;
+    const day = new Date(today);
+    while (s < 365) {
+      if (!set.has(day.toISOString().slice(0, 10))) break;
+      s++;
+      day.setDate(day.getDate() - 1);
+    }
+    return s;
+  }, [state.checkIns]);
+
   // Achievements
   const achievements = [
     { icon: 'local-fire-department' as const, label: 'RACHA\n7D', earned: protocolDay >= 7 },
@@ -402,6 +632,20 @@ export default function ProgresoScreen() {
           totalLessons,
         };
       });
+  }, [state.completedLessons]);
+
+  // Modules ring — completed modules vs total + active module progress (real data)
+  const moduleProgress = useMemo(() => {
+    const completed = state.completedLessons ?? [];
+    const totalModules = POLARIS_MODULES.length;
+    const completedModules = POLARIS_MODULES.filter(
+      (m) => m.lessons.length > 0 && m.lessons.every((l) => completed.includes(l.id)),
+    ).length;
+    const activeLessons = ACTIVE_MODULE.lessons.length;
+    const activeDone = ACTIVE_MODULE.lessons.filter((l) => completed.includes(l.id)).length;
+    const activePct = activeLessons > 0 ? Math.round((activeDone / activeLessons) * 100) : 0;
+    const locked = Math.max(0, totalModules - completedModules - 1);
+    return { totalModules, completedModules, activePct, locked };
   }, [state.completedLessons]);
 
   // Transformation narrative
@@ -856,36 +1100,44 @@ export default function ProgresoScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      <AppHeader title="PERFIL" />
 
-      {/* ── Profile Hero ── */}
-      <PremiumCard style={styles.heroCard}>
-        <View style={styles.avatarWrap}>
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{state.profile.name.slice(0, 2).toUpperCase()}</Text>
+      {/* ── Profile header (avatar · name · día de protocolo · racha) ── */}
+      <View style={styles.profileHeader}>
+        <View style={styles.profileAvatar}>
+          <Text style={styles.profileAvatarText}>{state.profile.name.slice(0, 2).toUpperCase()}</Text>
+        </View>
+        <View style={styles.profileInfo}>
+          <Text style={styles.profileName}>{state.profile.name.toUpperCase()}</Text>
+          <Text style={styles.profileDay}>DÍA {protocolDay} DE PROTOCOLO</Text>
+        </View>
+        <View style={styles.streakChip}>
+          <MaterialIcons name="local-fire-department" size={14} color={palette.gold} />
+          <Text style={styles.streakChipText}>{checkinStreak}</Text>
+        </View>
+      </View>
+
+      {/* ── Score Soberano + 14-day trend ── */}
+      <PremiumCard style={styles.scoreCard}>
+        <View style={styles.scoreTopRow}>
+          <View>
+            <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
+            <View style={styles.scoreNumberRow}>
+              <Text style={styles.scoreNumber}>{score}</Text>
+              {analytics.scoreDelta !== 0 && (
+                <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
+                  {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
+                </Text>
+              )}
             </View>
           </View>
-          <StatusPill label="PROTOCOLO SOBERANO" tone="gold" dot />
+          <Text style={styles.scoreCaption}>ÚLTIMOS{'\n'}14 DÍAS</Text>
         </View>
-        <View style={styles.heroInfo}>
-          <Text style={styles.heroName}>{state.profile.name.toUpperCase()}</Text>
-          <Text style={styles.heroRole}>{state.profile.role}</Text>
-          <View style={styles.heroBadgeRow}>
-            <View style={styles.heroBadge}>
-              <MaterialIcons name="calendar-today" size={11} color={palette.gold} />
-              <Text style={styles.heroBadgeText}>DÍA {protocolDay}</Text>
-            </View>
-            <View style={styles.heroBadge}>
-              <MaterialIcons name="view-module" size={11} color={palette.gold} />
-              <Text style={styles.heroBadgeText}>MÓDULO {ACTIVE_MODULE.order}</Text>
-            </View>
+        {analytics.score14.length >= 2 && (
+          <View style={styles.scoreSpark}>
+            <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
           </View>
-        </View>
+        )}
       </PremiumCard>
-
-      {/* ── Sovereign Score ── */}
-      <SovereignScore score={score} />
 
       {/* ── Share profile CTA ── */}
       <Pressable
@@ -914,45 +1166,96 @@ export default function ProgresoScreen() {
         progress={protocolProgress}
       />
 
-      {/* ── Metric Grid ── */}
-      <View style={styles.grid}>
-        <MetricCard
-          label="Racha"
-          value={`${Math.max(state.checkIns.length, protocolDay)}`}
-          meta="dias activos"
-          icon="local-fire-department"
-        />
-        <MetricCard
-          label="Energia"
-          value={averages.energy ? `${averages.energy}` : '--'}
-          meta="promedio /10"
-          icon="bolt"
-        />
-        <MetricCard
-          label="Claridad"
-          value={averages.clarity ? `${averages.clarity}` : '--'}
-          meta="promedio /10"
-          icon="center-focus-strong"
-        />
-        <MetricCard
-          label="Check-ins"
-          value={`${state.checkIns.length}`}
-          meta="completados"
-          icon="fact-check"
-        />
-      </View>
-
-      {/* ── Weekly Sparklines ── */}
-      {last7.length > 0 && (
+      {/* ── Promedios de la semana (sparkline metric cards) ── */}
+      {analytics.hasWeek ? (
         <>
-          <GoldDivider label="ULTIMOS 7 DIAS" />
-          <PremiumCard style={styles.sparklineCard}>
-            <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.gold} />
-            <View style={styles.sparklineDivider} />
-            <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
-          </PremiumCard>
+          <GoldDivider label="PROMEDIOS DE LA SEMANA" />
+          <View style={styles.grid}>
+            <WeeklyMetricCard
+              label="Energía"
+              icon="bolt"
+              data={analytics.energy}
+              avg={(averages.energy ?? 0).toFixed(1)}
+              trend={analytics.energyTrend != null ? `${analytics.energyTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.energyTrend)}%` : undefined}
+              trendUp={analytics.energyTrend == null ? undefined : analytics.energyTrend >= 0}
+            />
+            <WeeklyMetricCard
+              label="Claridad"
+              icon="center-focus-strong"
+              data={analytics.clarity}
+              avg={(averages.clarity ?? 0).toFixed(1)}
+              trend={analytics.clarityTrend != null ? `${analytics.clarityTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.clarityTrend)}%` : undefined}
+              trendUp={analytics.clarityTrend == null ? undefined : analytics.clarityTrend >= 0}
+            />
+            <WeeklyMetricCard
+              label="Carga sistema"
+              icon="thermostat"
+              data={analytics.load}
+              avg={(averages.stress ?? 0).toFixed(1)}
+              trend={analytics.loadTrend != null ? `${analytics.loadTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.loadTrend)}%` : undefined}
+              trendUp={analytics.loadTrend == null ? undefined : analytics.loadTrend < 0}
+            />
+            <WeeklyMetricCard
+              label="Coherencia"
+              icon="favorite"
+              data={analytics.coherence}
+              avg={(((averages.energy ?? 0) + (averages.clarity ?? 0)) / 2).toFixed(1)}
+              trend={analytics.coherenceTrend != null ? `${analytics.coherenceTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.coherenceTrend)}%` : undefined}
+              trendUp={analytics.coherenceTrend == null ? undefined : analytics.coherenceTrend >= 0}
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Fallback: metric grid when there is not enough check-in history yet */}
+          <View style={styles.grid}>
+            <MetricCard
+              label="Racha"
+              value={`${Math.max(state.checkIns.length, protocolDay)}`}
+              meta="dias activos"
+              icon="local-fire-department"
+            />
+            <MetricCard
+              label="Energia"
+              value={averages.energy ? `${averages.energy}` : '--'}
+              meta="promedio /10"
+              icon="bolt"
+            />
+            <MetricCard
+              label="Claridad"
+              value={averages.clarity ? `${averages.clarity}` : '--'}
+              meta="promedio /10"
+              icon="center-focus-strong"
+            />
+            <MetricCard
+              label="Check-ins"
+              value={`${state.checkIns.length}`}
+              meta="completados"
+              icon="fact-check"
+            />
+          </View>
         </>
       )}
+
+      {/* ── Módulos (ring + progreso del módulo activo) ── */}
+      <GoldDivider label="MÓDULOS" />
+      <PremiumCard style={styles.modulesCard}>
+        <ScoreRing
+          value={moduleProgress.completedModules}
+          max={moduleProgress.totalModules}
+          size={92}
+          stroke={7}
+          display={`${moduleProgress.completedModules}`}
+          sub={`de ${moduleProgress.totalModules}`}
+        />
+        <View style={styles.modulesBody}>
+          <Text style={styles.modulesTitle}>{ACTIVE_MODULE.title} · {moduleProgress.activePct}%</Text>
+          <View style={styles.modulesTrack}>
+            <View style={[styles.modulesFill, { width: `${moduleProgress.activePct}%` }]} />
+          </View>
+          <Text style={styles.modulesMeta}>1 ACTIVO · {moduleProgress.locked} BLOQUEADOS</Text>
+        </View>
+      </PremiumCard>
 
       {/* ── 42-Day Streak Heatmap ── */}
       {state.checkIns.length > 0 && (
@@ -1390,71 +1693,139 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Hero profile card
-  heroCard: {
-    gap: spacing.lg,
-  },
-  avatarWrap: {
+  // Profile header (design: avatar · name · día de protocolo · racha chip)
+  profileHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.lg,
+    gap: spacing.md,
   },
-  avatarRing: {
-    borderColor: palette.gold,
-    borderRadius: radii.xs,
-    borderWidth: 2,
-    padding: 3,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    height: 72,
-    justifyContent: 'center',
-    width: 72,
-  },
-  avatarText: {
-    color: palette.ink,
-    fontFamily: Fonts.display,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  heroInfo: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  heroName: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  heroRole: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  heroBadge: {
+  profileAvatar: {
     alignItems: 'center',
     backgroundColor: palette.goldLight,
-    borderColor: palette.line,
-    borderRadius: radii.xs,
+    borderColor: palette.lineGold,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 56,
+    justifyContent: 'center',
+    width: 56,
+  },
+  profileAvatarText: {
+    color: palette.gold,
+    fontFamily: Fonts.display,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  profileInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  profileName: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  profileDay: {
+    ...typography.mono,
+    color: palette.gold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+  },
+  streakChip: {
+    alignItems: 'center',
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
+    borderRadius: radii.pill,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
   },
-  heroBadgeText: {
-    ...typography.label,
+  streakChipText: {
     color: palette.gold,
-    fontSize: 11,
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // Score Soberano trend card
+  scoreCard: {
+    gap: spacing.md,
+  },
+  scoreTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  scoreEyebrow: {
+    ...typography.label,
+    color: palette.ash,
+  },
+  scoreNumberRow: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: spacing.xs,
+  },
+  scoreNumber: {
+    color: palette.gold,
+    fontFamily: Fonts.display,
+    fontSize: 46,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 50,
+  },
+  scoreTrend: {
+    ...typography.mono,
+    fontSize: 13,
+  },
+  scoreCaption: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 9.5,
+    letterSpacing: 1,
+    textAlign: 'right',
+  },
+  scoreSpark: {
+    height: 70,
+    marginTop: spacing.xs,
+  },
+
+  // Modules ring card
+  modulesCard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  modulesBody: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  modulesTitle: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  modulesTrack: {
+    backgroundColor: palette.charcoal,
+    borderRadius: radii.xs,
+    height: 3,
+    overflow: 'hidden',
+  },
+  modulesFill: {
+    backgroundColor: palette.gold,
+    height: '100%',
+  },
+  modulesMeta: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
 
   // Grid

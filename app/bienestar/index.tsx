@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -8,7 +8,6 @@ import {
   Text,
   TextInput,
   View,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -118,10 +117,6 @@ function getTodayPhrase(): string {
   return DAILY_PHRASES[day % DAILY_PHRASES.length];
 }
 
-// ─── Time chips ───────────────────────────────────────────────────────────────
-const TIME_CHIPS = [1, 3, 5, 10, 15, 20] as const;
-type TimeChip = typeof TIME_CHIPS[number];
-
 // ─── Quick-access blocks ──────────────────────────────────────────────────────
 type Block = {
   route: string;
@@ -137,32 +132,25 @@ const BLOCKS: Block[] = [
   { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', color: palette.ash, type: 'breathing'  },
   { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  color: palette.ash, type: 'meditation' },
   { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       color: palette.ash, type: 'sleep'      },
-  { route: '/bienestar/biblioteca',  icon: 'library-music',    label: 'BIBLIOTECA',  color: palette.ash, type: 'library'    },
+  { route: '/bienestar/biblioteca',  icon: 'local-library',    label: 'BIBLIOTECA',  color: palette.ash, type: 'library'    },
   { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      color: palette.ash, type: 'journal'    },
 ];
 
 const BLOCKS_EXTENDED = [
-  { id: 'habitos',     icon: 'check-circle-outline' as const, label: 'HÁBITOS',     route: '/bienestar/habitos' },
-  { id: 'ayuno',       icon: 'timer' as const,                label: 'AYUNO',       route: '/bienestar/ayuno' },
-  { id: 'nutricion',   icon: 'restaurant' as const,           label: 'NUTRICIÓN',   route: '/bienestar/nutricion' },
-  { id: 'cuerpo',      icon: 'monitor-weight' as const,       label: 'CUERPO',      route: '/bienestar/cuerpo' },
-  { id: 'suplementos', icon: 'science' as const,              label: 'SUPLEMENTOS', route: '/bienestar/suplementacion' },
-  { id: 'comunidad',   icon: 'group' as const,                label: 'COMUNIDAD',   route: '/bienestar/comunidad' },
+  { id: 'habitos',     icon: 'checklist' as const,      label: 'HÁBITOS',     route: '/bienestar/habitos' },
+  { id: 'ayuno',       icon: 'schedule' as const,       label: 'AYUNO',       route: '/bienestar/ayuno' },
+  { id: 'nutricion',   icon: 'restaurant' as const,     label: 'NUTRICIÓN',   route: '/bienestar/nutricion' },
+  { id: 'cuerpo',      icon: 'fitness-center' as const, label: 'CUERPO',      route: '/bienestar/cuerpo' },
+  { id: 'suplementos', icon: 'medication' as const,     label: 'SUPLEMENTOS', route: '/bienestar/suplementacion' },
+  { id: 'comunidad',   icon: 'groups' as const,         label: 'COMUNIDAD',   route: '/bienestar/comunidad' },
 ];
 
 // Herramientas emocionales del curso (Docs 3.2, 3.4 y 4.3)
 const BLOCKS_EMOCIONAL = [
-  { id: 'grito',       icon: 'record-voice-over' as const, label: 'GRITO',       route: '/bienestar/grito' },
-  { id: 'tapping',     icon: 'touch-app' as const,         label: 'TAPPING',     route: '/bienestar/tapping' },
-  { id: 'consciencia', icon: 'psychology' as const,        label: 'CONSCIENCIA', route: '/bienestar/consciencia' },
+  { id: 'grito',       icon: 'campaign' as const,        label: 'GRITO',       route: '/bienestar/grito' },
+  { id: 'tapping',     icon: 'touch-app' as const,       label: 'TAPPING',     route: '/bienestar/tapping' },
+  { id: 'consciencia', icon: 'psychology-alt' as const,  label: 'CONSCIENCIA', route: '/bienestar/consciencia' },
 ];
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Buenos días';
-  if (h < 18) return 'Buenas tardes';
-  return 'Buenas noches';
-}
 
 function getWeekDots(sessions: { completedAt: string }[]): boolean[] {
   const now = new Date();
@@ -250,7 +238,6 @@ export default function BienestarHub() {
   const insets = useSafeAreaInsets();
   const { state } = useLifeFlow();
 
-  const [selectedTime, setSelectedTime] = useState<TimeChip | null>(null);
   const [journalText, setJournalText] = useState('');
   const [saving, setSaving] = useState(false);
   const [journalSaved, setJournalSaved] = useState(false);
@@ -460,23 +447,20 @@ export default function BienestarHub() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled">
 
-      {/* ── Back + title ── */}
-      <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-        </Pressable>
+      {/* ── Header ── */}
+      <View style={styles.header}>
         <Text style={styles.screenTitle}>BIENESTAR</Text>
-        <View style={{ width: 36 }} />
+        <Text style={styles.headerSub}>El cuerpo es el primer sistema de armas.</Text>
       </View>
 
-      {/* ── Greeting + streak ── */}
-      <View style={styles.greetingRow}>
-        <View style={styles.greetingLeft}>
-          <Text style={styles.greetingText}>{greeting()}, {state.profile.name.split(' ')[0]}.</Text>
-          <View style={styles.streakRow}>
-            <MaterialIcons name="local-fire-department" size={14} color={palette.gold} />
-            <Text style={styles.streakText}>{streak} días</Text>
+      {/* ── Quick stats: sessions · minutes + week activity dots ── */}
+      <PremiumCard style={styles.statsCard}>
+        <View style={styles.statsLeft}>
+          <View style={styles.statsHeadline}>
+            <Text style={styles.statsNumber}>{stats.weekSessions}</Text>
+            <Text style={styles.statsUnit}>sesiones</Text>
           </View>
+          <Text style={styles.statsMeta}>{stats.weekMinutes} MIN · ESTA SEMANA</Text>
         </View>
         <View style={styles.dotRow}>
           {DAY_LABELS.map((label, i) => (
@@ -486,133 +470,65 @@ export default function BienestarHub() {
             </View>
           ))}
         </View>
-      </View>
-
-      {/* ── Stats row ── */}
-      <PremiumCard style={styles.statsCard}>
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{stats.weekMinutes}</Text>
-            <Text style={styles.statLabel}>min semana</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{stats.weekSessions}</Text>
-            <Text style={styles.statLabel}>sesiones</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{stats.total}</Text>
-            <Text style={styles.statLabel}>total</Text>
-          </View>
-        </View>
       </PremiumCard>
 
-      {/* ── Time chips ── */}
-      <View style={styles.chipsSection}>
-        <Text style={styles.chipsLabel}>¿CUÁNTO TIEMPO TIENES?</Text>
-        <View style={styles.chipsRow}>
-          {TIME_CHIPS.map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => setSelectedTime(selectedTime === t ? null : t)}
-              style={[styles.chip, selectedTime === t && styles.chipActive]}>
-              <Text style={[styles.chipText, selectedTime === t && styles.chipTextActive]}>
-                {t}min
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      {/* ── 6-block grid ── */}
-      <GoldDivider label="MÓDULOS" />
+      {/* ── PRÁCTICA grid ── */}
+      <GoldDivider label="PRÁCTICA" />
       <View style={styles.grid}>
         {BLOCKS.map((b) => (
-          <Pressable
-            key={b.route}
-            onPress={() => router.push(b.route as never)}
-            style={({ pressed }) => [styles.gridCard, pressed && { opacity: 0.75 }]}>
-            <View style={styles.gridIcon}>
-              <MaterialIcons name={b.icon} size={22} color={palette.ash} />
-            </View>
-            <Text style={styles.gridLabel}>{b.label}</Text>
-          </Pressable>
+          <HubTile key={b.route} icon={b.icon} label={b.label} onPress={() => router.push(b.route as never)} />
         ))}
       </View>
 
-      {/* ── Extended blocks grid ── */}
-      <GoldDivider label="SALUD & COMUNIDAD" />
+      {/* ── SISTEMA INTEGRAL grid ── */}
+      <GoldDivider label="SISTEMA INTEGRAL" />
       <View style={styles.grid}>
         {BLOCKS_EXTENDED.map((b) => (
-          <Pressable
-            key={b.id}
-            onPress={() => router.push(b.route as never)}
-            style={({ pressed }) => [styles.gridCard, pressed && { opacity: 0.75 }]}>
-            <View style={styles.gridIcon}>
-              <MaterialIcons name={b.icon} size={22} color={palette.ash} />
-            </View>
-            <Text style={styles.gridLabel}>{b.label}</Text>
-          </Pressable>
+          <HubTile key={b.id} icon={b.icon} label={b.label} onPress={() => router.push(b.route as never)} />
         ))}
       </View>
 
-      {/* ── Herramientas emocionales ── */}
+      {/* ── LIBERACIÓN EMOCIONAL grid (gold-accented tiles) ── */}
       <GoldDivider label="LIBERACIÓN EMOCIONAL" />
       <View style={styles.grid}>
         {BLOCKS_EMOCIONAL.map((b) => (
-          <Pressable
-            key={b.id}
-            onPress={() => router.push(b.route as never)}
-            style={({ pressed }) => [styles.gridCard, pressed && { opacity: 0.75 }]}>
-            <View style={styles.gridIcon}>
-              <MaterialIcons name={b.icon} size={22} color={palette.ash} />
-            </View>
-            <Text style={styles.gridLabel}>{b.label}</Text>
-          </Pressable>
+          <HubTile key={b.id} icon={b.icon} label={b.label} gold onPress={() => router.push(b.route as never)} />
         ))}
       </View>
 
-      {/* ── Wearable card (shown if connected) ── */}
+      {/* ── Wearable card (real biometrics — shown if connected, else connect prompt) ── */}
       <WearableCard router={router} />
 
       {/* ── Frase del día ── */}
-      <GoldDivider label="FRASE DEL DÍA" />
-      <PremiumCard style={styles.phraseCard}>
-        <MaterialIcons name="format-quote" size={20} color={palette.goldMuted} />
-        <Text style={styles.phraseText}>{phrase}</Text>
-      </PremiumCard>
-
-      {/* ── Journal ── */}
-      <GoldDivider label="REFLEXIÓN" />
-      <PremiumCard style={styles.journalCard}>
-        <Text style={styles.journalHint}>
-          Comparte tu reflexión, intención o gratitud de hoy...
-        </Text>
-        <TextInput
-          style={styles.journalInput}
-          multiline
-          value={journalText}
-          onChangeText={setJournalText}
-          placeholder="Escribe aquí..."
-          placeholderTextColor={palette.smoke}
-          textAlignVertical="top"
-          returnKeyType="default"
-        />
-        <Pressable
-          style={[styles.journalBtn, (!journalText.trim() || saving) && styles.journalBtnDisabled]}
-          onPress={saveJournal}
-          disabled={!journalText.trim() || saving}>
-          {saving
-            ? <ActivityIndicator size="small" color={palette.ink} />
-            : journalSaved
-              ? <MaterialIcons name="check" size={18} color={palette.ink} />
-              : <Text style={styles.journalBtnText}>GUARDAR</Text>
-          }
-        </Pressable>
-      </PremiumCard>
+      <Text style={styles.phraseQuote}>{phrase}</Text>
 
     </ScrollView>
+  );
+}
+
+// ─── Hub Tile — square card with large icon (design: PRÁCTICA / SISTEMA / LIBERACIÓN) ──
+function HubTile({
+  icon,
+  label,
+  gold,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+  label: string;
+  gold?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.gridCard,
+        gold && styles.gridCardGold,
+        pressed && { opacity: 0.75 },
+      ]}>
+      <MaterialIcons name={icon} size={28} color={gold ? palette.gold : palette.ivory} />
+      <Text style={[styles.gridLabel, gold && styles.gridLabelGold]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -625,57 +541,51 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  screenTitle: { ...typography.title, color: palette.ivory, fontSize: 18 },
+  screenTitle: { ...typography.title, color: palette.ivory, fontSize: 21 },
 
-  greetingRow: {
+  // Header (design: title + body subtitle)
+  header: { gap: 6, marginBottom: spacing.sm },
+  headerSub: { ...typography.body, color: palette.ash, fontSize: 13 },
+
+  // Week activity dots (shared mobile + desktop)
+  dotRow: { flexDirection: 'row', gap: 6 },
+  dotItem: { alignItems: 'center', gap: 6 },
+  dot: {
+    width: 9,
+    height: 9,
+    borderRadius: radii.pill,
+    backgroundColor: palette.charcoal,
+  },
+  dotActive: { backgroundColor: palette.gold },
+  dotLabel: { ...typography.label, color: palette.smoke, fontSize: 8, letterSpacing: 0.4 },
+
+  // Quick-stats card — sessions headline + week dots (design)
+  statsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.lg,
     marginBottom: spacing.lg,
   },
-  greetingLeft: { gap: 4 },
-  greetingText: { ...typography.body, color: palette.ivory, fontSize: 16, fontWeight: '600' },
-  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  streakText: { ...typography.mono, color: palette.ash, fontSize: 12 },
-  dotRow: { flexDirection: 'row', gap: 6 },
-  dotItem: { alignItems: 'center', gap: 3 },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: palette.charcoal,
-    borderWidth: 1,
-    borderColor: palette.smoke,
-  },
-  dotActive: { backgroundColor: palette.gold, borderColor: palette.gold },
-  dotLabel: { ...typography.label, color: palette.smoke, fontSize: 8, letterSpacing: 0 },
+  statsLeft: { gap: spacing.xs },
+  statsHeadline: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  statsNumber: { fontFamily: Fonts.display, color: palette.gold, fontSize: 26, letterSpacing: 0.5 },
+  statsUnit: { ...typography.mono, color: palette.ash },
+  statsMeta: { ...typography.mono, color: palette.smoke, fontSize: 10, letterSpacing: 1 },
 
-  statsCard: { marginBottom: spacing.lg },
+  // Desktop stats row (kept for desktop branch)
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   stat: { alignItems: 'center', flex: 1 },
   statValue: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 28, letterSpacing: 1 },
   statLabel: { ...typography.label, color: palette.smoke, marginTop: 2 },
   statDivider: { width: 1, height: 40, backgroundColor: palette.line },
-
-  chipsSection: { marginBottom: spacing.lg, gap: spacing.sm },
   chipsLabel: { ...typography.label, color: palette.ash },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.line,
-  },
-  chipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
-  chipText: { ...typography.label, color: palette.ash },
-  chipTextActive: { color: palette.gold },
 
+  // Tile grid (3 columns of square cards)
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   gridCard: {
     width: '30%',
@@ -687,31 +597,37 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
     padding: spacing.md,
-    minWidth: 90,
+    minWidth: 92,
   },
-  gridIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.sm,
-    backgroundColor: palette.charcoal,
-    alignItems: 'center',
-    justifyContent: 'center',
+  gridCardGold: {
+    borderColor: palette.lineGold,
+    backgroundColor: palette.goldGlow,
   },
   gridLabel: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 9.5,
+    letterSpacing: 1.2,
     textAlign: 'center',
   },
+  gridLabelGold: { color: palette.gold },
 
-  phraseCard: { gap: spacing.sm, marginBottom: spacing.lg },
+  // Frase del día (italic, centered)
+  phraseQuote: {
+    ...typography.body,
+    color: palette.ash,
+    fontStyle: 'italic',
+    fontSize: 13.5,
+    lineHeight: 22,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  // Desktop phrase text (kept for desktop branch)
   phraseText: { ...typography.body, color: palette.ash, fontStyle: 'italic', lineHeight: 22 },
 
-  journalCard: { gap: spacing.md },
-  journalHint: { ...typography.caption, color: palette.smoke },
   journalInput: {
     ...typography.body,
     color: palette.ivory,

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
@@ -35,56 +35,59 @@ function haptic(type: 'light' | 'medium' | 'success') {
   }
 }
 
-// ─── Breathing Player Component ───────────────────────────────────────────────
+// ─── Orb geometry ─────────────────────────────────────────────────────────────
+// Design: outer rings 300px; orb scales between ~200 (idle) and 195–240 (active).
+// We use a fixed 200px base orb and drive expansion via Animated scale per phase.
+const ORB_BASE = 200;
+const RING_OUTER = 300;
+const RING_INNER = 240;
 
-function BreathPlayer({
-  technique,
-  onComplete,
-  onExit,
-}: {
-  technique: BreathingTechnique;
-  onComplete: (durationSecs: number) => void;
-  onExit: () => void;
-}) {
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
+export default function RespiracionScreen() {
+  const sc = useScreen();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { saveWellnessSession } = useLifeFlow();
   const {
     startSession: storeStart,
     stopSession: storeStop,
-    pauseSession: storePause,
-    resumeSession: storeResume,
     setElapsed: storeElapsed,
   } = useWellnessStore();
-  const [phaseIdx, setPhaseIdx] = useState(0);
-  const [cycleCount, setCycleCount] = useState(0);
-  const [phaseTime, setPhaseTime] = useState(0);
-  const [totalTime, setTotalTime] = useState(0);
+
+  const [tech, setTech] = useState<BreathingTechnique>(BREATHING_TECHNIQUES[0]);
   const [running, setRunning] = useState(false);
-  const [paused, setPaused]   = useState(false);
-  const [done, setDone] = useState(false);
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const [phaseLeft, setPhaseLeft] = useState(BREATHING_TECHNIQUES[0].phases[0].duration);
+  const [cycles, setCycles] = useState(0);
 
-  const scaleAnim    = useRef(new Animated.Value(1)).current;
-  const pulseAnim    = useRef(new Animated.Value(1)).current;
-  const startTimeRef = useRef<number>(0);
-  const pausedAtRef  = useRef<number>(0);
-  const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const phaseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
 
-  const targetCycles = technique.cycles;
-  const phases = technique.phases;
+  const phases = tech.phases;
+  const currentPhase = phases[phaseIdx];
 
-  // Idle pulse animation
+  // Idle pulse when not running
   useEffect(() => {
-    if (!running) {
-      const pulse = Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1.0,  duration: 1800, useNativeDriver: true }),
-      ]);
-      Animated.loop(pulse).start();
-    } else {
+    if (running) {
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
+      return;
     }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 1800, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
   }, [running, pulseAnim]);
 
+  // Animate orb scale to the current phase target
   const animatePhase = useCallback((idx: number) => {
     const phase = phases[idx];
     Animated.timing(scaleAnim, {
@@ -95,543 +98,333 @@ function BreathPlayer({
     haptic('light');
   }, [phases, scaleAnim]);
 
-  const startSession = useCallback(() => {
-    setRunning(true);
-    setPaused(false);
-    setPhaseIdx(0);
-    setCycleCount(0);
-    setPhaseTime(0);
-    startTimeRef.current = Date.now();
-    haptic('medium');
-    animatePhase(0);
-    // Wire to global wellness store so mini player appears
-    const targetSecs = Math.round(
-      phases.reduce((acc, p) => acc + p.duration, 0) * targetCycles,
-    );
-    storeStart({ type: 'breathing', sessionName: technique.title, targetSeconds: targetSecs });
-  }, [animatePhase, phases, targetCycles, technique.title, storeStart]);
-
-  const handlePause = useCallback(() => {
-    if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
-    if (totalTimerRef.current) clearInterval(totalTimerRef.current);
-    scaleAnim.stopAnimation();
-    pausedAtRef.current = Date.now();
-    setRunning(false);
-    setPaused(true);
-    storePause();
-    haptic('light');
-  }, [scaleAnim, storePause]);
-
-  const handleResume = useCallback(() => {
-    // Slide startTime forward by paused duration so elapsed continues correctly
-    const pausedMs = Date.now() - pausedAtRef.current;
-    startTimeRef.current += pausedMs;
-    setRunning(true);
-    setPaused(false);
-    storeResume();
-    haptic('light');
-    // Re-animate current phase from beginning (phase duration resets — acceptable UX)
-    animatePhase(phaseIdx);
-  }, [animatePhase, phaseIdx, storeResume]);
-
-  // Phase timer — advances phases
+  // Phase countdown + advance (1s tick, mirrors design)
   useEffect(() => {
     if (!running) return;
 
-    const phase = phases[phaseIdx];
-    let elapsed = 0;
-
-    phaseTimerRef.current = setInterval(() => {
-      elapsed += 0.1;
-      setPhaseTime(elapsed);
-
-      if (elapsed >= phase.duration) {
-        clearInterval(phaseTimerRef.current!);
+    phaseTickRef.current = setInterval(() => {
+      setPhaseLeft((left) => {
+        if (left > 1) return left - 1;
+        // advance to next phase
         const nextIdx = (phaseIdx + 1) % phases.length;
-        const nextCycle = nextIdx === 0 ? cycleCount + 1 : cycleCount;
-
-        if (nextIdx === 0 && nextCycle >= targetCycles) {
-          // Done
-          setRunning(false);
-          setDone(true);
-          haptic('success');
-          scaleAnim.setValue(1);
-          storeStop();
-          onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
-        } else {
-          setCycleCount(nextCycle);
-          setPhaseIdx(nextIdx);
-          setPhaseTime(0);
-          animatePhase(nextIdx);
-        }
-      }
-    }, 100);
+        if (nextIdx === 0) setCycles((c) => c + 1);
+        setPhaseIdx(nextIdx);
+        animatePhase(nextIdx);
+        return phases[nextIdx].duration;
+      });
+    }, 1000);
 
     return () => {
-      if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
+      if (phaseTickRef.current) clearInterval(phaseTickRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, phaseIdx, cycleCount]);
+  }, [running, phaseIdx, tech.id]);
 
-  // Total time counter + sync elapsed to wellness store
+  // Total elapsed → wellness store (mini player)
   useEffect(() => {
     if (!running) return;
     totalTimerRef.current = setInterval(() => {
       const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
-      setTotalTime(elapsed);
       storeElapsed(elapsed);
     }, 1000);
     return () => { if (totalTimerRef.current) clearInterval(totalTimerRef.current); };
   }, [running, storeElapsed]);
 
-  const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-
-  const currentPhase = phases[phaseIdx];
-
-  return (
-    <View style={player.root}>
-      {/* Header */}
-      <View style={player.header}>
-        <Pressable onPress={onExit} style={player.backBtn} accessibilityLabel="Salir de la sesión" accessibilityRole="button">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-        </Pressable>
-        <Text style={player.titleText}>{technique.title}</Text>
-        <Text style={player.timer}>{formatTime(totalTime)}</Text>
-      </View>
-
-      {/* Description */}
-      <Text style={player.desc}>{technique.description}</Text>
-
-      {/* Circle */}
-      <View style={player.circleWrap}>
-        <Animated.View
-          style={[
-            player.outerRing,
-            { transform: [{ scale: running ? scaleAnim : pulseAnim }] },
-          ]}>
-          <View style={player.circle}>
-            {running || done ? (
-              <>
-                <Text style={player.phaseLabel}>
-                  {done ? '✓' : currentPhase.label}
-                </Text>
-                {running && (
-                  <Text style={player.phaseCount}>
-                    {Math.ceil(currentPhase.duration - phaseTime)}s
-                  </Text>
-                )}
-              </>
-            ) : (
-              <MaterialIcons name={technique.icon as React.ComponentProps<typeof MaterialIcons>['name']} size={40} color={palette.gold} />
-            )}
-          </View>
-        </Animated.View>
-      </View>
-
-      {/* Phase indicator & cycle counter */}
-      <View style={player.infoRow}>
-        <View style={player.cycleBox}>
-          <Text style={player.cycleValue}>{cycleCount}</Text>
-          <Text style={player.cycleLabel}>/ {targetCycles} ciclos</Text>
-        </View>
-        <View style={player.phaseDots}>
-          {phases.map((p, i) => (
-            <View
-              key={i}
-              style={[player.phaseDot, i === phaseIdx && running && player.phaseDotActive]}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* CTA */}
-      {!running && !paused && !done && (
-        <Pressable style={player.startBtn} onPress={startSession}>
-          <MaterialIcons name="play-arrow" size={24} color={palette.ink} />
-          <Text style={player.startBtnText}>INICIAR</Text>
-        </Pressable>
-      )}
-      {done && (
-        <View style={player.doneBox}>
-          <Text style={player.doneText}>SESIÓN COMPLETADA</Text>
-          <Pressable style={player.startBtn} onPress={onExit}>
-            <Text style={player.startBtnText}>CONTINUAR</Text>
-          </Pressable>
-        </View>
-      )}
-      {running && (
-        <View style={player.controlRow}>
-          <Pressable style={player.pauseBtn} onPress={handlePause}>
-            <MaterialIcons name="pause" size={20} color={palette.gold} />
-            <Text style={player.pauseBtnText}>PAUSAR</Text>
-          </Pressable>
-          <Pressable style={player.stopBtn} onPress={() => { setRunning(false); scaleAnim.setValue(1); storeStop(); }}>
-            <MaterialIcons name="stop" size={20} color={palette.ash} />
-            <Text style={player.stopBtnText}>DETENER</Text>
-          </Pressable>
-        </View>
-      )}
-      {paused && !done && (
-        <View style={player.controlRow}>
-          <Pressable style={player.startBtn} onPress={handleResume}>
-            <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
-            <Text style={player.startBtnText}>REANUDAR</Text>
-          </Pressable>
-          <Pressable style={player.stopBtn} onPress={() => { setPaused(false); scaleAnim.setValue(1); storeStop(); }}>
-            <MaterialIcons name="stop" size={20} color={palette.ash} />
-            <Text style={player.stopBtnText}>DETENER</Text>
-          </Pressable>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-
-export default function RespiracionScreen() {
-  const sc = useScreen();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { saveWellnessSession } = useLifeFlow();
-  const [active, setActive] = useState<BreathingTechnique | null>(null);
-
-  const handleComplete = useCallback(async (technique: BreathingTechnique, secs: number) => {
-    await saveWellnessSession({
-      type: 'breathing',
-      sessionName: technique.title,
-      durationSeconds: secs,
-      completedAt: new Date().toISOString(),
-      metadata: { techniqueId: technique.id, cycles: technique.cycles },
-    });
-    analytics.breathingComplete(technique.title, technique.cycles ?? 0, secs * 1000);
-    haptic('success');
-  }, [saveWellnessSession]);
-
-  if (active) {
-    return (
-      <BreathPlayer
-        technique={active}
-        onComplete={(secs) => handleComplete(active, secs)}
-        onExit={() => setActive(null)}
-      />
+  const start = useCallback(() => {
+    setRunning(true);
+    setPhaseIdx(0);
+    setPhaseLeft(phases[0].duration);
+    setCycles(0);
+    startTimeRef.current = Date.now();
+    haptic('medium');
+    animatePhase(0);
+    const targetSecs = Math.round(
+      phases.reduce((acc, p) => acc + p.duration, 0) * tech.cycles,
     );
-  }
+    storeStart({ type: 'breathing', sessionName: tech.title, targetSeconds: targetSecs });
+  }, [animatePhase, phases, tech.cycles, tech.title, storeStart]);
+
+  const stop = useCallback(async () => {
+    const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+    setRunning(false);
+    scaleAnim.stopAnimation();
+    scaleAnim.setValue(1);
+    storeStop();
+    if (cycles > 0 && elapsed > 5) {
+      await saveWellnessSession({
+        type: 'breathing',
+        sessionName: tech.title,
+        durationSeconds: elapsed,
+        completedAt: new Date().toISOString(),
+        metadata: { techniqueId: tech.id, cycles },
+      });
+      analytics.breathingComplete(tech.title, cycles, elapsed * 1000);
+      haptic('success');
+    }
+  }, [cycles, saveWellnessSession, scaleAnim, storeStop, tech.id, tech.title]);
+
+  const selectTech = useCallback((t: BreathingTechnique) => {
+    // switching technique resets the session
+    if (running) {
+      setRunning(false);
+      scaleAnim.stopAnimation();
+      scaleAnim.setValue(1);
+      storeStop();
+    }
+    setTech(t);
+    setPhaseIdx(0);
+    setPhaseLeft(t.phases[0].duration);
+    setCycles(0);
+    haptic('light');
+  }, [running, scaleAnim, storeStop]);
 
   return (
-    <ScrollView
-      style={sc.root}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
-      showsVerticalScrollIndicator={false}>
+    <View style={sc.root}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 },
+        ]}
+        showsVerticalScrollIndicator={false}>
 
-      {/* Header */}
-      <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Volver" accessibilityRole="button">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-        </Pressable>
-        <Text style={styles.title}>RESPIRACIÓN</Text>
-        <View style={{ width: 36 }} />
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            accessibilityLabel="Volver"
+            accessibilityRole="button">
+            <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
+          </Pressable>
+          <Text style={styles.title}>RESPIRACIÓN</Text>
+          <View style={styles.backBtn} />
+        </View>
 
-      <Text style={styles.intro}>
-        Controla tu sistema nervioso con precisión. Elige una técnica.
-      </Text>
+        <SafetyWarning
+          body="No realices estos ejercicios mientras conduces, en el agua, o de pie. Si estás embarazada, tienes epilepsia, problemas cardíacos o respiratorios, consulta a tu médico antes. Si sientes mareo intenso, detente."
+        />
 
-      <SafetyWarning
-        body="No realices estos ejercicios mientras conduces, en el agua, o de pie. Si estás embarazada, tienes epilepsia, problemas cardíacos o respiratorios, consulta a tu médico antes. Si sientes mareo intenso, detente."
-      />
+        {/* Orb */}
+        <View style={styles.orbStage}>
+          <View style={styles.ringOuter} />
+          <View style={styles.ringInner} />
+          <Animated.View
+            style={[
+              styles.orb,
+              { transform: [{ scale: running ? scaleAnim : pulseAnim }] },
+            ]}>
+            <View style={styles.orbInner} pointerEvents="none">
+              <Text style={styles.orbPhase}>{running ? currentPhase.label : 'LISTO'}</Text>
+              <Text style={styles.orbCount}>{running ? phaseLeft : '—'}</Text>
+            </View>
+          </Animated.View>
+        </View>
 
-      <GoldDivider label="TÉCNICAS" />
+        <Text style={styles.cyclesLabel}>CICLOS COMPLETADOS · {cycles}</Text>
 
-      {BREATHING_TECHNIQUES.map((tech) => (
+        {/* Technique chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+          style={styles.chipScroll}>
+          {BREATHING_TECHNIQUES.map((t) => {
+            const active = t.id === tech.id;
+            return (
+              <Pressable
+                key={t.id}
+                onPress={() => selectTech(t)}
+                style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
+                accessibilityRole="button"
+                accessibilityLabel={t.title}>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.title}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* Primary action */}
         <Pressable
-          key={tech.id}
-          onPress={() => { haptic('light'); setActive(tech); }}
-          style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-          <PremiumCard style={styles.cardInner}>
-            <View style={styles.cardTop}>
-              <View style={styles.iconBox}>
-                <MaterialIcons name={tech.icon as React.ComponentProps<typeof MaterialIcons>['name']} size={24} color={palette.gold} />
-              </View>
-              <View style={styles.cardMeta}>
-                <Text style={styles.cardTitle}>{tech.title}</Text>
-                <Text style={styles.cardSubtitle}>{tech.subtitle}</Text>
-              </View>
-              <MaterialIcons name="play-circle" size={32} color={palette.gold} />
-            </View>
-            <Text style={styles.cardDesc}>{tech.description}</Text>
-            <Text style={styles.cardBenefit}>{tech.benefit}</Text>
-            <View style={styles.cardFooter}>
-              <Text style={styles.cardCycles}>{tech.cycles} ciclos</Text>
-            </View>
-          </PremiumCard>
+          onPress={() => (running ? stop() : start())}
+          style={[styles.cta, running ? styles.ctaOutline : styles.ctaGold]}
+          accessibilityRole="button"
+          accessibilityLabel={running ? 'Detener' : 'Comenzar sesión'}>
+          <MaterialIcons
+            name={running ? 'stop' : 'play-arrow'}
+            size={20}
+            color={running ? palette.gold : palette.ink}
+          />
+          <Text style={[styles.ctaText, running ? styles.ctaTextOutline : styles.ctaTextGold]}>
+            {running ? 'DETENER' : 'COMENZAR SESIÓN'}
+          </Text>
         </Pressable>
-      ))}
-
-      <View style={{ height: spacing.xxxl }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  topRow: {
+  flex: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 430,
+    paddingHorizontal: spacing.xl,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   backBtn: {
     width: 44,
     height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: palette.graphite,
   },
   title: {
     ...typography.title,
     color: palette.ivory,
     fontSize: 18,
   },
-  intro: {
-    ...typography.body,
-    color: palette.ash,
+
+  // Orb stage
+  orbStage: {
+    width: RING_OUTER,
+    height: RING_OUTER,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xl,
     marginBottom: spacing.lg,
   },
-  card: {
-    marginBottom: spacing.md,
+  ringOuter: {
+    position: 'absolute',
+    width: RING_OUTER - 10,
+    height: RING_OUTER - 10,
+    borderRadius: (RING_OUTER - 10) / 2,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    opacity: 0.4,
   },
-  cardPressed: {
-    opacity: 0.8,
+  ringInner: {
+    position: 'absolute',
+    width: RING_INNER,
+    height: RING_INNER,
+    borderRadius: RING_INNER / 2,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    opacity: 0.25,
   },
-  cardInner: {
-    gap: spacing.sm,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.md,
+  orb: {
+    width: ORB_BASE,
+    height: ORB_BASE,
+    borderRadius: ORB_BASE / 2,
+    borderWidth: 1.5,
+    borderColor: palette.lineGold,
     backgroundColor: palette.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: palette.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 40,
+    elevation: 8,
   },
-  cardMeta: {
-    flex: 1,
+  orbInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardTitle: {
-    ...typography.section,
+  orbPhase: {
+    fontFamily: Fonts.display,
+    color: palette.gold,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  orbCount: {
+    fontFamily: Fonts.display,
     color: palette.ivory,
-    fontSize: 16,
-    letterSpacing: 2.5,
+    fontSize: 44,
+    fontWeight: '700',
+    marginTop: 6,
   },
-  cardSubtitle: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  cardDesc: {
+
+  cyclesLabel: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 12,
-  },
-  cardBenefit: {
-    ...typography.body,
-    color: palette.smoke,
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  cardCycles: {
-    ...typography.label,
-    color: palette.smoke,
     fontSize: 11,
+    letterSpacing: 2,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
-});
 
-const player = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: palette.black,
-    paddingHorizontal: spacing.xl,
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingTop: 56,
+  // Chips
+  chipScroll: {
+    flexGrow: 0,
     marginBottom: spacing.lg,
   },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleText: {
-    ...typography.section,
-    color: palette.ivory,
-    fontSize: 16,
-    letterSpacing: 3,
-  },
-  timer: {
-    fontFamily: Fonts.mono,
-    color: palette.smoke,
-    fontSize: 14,
-    letterSpacing: 1,
-  },
-  desc: {
-    ...typography.body,
-    color: palette.smoke,
-    textAlign: 'center',
-    marginBottom: spacing.xxl,
-  },
-  circleWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: spacing.xxl,
-  },
-  outerRing: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 2,
-    borderColor: palette.gold + '44',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circle: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: palette.gold + '18',
-    borderWidth: 2,
-    borderColor: palette.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  phaseLabel: {
-    ...typography.section,
-    color: palette.gold,
-    fontSize: 18,
-    letterSpacing: 4,
-    textAlign: 'center',
-  },
-  phaseCount: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 36,
-    marginTop: 4,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: spacing.xxl,
-  },
-  cycleBox: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  cycleValue: {
-    fontFamily: Fonts.display,
-    color: palette.gold,
-    fontSize: 28,
-  },
-  cycleLabel: {
-    ...typography.body,
-    color: palette.smoke,
-    fontSize: 13,
-  },
-  phaseDots: {
+  chipRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  phaseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: palette.charcoal,
+  chip: {
+    height: 36,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  phaseDotActive: {
+  chipActive: {
     backgroundColor: palette.gold,
   },
-  controlRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'center',
+  chipInactive: {
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
   },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: palette.gold,
-    paddingHorizontal: spacing.xxxl,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.sm,
+  chipText: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.goldMuted,
   },
-  startBtnText: {
-    ...typography.label,
+  chipTextActive: {
     color: palette.ink,
-    fontSize: 14,
     fontWeight: '700',
   },
-  pauseBtn: {
+
+  // CTA
+  cta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    borderColor: palette.gold,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.sm,
-    minHeight: 48,
-    minWidth: 110,
     justifyContent: 'center',
+    gap: spacing.sm,
+    height: 52,
+    borderRadius: radii.sm,
   },
-  pauseBtnText: {
-    ...typography.label,
-    color: palette.gold,
+  ctaGold: {
+    backgroundColor: palette.gold,
+  },
+  ctaOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: palette.lineGold,
+  },
+  ctaText: {
+    fontFamily: Fonts.display,
     fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 1.5,
   },
-  stopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderColor: palette.smoke,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.sm,
-    minHeight: 48,
-    minWidth: 110,
-    justifyContent: 'center',
-  },
-  stopBtnText: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 13,
-  },
-  doneBox: {
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  doneText: {
-    ...typography.section,
-    color: palette.gold,
-    letterSpacing: 3,
-  },
+  ctaTextGold: { color: palette.ink },
+  ctaTextOutline: { color: palette.gold },
 });

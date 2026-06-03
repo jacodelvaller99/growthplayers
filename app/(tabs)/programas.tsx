@@ -12,26 +12,12 @@ import {
   PremiumCard,
   ProgressCard,
   StatusPill,
-  screen,
   useScreen,
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-
-function statusTone(status: string) {
-  if (status === 'active' || status === 'unlocked') return 'gold' as const;
-  if (status === 'completed') return 'success' as const;
-  return 'muted' as const;
-}
-
-function statusLabel(status: string) {
-  if (status === 'completed') return 'COMPLETADO';
-  if (status === 'active' || status === 'unlocked') return 'ACTIVO';
-  if (status === 'coming_soon') return 'PRÓXIMAMENTE';
-  return 'BLOQUEADO';
-}
 
 // A module is unlocked when either:
 //  - It is the first active module (static status 'active')
@@ -70,6 +56,8 @@ export default function ProgramasScreen() {
     : 0;
 
   // ── Module card renderer (shared between mobile and desktop) ──────────────
+  // Vertical "compass" card: module nº top-left, state indicator top-right,
+  // archetype eyebrow + name + "subtitle · N lecciones" + progress at the base.
   const renderModuleCard = (module: typeof POLARIS_MODULES[number], idx: number, wrapStyle?: object) => {
     const isComingSoon = module.status === 'coming_soon';
     const unlocked = isModuleUnlocked(POLARIS_MODULES, idx, completedLessons);
@@ -81,6 +69,8 @@ export default function ProgramasScreen() {
       : 0;
     const effectiveStatus = isAllDone ? 'completed' : unlocked ? 'active' : module.status;
     const isActive = effectiveStatus === 'active';
+    const dimmed = isLocked || isComingSoon;
+    const lessonsLabel = module.lessons.length === 1 ? '1 lección' : `${module.lessons.length} lecciones`;
 
     return (
       <View key={module.id} style={wrapStyle}>
@@ -102,42 +92,42 @@ export default function ProgramasScreen() {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             router.push({ pathname: '/module/[id]', params: { id: module.id } });
           }}
-          style={({ pressed }) => [pressed && { opacity: 0.82 }]}>
-          <PremiumCard style={[styles.moduleCard, isActive && styles.moduleCardActive, isDesktop && styles.moduleCardDesktop]}>
-            {isActive && <View style={styles.activeStripe} />}
-            <View style={[styles.moduleInner, !isActive && styles.moduleInnerFull]}>
-              <View style={styles.moduleTop}>
-                <Text style={[styles.moduleNumber, isActive && styles.moduleNumberActive]}>
-                  {String(module.order).padStart(2, '0')}
-                </Text>
-                <StatusPill
-                  label={statusLabel(effectiveStatus)}
-                  tone={statusTone(effectiveStatus)}
-                />
-              </View>
-              <Text style={styles.moduleTitle}>{module.title}</Text>
-              <Text style={styles.moduleSubtitle}>{module.subtitle}</Text>
-              <View style={styles.moduleFooter}>
-                <Text style={styles.moduleLessons}>
-                  {isComingSoon ? 'PRÓXIMAMENTE' : `${module.lessons.length} LECCIONES`}
-                </Text>
-                {!isComingSoon && !isLocked && (
-                  <View style={styles.progressWrap}>
-                    <View style={styles.progressTrack}>
-                      <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
-                    </View>
-                    <Text style={styles.progressPct}>{moduleProgress}%</Text>
-                  </View>
-                )}
-                <MaterialIcons
-                  name={isComingSoon || isLocked ? 'lock' : 'chevron-right'}
-                  size={20}
-                  color={isActive ? palette.ink : palette.gold}
-                />
-              </View>
+          style={({ pressed }) => [pressed && !dimmed && { opacity: 0.82 }]}>
+          <PremiumCard style={[styles.moduleCard, isActive && styles.moduleCardActive, dimmed && styles.moduleCardDimmed]}>
+            {/* Top row — number + state indicator */}
+            <View style={styles.moduleTop}>
+              <Text style={[styles.moduleNumber, isActive && styles.moduleNumberActive]}>
+                {String(module.order).padStart(2, '0')}
+              </Text>
+              {isComingSoon ? (
+                <View style={styles.soonBadge}>
+                  <Text style={styles.soonBadgeText}>PRONTO</Text>
+                </View>
+              ) : isLocked ? (
+                <MaterialIcons name="lock" size={18} color={palette.smoke} />
+              ) : isActive ? (
+                <View style={styles.liveDot} />
+              ) : (
+                <MaterialIcons name="check-circle" size={18} color={palette.success} />
+              )}
             </View>
-            {/* Locked/coming-soon overlay */}
-            {(isComingSoon || isLocked) && <View style={styles.comingSoonOverlay} />}
+
+            {/* Base — archetype, name, meta, progress */}
+            <View style={styles.moduleBase}>
+              {module.arquetipo ? (
+                <Text style={styles.moduleArq} numberOfLines={1}>EL {module.arquetipo.toUpperCase()}</Text>
+              ) : null}
+              <Text style={styles.moduleTitle} numberOfLines={2}>{module.title}</Text>
+              <Text style={styles.moduleSubtitle} numberOfLines={1}>{module.subtitle} · {lessonsLabel}</Text>
+              {isActive && (
+                <View style={styles.progressWrap}>
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
+                  </View>
+                  <Text style={styles.progressPct}>{moduleProgress}%</Text>
+                </View>
+              )}
+            </View>
           </PremiumCard>
         </Pressable>
 
@@ -220,135 +210,39 @@ export default function ProgramasScreen() {
     );
   }
 
-  // ── MOBILE / TABLET LAYOUT (original, untouched) ─────────────────────────
+  // ── MOBILE / TABLET LAYOUT ───────────────────────────────────────────────
   return (
     <View style={styles.root}>
       <ScrollView
         style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24, gap: spacing.xl }]}
         showsVerticalScrollIndicator={false}
         bounces
         overScrollMode="never"
         keyboardShouldPersistTaps="handled">
-        <AppHeader title="PROGRAMA" />
+        {/* ── Header ── */}
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>PROGRAMAS</Text>
+          <Text style={styles.pageSub}>Nueve arquetipos. Un camino de soberanía.</Text>
+        </View>
 
-        {/* ── Protocol Hero ── */}
-        <PremiumCard style={styles.heroCard}>
-          <View style={styles.heroTop}>
-            <View style={styles.heroTitleWrap}>
-              <Text style={styles.heroEyebrow}>PROTOCOLO SOBERANO</Text>
-              <Text style={styles.heroTitle}>90 DIAS DE{'\n'}EJECUCION.</Text>
-            </View>
-            <StatusPill label="ACTIVO" tone="gold" dot />
-          </View>
-          <View style={styles.heroStats}>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatNum}>{completedCount}</Text>
-              <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}COMPLETADOS</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatNum}>{POLARIS_MODULES.length}</Text>
-              <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}TOTALES</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatNum}>{totalLessons}</Text>
-              <Text style={styles.heroStatMeta}>LECCIONES{'\n'}EN TOTAL</Text>
+        {/* ── Ruta completada ── */}
+        <PremiumCard style={styles.routeCard}>
+          <MaterialIcons name="workspace-premium" size={20} color={palette.gold} />
+          <View style={styles.routeBody}>
+            <Text style={styles.routeLabel}>RUTA COMPLETADA</Text>
+            <View style={styles.routeTrack}>
+              <View style={[styles.routeFill, { width: `${overallProgress}%` }]} />
             </View>
           </View>
+          <Text style={styles.routePct}>{overallProgress}%</Text>
         </PremiumCard>
 
-        <ProgressCard
-          label="Avance total del protocolo"
-          value={`${overallProgress}% · ${completedLessons.length}/${totalLessons} lecciones`}
-          progress={overallProgress}
-        />
-
-        {/* ── Module List ── */}
-        <GoldDivider label="MÓDULOS" />
-        <View style={styles.list}>
-          {POLARIS_MODULES.map((module, idx) => {
-            const isComingSoon = module.status === 'coming_soon';
-            const unlocked = isModuleUnlocked(POLARIS_MODULES, idx, completedLessons);
-            const isLocked = !unlocked && !isComingSoon;
-            const moduleDone = module.lessons.filter((l) => completedLessons.includes(l.id)).length;
-            const isAllDone = module.lessons.length > 0 && moduleDone === module.lessons.length;
-            const moduleProgress = module.lessons.length > 0
-              ? Math.round((moduleDone / module.lessons.length) * 100)
-              : 0;
-            const effectiveStatus = isAllDone ? 'completed' : unlocked ? 'active' : module.status;
-            const isActive = effectiveStatus === 'active';
-            return (
-              <View key={module.id}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Modulo ${module.order}: ${module.title}`}
-                  onPress={() => {
-                    if (isComingSoon) {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                      showToast('Este módulo se publica próximamente');
-                      return;
-                    }
-                    if (isLocked) {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                      showToast('Completa el módulo anterior para desbloquear este');
-                      return;
-                    }
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push({ pathname: '/module/[id]', params: { id: module.id } });
-                  }}
-                  style={({ pressed }) => [pressed && { opacity: 0.82 }]}>
-                  <PremiumCard style={[styles.moduleCard, isActive && styles.moduleCardActive]}>
-                    {isActive && <View style={styles.activeStripe} />}
-                    <View style={[styles.moduleInner, !isActive && styles.moduleInnerFull]}>
-                      <View style={styles.moduleTop}>
-                        <Text style={[styles.moduleNumber, isActive && styles.moduleNumberActive]}>
-                          {String(module.order).padStart(2, '0')}
-                        </Text>
-                        <StatusPill
-                          label={statusLabel(effectiveStatus)}
-                          tone={statusTone(effectiveStatus)}
-                        />
-                      </View>
-                      <Text style={styles.moduleTitle}>{module.title}</Text>
-                      <Text style={styles.moduleSubtitle}>{module.subtitle}</Text>
-                      <View style={styles.moduleFooter}>
-                        <Text style={styles.moduleLessons}>
-                          {isComingSoon ? 'PRÓXIMAMENTE' : `${module.lessons.length} LECCIONES`}
-                        </Text>
-                        {!isComingSoon && !isLocked && (
-                          <View style={styles.progressWrap}>
-                            <View style={styles.progressTrack}>
-                              <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
-                            </View>
-                            <Text style={styles.progressPct}>{moduleProgress}%</Text>
-                          </View>
-                        )}
-                        <MaterialIcons
-                          name={isComingSoon || isLocked ? 'lock' : 'chevron-right'}
-                          size={20}
-                          color={isActive ? palette.ink : palette.gold}
-                        />
-                      </View>
-                    </View>
-                    {/* Locked/coming-soon overlay */}
-                    {(isComingSoon || isLocked) && <View style={styles.comingSoonOverlay} />}
-                  </PremiumCard>
-                </Pressable>
-
-                {/* Explorar en Skool — for coming_soon or locked modules with a URL */}
-                {(isComingSoon || isLocked) && module.skoolUrl && (
-                  <Pressable
-                    style={({ pressed }) => [styles.skoolLink, pressed && { opacity: 0.7 }]}
-                    onPress={() => Linking.openURL(module.skoolUrl!)}>
-                    <MaterialIcons name="open-in-new" size={12} color={palette.gold} />
-                    <Text style={styles.skoolLinkText}>Explorar en Skool →</Text>
-                  </Pressable>
-                )}
-              </View>
-            );
-          })}
+        {/* ── Module grid (2 columns) ── */}
+        <View style={styles.grid}>
+          {POLARIS_MODULES.map((module, idx) =>
+            renderModuleCard(module, idx, styles.gridItem),
+          )}
         </View>
       </ScrollView>
 
@@ -368,19 +262,162 @@ const styles = StyleSheet.create({
     backgroundColor: palette.black,
   },
 
-  // Hero
-  heroCard: {
-    gap: spacing.lg,
+  // ── Page header ──
+  pageHeader: {
+    gap: spacing.sm,
+  },
+  pageTitle: {
+    ...typography.title,
+    color: palette.ivory,
+    fontSize: 21,
+  },
+  pageSub: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+  },
+
+  // ── Ruta completada card ──
+  routeCard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  routeBody: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  routeLabel: {
+    ...typography.mono,
+    color: palette.ash,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  routeTrack: {
+    backgroundColor: palette.charcoal,
+    borderRadius: radii.pill,
+    height: 6,
     overflow: 'hidden',
   },
-  heroTop: {
+  routeFill: {
+    backgroundColor: palette.gold,
+    borderRadius: radii.pill,
+    height: '100%',
+  },
+  routePct: {
+    color: palette.gold,
+    fontFamily: Fonts.display,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // ── Module grid ──
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  gridItem: {
+    width: '48%',
+  },
+
+  // ── Module card (vertical) ──
+  moduleCard: {
+    justifyContent: 'space-between',
+    minHeight: 168,
+    overflow: 'hidden',
+  },
+  moduleCardActive: {
+    borderColor: palette.lineGold,
+  },
+  moduleCardDimmed: {
+    opacity: 0.62,
+  },
+  moduleTop: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  heroTitleWrap: {
-    gap: spacing.xs,
+  moduleNumber: {
+    color: palette.smoke,
+    fontFamily: Fonts.display,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
+  moduleNumberActive: {
+    color: palette.gold,
+  },
+  liveDot: {
+    backgroundColor: palette.success,
+    borderRadius: radii.pill,
+    height: 7,
+    marginTop: 7,
+    width: 7,
+  },
+  soonBadge: {
+    borderColor: palette.lineGold,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  soonBadgeText: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 8,
+    letterSpacing: 1.5,
+  },
+  moduleBase: {
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+  },
+  moduleArq: {
+    color: palette.ash,
+    fontFamily: Fonts.mono,
+    fontSize: 8.5,
+    letterSpacing: 1.6,
+  },
+  moduleTitle: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    lineHeight: 19,
+    textTransform: 'uppercase',
+  },
+  moduleSubtitle: {
+    ...typography.caption,
+    color: palette.ash,
+    fontSize: 11.5,
+  },
+  progressWrap: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  progressTrack: {
+    backgroundColor: palette.charcoal,
+    borderRadius: radii.pill,
+    flex: 1,
+    height: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    backgroundColor: palette.gold,
+    borderRadius: radii.pill,
+    height: '100%',
+  },
+  progressPct: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+  },
+
+  // ── Desktop hero (unchanged) ──
   heroEyebrow: {
     ...typography.label,
     color: palette.ash,
@@ -393,11 +430,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     lineHeight: 30,
     textTransform: 'uppercase',
-  },
-  heroStats: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
   },
   heroStat: {
     alignItems: 'center',
@@ -422,100 +454,6 @@ const styles = StyleSheet.create({
     backgroundColor: palette.lineSoft,
     height: 40,
     width: 1,
-  },
-
-  // Module list
-  list: {
-    gap: spacing.md,
-  },
-
-  // Module card
-  moduleCard: {
-    flexDirection: 'row',
-    overflow: 'hidden',
-    padding: 0,
-  },
-  moduleCardActive: {
-    backgroundColor: palette.gold,
-    borderColor: palette.gold,
-  },
-  moduleCardDesktop: {
-    minHeight: 160,
-  },
-  activeStripe: {
-    backgroundColor: palette.black,
-    opacity: 0.18,
-    width: 4,
-  },
-  moduleInner: {
-    flex: 1,
-    gap: spacing.sm,
-    padding: spacing.lg,
-  },
-  moduleInnerFull: {
-    paddingLeft: spacing.lg,
-  },
-  moduleTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  moduleNumber: {
-    ...typography.mono,
-    color: palette.smoke,
-  },
-  moduleNumberActive: {
-    color: palette.ink,
-  },
-  moduleTitle: {
-    ...typography.title,
-    color: palette.ivory,
-    fontSize: 18,
-  },
-  moduleSubtitle: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-  },
-  moduleFooter: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  moduleLessons: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-  },
-  progressWrap: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  progressTrack: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    backgroundColor: palette.gold,
-    height: '100%',
-  },
-  progressPct: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-  },
-
-  // Coming soon overlay
-  comingSoonOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 15, 15, 0.50)',
-    borderRadius: radii.md,
   },
 
   // Skool link

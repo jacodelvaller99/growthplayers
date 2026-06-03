@@ -106,6 +106,7 @@ export default function CheckInScreen() {
   };
 
   // ── Shared JSX blocks ──────────────────────────────────────────────────────
+  // Desktop variant — vertical stack (number on top of bar)
   const coherenceCard = (
     <PremiumCard style={styles.coherenceCard}>
       <Text style={styles.coherenceEyebrow}>ÍNDICE DE CAPACIDAD HOY</Text>
@@ -132,6 +133,39 @@ export default function CheckInScreen() {
       {stressReading ? (
         <Text style={styles.stressReading}>{stressReading}</Text>
       ) : null}
+    </PremiumCard>
+  );
+
+  // Mobile variant — "ÍNDICE DE CAPACIDAD" card: big number/10 on the left,
+  // progress + status on the right (matches mobile prototype composition).
+  const capacityCardMobile = (
+    <PremiumCard style={styles.capacityCard}>
+      <View style={styles.capacityScoreCol}>
+        <View style={styles.coherenceRow}>
+          <Text style={[styles.capacityScore, coherenceStrong && styles.coherenceScoreStrong]}>
+            {coherence}
+          </Text>
+          <Text style={styles.capacityDenom}>/10</Text>
+        </View>
+        <Text style={styles.capacityEyebrow}>ÍNDICE DE CAPACIDAD</Text>
+      </View>
+      <View style={styles.capacityMeterCol}>
+        <View style={styles.coherenceTrack}>
+          <View
+            style={[
+              styles.coherenceFill,
+              {
+                width: `${coherence * 10}%` as `${number}%`,
+                backgroundColor: coherenceStrong ? palette.gold : palette.smoke,
+              },
+            ]}
+          />
+        </View>
+        <Text style={[styles.capacityStatus, coherenceStrong && { color: palette.gold }]}>
+          {coherenceLabel}
+        </Text>
+        {stressReading ? <Text style={styles.stressReading}>{stressReading}</Text> : null}
+      </View>
     </PremiumCard>
   );
 
@@ -237,7 +271,7 @@ export default function CheckInScreen() {
     );
   }
 
-  // ── Mobile layout (unchanged) ───────────────────────────────────────────────
+  // ── Mobile layout ───────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={sc.root}
@@ -249,11 +283,23 @@ export default function CheckInScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      <AppHeader title="CHECK-IN DIARIO" />
+      {/* ── Header: back → comando · fecha · título ── */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.replace('/(tabs)/comando')}
+          accessibilityRole="button"
+          accessibilityLabel="Volver al centro de comando"
+          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.65 }]}>
+          <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
+        </Pressable>
+        <View style={styles.headerCopy}>
+          <Text style={styles.dateLabel}>{todayLabel()}</Text>
+          <Text style={styles.headerTitle}>CHECK-IN DIARIO</Text>
+        </View>
+      </View>
 
-      {/* ── Intro ── */}
+      {/* ── Intro: "LEE EL SISTEMA." ── */}
       <GoldAccentCard>
-        <Text style={styles.dateLabel}>{todayLabel()}</Text>
         {streak >= 3 && (
           <View style={styles.streakRow}>
             <MaterialIcons name="local-fire-department" size={14} color={palette.gold} />
@@ -262,8 +308,7 @@ export default function CheckInScreen() {
         )}
         <Text style={styles.introTitle}>{checkInTitle(streak)}</Text>
         <Text style={styles.introBody}>
-          Esta medición calibra tu dashboard, mentor y score soberano. La honestidad aquí es una
-          ventaja competitiva.
+          No calibras para sentirte bien. Calibras para saber con qué tropas sales hoy al campo.
         </Text>
       </GoldAccentCard>
 
@@ -275,7 +320,7 @@ export default function CheckInScreen() {
           label="CLARIDAD MENTAL"
           value={clarity}
           onChange={setClarity}
-          icon="center-focus-strong"
+          icon="adjust"
         />
         <ScaleSelector
           label="CARGA DEL SISTEMA"
@@ -286,21 +331,46 @@ export default function CheckInScreen() {
         <ScaleSelector label="CALIDAD DE SUEÑO" value={sleep} onChange={setSleep} icon="bedtime" />
       </PremiumCard>
 
-      {/* ── Real-time Coherence Preview ── */}
-      {coherenceCard}
+      {/* ── Índice de capacidad ── */}
+      {capacityCardMobile}
 
       {/* ── System Need ── */}
       <GoldDivider label="LECTURA INTERNA" />
       {systemNeedCard}
 
       <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
-      <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
     </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  // Header (mobile) — back · date · title
+  header: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  backBtn: {
+    alignItems: 'center',
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    marginTop: 2,
+    width: 40,
+  },
+  headerCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  headerTitle: {
+    ...typography.title,
+    color: palette.ivory,
+  },
+
   // Intro
   dateLabel: {
     ...typography.mono,
@@ -391,6 +461,46 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 18,
     marginTop: 4,
+  },
+
+  // Capacity card (mobile) — score column + meter column
+  capacityCard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  capacityScoreCol: {
+    gap: 4,
+  },
+  capacityScore: {
+    color: palette.smoke,
+    fontFamily: Fonts.display,
+    fontSize: 42,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 46,
+  },
+  capacityDenom: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  capacityEyebrow: {
+    ...typography.label,
+    color: palette.ash,
+    fontSize: 10,
+  },
+  capacityMeterCol: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  capacityStatus: {
+    fontFamily: Fonts.display,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase' as const,
+    color: palette.smoke,
   },
 
   // System need

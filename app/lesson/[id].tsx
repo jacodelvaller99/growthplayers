@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SkoolVideo } from '@/components/SkoolVideo';
-import { GoldDivider, PrimaryButton, SecondaryButton, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -798,7 +798,8 @@ export default function LessonScreen() {
 
   const { lesson, mod } = meta;
   const lessonIndex = mod.lessons.findIndex((l) => l.id === lessonId);
-  const headerLabel = `MÓDULO ${String(mod.order).padStart(2, '0')} · LECCIÓN ${String(lessonIndex + 1).padStart(2, '0')}`;
+  const moduleLabel = `MÓDULO ${mod.order} · ${(mod.arquetipo ?? mod.title).toUpperCase()}`;
+  const lessonBadge = `LECCIÓN ${String(lessonIndex + 1).padStart(2, '0')}`;
 
   return (
     <>
@@ -815,39 +816,54 @@ export default function LessonScreen() {
       <ScrollView
         ref={scrollRef}
         style={sc.root}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32, paddingHorizontal: 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
 
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-          </Pressable>
-          <Text style={styles.headerLabel}>{headerLabel}</Text>
-          {isLessonCompleted && (
-            <MaterialIcons name="check-circle" size={20} color={palette.success} />
+        {/* ── Video Section (fullwidth banner) ── */}
+        <View style={styles.videoBanner}>
+          {(lesson.vimeoId || lesson.skoolUrl) ? (
+            <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} height={232} />
+          ) : (
+            <View style={styles.videoComingSoon}>
+              <Text style={styles.videoComingSoonIcon}>⏳</Text>
+              <Text style={styles.videoComingSoonText}>Video próximamente</Text>
+            </View>
           )}
-        </View>
-
-        {/* ── Video Section ── */}
-        {(lesson.vimeoId || lesson.skoolUrl) ? (
-          <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} height={220} />
-        ) : (
-          <View style={styles.videoComingSoon}>
-            <Text style={styles.videoComingSoonIcon}>⏳</Text>
-            <Text style={styles.videoComingSoonText}>Video próximamente</Text>
-          </View>
-        )}
-
-        {/* ── Lesson Info ── */}
-        <View style={styles.lessonInfo}>
-          <Text style={styles.lessonTitle}>{lesson.title}</Text>
-          <Text style={styles.lessonMeta}>
-            {lesson.duration ? `${lesson.duration} · ` : ''}MÓDULO {String(mod.order).padStart(2, '0')}
+          {/* Floating back button */}
+          <Pressable
+            style={[styles.backBtn, { top: insets.top + 8 }]}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Volver">
+            <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
+          </Pressable>
+          {/* Module · archetype label */}
+          <Text style={[styles.videoLabel, { top: insets.top + 14 }]} numberOfLines={1}>
+            {moduleLabel}
           </Text>
         </View>
 
+        {/* ── Lesson Info ── */}
+        <View style={styles.lessonBody}>
+          <View style={styles.lessonBadgeRow}>
+            <View style={styles.lessonBadge}>
+              <Text style={styles.lessonBadgeText}>{lessonBadge}</Text>
+            </View>
+            {isLessonCompleted && (
+              <View style={styles.lessonDoneChip}>
+                <MaterialIcons name="check-circle" size={14} color={palette.success} />
+                <Text style={styles.lessonDoneText}>COMPLETADA</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.lessonTitle}>{lesson.title}</Text>
+          {lesson.duration ? (
+            <Text style={styles.lessonMeta}>{lesson.duration}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.bodyPad}>
         <GoldDivider label="LECCIÓN" />
 
         {/* ── Task Section ── */}
@@ -971,6 +987,7 @@ export default function LessonScreen() {
             disabled={!canComplete || isLessonCompleted}
           />
         </View>
+        </View>
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -1004,39 +1021,44 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: palette.ink },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1 },
   content: {
-    gap: spacing.lg,
+    gap: 0,
   },
 
-  // Header
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-    minHeight: 44,
+  // Video banner (fullwidth) + floating chrome
+  videoBanner: {
+    position: 'relative',
   },
   backBtn: {
     alignItems: 'center',
-    height: 44,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderColor: palette.lineHard,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    height: 38,
     justifyContent: 'center',
-    width: 44,
+    left: spacing.lg,
+    position: 'absolute',
+    width: 38,
+    zIndex: 3,
   },
-  headerLabel: {
-    ...typography.label,
-    color: palette.ash,
-    flex: 1,
-    letterSpacing: 1.5,
+  videoLabel: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 9.5,
+    letterSpacing: 1.4,
+    maxWidth: '52%',
+    position: 'absolute',
+    right: spacing.lg,
+    textAlign: 'right',
+    zIndex: 3,
   },
-
-  // Video
   videoComingSoon: {
     alignItems: 'center',
     backgroundColor: palette.graphite,
     borderColor: palette.charcoal,
-    borderRadius: radii.md,
-    borderStyle: 'dashed',
-    borderWidth: 1,
+    borderBottomWidth: 1,
     gap: spacing.sm,
-    height: 220,
+    height: 232,
     justifyContent: 'center',
   },
   videoComingSoonIcon: {
@@ -1048,22 +1070,62 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  // Lesson info
-  lessonInfo: {
-    gap: spacing.xs,
+  // Lesson info (below the banner)
+  lessonBody: {
+    gap: spacing.sm,
+    paddingHorizontal: 20,
+    paddingTop: spacing.xl,
+  },
+  lessonBadgeRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  lessonBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+  },
+  lessonBadgeText: {
+    color: palette.gold,
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  lessonDoneChip: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  lessonDoneText: {
+    color: palette.success,
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
   },
   lessonTitle: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 24,
+    fontSize: 19,
     fontWeight: '800',
     letterSpacing: 0.4,
-    lineHeight: 30,
+    lineHeight: 25,
     textTransform: 'uppercase',
   },
   lessonMeta: {
     ...typography.mono,
     color: palette.ash,
+  },
+
+  // Body (everything below lesson info — restores horizontal padding + spacing)
+  bodyPad: {
+    gap: spacing.lg,
+    paddingHorizontal: 20,
+    paddingTop: spacing.lg,
   },
 
   // Task card

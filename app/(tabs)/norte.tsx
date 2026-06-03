@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -55,6 +55,25 @@ export default function NorteScreen() {
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  // ── "Valores núcleo" chips (mobile) — backed by the same `nonNegotiables`
+  //    newline-string state so save() + desktop stay untouched. ──────────────
+  const values = nonNegotiables
+    .split('\n')
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const [addingValue, setAddingValue] = useState(false);
+  const [valueDraft, setValueDraft] = useState('');
+
+  const removeValue = (index: number) => {
+    setNonNegotiables(values.filter((_, i) => i !== index).join('\n'));
+  };
+  const commitValue = () => {
+    const v = valueDraft.trim();
+    if (v) setNonNegotiables(values.length ? `${values.join('\n')}\n${v}` : v);
+    setValueDraft('');
+    setAddingValue(false);
   };
 
   // ── Desktop layout ────────────────────────────────────────────────────────
@@ -199,7 +218,7 @@ export default function NorteScreen() {
     );
   }
 
-  // ── Mobile / tablet layout (unchanged) ───────────────────────────────────
+  // ── Mobile / tablet layout ────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={sc.root}
@@ -211,19 +230,20 @@ export default function NorteScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      <AppHeader title="MI NORTE" />
-
-      {/* ── Purpose Display ── */}
-      <GoldAccentCard>
-        <View style={styles.northHeader}>
-          <StatusPill label="DIRECCIÓN MAESTRA" dot />
-          <Text style={[styles.norteScore, norteScore === 100 && styles.norteScoreFull]}>
-            {norteScore}% DEFINIDO
-          </Text>
+      {/* ── Header: back → comando · título · subtítulo ── */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.replace('/(tabs)/comando')}
+          accessibilityRole="button"
+          accessibilityLabel="Volver al centro de comando"
+          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.65 }]}>
+          <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
+        </Pressable>
+        <View style={styles.headerCopy}>
+          <Text style={styles.headerTitle}>MI NORTE</Text>
+          <Text style={styles.headerSub}>La dirección maestra que ordena cada decisión.</Text>
         </View>
-        <Text style={styles.purposeStatement}>{purpose || 'Define tu propósito principal'}</Text>
-        <Text style={styles.identityStatement}>{identity || 'Define tu identidad'}</Text>
-      </GoldAccentCard>
+      </View>
 
       {/* ── Empty State CTA ── */}
       {isNorteEmpty && (
@@ -237,107 +257,211 @@ export default function NorteScreen() {
         </Pressable>
       )}
 
-      {/* ── Daily Reminder ── */}
-      {state.northStar.dailyReminder ? (
-        <PremiumCard style={styles.reminderCard}>
-          <Text style={styles.reminderLabel}>RECORDATORIO DIARIO</Text>
-          <Text style={styles.reminderText}>{state.northStar.dailyReminder}</Text>
-        </PremiumCard>
-      ) : null}
+      {/* ── Dirección maestra ── */}
+      <GoldDivider label="DIRECCIÓN MAESTRA" />
+      <PremiumInput
+        value={purpose}
+        onChangeText={setPurpose}
+        multiline
+        style={styles.textArea}
+        placeholder="¿Por qué operas? ¿A qué le sirves?"
+        accessibilityLabel="Dirección maestra"
+      />
 
-      {/* ── Non-Negotiables ── */}
-      {state.northStar.nonNegotiables.length > 0 && (
-        <>
-          <GoldDivider label="NO NEGOCIABLES" />
-          <View style={styles.ruleList}>
-            {state.northStar.nonNegotiables.map((item, index) => (
-              <PremiumCard key={`${item}-${index}`} style={styles.ruleCard}>
-                <Text style={styles.ruleIndex}>
-                  {String(index + 1).padStart(2, '0')}
-                </Text>
-                <Text style={styles.ruleText}>{item}</Text>
-              </PremiumCard>
-            ))}
+      {/* ── Declaración de identidad ── */}
+      <GoldDivider label="DECLARACIÓN DE IDENTIDAD" />
+      <PremiumInput
+        value={identity}
+        onChangeText={setIdentity}
+        style={styles.input}
+        placeholder="Soy el tipo de persona que…"
+        accessibilityLabel="Declaración de identidad"
+      />
+
+      {/* ── Valores núcleo (chips) ── */}
+      <GoldDivider label="VALORES NÚCLEO" />
+      <View style={styles.chipWrap}>
+        {values.map((v, i) => (
+          <Pressable
+            key={`${v}-${i}`}
+            onPress={() => removeValue(i)}
+            accessibilityRole="button"
+            accessibilityLabel={`Quitar ${v}`}
+            style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}>
+            <Text style={styles.chipText}>{v}</Text>
+            <MaterialIcons name="close" size={13} color={palette.ink} />
+          </Pressable>
+        ))}
+        {addingValue ? (
+          <View style={styles.chipInput}>
+            <TextInput
+              value={valueDraft}
+              onChangeText={setValueDraft}
+              onSubmitEditing={commitValue}
+              onBlur={commitValue}
+              autoFocus
+              returnKeyType="done"
+              placeholder="Valor…"
+              placeholderTextColor={palette.smoke}
+              selectionColor={palette.gold}
+              style={styles.chipInputText}
+              accessibilityLabel="Nuevo valor núcleo"
+            />
           </View>
-        </>
-      )}
+        ) : (
+          <Pressable
+            onPress={() => setAddingValue(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Añadir valor núcleo"
+            style={({ pressed }) => [styles.chipAdd, pressed && { opacity: 0.7 }]}>
+            <MaterialIcons name="add" size={14} color={palette.ash} />
+            <Text style={styles.chipAddText}>Añadir</Text>
+          </Pressable>
+        )}
+      </View>
 
-      {/* ── Edit Form ── */}
-      <GoldDivider label="EDITAR NORTE" />
-      <PremiumCard style={styles.form}>
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
-          <PremiumInput
-            value={purpose}
-            onChangeText={setPurpose}
-            multiline
-            style={styles.textArea}
-            placeholder="¿Por qué operas a este nivel?"
-            accessibilityLabel="Propósito principal"
-          />
-        </View>
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD</Text>
-          <PremiumInput
-            value={identity}
-            onChangeText={setIdentity}
-            multiline
-            style={styles.textArea}
-            placeholder="Soy alguien que..."
-            accessibilityLabel="Declaración de identidad"
-          />
-        </View>
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LÍNEA</Text>
-          {!nonNegotiables.trim() && (
-            <View style={styles.promptSuggestions}>
-              {['Mi salud es primero', 'No trabajo los domingos', 'Tiempo con familia intocable', 'Sin deudas por consumo'].map((s) => (
-                <Pressable
-                  key={s}
-                  onPress={() => setNonNegotiables((prev) => prev ? `${prev}\n${s}` : s)}
-                  style={({ pressed }) => [styles.suggestionPill, pressed && { opacity: 0.7 }]}>
-                  <Text style={styles.suggestionText}>+ {s}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-          <PremiumInput
-            value={nonNegotiables}
-            onChangeText={setNonNegotiables}
-            multiline
-            style={styles.textAreaLarge}
-            placeholder="Primer principio&#10;Segundo principio&#10;..."
-            accessibilityLabel="No negociables"
-          />
-        </View>
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>RECORDATORIO DIARIO</Text>
-          <PremiumInput
-            value={dailyReminder}
-            onChangeText={setDailyReminder}
-            multiline
-            style={styles.textArea}
-            placeholder="La frase que te ancla cada mañana..."
-            accessibilityLabel="Recordatorio diario"
-          />
-        </View>
-        <PrimaryButton
-          label={saved ? 'NORTE DECLARADO ✓' : 'GUARDAR NORTE'}
-          icon={saved ? 'check-circle' : 'check'}
-          onPress={save}
-        />
-        {saved ? (
-          <Text style={styles.savedToast}>
-            Declarado. El protocolo ahora opera hacia este norte.
-          </Text>
-        ) : null}
-      </PremiumCard>
+      {/* ── Recordatorio diario ── */}
+      <GoldDivider label="RECORDATORIO DIARIO" />
+      <PremiumInput
+        value={dailyReminder}
+        onChangeText={setDailyReminder}
+        multiline
+        style={styles.textArea}
+        placeholder="La frase que te ancla cada mañana…"
+        accessibilityLabel="Recordatorio diario"
+      />
+
+      <PrimaryButton
+        label={saved ? 'NORTE DECLARADO' : 'GUARDAR NORTE'}
+        icon={saved ? 'check-circle' : 'explore'}
+        onPress={save}
+      />
     </ScrollView>
+
+    {/* ── Toast: NORTE FIJADO EN EL SISTEMA ── */}
+    {saved ? (
+      <View style={[styles.toast, { bottom: insets.bottom + 24 }]} pointerEvents="none">
+        <MaterialIcons name="check" size={16} color={palette.ink} />
+        <Text style={styles.toastText}>NORTE FIJADO EN EL SISTEMA</Text>
+      </View>
+    ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  // Header (mobile) — back · title · sub
+  header: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  backBtn: {
+    alignItems: 'center',
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    marginTop: 2,
+    width: 40,
+  },
+  headerCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  headerTitle: {
+    ...typography.title,
+    color: palette.ivory,
+  },
+  headerSub: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+  },
+
+  // Single-line field (identity)
+  input: {
+    minHeight: 52,
+  },
+
+  // Valores núcleo — chips
+  chipWrap: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+  },
+  chipText: {
+    color: palette.ink,
+    fontFamily: Fonts.display,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  chipAdd: {
+    alignItems: 'center',
+    borderColor: palette.lineHard,
+    borderRadius: radii.pill,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+  },
+  chipAddText: {
+    color: palette.ash,
+    fontFamily: Fonts.display,
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  chipInput: {
+    alignItems: 'center',
+    borderColor: palette.lineGold,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 36,
+    minWidth: 120,
+    paddingHorizontal: spacing.md,
+  },
+  chipInputText: {
+    color: palette.ivory,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    minWidth: 90,
+    paddingVertical: 0,
+  },
+
+  // Toast — "NORTE FIJADO EN EL SISTEMA"
+  toast: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    position: 'absolute',
+  },
+  toastText: {
+    ...typography.label,
+    color: palette.ink,
+    fontSize: 10,
+  },
+
   // Desktop layout
   contentDesktop: {
     alignSelf: 'center',

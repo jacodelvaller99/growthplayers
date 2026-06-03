@@ -11,8 +11,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -23,7 +24,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldAccentCard, GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import { useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -125,19 +126,44 @@ const TAPPING_POINTS: TappingPoint[] = [
   },
 ];
 
-// ─── Intensity Selector ───────────────────────────────────────────────────────
+// ─── Intensity Selector (square 1–10 grid) ────────────────────────────────────
 function IntensitySelector({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <View style={styles.intensityRow}>
-      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-        <Pressable
-          key={n}
-          onPress={() => { onChange(n); haptic('light'); }}
-          style={[styles.intensityBtn, value === n && styles.intensityBtnActive]}>
-          <Text style={[styles.intensityNum, value === n && styles.intensityNumActive]}>{n}</Text>
-        </Pressable>
-      ))}
+      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
+        const on = n <= value;
+        return (
+          <Pressable
+            key={n}
+            onPress={() => { onChange(n); haptic('light'); }}
+            style={[styles.intensityBtn, on && styles.intensityBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel={`Intensidad ${n}`}>
+            <Text style={[styles.intensityNum, on && styles.intensityNumActive]}>{n}</Text>
+          </Pressable>
+        );
+      })}
     </View>
+  );
+}
+
+// ─── Glowing point icon (idle pulse like design polaris-glow) ─────────────────
+function PointGlyph({ icon }: { icon: React.ComponentProps<typeof MaterialIcons>['name'] }) {
+  const glow = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1.06, duration: 1000, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1.0,  duration: 1000, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [glow]);
+  return (
+    <Animated.View style={[styles.glyphCircle, { transform: [{ scale: glow }] }]}>
+      <MaterialIcons name={icon} size={44} color={palette.gold} />
+    </Animated.View>
   );
 }
 
@@ -176,6 +202,8 @@ export default function TappingScreen() {
     if (pointIdx > 0) {
       haptic('light');
       setPointIdx((p) => p - 1);
+    } else {
+      setScreen('setup');
     }
   }, [pointIdx]);
 
@@ -186,64 +214,61 @@ export default function TappingScreen() {
     setScreen('done');
   }, [saveWellnessSession, startedAt]);
 
+  // Shared header
+  const renderHeader = (onBack: () => void) => (
+    <View style={styles.header}>
+      <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Volver" accessibilityRole="button">
+        <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
+      </Pressable>
+      <Text style={styles.title}>TAPPING · EFT</Text>
+      <View style={styles.backBtn} />
+    </View>
+  );
+
+  const contentStyle = [
+    sc.content,
+    { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 },
+  ];
+
   // ── Setup ──────────────────────────────────────────────────────────────────
   if (screen === 'setup') {
     return (
       <ScrollView
         style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
+        contentContainerStyle={contentStyle}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Volver" accessibilityRole="button">
-            <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-          </Pressable>
-          <Text style={styles.title}>TAPPING EFT</Text>
-          <View style={{ width: 44 }} />
-        </View>
+        {renderHeader(() => router.back())}
 
-        <GoldAccentCard>
-          <Text style={styles.eyebrow}>TÉCNICA DE LIBERACIÓN EMOCIONAL</Text>
-          <Text style={styles.heroText}>
-            9 puntos.{'\n'}Una emoción.{'\n'}Libertad.
-          </Text>
-          <Text style={styles.heroSub}>
-            El Tapping activa los meridianos energéticos del cuerpo para liberar patrones emocionales bloqueados.
-          </Text>
-        </GoldAccentCard>
+        <Text style={styles.intro}>
+          Nombra lo que cargas y mídelo. Vamos a bajar su intensidad punto por punto.
+        </Text>
 
         <SafetyWarning
           body="El tapping es una herramienta de autorregulación, no un tratamiento médico ni psicológico. Si tienes una condición de salud mental, consúltala con un profesional."
         />
 
-        <GoldDivider label="CONFIGURA TU SESIÓN" />
-        <PremiumCard style={styles.card}>
-          <Text style={styles.cardLabel}>¿QUÉ EMOCIÓN QUIERES LIBERAR HOY?</Text>
-          <TextInput
-            style={styles.emotionInput}
-            value={emotion}
-            onChangeText={setEmotion}
-            placeholder="Ej: ansiedad, rabia, miedo al fracaso..."
-            placeholderTextColor={palette.smoke}
-            returnKeyType="done"
-            maxLength={80}
-          />
+        <Text style={styles.fieldLabel}>¿QUÉ EMOCIÓN VAS A LIBERAR?</Text>
+        <TextInput
+          style={styles.emotionInput}
+          value={emotion}
+          onChangeText={setEmotion}
+          placeholder="Ej. ansiedad por la reunión de mañana"
+          placeholderTextColor={palette.smoke}
+          returnKeyType="done"
+          maxLength={80}
+        />
 
-          <Text style={[styles.cardLabel, { marginTop: spacing.md }]}>INTENSIDAD AHORA (1–10)</Text>
-          <IntensitySelector value={intensityBefore} onChange={setIntensityBefore} />
-          <Text style={styles.intensityHint}>
-            {intensityBefore >= 8
-              ? 'Alta carga. El tapping te ayudará a regular.'
-              : intensityBefore >= 5
-              ? 'Carga moderada. Excelente momento para limpiar.'
-              : 'Carga baja. Perfecto para mantenimiento.'}
-          </Text>
-        </PremiumCard>
+        <Text style={styles.fieldLabel}>INTENSIDAD ACTUAL · {intensityBefore}/10</Text>
+        <IntensitySelector value={intensityBefore} onChange={setIntensityBefore} />
 
         <Pressable
-          style={[styles.primaryBtn, !emotion.trim() && { opacity: 0.5 }]}
-          onPress={() => { haptic('light'); setScreen('tapping'); }}
-          disabled={!emotion.trim()}>
-          <MaterialIcons name="play-arrow" size={20} color={palette.ink} />
+          style={[styles.primaryBtn, !emotion.trim() && styles.primaryBtnDisabled]}
+          onPress={() => { haptic('light'); setPointIdx(0); setScreen('tapping'); }}
+          disabled={!emotion.trim()}
+          accessibilityRole="button"
+          accessibilityLabel="Iniciar secuencia">
+          <MaterialIcons name="touch-app" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>INICIAR SECUENCIA</Text>
         </Pressable>
       </ScrollView>
@@ -256,49 +281,41 @@ export default function TappingScreen() {
     const scriptFilled = point.script.replace(/\[EMOCIÓN\]/g, emotionLabel);
 
     return (
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}>
+      <ScrollView style={sc.root} contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
+        {renderHeader(() => setScreen('setup'))}
 
-        {/* Progress bar */}
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%` as `${number}%` }]} />
+        {/* Progress */}
+        <View style={styles.progressRow}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%` as `${number}%` }]} />
+          </View>
+          <Text style={styles.progressText}>{pointIdx + 1}/{TAPPING_POINTS.length}</Text>
         </View>
-        <Text style={styles.progressText}>{pointIdx + 1} / {TAPPING_POINTS.length}</Text>
 
         {/* Point */}
-        <View style={styles.pointHeader}>
-          <MaterialIcons name={point.icon} size={36} color={palette.gold} />
+        <View style={styles.pointBlock}>
+          <PointGlyph icon={point.icon} />
           <Text style={styles.pointName}>{point.name}</Text>
-        </View>
-
-        <PremiumCard style={styles.card}>
-          <Text style={styles.cardLabel}>UBICACIÓN</Text>
-          <Text style={styles.locationText}>{point.location}</Text>
-
+          <Text style={styles.pointLoc}>{point.location.toUpperCase()}</Text>
+          <View style={styles.scriptWrap}>
+            {scriptFilled.split('\n').map((line, i) => (
+              <Text key={i} style={styles.scriptLine}>&ldquo;{line}&rdquo;</Text>
+            ))}
+          </View>
           <View style={styles.repsRow}>
             <MaterialIcons name="touch-app" size={14} color={palette.gold} />
             <Text style={styles.repsText}>Golpea suavemente × {point.reps} veces</Text>
           </View>
-        </PremiumCard>
-
-        <GoldDivider label="MIENTRAS TAPEAS, DI EN VOZ ALTA" />
-        <PremiumCard style={[styles.card, styles.scriptCard]}>
-          {scriptFilled.split('\n').map((line, i) => (
-            <Text key={i} style={styles.scriptLine}>{line}</Text>
-          ))}
-        </PremiumCard>
+        </View>
 
         {/* Navigation */}
         <View style={styles.navRow}>
-          {pointIdx > 0 && (
-            <Pressable style={styles.prevBtn} onPress={prevPoint}>
-              <MaterialIcons name="arrow-back" size={18} color={palette.ash} />
-              <Text style={styles.prevBtnText}>Anterior</Text>
-            </Pressable>
-          )}
-          <Pressable style={[styles.nextBtn, pointIdx === 0 && { marginLeft: 'auto' }]} onPress={nextPoint}>
-            <Text style={styles.nextBtnText}>{isLast ? 'FINALIZAR' : 'SIGUIENTE PUNTO'}</Text>
+          <Pressable style={styles.prevBtn} onPress={prevPoint} accessibilityRole="button" accessibilityLabel="Anterior">
+            <MaterialIcons name="arrow-back" size={18} color={palette.gold} />
+            <Text style={styles.prevBtnText}>Anterior</Text>
+          </Pressable>
+          <Pressable style={styles.nextBtn} onPress={nextPoint} accessibilityRole="button" accessibilityLabel={isLast ? 'Cerrar' : 'Siguiente punto'}>
+            <Text style={styles.nextBtnText}>{isLast ? 'CERRAR' : 'SIGUIENTE PUNTO'}</Text>
             <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />
           </Pressable>
         </View>
@@ -309,41 +326,53 @@ export default function TappingScreen() {
   // ── Cierre ─────────────────────────────────────────────────────────────────
   if (screen === 'close') {
     return (
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}>
-        <Text style={styles.eyebrow}>CIERRE DE SESIÓN</Text>
-        <Text style={styles.phaseTitle}>Mide tu avance</Text>
+      <ScrollView style={sc.root} contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
+        {renderHeader(() => setScreen('tapping'))}
 
-        <PremiumCard style={styles.card}>
-          <Text style={styles.cardLabel}>INTENSIDAD ANTES: {intensityBefore}/10</Text>
-          <Text style={[styles.cardLabel, { marginTop: spacing.md }]}>¿CÓMO ESTÁ LA CARGA AHORA? (1–10)</Text>
-          <IntensitySelector value={intensityAfter} onChange={setIntensityAfter} />
+        <View style={styles.closeHeader}>
+          <MaterialIcons name="spa" size={40} color={palette.gold} />
+          <Text style={styles.closeTitle}>SISTEMA RECALIBRADO</Text>
+        </View>
 
-          {intensityAfter < intensityBefore && (
-            <View style={styles.resultBanner}>
-              <MaterialIcons name="trending-down" size={16} color={palette.success} />
-              <Text style={styles.resultText}>
-                Bajaste {intensityBefore - intensityAfter} puntos. Tu sistema nervioso procesó información.
-              </Text>
-            </View>
-          )}
-          {intensityAfter >= intensityBefore && (
-            <Text style={styles.resultNote}>
-              Si la intensidad no bajó, es normal. Algunas capas necesitan varias rondas. Repite la secuencia.
+        {/* Before → After */}
+        <View style={styles.compareCard}>
+          <View style={styles.compareCol}>
+            <Text style={styles.compareEyebrow}>ANTES</Text>
+            <Text style={[styles.compareNum, { color: palette.danger }]}>{intensityBefore}</Text>
+          </View>
+          <MaterialIcons name="arrow-forward" size={24} color={palette.ash} />
+          <View style={styles.compareCol}>
+            <Text style={styles.compareEyebrow}>DESPUÉS</Text>
+            <Text style={[styles.compareNum, { color: palette.success }]}>{intensityAfter}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.fieldLabel}>¿CÓMO ESTÁ LA CARGA AHORA? (1–10)</Text>
+        <IntensitySelector value={intensityAfter} onChange={setIntensityAfter} />
+
+        {intensityAfter < intensityBefore && (
+          <View style={styles.resultBanner}>
+            <MaterialIcons name="trending-down" size={16} color={palette.success} />
+            <Text style={styles.resultText}>
+              Bajaste {intensityBefore - intensityAfter} puntos. Tu sistema nervioso procesó información.
             </Text>
-          )}
-        </PremiumCard>
+          </View>
+        )}
+        {intensityAfter >= intensityBefore && (
+          <Text style={styles.resultNote}>
+            Si la intensidad no bajó, es normal. Algunas capas necesitan varias rondas. Repite la secuencia.
+          </Text>
+        )}
 
-        <GoldDivider label="AFIRMACIÓN DE CIERRE" />
-        <GoldAccentCard>
+        {/* Closing affirmation */}
+        <View style={styles.affirmCard}>
           <Text style={styles.affirmText}>
-            "Soy abundancia. Fluyo con la vida. Recibo con gratitud y doy con propósito."
+            &ldquo;Suelto la escasez. Me abro a recibir lo que mi trabajo merece. La abundancia es mi estado natural.&rdquo;
           </Text>
           <Text style={styles.affirmSub}>Repite 3 veces mientras sientes el cuerpo.</Text>
-        </GoldAccentCard>
+        </View>
 
-        <Pressable style={styles.primaryBtn} onPress={finish}>
+        <Pressable style={styles.primaryBtn} onPress={finish} accessibilityRole="button" accessibilityLabel="Guardar sesión">
           <MaterialIcons name="check" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>GUARDAR SESIÓN</Text>
         </Pressable>
@@ -353,13 +382,13 @@ export default function TappingScreen() {
 
   // ── Done ───────────────────────────────────────────────────────────────────
   return (
-    <View style={[sc.root, styles.centeredPhase, { paddingTop: insets.top + 16 }]}>
+    <View style={[sc.root, styles.donePhase, { paddingTop: insets.top + 16 }]}>
       <MaterialIcons name="check-circle" size={64} color={palette.gold} />
-      <Text style={styles.phaseTitle}>Sesión completada.</Text>
+      <Text style={styles.doneTitle}>Sesión completada.</Text>
       <Text style={styles.doneSub}>
         Cada sesión de Tapping es un paso hacia un sistema nervioso más libre y una mente más clara.
       </Text>
-      <Pressable style={styles.primaryBtn} onPress={() => router.back()}>
+      <Pressable style={[styles.primaryBtn, { alignSelf: 'stretch' }]} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver al centro">
         <Text style={styles.primaryBtnText}>VOLVER AL CENTRO</Text>
       </Pressable>
     </View>
@@ -374,31 +403,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.graphite,
+  },
   title: { ...typography.title, color: palette.ivory, fontSize: 16 },
 
-  eyebrow: { fontFamily: Fonts.display, color: palette.goldMuted, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' as const },
-  heroText: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 38,
-    marginVertical: spacing.sm,
-  },
-  heroSub: { ...typography.body, color: palette.ash, lineHeight: 22 },
-  phaseTitle: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 26,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginVertical: spacing.sm,
-  },
+  intro: { ...typography.body, color: palette.ash, lineHeight: 22 },
 
-  card: { gap: spacing.md },
-  cardLabel: { ...typography.label, color: palette.ash, fontSize: 11 },
+  fieldLabel: { ...typography.label, color: palette.gold, fontSize: 11, letterSpacing: 1.8 },
 
   emotionInput: {
     ...typography.body,
@@ -407,26 +424,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.line,
     borderRadius: radii.sm,
-    padding: spacing.md,
-    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: 52,
   },
 
-  intensityRow: { flexDirection: 'row', gap: 4, flexWrap: 'nowrap' },
+  // Intensity grid
+  intensityRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'nowrap' },
   intensityBtn: {
     flex: 1,
-    height: 44,
-    minWidth: 28,
+    aspectRatio: 1,
+    minWidth: 26,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: palette.line,
+    backgroundColor: palette.graphite,
     alignItems: 'center',
     justifyContent: 'center',
   },
   intensityBtnActive: { backgroundColor: palette.gold, borderColor: palette.gold },
-  intensityNum: { ...typography.mono, color: palette.ash, fontSize: 13 },
-  intensityNumActive: { color: palette.ink, fontWeight: '700' },
-  intensityHint: { ...typography.caption, color: palette.smoke, fontStyle: 'italic' },
+  intensityNum: { fontFamily: Fonts.display, color: palette.ash, fontSize: 15, fontWeight: '700' },
+  intensityNumActive: { color: palette.ink },
 
+  // Buttons
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -434,71 +454,115 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: palette.gold,
     borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    minHeight: 52,
+    height: 52,
     marginTop: spacing.lg,
   },
-  primaryBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 14, letterSpacing: 1.5 },
+  primaryBtnDisabled: { opacity: 0.4 },
+  primaryBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 13, letterSpacing: 1.5 },
 
+  // Progress
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   progressBar: {
-    height: 3,
+    flex: 1,
+    height: 6,
     backgroundColor: palette.charcoal,
-    borderRadius: 2,
+    borderRadius: radii.pill,
     overflow: 'hidden',
-    marginBottom: 6,
   },
-  progressFill: { height: '100%', backgroundColor: palette.gold, borderRadius: 2 },
-  progressText: { ...typography.mono, color: palette.smoke, fontSize: 11, textAlign: 'right', marginBottom: spacing.lg },
+  progressFill: { height: '100%', backgroundColor: palette.gold, borderRadius: radii.pill },
+  progressText: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 12 },
 
-  pointHeader: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
-  pointName: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 0.5,
+  // Point block
+  pointBlock: { alignItems: 'center', marginTop: spacing.sm },
+  glyphCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: palette.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 6,
   },
+  pointName: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 19, fontWeight: '800', letterSpacing: 0.5, marginTop: spacing.xl, textAlign: 'center' },
+  pointLoc: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11, letterSpacing: 1, marginTop: 6, textAlign: 'center' },
+  scriptWrap: { marginTop: spacing.xl, maxWidth: 290, gap: 4 },
+  scriptLine: { ...typography.body, color: palette.ivory, fontStyle: 'italic', fontSize: 15, lineHeight: 24, textAlign: 'center' },
+  repsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.lg },
+  repsText: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 12 },
 
-  locationText: { ...typography.body, color: palette.ivory, lineHeight: 22 },
-  repsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  repsText: { ...typography.mono, color: palette.gold, fontSize: 12 },
-
-  scriptCard: { backgroundColor: 'rgba(201,160,0,0.06)', borderColor: palette.gold + '30' },
-  scriptLine: { ...typography.body, color: palette.ivory, lineHeight: 26, fontStyle: 'italic' },
-
-  navRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
+  // Navigation
+  navRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xxl },
   prevBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    height: 48,
     borderWidth: 1,
-    borderColor: palette.line,
+    borderColor: palette.lineGold,
     borderRadius: radii.sm,
   },
-  prevBtnText: { ...typography.label, color: palette.ash },
+  prevBtnText: { fontFamily: Fonts.sans, color: palette.gold, fontSize: 13, fontWeight: '600' },
   nextBtn: {
-    flex: 1,
+    flex: 1.6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     backgroundColor: palette.gold,
     borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    minHeight: 48,
+    height: 48,
   },
-  nextBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 13, letterSpacing: 1.5 },
+  nextBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 13, letterSpacing: 1 },
 
-  resultBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: 4 },
+  // Close
+  closeHeader: { alignItems: 'center', gap: spacing.md },
+  closeTitle: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 18, fontWeight: '800', letterSpacing: 1 },
+
+  compareCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+  },
+  compareCol: { alignItems: 'center' },
+  compareEyebrow: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
+  compareNum: { fontFamily: Fonts.display, fontSize: 34, fontWeight: '800', marginTop: 6 },
+
+  resultBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   resultText: { ...typography.body, color: palette.success, flex: 1, lineHeight: 20 },
-  resultNote: { ...typography.caption, color: palette.smoke, fontStyle: 'italic', lineHeight: 18, marginTop: 4 },
+  resultNote: { ...typography.caption, color: palette.smoke, fontStyle: 'italic', lineHeight: 18 },
 
-  affirmText: { ...typography.body, color: palette.ivory, fontStyle: 'italic', lineHeight: 26, fontSize: 16 },
-  affirmSub: { ...typography.caption, color: palette.ash, marginTop: spacing.sm },
+  affirmCard: {
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  affirmText: { ...typography.body, color: palette.ivory, fontStyle: 'italic', fontSize: 14, lineHeight: 24 },
+  affirmSub: { ...typography.caption, color: palette.ash },
 
-  centeredPhase: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, gap: spacing.lg },
+  // Done
+  donePhase: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
+  },
+  doneTitle: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 26, fontWeight: '800', textAlign: 'center' },
   doneSub: { ...typography.body, color: palette.ash, textAlign: 'center', lineHeight: 22 },
 });
