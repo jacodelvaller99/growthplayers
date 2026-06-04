@@ -37,6 +37,7 @@ import { useWellnessStore } from '@/store/wellnessStore';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { useWearableConnections } from '@/lib/wearables';
 import { LIVE_SESSION, getNextSession, formatSessionDate } from '@/data/live-sessions';
+import { db2, supabase } from '@/lib/supabase';
 
 function greeting() {
   const hour = new Date().getHours();
@@ -978,6 +979,7 @@ export default function DashboardScreen() {
               {liveSessionBlock}
               <GoldDivider label="COMUNIDAD" />
               {communityBlock}
+              <CommunityPreview />
               <GoldDivider label="MI NORTE" />
               <PremiumCard style={styles.northCard}>
                 <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
@@ -1029,6 +1031,7 @@ export default function DashboardScreen() {
           {liveSessionBlock}
           <GoldDivider label="COMUNIDAD" />
           {communityBlock}
+          <CommunityPreview />
           <GoldDivider label="MI NORTE" />
           <PremiumCard style={styles.northCard}>
             <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
@@ -2052,5 +2055,150 @@ const mob = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     textAlign: 'center',
+  },
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// CommunityPreview — sección autocontenida (WS-8): preview de los posts más
+// recientes de la comunidad + enlace al feed (estilo Skool). No depende de nada
+// del Dashboard: hace su propio fetch y trae sus propios estilos. Diseñada para
+// AÑADIRSE bajo el divider "COMUNIDAD" sin tocar el resto de comando.
+// ════════════════════════════════════════════════════════════════════════════
+interface PreviewPost {
+  id: string;
+  author: string;
+  content: string;
+}
+
+function CommunityPreview() {
+  const router = useRouter();
+  const { userId } = useLifeFlow();
+  const [previews, setPreviews] = useState<PreviewPost[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Bloqueos del usuario → no mostrar su contenido en el preview.
+        let blocked = new Set<string>();
+        if (userId) {
+          try {
+            const { data: blocks } = await (supabase as any)
+              .from('user_blocks')
+              .select('blocked_id')
+              .eq('blocker_id', userId);
+            blocked = new Set<string>((blocks ?? []).map((b: any) => b.blocked_id as string));
+          } catch { /* sin bloqueos */ }
+        }
+
+        const { data, error } = await db2.communityPosts()
+          .select('id, user_id, content, is_pinned, created_at')
+          .order('is_pinned', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(6);
+        if (error || !data) { if (!cancelled) setLoaded(true); return; }
+
+        const visible = (data as any[]).filter((p) => !blocked.has(p.user_id)).slice(0, 2);
+        const ids = [...new Set<string>(visible.map((p) => p.user_id).filter(Boolean))];
+        const nameMap: Record<string, string> = {};
+        if (ids.length > 0) {
+          try {
+            const { data: profiles } = await supabase
+              .from('user_profiles')
+              .select('user_id, full_name')
+              .in('user_id', ids);
+            (profiles ?? []).forEach((p: any) => { if (p.full_name) nameMap[p.user_id] = p.full_name; });
+          } catch { /* nombres por defecto */ }
+        }
+
+        if (!cancelled) {
+          setPreviews(visible.map((p) => ({
+            id: p.id,
+            author: nameMap[p.user_id] ?? 'Miembro',
+            content: p.content ?? '',
+          })));
+          setLoaded(true);
+        }
+      } catch {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // Hasta cargar o si no hay nada que mostrar, no renderizamos nada extra
+  // (el teaser de comunidad existente ya cubre el caso vacío).
+  if (!loaded || previews.length === 0) return null;
+
+  return (
+    <View style={cp.wrap}>
+      {previews.map((p) => (
+        <Pressable
+          key={p.id}
+          onPress={() => router.push('/bienestar/comunidad' as never)}
+          style={({ pressed }) => [cp.post, pressed && { opacity: 0.85 }]}
+          accessibilityLabel={`Publicación de ${p.author}`}>
+          <View style={cp.avatar}>
+            <Text style={cp.avatarText}>{p.author.charAt(0).toUpperCase()}</Text>
+          </View>
+          <View style={cp.body}>
+            <Text style={cp.author}>{p.author}</Text>
+            <Text style={cp.content} numberOfLines={2}>{p.content}</Text>
+          </View>
+        </Pressable>
+      ))}
+      <Pressable
+        onPress={() => router.push('/bienestar/comunidad' as never)}
+        style={({ pressed }) => [cp.viewAll, pressed && { opacity: 0.8 }]}>
+        <Text style={cp.viewAllText}>VER TODA LA COMUNIDAD</Text>
+        <MaterialIcons name="arrow-forward" size={14} color={palette.gold} />
+      </Pressable>
+    </View>
+  );
+}
+
+const cp = StyleSheet.create({
+  wrap: { gap: spacing.sm },
+  post: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+  },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarText: { fontFamily: Fonts.display, fontSize: 14, color: palette.gold },
+  body: { flex: 1, gap: 3 },
+  author: { fontFamily: Fonts.sans, fontSize: 13, fontWeight: '600', color: palette.ivory },
+  content: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 19 },
+  viewAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    paddingVertical: spacing.sm,
+  },
+  viewAllText: {
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: palette.gold,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
 });

@@ -80,6 +80,8 @@ function MainStack() {
       <Stack.Screen name="bienestar/cuerpo" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
+      <Stack.Screen name="comunidad/mensajes" options={{ headerShown: false }} />
+      <Stack.Screen name="comunidad/chat/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
       <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />
@@ -97,6 +99,7 @@ function MainStack() {
       <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
       <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
       <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
+      <Stack.Screen name="admin/comunidad/index" options={{ headerShown: false }} />
       <Stack.Screen name="pricing" options={{ headerShown: false }} />
       <Stack.Screen name="oauth/whoop/callback" options={{ headerShown: false }} />
       <Stack.Screen name="oauth/oura/callback"  options={{ headerShown: false }} />
