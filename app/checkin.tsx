@@ -69,6 +69,7 @@ export default function CheckInScreen() {
   const [stress, setStress] = useState(todayCheckIn?.stress ?? 4);
   const [sleep, setSleep] = useState(todayCheckIn?.sleep ?? 7);
   const [systemNeed, setSystemNeed] = useState(todayCheckIn?.systemNeed ?? '');
+  const [saved, setSaved] = useState(false);
 
   // Real-time coherence score
   const coherence = Math.round((energy + clarity + sleep + (11 - stress)) / 4);
@@ -102,8 +103,82 @@ export default function CheckInScreen() {
     });
     analytics.checkinSubmit(energy, clarity, stress, sleep);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace('/(tabs)/comando');
+    // Revela la recomendación de cierre antes de redirigir (WS-3).
+    setSaved(true);
   };
+
+  // ── Recomendación accionable post-guardado ──────────────────────────────────
+  // Lógica local determinista, priorizando el sistema más comprometido.
+  const recommendation = (() => {
+    if (stress >= 7) {
+      return {
+        icon: 'self-improvement' as const,
+        tag: 'DESCOMPRESIÓN',
+        title: 'Baja la carga antes de ejecutar',
+        body: 'Tu sistema marca tensión alta. Antes de arrancar, 5 minutos de respiración o un grito de descarga. Luego un solo foco — no abras frentes nuevos hoy.',
+        route: '/bienestar/respiracion' as const,
+        cta: 'IR A RESPIRACIÓN',
+      };
+    }
+    if (sleep <= 4) {
+      return {
+        icon: 'bedtime' as const,
+        tag: 'RECUPERACIÓN',
+        title: 'Prioriza recuperar el sistema',
+        body: 'Dormiste por debajo de tu base. Hoy opera en mínimo viable, hidrátate y protege una siesta corta o cierre temprano. La recuperación es parte del protocolo, no su pausa.',
+        route: '/bienestar/meditacion' as const,
+        cta: 'IR A MEDITACIÓN',
+      };
+    }
+    if (energy <= 4) {
+      return {
+        icon: 'battery-charging-full' as const,
+        tag: 'PROTEGER ENERGÍA',
+        title: 'Una acción, sin culpa',
+        body: 'Energía baja: elige la única acción que mueve la aguja y apaga lo no urgente. Proteger la energía hoy es ganar capacidad mañana.',
+        route: '/bienestar/binaurales' as const,
+        cta: 'ENFOCAR CON BINAURALES',
+      };
+    }
+    if (coherence >= 8) {
+      return {
+        icon: 'rocket-launch' as const,
+        tag: 'CAPITALIZA',
+        title: 'Estás en ventana de alto rendimiento',
+        body: 'Tu capacidad está al máximo. Bloquea ahora tu trabajo más difícil y de mayor impacto — la claridad de hoy no se desperdicia en lo trivial.',
+        route: '/(tabs)/programas' as const,
+        cta: 'IR AL PROTOCOLO',
+      };
+    }
+    return {
+      icon: 'center-focus-strong' as const,
+      tag: 'CALIBRA Y MUEVE',
+      title: 'Sistema operativo — ejecuta con foco',
+      body: 'Condiciones estables. Define tus tres prioridades, protege un bloque sin interrupciones y muévete sin sobre-analizar.',
+      route: '/(tabs)/programas' as const,
+      cta: 'IR AL PROTOCOLO',
+    };
+  })();
+
+  const goToCommando = () => router.replace('/(tabs)/comando');
+  const followRecommendation = () => router.replace(recommendation.route as never);
+
+  const recommendationCard = (
+    <PremiumCard style={styles.recoCard}>
+      <View style={styles.recoHeader}>
+        <View style={styles.recoIconWrap}>
+          <MaterialIcons name={recommendation.icon} size={22} color={palette.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.recoTag}>RECOMENDACIÓN DEL SISTEMA · {recommendation.tag}</Text>
+          <Text style={styles.recoTitle}>{recommendation.title}</Text>
+        </View>
+      </View>
+      <Text style={styles.recoBody}>{recommendation.body}</Text>
+      <PrimaryButton label={recommendation.cta} icon="arrow-forward" onPress={followRecommendation} />
+      <SecondaryButton label="VOLVER AL COMANDO" icon="dashboard" onPress={goToCommando} />
+    </PremiumCard>
+  );
 
   // ── Shared JSX blocks ──────────────────────────────────────────────────────
   // Desktop variant — vertical stack (number on top of bar)
@@ -258,12 +333,18 @@ export default function CheckInScreen() {
             <View style={styles.desktopRight}>
               {coherenceCard}
 
-              <GoldDivider label="LECTURA INTERNA" />
+              <GoldDivider label={saved ? 'TU PRÓXIMO MOVIMIENTO' : 'LECTURA INTERNA'} />
 
-              {systemNeedCard}
+              {saved ? (
+                recommendationCard
+              ) : (
+                <>
+                  {systemNeedCard}
 
-              <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
-              <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
+                  <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+                  <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
+                </>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -335,10 +416,15 @@ export default function CheckInScreen() {
       {capacityCardMobile}
 
       {/* ── System Need ── */}
-      <GoldDivider label="LECTURA INTERNA" />
-      {systemNeedCard}
-
-      <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+      <GoldDivider label={saved ? 'TU PRÓXIMO MOVIMIENTO' : 'LECTURA INTERNA'} />
+      {saved ? (
+        recommendationCard
+      ) : (
+        <>
+          {systemNeedCard}
+          <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+        </>
+      )}
     </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -534,6 +620,48 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: spacing.lg,
     textAlignVertical: 'top',
+  },
+
+  // Recommendation (post-save closing card)
+  recoCard: {
+    borderColor: palette.lineGold,
+    borderWidth: 1,
+    gap: spacing.md,
+  },
+  recoHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  recoIconWrap: {
+    alignItems: 'center',
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  recoTag: {
+    ...typography.label,
+    color: palette.gold,
+    fontSize: 9,
+    letterSpacing: 1.2,
+  },
+  recoTitle: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 17,
+    fontWeight: '700',
+    lineHeight: 22,
+    marginTop: 4,
+  },
+  recoBody: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 14,
+    lineHeight: 21,
   },
 
   // Desktop layout

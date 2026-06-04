@@ -22,8 +22,28 @@ interface Measurement {
   weight_kg: number;
   height_cm: number;
   bmi: number;
+  waist_cm?: number | null;
+  chest_cm?: number | null;
+  hip_cm?: number | null;
+  thigh_cm?: number | null;
+  arm_cm?: number | null;
+  body_fat_percent?: number | null;
+  muscle_mass_kg?: number | null;
   created_at?: string;
 }
+
+// Medidas corporales opcionales (columnas nuevas de body_measurements).
+const EXTRA_FIELDS = [
+  { key: 'waist_cm',         label: 'CINTURA (cm)',   placeholder: '80'   },
+  { key: 'chest_cm',         label: 'PECHO (cm)',     placeholder: '100'  },
+  { key: 'hip_cm',           label: 'CADERA (cm)',    placeholder: '95'   },
+  { key: 'thigh_cm',         label: 'MUSLO (cm)',     placeholder: '55'   },
+  { key: 'arm_cm',           label: 'BRAZO (cm)',     placeholder: '35'   },
+  { key: 'body_fat_percent', label: '% GRASA',        placeholder: '15'   },
+  { key: 'muscle_mass_kg',   label: 'M. MUSCULAR (kg)', placeholder: '35' },
+] as const;
+
+type ExtraKey = typeof EXTRA_FIELDS[number]['key'];
 
 function calcBMI(weight: number, height: number): number {
   if (!weight || !height) return 0;
@@ -51,8 +71,15 @@ export default function CuerpoScreen() {
 
   const [weight, setWeight]   = useState('');
   const [height, setHeight]   = useState('');
+  const [extras, setExtras]   = useState<Record<ExtraKey, string>>({
+    waist_cm: '', chest_cm: '', hip_cm: '', thigh_cm: '', arm_cm: '',
+    body_fat_percent: '', muscle_mass_kg: '',
+  });
   const [history, setHistory] = useState<Measurement[]>([]);
   const [saving, setSaving]   = useState(false);
+
+  const setExtra = (key: ExtraKey, val: string) =>
+    setExtras(prev => ({ ...prev, [key]: val }));
 
   const weightNum = parseFloat(weight) || 0;
   const heightNum = parseFloat(height) || 0;
@@ -63,12 +90,22 @@ export default function CuerpoScreen() {
     if (!userId) return;
     try {
       const { data } = await db2.bodyMeasurements()
-        .select('id, weight_kg, height_cm, bmi, created_at')
+        .select('id, weight_kg, height_cm, bmi, waist_cm, chest_cm, hip_cm, thigh_cm, arm_cm, body_fat_percent, muscle_mass_kg, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(8);
       if (data) setHistory(data as Measurement[]);
-    } catch { /* tabla puede no existir */ }
+    } catch {
+      // columnas nuevas pueden no existir aún → reintenta con el set mínimo
+      try {
+        const { data } = await db2.bodyMeasurements()
+          .select('id, weight_kg, height_cm, bmi, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(8);
+        if (data) setHistory(data as Measurement[]);
+      } catch { /* tabla puede no existir */ }
+    }
   };
 
   useEffect(() => { loadHistory(); }, [userId]);
@@ -76,17 +113,30 @@ export default function CuerpoScreen() {
   const saveMeasurement = async () => {
     if (!weightNum || !heightNum) return;
     setSaving(true);
+    // numérico o null para cada medida opcional
+    const num = (v: string) => {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : null;
+    };
     try {
       await db2.bodyMeasurements().insert({
-        user_id:   userId,
-        weight_kg: weightNum,
-        height_cm: heightNum,
+        user_id:          userId,
+        weight_kg:        weightNum,
+        height_cm:        heightNum,
         bmi,
+        waist_cm:         num(extras.waist_cm),
+        chest_cm:         num(extras.chest_cm),
+        hip_cm:           num(extras.hip_cm),
+        thigh_cm:         num(extras.thigh_cm),
+        arm_cm:           num(extras.arm_cm),
+        body_fat_percent: num(extras.body_fat_percent),
+        muscle_mass_kg:   num(extras.muscle_mass_kg),
       });
       setWeight('');
       setHeight('');
+      setExtras({ waist_cm: '', chest_cm: '', hip_cm: '', thigh_cm: '', arm_cm: '', body_fat_percent: '', muscle_mass_kg: '' });
       loadHistory();
-    } catch { /* tabla puede no existir aún */ }
+    } catch { /* tabla/columna puede no existir aún */ }
     setSaving(false);
   };
 
@@ -164,6 +214,25 @@ export default function CuerpoScreen() {
                 />
               </View>
             </View>
+
+            {/* Medidas corporales (opcionales) */}
+            <Text style={styles.subLabel}>MEDIDAS (OPCIONAL)</Text>
+            <View style={styles.measureGrid}>
+              {EXTRA_FIELDS.map(f => (
+                <View key={f.key} style={styles.measureGroup}>
+                  <Text style={styles.inputLabel}>{f.label}</Text>
+                  <TextInput
+                    style={styles.measureInput}
+                    value={extras[f.key]}
+                    onChangeText={(v) => setExtra(f.key, v)}
+                    keyboardType="decimal-pad"
+                    placeholder={f.placeholder}
+                    placeholderTextColor={palette.smoke}
+                  />
+                </View>
+              ))}
+            </View>
+
             <Pressable
               onPress={saveMeasurement}
               disabled={saving || !weightNum || !heightNum}
@@ -203,20 +272,34 @@ export default function CuerpoScreen() {
               <Text style={styles.sectionLabel}>REGISTROS</Text>
               {history.map((m, i) => {
                 const cat = bmiCategory(m.bmi);
+                // medidas extra presentes → línea compacta de detalle
+                const extraParts: string[] = [];
+                if (m.waist_cm != null)         extraParts.push(`Cintura ${m.waist_cm}`);
+                if (m.chest_cm != null)         extraParts.push(`Pecho ${m.chest_cm}`);
+                if (m.hip_cm != null)           extraParts.push(`Cadera ${m.hip_cm}`);
+                if (m.thigh_cm != null)         extraParts.push(`Muslo ${m.thigh_cm}`);
+                if (m.arm_cm != null)           extraParts.push(`Brazo ${m.arm_cm}`);
+                if (m.body_fat_percent != null) extraParts.push(`Grasa ${m.body_fat_percent}%`);
+                if (m.muscle_mass_kg != null)   extraParts.push(`Músculo ${m.muscle_mass_kg}kg`);
                 return (
-                  <View key={m.id ?? i} style={styles.historyRow}>
-                    <View style={styles.historyLeft}>
-                      <Text style={styles.historyWeight}>{m.weight_kg} kg</Text>
-                      <Text style={styles.historyMeta}>{m.height_cm} cm · IMC {m.bmi}</Text>
-                    </View>
-                    <View style={styles.historyRight}>
-                      <View style={[styles.categoryBadge, { borderColor: cat.color }]}>
-                        <Text style={[styles.categoryBadgeText, { color: cat.color }]}>{cat.label}</Text>
+                  <View key={m.id ?? i} style={styles.historyCard}>
+                    <View style={styles.historyRow}>
+                      <View style={styles.historyLeft}>
+                        <Text style={styles.historyWeight}>{m.weight_kg} kg</Text>
+                        <Text style={styles.historyMeta}>{m.height_cm} cm · IMC {m.bmi}</Text>
                       </View>
-                      <Text style={styles.historyDate}>
-                        {m.created_at ? formatDate(m.created_at) : ''}
-                      </Text>
+                      <View style={styles.historyRight}>
+                        <View style={[styles.categoryBadge, { borderColor: cat.color }]}>
+                          <Text style={[styles.categoryBadgeText, { color: cat.color }]}>{cat.label}</Text>
+                        </View>
+                        <Text style={styles.historyDate}>
+                          {m.created_at ? formatDate(m.created_at) : ''}
+                        </Text>
+                      </View>
                     </View>
+                    {extraParts.length > 0 && (
+                      <Text style={styles.historyExtra}>{extraParts.join('  ·  ')}</Text>
+                    )}
                   </View>
                 );
               })}
@@ -262,6 +345,11 @@ const styles = StyleSheet.create({
   inputLabel:         { ...typography.label, color: palette.ash, fontSize: 10, marginBottom: 6 },
   input:              { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 18, borderWidth: 1, borderColor: palette.line },
 
+  subLabel:           { ...typography.label, color: palette.smoke, fontSize: 9, marginBottom: spacing.sm },
+  measureGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  measureGroup:       { width: '47%', flexGrow: 1 },
+  measureInput:       { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: 10, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 15, borderWidth: 1, borderColor: palette.line },
+
   saveBtn:            { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center' },
   saveBtnDisabled:    { backgroundColor: palette.graphite },
   saveBtnText:        { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
@@ -273,7 +361,9 @@ const styles = StyleSheet.create({
   sparkRange:         { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   sparkRangeText:     { fontSize: 10, color: palette.smoke },
 
-  historyRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8 },
+  historyCard:        { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8 },
+  historyRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  historyExtra:       { fontSize: 11, color: palette.smoke, marginTop: 8, lineHeight: 16 },
   historyLeft:        { flex: 1 },
   historyWeight:      { fontFamily: Fonts.display, fontSize: 18, color: palette.ivory },
   historyMeta:        { fontSize: 12, color: palette.ash, marginTop: 2 },

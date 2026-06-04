@@ -187,13 +187,21 @@ export default function RootLayout() {
     navigator.serviceWorker.register('/service-worker.js').catch(() => {});
   }, []);
 
-  // Navigate to check-in when user taps the daily reminder notification
+  // Deep-link on notification tap: read the target route from the notification
+  // payload (data.route / data.screen) and navigate there. Falls back to the
+  // daily check-in. Enables habit reminders (WS-4) and smart-notifications to
+  // open the exact practice. (WS-7)
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let sub: { remove: () => void } | null = null;
     import('expo-notifications').then((N) => {
-      sub = N.addNotificationResponseReceivedListener(() => {
-        router.push('/checkin' as never);
+      sub = N.addNotificationResponseReceivedListener((response) => {
+        const data = response?.notification?.request?.content?.data as
+          | { route?: unknown; screen?: unknown }
+          | undefined;
+        const target = data?.route ?? data?.screen;
+        const route = typeof target === 'string' && target.startsWith('/') ? target : '/checkin';
+        router.push(route as never);
       });
     });
     return () => { sub?.remove(); };

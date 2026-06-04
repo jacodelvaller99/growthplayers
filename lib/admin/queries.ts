@@ -205,6 +205,73 @@ export async function fetchUserCheckIns(userId: string) {
   return data ?? [];
 }
 
+// ─── Mentorship (sessions + tasks) ──────────────────────────────────────────────
+// Tables mentorship_sessions / mentorship_tasks (migration 20260604000000) are not
+// in the generated types → use the untyped `supa` client. Returns empty on missing
+// tables so the admin detail degrades gracefully before the migration is applied.
+
+export interface AdminMentorshipSession {
+  id: string;
+  week: number | null;
+  session_date: string | null;
+  notes: string | null;
+  action_plan: unknown[];
+  created_at: string;
+}
+
+export interface AdminMentorshipTask {
+  id: string;
+  week: number | null;
+  title: string;
+  completed: boolean;
+  completed_at: string | null;
+}
+
+export interface AdminMentorshipData {
+  sessions: AdminMentorshipSession[];
+  tasks: AdminMentorshipTask[];
+}
+
+export async function fetchUserMentorship(userId: string): Promise<AdminMentorshipData> {
+  const empty: AdminMentorshipData = { sessions: [], tasks: [] };
+  try {
+    const [sessRes, taskRes] = await Promise.all([
+      supa
+        .from('mentorship_sessions')
+        .select('id, week, session_date, notes, action_plan, created_at')
+        .eq('user_id', userId)
+        .order('session_date', { ascending: false, nullsFirst: false })
+        .limit(20),
+      supa
+        .from('mentorship_tasks')
+        .select('id, week, title, completed, completed_at')
+        .eq('user_id', userId)
+        .order('week', { ascending: false })
+        .limit(50),
+    ]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessions = ((sessRes.data ?? []) as any[]).map((s: any) => ({
+      id: s.id,
+      week: s.week ?? null,
+      session_date: s.session_date ?? null,
+      notes: s.notes ?? null,
+      action_plan: Array.isArray(s.action_plan) ? s.action_plan : [],
+      created_at: s.created_at,
+    })) as AdminMentorshipSession[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tasks = ((taskRes.data ?? []) as any[]).map((t: any) => ({
+      id: t.id,
+      week: t.week ?? null,
+      title: t.title ?? '',
+      completed: !!t.completed,
+      completed_at: t.completed_at ?? null,
+    })) as AdminMentorshipTask[];
+    return { sessions, tasks };
+  } catch (_) {
+    return empty; // tables not yet migrated
+  }
+}
+
 // ─── Memberships ─────────────────────────────────────────────────────────────
 
 export async function fetchAllMemberships(statusFilter?: string): Promise<UserMembership[]> {

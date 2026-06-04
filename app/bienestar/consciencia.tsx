@@ -9,7 +9,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { readLocal, writeLocal } from '@/storage/local';
 
 // ─── Haptic ───────────────────────────────────────────────────────────────────
 function haptic() {
@@ -62,9 +63,9 @@ const LEVELS: Level[] = [
   },
   {
     hz: 75,
-    name: 'Tristeza',
+    name: 'Pena / Aflicción',
     description: 'Pérdida, nostalgia. El corazón llora lo que fue o pudo ser.',
-    actionAdvice: 'Permite sentir sin resistir. La tristeza procesada es liberación. Escritura terapéutica o tapping.',
+    actionAdvice: 'Permite sentir sin resistir. La pena procesada es liberación. Escritura terapéutica o tapping.',
     zone: 'fuerza',
   },
   {
@@ -111,7 +112,7 @@ const LEVELS: Level[] = [
   },
   {
     hz: 310,
-    name: 'Voluntad',
+    name: 'Disposición',
     description: 'Optimismo, intención. La energía se organiza y fluye hacia el objetivo.',
     actionAdvice: 'Tu sistema quiere ejecutar. Prioriza una cosa y muévete. El impulso es tuyo — no lo desperdicies.',
     zone: 'poder',
@@ -147,14 +148,40 @@ const LEVELS: Level[] = [
   {
     hz: 600,
     name: 'Paz',
-    description: 'Iluminación, presencia pura. La mente ya no necesita resolver nada.',
+    description: 'Quietud, presencia pura. La mente ya no necesita resolver nada.',
     actionAdvice: 'La paz de este nivel es contagiosa. Tu trabajo es estar presente. El universo hace el resto.',
+    zone: 'poder',
+  },
+  {
+    hz: 700,
+    name: 'Iluminación',
+    description: 'Unidad, consciencia pura. La cima de la escala (700–1000). El ego se disuelve por completo.',
+    actionAdvice: 'Estado de pura presencia. No hay nada que hacer ni alcanzar — solo ser. Desde aquí, tu sola existencia es servicio.',
     zone: 'poder',
   },
 ];
 
 // Default to the threshold level (Valentía · 200 Hz) so the screen reads complete on load.
 const DEFAULT_INDEX = LEVELS.findIndex((l) => l.hz === 200);
+
+// ─── Weekly calibration (local) ────────────────────────────────────────────────
+const WEEKLY_KEY = 'consciencia:weekly';
+
+interface WeeklyCalibration {
+  week: string;     // 'YYYY-Www'
+  hz: number[];     // niveles seleccionados (frecuencias)
+  savedAt: string;  // ISO timestamp
+}
+
+// Identificador de semana ISO (estable, sin dependencias externas).
+function isoWeekId(d = new Date()): string {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ConscienciaScreen() {
@@ -167,10 +194,45 @@ export default function ConscienciaScreen() {
   const isPower = selected.zone === 'poder';
   const next = selIdx < LEVELS.length - 1 ? LEVELS[selIdx + 1] : null;
 
+  // Check semanal: emociones que te habitaron esta semana (persistido local).
+  const thisWeek = isoWeekId();
+  const [weeklyHz, setWeeklyHz] = useState<number[]>([]);
+  const [weeklySaved, setWeeklySaved] = useState<WeeklyCalibration | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const stored = await readLocal<WeeklyCalibration>(WEEKLY_KEY);
+      if (stored && stored.week === thisWeek) {
+        setWeeklySaved(stored);
+        setWeeklyHz(stored.hz ?? []);
+      }
+    })();
+  }, [thisWeek]);
+
   const select = useCallback((idx: number) => {
     setSelIdx(idx);
     haptic();
   }, []);
+
+  const toggleWeekly = useCallback((hz: number) => {
+    haptic();
+    setWeeklyHz((prev) => (prev.includes(hz) ? prev.filter((h) => h !== hz) : [...prev, hz]));
+  }, []);
+
+  const saveWeekly = useCallback(async () => {
+    const entry: WeeklyCalibration = {
+      week: thisWeek,
+      hz: [...weeklyHz].sort((a, b) => a - b),
+      savedAt: new Date().toISOString(),
+    };
+    await writeLocal(WEEKLY_KEY, entry);
+    setWeeklySaved(entry);
+    haptic();
+  }, [thisWeek, weeklyHz]);
+
+  const weeklyAvg = weeklyHz.length
+    ? Math.round(weeklyHz.reduce((a, b) => a + b, 0) / weeklyHz.length)
+    : null;
 
   return (
     <ScrollView
@@ -263,6 +325,57 @@ export default function ConscienciaScreen() {
             <Text style={styles.adviceText}>{selected.actionAdvice}</Text>
           </View>
         )}
+      </View>
+
+      {/* Check semanal — autoexploración, no diagnóstico */}
+      <Text style={styles.sectionLabel}>CHECK SEMANAL</Text>
+      <View style={styles.weeklyCard}>
+        <Text style={styles.weeklyTitle}>¿Qué emociones te habitaron esta semana?</Text>
+        <Text style={styles.weeklySub}>
+          Marca los estados que reconociste. Es una mirada honesta a tu semana, no una etiqueta.
+        </Text>
+
+        <View style={styles.weeklyGrid}>
+          {LEVELS.map((level) => {
+            const on = weeklyHz.includes(level.hz);
+            const isPoder = level.zone === 'poder';
+            return (
+              <Pressable
+                key={level.hz}
+                onPress={() => toggleWeekly(level.hz)}
+                style={[styles.weeklyChip, on && styles.weeklyChipOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`${level.name}, ${level.hz} Hz`}>
+                <Text style={[styles.weeklyChipText, on && styles.weeklyChipTextOn, !on && isPoder && { color: palette.gold }]}>
+                  {level.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {weeklyAvg != null && (
+          <Text style={styles.weeklyAvg}>
+            Promedio de la semana: <Text style={styles.weeklyAvgStrong}>{weeklyAvg} Hz</Text>
+            {'  ·  '}{weeklyAvg >= 200 ? 'zona PODER' : 'zona FUERZA'}
+          </Text>
+        )}
+
+        <Pressable
+          onPress={saveWeekly}
+          disabled={weeklyHz.length === 0}
+          style={[styles.weeklyBtn, weeklyHz.length === 0 && styles.weeklyBtnDisabled]}
+          accessibilityRole="button">
+          <MaterialIcons
+            name={weeklySaved ? 'check-circle' : 'event-available'}
+            size={16}
+            color={weeklyHz.length === 0 ? palette.ash : palette.ink}
+          />
+          <Text style={[styles.weeklyBtnText, weeklyHz.length === 0 && { color: palette.ash }]}>
+            {weeklySaved ? 'CALIBRACIÓN GUARDADA' : 'REGISTRAR ESTA SEMANA'}
+          </Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -360,4 +473,41 @@ const styles = StyleSheet.create({
   howToRiseText: { ...typography.caption, color: palette.ash, fontSize: 13, flex: 1, lineHeight: 20 },
   howToRiseStrong: { color: palette.gold, fontFamily: Fonts.sansBold },
   adviceText: { ...typography.caption, color: palette.smoke, fontSize: 12, lineHeight: 19, fontStyle: 'italic' },
+
+  // Weekly check
+  weeklyCard: {
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  weeklyTitle: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+  weeklySub: { ...typography.caption, color: palette.ash, fontSize: 12, lineHeight: 18 },
+  weeklyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  weeklyChip: {
+    backgroundColor: palette.black,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  weeklyChipOn: { backgroundColor: palette.gold, borderColor: palette.gold },
+  weeklyChipText: { fontFamily: Fonts.sans, color: palette.ash, fontSize: 12 },
+  weeklyChipTextOn: { color: palette.ink, fontFamily: Fonts.sansBold },
+  weeklyAvg: { ...typography.caption, color: palette.ash, fontSize: 12 },
+  weeklyAvgStrong: { color: palette.gold, fontFamily: Fonts.sansBold },
+  weeklyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+  },
+  weeklyBtnDisabled: { backgroundColor: palette.charcoal },
+  weeklyBtnText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 12, letterSpacing: 1 },
 });

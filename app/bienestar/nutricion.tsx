@@ -1,11 +1,13 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -83,6 +85,56 @@ export default function NutricionScreen() {
     calories:     null,
   });
 
+  // Plan de nutrición subido por el nutriólogo (columnas nuevas, cliente sin tipar)
+  const [planUrl, setPlanUrl] = useState('');
+  const [nutritionistName, setNutritionistName] = useState('');
+  const [savedPlanUrl, setSavedPlanUrl] = useState<string | null>(null);
+  const [savedNutritionist, setSavedNutritionist] = useState<string | null>(null);
+  const [planSaving, setPlanSaving] = useState(false);
+
+  // Carga el plan ya guardado (si existe) para mostrarlo al volver a la pantalla.
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const { data } = await db2.nutritionProfiles()
+          .select('plan_url, nutritionist_name')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (data) {
+          setSavedPlanUrl((data as any).plan_url ?? null);
+          setSavedNutritionist((data as any).nutritionist_name ?? null);
+          setPlanUrl((data as any).plan_url ?? '');
+          setNutritionistName((data as any).nutritionist_name ?? '');
+        }
+      } catch { /* tabla/columna puede no existir aún */ }
+    })();
+  }, [userId]);
+
+  const savePlan = async () => {
+    const url = planUrl.trim();
+    const name = nutritionistName.trim();
+    if (!url) return;
+    setPlanSaving(true);
+    if (userId) {
+      try {
+        await db2.nutritionProfiles().upsert({
+          user_id:           userId,
+          plan_url:          url,
+          nutritionist_name: name || null,
+          updated_at:        new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+      } catch { /* tabla/columna puede no existir aún */ }
+    }
+    setSavedPlanUrl(url);
+    setSavedNutritionist(name || null);
+    setPlanSaving(false);
+  };
+
+  const openPlan = () => {
+    if (savedPlanUrl) Linking.openURL(savedPlanUrl).catch(() => {});
+  };
+
   const toggleMulti = (field: 'restrictions' | 'allergies', id: string) => {
     setAnswers(prev => {
       const current = prev[field];
@@ -132,6 +184,62 @@ export default function NutricionScreen() {
 
   const progressPct = `${((step - 1) / TOTAL_STEPS) * 100}%` as any;
 
+  // Sección reutilizable: plan de nutrición (subir/ver el plan del nutriólogo).
+  const PlanSection = (
+    <View style={styles.planCard}>
+      <View style={styles.planHeader}>
+        <MaterialIcons name="description" size={18} color={palette.gold} />
+        <Text style={styles.planTitle}>PLAN DE NUTRICIÓN</Text>
+      </View>
+
+      {savedPlanUrl ? (
+        <Pressable onPress={openPlan} style={styles.planSaved}>
+          <MaterialIcons name="insert-drive-file" size={22} color={palette.gold} />
+          <View style={styles.planSavedText}>
+            <Text style={styles.planSavedLabel} numberOfLines={1}>Plan guardado</Text>
+            {!!savedNutritionist && (
+              <Text style={styles.planSavedMeta} numberOfLines={1}>Por {savedNutritionist}</Text>
+            )}
+          </View>
+          <MaterialIcons name="open-in-new" size={18} color={palette.ash} />
+        </Pressable>
+      ) : (
+        <Text style={styles.planEmptyText}>
+          Sube el plan que te entregó tu nutriólogo (enlace a un PDF o imagen) para tenerlo siempre a mano.
+        </Text>
+      )}
+
+      <Text style={styles.planInputLabel}>ENLACE DEL PLAN (PDF / IMAGEN)</Text>
+      <TextInput
+        style={styles.planInput}
+        value={planUrl}
+        onChangeText={setPlanUrl}
+        placeholder="https://…"
+        placeholderTextColor={palette.smoke}
+        autoCapitalize="none"
+        keyboardType="url"
+      />
+      <Text style={styles.planInputLabel}>NUTRIÓLOGO (OPCIONAL)</Text>
+      <TextInput
+        style={styles.planInput}
+        value={nutritionistName}
+        onChangeText={setNutritionistName}
+        placeholder="Nombre del profesional"
+        placeholderTextColor={palette.smoke}
+      />
+      <Pressable
+        onPress={savePlan}
+        disabled={planSaving || !planUrl.trim()}
+        style={[styles.planSaveBtn, (planSaving || !planUrl.trim()) && styles.planSaveBtnDisabled]}
+      >
+        <MaterialIcons name="upload-file" size={16} color={(planSaving || !planUrl.trim()) ? palette.ash : palette.ink} />
+        <Text style={[styles.planSaveBtnText, (planSaving || !planUrl.trim()) && { color: palette.ash }]}>
+          {planSaving ? 'GUARDANDO…' : savedPlanUrl ? 'ACTUALIZAR PLAN' : 'AGREGAR PLAN DE NUTRICIÓN'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+
   if (saved) {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -142,18 +250,23 @@ export default function NutricionScreen() {
           <Text style={styles.title}>NUTRICIÓN</Text>
           <View style={{ width: 38 }} />
         </View>
-        <View style={styles.successContainer}>
-          <MaterialIcons name="check-circle" size={64} color={palette.gold} />
-          <Text style={styles.successTitle}>PERFIL GUARDADO</Text>
-          <Text style={styles.successSub}>
-            Tu perfil nutricional está configurado.{'\n'}
-            Dieta {DIET_TYPES.find(d => d.id === answers.dietType)?.label ?? ''} ·{' '}
-            {answers.calories} kcal/día
-          </Text>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.successContainer}>
+            <MaterialIcons name="check-circle" size={64} color={palette.gold} />
+            <Text style={styles.successTitle}>PERFIL GUARDADO</Text>
+            <Text style={styles.successSub}>
+              Tu perfil nutricional está configurado.{'\n'}
+              Dieta {DIET_TYPES.find(d => d.id === answers.dietType)?.label ?? ''} ·{' '}
+              {answers.calories} kcal/día
+            </Text>
+          </View>
+
+          {PlanSection}
+
           <Pressable onPress={() => router.back()} style={styles.doneBtn}>
             <Text style={styles.doneBtnText}>VOLVER AL HUB</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -199,6 +312,9 @@ export default function NutricionScreen() {
                 )}
               </Pressable>
             ))}
+
+            {/* Plan de nutrición — accesible desde el inicio del wizard */}
+            {PlanSection}
           </View>
         )}
 
@@ -351,9 +467,23 @@ const styles = StyleSheet.create({
   nextBtnDisabled:  { backgroundColor: palette.graphite },
   nextBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
-  successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: 16 },
+  successContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl, gap: 16 },
   successTitle:     { fontFamily: Fonts.display, fontSize: 22, color: palette.gold, letterSpacing: 2 },
   successSub:       { ...typography.body, color: palette.ash, textAlign: 'center', lineHeight: 22 },
-  doneBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: 14, paddingHorizontal: 32, marginTop: 8 },
+  doneBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: 14, paddingHorizontal: 32, marginTop: spacing.lg, alignSelf: 'center' },
   doneBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
+
+  planCard:         { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.lg, borderWidth: 1, borderColor: palette.lineGoldSubtle, gap: spacing.sm },
+  planHeader:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  planTitle:        { ...typography.label, color: palette.gold, fontSize: 11 },
+  planEmptyText:    { fontSize: 12, color: palette.ash, lineHeight: 18 },
+  planSaved:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: palette.goldLight, borderRadius: radii.sm, padding: spacing.sm, borderWidth: 1, borderColor: palette.lineGold },
+  planSavedText:    { flex: 1 },
+  planSavedLabel:   { fontFamily: Fonts.sans, fontSize: 13, color: palette.ivory, fontWeight: '600' },
+  planSavedMeta:    { fontSize: 11, color: palette.ash, marginTop: 2 },
+  planInputLabel:   { ...typography.label, color: palette.ash, fontSize: 9, marginTop: 4 },
+  planInput:        { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13 },
+  planSaveBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.sm, padding: spacing.sm, marginTop: 4 },
+  planSaveBtnDisabled:{ backgroundColor: palette.charcoal },
+  planSaveBtnText:  { fontFamily: Fonts.display, fontSize: 12, color: palette.ink, letterSpacing: 1 },
 });

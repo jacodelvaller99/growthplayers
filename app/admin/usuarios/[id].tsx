@@ -33,7 +33,9 @@ import {
   fetchUserDetail,
   fetchUserEvents,
   fetchUserMemberships,
+  fetchUserMentorship,
 } from '@/lib/admin/queries';
+import type { AdminMentorshipData } from '@/lib/admin/queries';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman } from '@/lib/admin/actions';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
@@ -153,6 +155,7 @@ export default function UserDetailScreen() {
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [conversations, setConversations] = useState<MentorConversation[]>([]);
   const [checkIns, setCheckIns] = useState<Array<{ date: string; energy: number; clarity: number; stress: number; sleep: number }>>([]);
+  const [mentorship, setMentorship] = useState<AdminMentorshipData>({ sessions: [], tasks: [] });
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNorman, setShowNorman] = useState(false);
@@ -166,17 +169,19 @@ export default function UserDetailScreen() {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [userDetail, evts, convs, cis, audit] = await Promise.all([
+    const [userDetail, evts, convs, cis, ment, audit] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
       fetchMentorConversations(userId, 30),
       fetchUserCheckIns(userId),
+      fetchUserMentorship(userId),
       fetchUserAuditLog(userId),
     ]);
     setUser(userDetail);
     setEvents(evts);
     setConversations(convs);
     setCheckIns(cis as typeof checkIns);
+    setMentorship(ment);
     setAuditLog(audit);
     setLoading(false);
   }, [userId]);
@@ -491,6 +496,74 @@ export default function UserDetailScreen() {
         </PremiumCard>
 
         {/* ─────────────────────────────────────────────────── */}
+        {/* M. MENTORÍA (sesiones + tareas) */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label={`M. MENTORÍA (${mentorship.sessions.length} sesiones · ${mentorship.tasks.filter(t => t.completed).length}/${mentorship.tasks.length} tareas)`} />
+        <PremiumCard style={s.card}>
+          {/* Tareas */}
+          <Text style={s.mlLabel}>TAREAS DE LA SEMANA</Text>
+          {mentorship.tasks.length === 0 ? (
+            <Text style={s.emptyText}>Sin tareas asignadas</Text>
+          ) : (
+            mentorship.tasks.slice(0, 12).map(t => (
+              <View key={t.id} style={s.taskRow}>
+                <MaterialIcons
+                  name={t.completed ? 'check-circle' : 'radio-button-unchecked'}
+                  size={16}
+                  color={t.completed ? palette.success : palette.smoke}
+                />
+                <Text style={[s.taskTitle, t.completed && s.taskTitleDone]} numberOfLines={2}>
+                  {t.title}
+                </Text>
+                {t.week != null && <Text style={s.taskWeek}>S{t.week}</Text>}
+              </View>
+            ))
+          )}
+
+          {/* Sesiones: notas + plan de acción + fecha */}
+          <Text style={[s.mlLabel, { marginTop: spacing.md }]}>NOTAS Y PLAN DE ACCIÓN</Text>
+          {mentorship.sessions.length === 0 ? (
+            <Text style={s.emptyText}>Sin sesiones registradas</Text>
+          ) : (
+            mentorship.sessions.slice(0, 8).map(sess => (
+              <View key={sess.id} style={s.sessionBox}>
+                <View style={s.sessionHeader}>
+                  <Text style={s.sessionWeek}>
+                    {sess.week != null ? `SEMANA ${sess.week}` : 'SESIÓN'}
+                  </Text>
+                  <Text style={s.sessionDate}>
+                    {sess.session_date ? formatDate(sess.session_date) : formatDate(sess.created_at)}
+                  </Text>
+                </View>
+                {sess.notes ? (
+                  <Text style={s.sessionNotes}>{sess.notes}</Text>
+                ) : (
+                  <Text style={s.sessionNotesEmpty}>Sin notas</Text>
+                )}
+                {sess.action_plan.length > 0 && (
+                  <View style={s.planList}>
+                    {sess.action_plan.slice(0, 6).map((item, i) => {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const it = item as any;
+                      const label =
+                        typeof it === 'string'
+                          ? it
+                          : (it?.title ?? it?.task ?? it?.text ?? JSON.stringify(it));
+                      return (
+                        <View key={i} style={s.planRow}>
+                          <MaterialIcons name="arrow-right" size={14} color={palette.gold} />
+                          <Text style={s.planText}>{label}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            ))
+          )}
+        </PremiumCard>
+
+        {/* ─────────────────────────────────────────────────── */}
         {/* I. PREDICCIÓN & SESIÓN SEMANAL */}
         {/* ─────────────────────────────────────────────────── */}
         <GoldDivider label="I. PREDICCIÓN & SESIÓN SEMANAL" />
@@ -673,6 +746,21 @@ const s = StyleSheet.create({
   checkInHeaderCell: { ...typography.label, color: palette.smoke, flex: 1, textAlign: 'center', fontSize: 8 },
   checkInRow: { flexDirection: 'row', paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   checkInCell: { ...typography.mono, color: palette.ivory, flex: 1, textAlign: 'center', fontSize: 11 },
+
+  // Mentorship
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+  taskTitle: { ...typography.caption, color: palette.ivory, flex: 1, fontSize: 12 },
+  taskTitleDone: { color: palette.smoke, textDecorationLine: 'line-through' },
+  taskWeek: { ...typography.mono, color: palette.smoke, fontSize: 9 },
+  sessionBox: { marginTop: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: palette.gold },
+  sessionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs },
+  sessionWeek: { ...typography.label, color: palette.gold, fontSize: 9, letterSpacing: 1 },
+  sessionDate: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  sessionNotes: { ...typography.caption, color: palette.ash, fontSize: 12, lineHeight: 18 },
+  sessionNotesEmpty: { ...typography.caption, color: palette.smoke, fontSize: 11, fontStyle: 'italic' },
+  planList: { marginTop: spacing.sm, gap: 4 },
+  planRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
+  planText: { ...typography.caption, color: palette.ivory, flex: 1, fontSize: 11, lineHeight: 16 },
 
   auditRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   auditAction: { fontFamily: Fonts.sans, fontSize: 12, color: palette.ivory, textTransform: 'capitalize' },

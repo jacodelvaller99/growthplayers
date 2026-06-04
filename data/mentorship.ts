@@ -129,3 +129,41 @@ export function weekStatus(week: number, protocolDay: number): WeekStatus {
   if (week === cur) return 'actual';
   return 'proxima';
 }
+
+/** Rango de fechas (inicio/fin) de una semana del programa. */
+export interface WeekDateRange {
+  start: Date;
+  end: Date;
+}
+
+/**
+ * Fechas de la semana N a partir del día de inicio del protocolo.
+ * Semana N abarca `protocolStartDate + (N-1)*7` … `+6` (7 días, fin inclusive).
+ * @param week               número de semana (1..N)
+ * @param protocolStartDate  ISO string (o Date) del día de inicio del protocolo
+ */
+export function weekDateRange(
+  week: number,
+  protocolStartDate: string | Date,
+): WeekDateRange {
+  const base = new Date(protocolStartDate);
+  // Normaliza a medianoche local para evitar arrastre por horas/zonas.
+  const startMs = new Date(base.getFullYear(), base.getMonth(), base.getDate()).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const offsetDays = (Math.max(week, 1) - 1) * 7;
+  const start = new Date(startMs + offsetDays * dayMs);
+  const end = new Date(startMs + (offsetDays + 6) * dayMs);
+  return { start, end };
+}
+
+/** Formatea un rango de semana como texto corto en español (ej. "12 ene – 18 ene"). */
+export function formatWeekRange(range: WeekDateRange): string {
+  const fmt = (d: Date) => {
+    try {
+      return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+    } catch {
+      return '';
+    }
+  };
+  return `${fmt(range.start)} – ${fmt(range.end)}`;
+}

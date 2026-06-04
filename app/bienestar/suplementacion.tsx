@@ -1,11 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +23,14 @@ interface Supplement {
   timing:    string;
   evidence:  string;
   color:     string;
+}
+
+// Entrada estructurada persistida en supplement_stacks.supplements (jsonb).
+interface StackItem {
+  name:     string;
+  dose:     string;
+  timing:   string;
+  category: Tab;
 }
 
 const SUPPLEMENTS: Record<Tab, Supplement[]> = {
@@ -61,17 +70,76 @@ export default function SuplementacionScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('energia');
   const [savedStack, setSavedStack] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  // Overrides editables de dosis/timing por suplemento (clave: `${tab}:${name}`).
+  const [overrides, setOverrides] = useState<Record<string, { dose: string; timing: string }>>({});
 
-  const currentSupps = SUPPLEMENTS[activeTab];
+  const ovKey = (tab: Tab, name: string) => `${tab}:${name}`;
+
+  // Carga los stacks guardados (estructurados) y aplica las dosis/timing editadas.
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const { data } = await db2.supplements()
+          .select('goal, supplements')
+          .eq('user_id', userId);
+        if (!Array.isArray(data)) return;
+        const next: Record<string, { dose: string; timing: string }> = {};
+        for (const row of data as any[]) {
+          const goal = row.goal as Tab;
+          const items = row.supplements;
+          if (!Array.isArray(items)) continue;
+          for (const it of items) {
+            if (it && typeof it === 'object' && it.name) {
+              next[ovKey(goal, it.name)] = {
+                dose:   it.dose   ?? '',
+                timing: it.timing ?? '',
+              };
+            }
+          }
+        }
+        if (Object.keys(next).length) setOverrides(prev => ({ ...next, ...prev }));
+      } catch { /* tabla/columna puede no existir aún */ }
+    })();
+  }, [userId]);
+
+  // Suplementos del tab actual con dosis/timing efectivos (override > catálogo).
+  const currentSupps = SUPPLEMENTS[activeTab].map(s => {
+    const ov = overrides[ovKey(activeTab, s.name)];
+    return { ...s, dose: ov?.dose || s.dose, timing: ov?.timing || s.timing };
+  });
+
+  const setField = (name: string, field: 'dose' | 'timing', value: string) => {
+    setOverrides(prev => {
+      const key = ovKey(activeTab, name);
+      const base = prev[key] ?? {
+        dose:   SUPPLEMENTS[activeTab].find(s => s.name === name)?.dose   ?? '',
+        timing: SUPPLEMENTS[activeTab].find(s => s.name === name)?.timing ?? '',
+      };
+      return { ...prev, [key]: { ...base, [field]: value } };
+    });
+    setSavedStack(null);
+  };
 
   const saveStack = async () => {
+    // Stack ESTRUCTURADO: objetos {name, dose, timing, category}.
+    const structured: StackItem[] = currentSupps.map(s => ({
+      name:     s.name,
+      dose:     s.dose,
+      timing:   s.timing,
+      category: activeTab,
+    }));
+    setEditing(null);
     if (!userId) { setSavedStack(activeTab); return; }
     try {
       await db2.supplements().upsert({
-        user_id:    userId,
-        goal:       activeTab,
-        stack:      currentSupps.map(s => s.name),
-        updated_at: new Date().toISOString(),
+        user_id:     userId,
+        goal:        activeTab,
+        supplements: structured,
+        // legacy: mantiene el array de nombres por compatibilidad con lecturas viejas
+        stack:       structured.map(s => s.name),
+        updated_at:  new Date().toISOString(),
       }, { onConflict: 'user_id,goal' });
     } catch { /* tabla puede no existir aún */ }
     setSavedStack(activeTab);
@@ -101,7 +169,7 @@ export default function SuplementacionScreen() {
         {TABS.map(tab => (
           <Pressable
             key={tab.id}
-            onPress={() => { setActiveTab(tab.id); setSavedStack(null); }}
+            onPress={() => { setActiveTab(tab.id); setSavedStack(null); setEditing(null); }}
             style={[styles.tab, activeTab === tab.id && styles.tabActive]}
           >
             <MaterialIcons name={tab.icon as any} size={16} color={activeTab === tab.id ? palette.ink : palette.ash} />
@@ -111,22 +179,62 @@ export default function SuplementacionScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {currentSupps.map((s, i) => (
-          <View key={i} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.colorDot, { backgroundColor: s.color }]} />
-              <Text style={styles.cardName}>{s.name}</Text>
-              <View style={styles.doseChip}>
-                <Text style={styles.doseText}>{s.dose}</Text>
+        {currentSupps.map((s, i) => {
+          const isEditing = editing === s.name;
+          return (
+            <View key={i} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.colorDot, { backgroundColor: s.color }]} />
+                <Text style={styles.cardName}>{s.name}</Text>
+                {!isEditing && (
+                  <View style={styles.doseChip}>
+                    <Text style={styles.doseText}>{s.dose}</Text>
+                  </View>
+                )}
+                <Pressable
+                  onPress={() => setEditing(isEditing ? null : s.name)}
+                  hitSlop={8}
+                  style={styles.editBtn}
+                  accessibilityLabel={isEditing ? 'Cerrar edición' : `Editar dosis de ${s.name}`}
+                >
+                  <MaterialIcons name={isEditing ? 'check' : 'edit'} size={16} color={palette.gold} />
+                </Pressable>
               </View>
+
+              {isEditing ? (
+                <View style={styles.editGrid}>
+                  <View style={styles.editField}>
+                    <Text style={styles.editLabel}>DOSIS</Text>
+                    <TextInput
+                      style={styles.editInput}
+                      value={s.dose}
+                      onChangeText={(v) => setField(s.name, 'dose', v)}
+                      placeholder="Ej: 300 mg"
+                      placeholderTextColor={palette.smoke}
+                    />
+                  </View>
+                  <View style={styles.editField}>
+                    <Text style={styles.editLabel}>TIMING</Text>
+                    <TextInput
+                      style={styles.editInput}
+                      value={s.timing}
+                      onChangeText={(v) => setField(s.name, 'timing', v)}
+                      placeholder="Ej: Mañana con comida"
+                      placeholderTextColor={palette.smoke}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.timingRow}>
+                  <MaterialIcons name="schedule" size={13} color={palette.gold} />
+                  <Text style={styles.timingText}>{s.timing}</Text>
+                </View>
+              )}
+
+              <Text style={styles.evidenceText}>{s.evidence}</Text>
             </View>
-            <View style={styles.timingRow}>
-              <MaterialIcons name="schedule" size={13} color={palette.gold} />
-              <Text style={styles.timingText}>{s.timing}</Text>
-            </View>
-            <Text style={styles.evidenceText}>{s.evidence}</Text>
-          </View>
-        ))}
+          );
+        })}
 
         {/* Guardar stack */}
         <Pressable
@@ -173,9 +281,15 @@ const styles = StyleSheet.create({
   cardName:      { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory, fontWeight: '700', flex: 1 },
   doseChip:      { backgroundColor: 'rgba(212,175,55,0.15)', borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 3 },
   doseText:      { fontFamily: Fonts.mono, fontSize: 11, color: palette.gold },
+  editBtn:       { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight },
   timingRow:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
   timingText:    { fontSize: 12, color: palette.gold },
   evidenceText:  { fontSize: 12, color: palette.ash, lineHeight: 18 },
+
+  editGrid:      { gap: spacing.sm, marginBottom: 10 },
+  editField:     { gap: 4 },
+  editLabel:     { ...typography.label, color: palette.ash, fontSize: 9 },
+  editInput:     { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.sm, paddingVertical: 8, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13 },
 
   saveBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.sm },
   saveBtnSaved:  { backgroundColor: 'rgba(212,175,55,0.3)', borderWidth: 1, borderColor: palette.gold },

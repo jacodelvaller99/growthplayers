@@ -88,6 +88,59 @@ export async function cancelReminders(): Promise<void> {
   }
 }
 
+// ─── Recordatorio diario por hora con deep-link a una pantalla ────────────────
+// Agenda una notificación local que se repite cada día a `hour:minute`. El tap
+// la abre directo en `route` (lo lee el listener de app/_layout.tsx → WS-7).
+// Reusa el mismo patrón scheduleNotificationAsync del recordatorio de check-in.
+//
+// Ej.: meditación matutina 6:30am →
+//   scheduleDailyRoutineReminder({ title:'MEDITACIÓN MATUTINA', body:'Agradece y crea tu día.', hour:6, minute:30, route:'/bienestar/meditacion' })
+export interface DailyRoutineReminder {
+  title:   string;
+  body:    string;
+  hour:    number;          // 0–23
+  minute?: number;          // 0–59 (default 0)
+  route:   string;          // deep-link interno (ej. '/bienestar/meditacion')
+  /** datos extra opcionales que viajan en la notificación */
+  data?:   Record<string, unknown>;
+}
+
+export async function scheduleDailyRoutineReminder(
+  reminder: DailyRoutineReminder,
+): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+  try {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: reminder.title,
+        body:  reminder.body,
+        sound: true,
+        // `route` lo consume addNotificationResponseReceivedListener (WS-7).
+        data:  { route: reminder.route, ...(reminder.data ?? {}) },
+      },
+      trigger: {
+        type:   Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour:   reminder.hour,
+        minute: reminder.minute ?? 0,
+      },
+    });
+    return id;
+  } catch (err) {
+    console.warn('[Notifications] scheduleDailyRoutineReminder error:', err);
+    return null;
+  }
+}
+
+// ─── Cancelar un recordatorio puntual por id ──────────────────────────────────
+export async function cancelScheduledNotification(id: string): Promise<void> {
+  if (Platform.OS === 'web' || !id) return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(id);
+  } catch {
+    // ignore
+  }
+}
+
 // ─── Última respuesta de notificación ────────────────────────────────────────
 // Usa Notifications.useLastNotificationResponse() en el componente que lo necesite.
 // Al tap en la notificación de check-in → router.push('/checkin')

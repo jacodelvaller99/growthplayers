@@ -19,9 +19,20 @@ import {
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { analytics } from '@/lib/analytics';
+import { intel } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
 const TOTAL_STEPS = 5;
+
+// Consent gate — Términos, Privacidad y Descargo de Salud (compliance de lanzamiento)
+type ConsentKey = 'terms' | 'privacy' | 'health';
+
+const CONSENT_ITEMS: { key: ConsentKey; label: string; route: '/legal/terminos' | '/legal/privacidad' | '/legal/salud' }[] = [
+  { key: 'terms',   label: 'Términos y Condiciones',          route: '/legal/terminos' },
+  { key: 'privacy', label: 'Política de Privacidad (RGPD)',   route: '/legal/privacidad' },
+  { key: 'health',  label: 'Descargo de Salud y Bienestar',   route: '/legal/salud' },
+];
 
 export default function OnboardingScreen() {
   const sc = useScreen();
@@ -36,6 +47,43 @@ export default function OnboardingScreen() {
   const [accessCode, setAccessCode] = useState('');
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
   const [codeMessage, setCodeMessage] = useState('');
+
+  // ── Consent gate (Step 0) ──────────────────────────────────────────────────
+  const [consents, setConsents] = useState<Record<ConsentKey, boolean>>({
+    terms: false,
+    privacy: false,
+    health: false,
+  });
+  const allConsented = consents.terms && consents.privacy && consents.health;
+
+  const toggleConsent = (key: ConsentKey) => {
+    setConsents((c) => ({ ...c, [key]: !c[key] }));
+  };
+
+  const acceptConsentAndContinue = async () => {
+    if (!allConsented) return;
+    const now = new Date().toISOString();
+    // Activa el tracking de comportamiento (ml_consent) — el usuario acaba de aceptar.
+    analytics.setConsent(true);
+    // Persiste el consentimiento en profiles (campos nuevos sin tipar → cliente intel/anyClient).
+    if (userId) {
+      try {
+        await intel.profiles().update({
+          consents: {
+            terms:   { accepted: true, at: now },
+            privacy: { accepted: true, at: now },
+            health:  { accepted: true, at: now },
+          },
+          terms_accepted_at: now,
+          ml_consent: true,
+        }).eq('id', userId);
+      } catch (e) {
+        // No bloquear el onboarding si la escritura falla (se re-confirma al completar).
+        console.warn('[Onboarding] persist consents:', e);
+      }
+    }
+    setStep(1);
+  };
 
   const goToStep3 = () => {
     // Pre-populate purpose with pain point if user hasn't set it yet
@@ -132,12 +180,43 @@ export default function OnboardingScreen() {
           </View>
 
           <View style={styles.dividerLine} />
-          <Text style={styles.legalNote}>
-            Al continuar, aceptas que tus datos biométricos y de bienestar son usados exclusivamente
-            para personalizar tu experiencia. No son consejo médico. Puedes exportar o eliminar
-            tu cuenta en Perfil → Privacidad y Datos (RGPD/GDPR).
-          </Text>
-          <PrimaryButton label="COMENZAR ACTIVACIÓN" icon="arrow-forward" onPress={() => setStep(1)} />
+
+          {/* ── Consentimiento legal (gate de compliance) ── */}
+          <View style={styles.consentBlock}>
+            <Text style={styles.consentIntro}>
+              Esto es bienestar y alto rendimiento, no atención médica. Consulta cualquier práctica
+              con tu médico. Para continuar, lee y acepta:
+            </Text>
+            {CONSENT_ITEMS.map(({ key, label, route }) => (
+              <Pressable
+                key={key}
+                onPress={() => toggleConsent(key)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: consents[key] }}
+                accessibilityLabel={`Aceptar ${label}`}
+                style={({ pressed }) => [styles.consentRow, pressed && { opacity: 0.7 }]}>
+                <View style={[styles.checkbox, consents[key] && styles.checkboxChecked]}>
+                  {consents[key] && <MaterialIcons name="check" size={16} color={palette.ink} />}
+                </View>
+                <Text style={styles.consentText}>
+                  He leído y acepto los{' '}
+                  <Text
+                    style={styles.consentLink}
+                    onPress={() => router.push(route as never)}
+                    accessibilityRole="link">
+                    {label}
+                  </Text>
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <PrimaryButton
+            label="COMENZAR ACTIVACIÓN"
+            icon="arrow-forward"
+            onPress={acceptConsentAndContinue}
+            disabled={!allConsented}
+          />
         </View>
       )}
 
@@ -383,12 +462,50 @@ const styles = StyleSheet.create({
     backgroundColor: palette.line,
     height: 1,
   },
-  legalNote: {
+
+  // ── Consent gate
+  consentBlock: {
+    gap: spacing.md,
+  },
+  consentIntro: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
-    lineHeight: 15,
-    opacity: 0.7,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  consentRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+    minHeight: 44,
+    paddingVertical: spacing.xs,
+  },
+  checkbox: {
+    alignItems: 'center',
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    borderWidth: 1.5,
+    height: 24,
+    justifyContent: 'center',
+    marginTop: 2,
+    width: 24,
+  },
+  checkboxChecked: {
+    backgroundColor: palette.gold,
+    borderColor: palette.gold,
+  },
+  consentText: {
+    ...typography.body,
+    color: palette.ash,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  consentLink: {
+    color: palette.gold,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 
   // ── Step cards

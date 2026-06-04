@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -33,12 +34,14 @@ import {
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { useMentorship, type SessionNote, type ActionItem } from '@/hooks/use-mentorship';
+import { useMentorship, type SessionNote, type ActionItem, type SessionDraft } from '@/hooks/use-mentorship';
 import {
   MENTORSHIP_PROGRAM,
   TOTAL_WEEKS,
   currentWeek,
   currentWeekNumber,
+  formatWeekRange,
+  weekDateRange,
   weekStatus,
   type MentorshipWeek,
 } from '@/data/mentorship';
@@ -52,6 +55,11 @@ function fmtDate(iso: string): string {
   }
 }
 
+/** Etiqueta del rango de fechas de una semana, a partir del inicio del protocolo. */
+function weekRangeLabel(week: number, protocolStartDate: string): string {
+  return formatWeekRange(weekDateRange(week, protocolStartDate));
+}
+
 export default function MentoriaScreen() {
   const sc = useScreen();
   const { isDesktop } = useBreakpoint();
@@ -63,12 +71,41 @@ export default function MentoriaScreen() {
   const weekNum = currentWeekNumber(protocolDay);
   const week = currentWeek(protocolDay);
   const startDate = useMemo(() => fmtDate(state.protocolStartDate), [state.protocolStartDate]);
+  const currentRange = useMemo(
+    () => weekRangeLabel(weekNum, state.protocolStartDate),
+    [weekNum, state.protocolStartDate],
+  );
 
   const [noteText, setNoteText] = useState('');
   const [noteWeek, setNoteWeek] = useState(weekNum);
   const [manualText, setManualText] = useState('');
 
   const pendingCount = m.plan.filter((it) => !it.done).length;
+  const isRecording = m.recordingPhase === 'recording';
+  const isProcessing =
+    m.recordingPhase === 'uploading' ||
+    m.recordingPhase === 'transcribing' ||
+    m.recordingPhase === 'summarizing';
+
+  // ── Consentimiento + arranque de grabación ─────────────────────────────────
+  const beginRecording = () => {
+    Alert.alert(
+      'Grabar esta sesión',
+      'Vas a grabar el audio de tu sesión de mentoría. Se subirá de forma privada a ' +
+        'tu espacio cifrado, se transcribirá y Norman redactará tus notas y plan de acción. ' +
+        'Solo tú (y tu Navegador) podrán verlo. ¿Autorizas la grabación?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Autorizo y grabar', onPress: () => { void m.startRecording(); } },
+      ],
+    );
+  };
+
+  const recLabel: Record<string, string> = {
+    uploading: 'SUBIENDO AUDIO…',
+    transcribing: 'TRANSCRIBIENDO…',
+    summarizing: 'NORMAN REDACTA…',
+  };
 
   // ── Hero: dónde estás ──────────────────────────────────────────────────────
   const hero = (
@@ -78,6 +115,10 @@ export default function MentoriaScreen() {
         <Text style={styles.heroStart}>INICIO · {startDate}</Text>
       </View>
       <Text style={styles.heroPhase}>{week.phase}</Text>
+      <View style={styles.heroDateRow}>
+        <MaterialIcons name="event" size={13} color={palette.gold} />
+        <Text style={styles.heroDate}>{currentRange}</Text>
+      </View>
       <Text style={styles.heroFocus}>{week.focus}</Text>
       <View style={styles.heroBar}>
         <View style={[styles.heroBarFill, { width: `${Math.round((weekNum / TOTAL_WEEKS) * 100)}%` as unknown as number }]} />
@@ -165,6 +206,7 @@ export default function MentoriaScreen() {
             key={w.week}
             w={w}
             status={weekStatus(w.week, protocolDay)}
+            dateRange={weekRangeLabel(w.week, state.protocolStartDate)}
             onPickForNote={() => setNoteWeek(w.week)}
             selectedForNote={noteWeek === w.week}
           />
@@ -180,6 +222,83 @@ export default function MentoriaScreen() {
       <Text style={styles.notesSub}>
         Tu Navegador registra aquí cada sesión; Norman convierte las notas en tu plan de acción.
       </Text>
+
+      {/* ── Grabar sesión → IA ─────────────────────────────────────────────── */}
+      {m.draft ? (
+        <DraftEditor
+          draft={m.draft}
+          weekRange={weekRangeLabel(m.draft.week, state.protocolStartDate)}
+          onChangeNotes={(t) => m.updateDraft({ notes: t })}
+          onChangeAction={(i, t) => {
+            const next = m.draft!.actions.slice();
+            next[i] = t;
+            m.updateDraft({ actions: next });
+          }}
+          onRemoveAction={(i) => {
+            const next = m.draft!.actions.slice();
+            next.splice(i, 1);
+            m.updateDraft({ actions: next });
+          }}
+          onAddAction={() => m.updateDraft({ actions: [...m.draft!.actions, ''] })}
+          onConfirm={() => { void m.confirmDraft(); }}
+          onDiscard={m.discardDraft}
+        />
+      ) : (
+        <View style={styles.recordBox}>
+          {!m.audioAvailable ? (
+            <Text style={styles.recordUnavailable}>
+              {Platform.OS === 'web'
+                ? 'La grabación con IA está disponible en la app móvil (iOS / Android).'
+                : 'La grabación no está disponible en este dispositivo.'}
+            </Text>
+          ) : isProcessing ? (
+            <View style={styles.recordProcessing}>
+              <ActivityIndicator size="small" color={palette.gold} />
+              <Text style={styles.recordProcessingText}>
+                {recLabel[m.recordingPhase] ?? 'PROCESANDO…'}
+              </Text>
+            </View>
+          ) : isRecording ? (
+            <View style={styles.recordActive}>
+              <View style={styles.recRow}>
+                <View style={styles.recDot} />
+                <Text style={styles.recText}>GRABANDO SESIÓN · SEM {noteWeek}</Text>
+              </View>
+              <View style={styles.recBtns}>
+                <Pressable
+                  onPress={() => m.cancelRecording()}
+                  style={styles.recCancel}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancelar grabación"
+                >
+                  <MaterialIcons name="close" size={16} color={palette.smoke} />
+                  <Text style={styles.recCancelText}>CANCELAR</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { void m.stopRecordingAndProcess(noteWeek); }}
+                  style={styles.recStop}
+                  accessibilityRole="button"
+                  accessibilityLabel="Detener y procesar"
+                >
+                  <MaterialIcons name="stop" size={16} color={palette.ink} />
+                  <Text style={styles.recStopText}>DETENER Y PROCESAR</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              onPress={beginRecording}
+              style={styles.recStart}
+              accessibilityRole="button"
+              accessibilityLabel="Grabar sesión"
+            >
+              <MaterialIcons name="mic" size={18} color={palette.ink} />
+              <Text style={styles.recStartText}>GRABAR SESIÓN</Text>
+            </Pressable>
+          )}
+          {m.recordingError && <Text style={styles.recError}>{m.recordingError}</Text>}
+        </View>
+      )}
 
       <View style={styles.noteComposer}>
         <View style={styles.noteWeekRow}>
@@ -228,7 +347,12 @@ export default function MentoriaScreen() {
           <GoldDivider />
           <View style={styles.noteList}>
             {m.notes.map((n) => (
-              <NoteCard key={n.id} n={n} onRemove={() => m.removeNote(n.id)} />
+              <NoteCard
+                key={n.id}
+                n={n}
+                weekRange={weekRangeLabel(n.week, state.protocolStartDate)}
+                onRemove={() => m.removeNote(n.id)}
+              />
             ))}
           </View>
         </>
@@ -288,8 +412,8 @@ function ActionRow({ item, onToggle, onRemove }: { item: ActionItem; onToggle: (
 }
 
 function WeekRow({
-  w, status, onPickForNote, selectedForNote,
-}: { w: MentorshipWeek; status: ReturnType<typeof weekStatus>; onPickForNote: () => void; selectedForNote: boolean }) {
+  w, status, dateRange, onPickForNote, selectedForNote,
+}: { w: MentorshipWeek; status: ReturnType<typeof weekStatus>; dateRange: string; onPickForNote: () => void; selectedForNote: boolean }) {
   const [open, setOpen] = useState(status === 'actual');
   const dot =
     status === 'completada' ? <MaterialIcons name="check" size={13} color={palette.ink} />
@@ -308,6 +432,7 @@ function WeekRow({
       <Pressable style={styles.weekBody} onPress={() => setOpen(!open)} accessibilityRole="button">
         <View style={styles.weekHead}>
           <Text style={[styles.weekNum, status === 'actual' && styles.weekNumActive]}>SEMANA {w.week}</Text>
+          <Text style={[styles.weekRange, status === 'actual' && styles.weekRangeActive]}>{dateRange}</Text>
           {status === 'actual' && <StatusPill label="AHORA" />}
         </View>
         <Text style={[styles.weekPhase, status === 'proxima' && styles.weekPhaseDim]}>{w.phase}</Text>
@@ -331,12 +456,18 @@ function WeekRow({
   );
 }
 
-function NoteCard({ n, onRemove }: { n: SessionNote; onRemove: () => void }) {
+function NoteCard({ n, weekRange, onRemove }: { n: SessionNote; weekRange: string; onRemove: () => void }) {
   return (
     <View style={styles.noteCard}>
       <View style={styles.noteCardHead}>
-        <Text style={styles.noteCardWeek}>SEMANA {n.week}</Text>
-        <Text style={styles.noteCardDate}>{fmtDate(n.date)}</Text>
+        {n.transcript ? (
+          <View style={styles.noteCardTag}>
+            <MaterialIcons name="mic" size={11} color={palette.gold} />
+            <Text style={styles.noteCardTagText}>GRABADA</Text>
+          </View>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
         <Pressable onPress={onRemove} hitSlop={8} accessibilityLabel="Eliminar nota">
           <MaterialIcons name="close" size={14} color={palette.smoke} />
         </Pressable>
@@ -348,6 +479,82 @@ function NoteCard({ n, onRemove }: { n: SessionNote; onRemove: () => void }) {
           <Text style={styles.audioText}>Grabación de sesión</Text>
         </View>
       )}
+      {/* Fecha/semana ABAJO de la nota (pedido de la reunión). */}
+      <View style={styles.noteCardFooter}>
+        <MaterialIcons name="event" size={12} color={palette.smoke} />
+        <Text style={styles.noteCardFooterText}>
+          SEMANA {n.week} · {weekRange} · {fmtDate(n.date)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function DraftEditor({
+  draft, weekRange, onChangeNotes, onChangeAction, onRemoveAction, onAddAction, onConfirm, onDiscard,
+}: {
+  draft: SessionDraft;
+  weekRange: string;
+  onChangeNotes: (t: string) => void;
+  onChangeAction: (i: number, t: string) => void;
+  onRemoveAction: (i: number) => void;
+  onAddAction: () => void;
+  onConfirm: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <View style={styles.draftBox}>
+      <View style={styles.draftHead}>
+        <MaterialIcons name="auto-awesome" size={15} color={palette.gold} />
+        <Text style={styles.draftTitle}>NORMAN REDACTÓ TU SESIÓN</Text>
+      </View>
+      <Text style={styles.draftSub}>
+        Revisa y edita las notas y el plan antes de guardar · SEMANA {draft.week} · {weekRange}
+      </Text>
+
+      <Text style={styles.draftLabel}>NOTAS DE SESIÓN</Text>
+      <TextInput
+        value={draft.notes}
+        onChangeText={onChangeNotes}
+        placeholder="Notas de la sesión…"
+        placeholderTextColor={palette.smoke}
+        selectionColor={palette.gold}
+        style={styles.draftNotes}
+        multiline
+        textAlignVertical="top"
+      />
+
+      <Text style={styles.draftLabel}>PLAN DE ACCIÓN</Text>
+      {draft.actions.map((a, i) => (
+        <View key={i} style={styles.draftActionRow}>
+          <MaterialIcons name="chevron-right" size={16} color={palette.gold} />
+          <TextInput
+            value={a}
+            onChangeText={(t) => onChangeAction(i, t)}
+            placeholder="Acción…"
+            placeholderTextColor={palette.smoke}
+            selectionColor={palette.gold}
+            style={styles.draftActionInput}
+          />
+          <Pressable onPress={() => onRemoveAction(i)} hitSlop={8} accessibilityLabel="Quitar acción">
+            <MaterialIcons name="close" size={15} color={palette.smoke} />
+          </Pressable>
+        </View>
+      ))}
+      <Pressable onPress={onAddAction} style={styles.draftAddAction} accessibilityRole="button">
+        <MaterialIcons name="add" size={16} color={palette.gold} />
+        <Text style={styles.draftAddActionText}>AGREGAR ACCIÓN</Text>
+      </Pressable>
+
+      <View style={styles.draftBtns}>
+        <Pressable onPress={onDiscard} style={styles.draftDiscard} accessibilityRole="button">
+          <Text style={styles.draftDiscardText}>DESCARTAR</Text>
+        </Pressable>
+        <Pressable onPress={onConfirm} style={styles.draftConfirm} accessibilityRole="button">
+          <MaterialIcons name="check" size={16} color={palette.ink} />
+          <Text style={styles.draftConfirmText}>GUARDAR SESIÓN</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -374,6 +581,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.display, fontWeight: '700', fontSize: 26, color: palette.ivory,
     letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 4,
   },
+  heroDateRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  heroDate: { ...typography.mono, fontSize: 11, color: palette.gold, letterSpacing: 0.5 },
   heroFocus: { ...typography.body, color: palette.ash, fontSize: 14, lineHeight: 21 },
   heroBar: { height: 4, borderRadius: 2, backgroundColor: palette.charcoal, overflow: 'hidden', marginTop: 6 },
   heroBarFill: { height: '100%', backgroundColor: palette.gold, borderRadius: 2 },
@@ -430,6 +639,8 @@ const styles = StyleSheet.create({
   weekHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   weekNum: { ...typography.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1.5 },
   weekNumActive: { color: palette.gold },
+  weekRange: { ...typography.mono, fontSize: 9.5, color: palette.smoke, letterSpacing: 0.3, flex: 1 },
+  weekRangeActive: { color: palette.goldMuted },
   weekPhase: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14.5, color: palette.ivory, marginTop: 3, letterSpacing: 0.3 },
   weekPhaseDim: { color: palette.ash },
   weekDetail: { gap: 7, marginTop: 8 },
@@ -463,9 +674,71 @@ const styles = StyleSheet.create({
   noteList: { gap: 10 },
   noteCard: { borderRadius: 10, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.graphiteLight, padding: 12, gap: 6 },
   noteCardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  noteCardWeek: { ...typography.mono, fontSize: 9.5, color: palette.gold, letterSpacing: 1 },
-  noteCardDate: { ...typography.mono, fontSize: 9.5, color: palette.smoke, flex: 1 },
+  noteCardTag: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  noteCardTagText: { ...typography.mono, fontSize: 9, color: palette.gold, letterSpacing: 1 },
   noteCardText: { ...typography.body, fontSize: 13, color: palette.ivory, lineHeight: 19 },
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   audioText: { ...typography.mono, fontSize: 10, color: palette.gold, letterSpacing: 0.5 },
+  noteCardFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: palette.line },
+  noteCardFooterText: { ...typography.mono, fontSize: 9.5, color: palette.smoke, letterSpacing: 0.3 },
+
+  // Grabar sesión → IA
+  recordBox: { gap: 8 },
+  recStart: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: palette.gold, borderRadius: 10, minHeight: 48,
+  },
+  recStartText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12.5, color: palette.ink, letterSpacing: 1.5 },
+  recordUnavailable: { ...typography.body, fontSize: 12, color: palette.smoke, lineHeight: 18, textAlign: 'center', paddingVertical: 8 },
+  recordProcessing: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48 },
+  recordProcessingText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.gold, letterSpacing: 1 },
+  recordActive: {
+    gap: 10, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: palette.lineGold, backgroundColor: palette.goldGlow,
+  },
+  recRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: palette.danger },
+  recText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.ivory, letterSpacing: 1 },
+  recBtns: { flexDirection: 'row', gap: 8 },
+  recCancel: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: 44, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: palette.line,
+  },
+  recCancelText: { fontFamily: Fonts.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1 },
+  recStop: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    minHeight: 44, borderRadius: 8, backgroundColor: palette.gold,
+  },
+  recStopText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, color: palette.ink, letterSpacing: 1 },
+  recError: { ...typography.mono, fontSize: 10.5, color: palette.danger, letterSpacing: 0.3 },
+
+  // Borrador de Norman (editable antes de confirmar)
+  draftBox: {
+    gap: 10, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: palette.lineGold, backgroundColor: palette.goldGlow,
+  },
+  draftHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  draftTitle: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, color: palette.ivory, letterSpacing: 1.5 },
+  draftSub: { ...typography.body, fontSize: 12, color: palette.ash, lineHeight: 17 },
+  draftLabel: { ...typography.mono, fontSize: 10, color: palette.gold, letterSpacing: 1.5, marginTop: 2 },
+  draftNotes: {
+    minHeight: 110, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: palette.line,
+    backgroundColor: palette.graphiteLight, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13.5, lineHeight: 20,
+  },
+  draftActionRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  draftActionInput: {
+    flex: 1, minHeight: 44, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: palette.line,
+    backgroundColor: palette.graphiteLight, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13,
+  },
+  draftAddAction: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
+  draftAddActionText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.gold, letterSpacing: 1 },
+  draftBtns: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  draftDiscard: {
+    minHeight: 44, paddingHorizontal: 16, borderRadius: 10, borderWidth: 1, borderColor: palette.line,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  draftDiscardText: { fontFamily: Fonts.mono, fontSize: 10.5, color: palette.smoke, letterSpacing: 1 },
+  draftConfirm: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    minHeight: 44, borderRadius: 10, backgroundColor: palette.gold,
+  },
+  draftConfirmText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, color: palette.ink, letterSpacing: 1.5 },
 });

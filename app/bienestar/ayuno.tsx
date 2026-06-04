@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +23,8 @@ const FASTING_STAGES = [
   { h: [12, 16], name: 'Cetosis temprana',    info: 'Producción de cetonas. Claridad mental aumenta notablemente.', color: '#E8A000' },
   { h: [16, 20], name: 'Autofagia activa',    info: 'Reciclaje celular profundo. Premio Nobel Medicina 2016.',      color: '#D4AF37' },
   { h: [20, 24], name: 'Regeneración máx.',   info: 'HGH aumenta hasta 5×. Reducción de inflamación sistémica.',   color: '#C8A020' },
+  { h: [24, 48], name: 'Autofagia profunda',  info: 'Renovación celular sostenida. Glucógeno totalmente agotado.',  color: '#C8A020' },
+  { h: [48, 72], name: 'Reinicio inmune',     info: 'Regeneración de células madre y del sistema inmune (>48h).',   color: '#B8901C' },
 ];
 
 const PROTOCOLS = [
@@ -29,6 +32,49 @@ const PROTOCOLS = [
   { label: '18:6',  targetHours: 18, description: 'Intermedio. Mayor autofagia y quema de grasa.' },
   { label: '20:4',  targetHours: 20, description: 'Avanzado. Para quienes dominan el 18:6.' },
   { label: '24h',   targetHours: 24, description: 'Un día completo. Solo para practicantes experimentados.' },
+  { label: '48h',   targetHours: 48, description: 'Ayuno prolongado. Autofagia profunda. Requiere experiencia.' },
+  { label: '72h',   targetHours: 72, description: 'Reinicio inmune. Solo con supervisión y mucha preparación.' },
+];
+
+// ── Guía educativa: preparar, hidratar y romper el ayuno (refeeding) ──────────
+const GUIDE_SECTIONS = [
+  {
+    icon: 'self-improvement' as const,
+    title: 'Preparar el cuerpo',
+    points: [
+      'Reduce azúcares y ultraprocesados 1–2 días antes para suavizar la transición.',
+      'Cena ligera la noche previa: proteína magra, vegetales y grasas buenas.',
+      'En ayunos largos (48h+) baja la intensidad del ejercicio y descansa bien.',
+    ],
+  },
+  {
+    icon: 'water-drop' as const,
+    title: 'Hidratación y electrolitos',
+    points: [
+      'Bebe agua de forma constante durante todo el ayuno.',
+      'Permitido: agua, café solo y té sin azúcar (no rompen el ayuno).',
+      'En 24h+ añade electrolitos (sodio, potasio, magnesio) para evitar mareo y fatiga.',
+    ],
+  },
+  {
+    icon: 'restaurant' as const,
+    title: 'Cómo ROMPER el ayuno (refeeding)',
+    points: [
+      'Rompe suave: caldo de huesos, proteína ligera o fruta de bajo índice glucémico.',
+      'Evita una comida copiosa o muy azucarada de golpe — puede causar malestar.',
+      'Mastica despacio y espera 30–60 min antes de una comida completa.',
+      'A mayor duración del ayuno, más gradual debe ser la reintroducción de alimentos.',
+    ],
+  },
+];
+
+// Sugerencias rápidas para el alimento con que se rompe el ayuno (breaking_food).
+const BREAKING_FOOD_SUGGESTIONS = [
+  'Caldo de huesos',
+  'Proteína ligera',
+  'Fruta baja en azúcar',
+  'Aguacate',
+  'Yogur / kéfir',
 ];
 
 function formatDuration(ms: number) {
@@ -45,6 +91,8 @@ export default function AyunoScreen() {
   const { userId } = useLifeFlow();
 
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [showBreakModal, setShowBreakModal] = useState(false);
+  const [breakingFood, setBreakingFood] = useState('');
   const [selectedProtocol, setSelectedProtocol] = useState(PROTOCOLS[0]);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -87,18 +135,23 @@ export default function AyunoScreen() {
     if (!startedAt) return;
     const now = new Date();
     const actualHours = (now.getTime() - startedAt.getTime()) / 3_600_000;
+    const food = breakingFood.trim();
     setStartedAt(null);
+    setShowBreakModal(false);
     if (userId && sessionId) {
       try {
         await db2.fasting().update({
-          ended_at:     now.toISOString(),
-          completed:    actualHours >= selectedProtocol.targetHours,
-          actual_hours: Math.round(actualHours * 10) / 10,
+          ended_at:      now.toISOString(),
+          completed:     actualHours >= selectedProtocol.targetHours,
+          actual_hours:  Math.round(actualHours * 10) / 10,
+          // breaking_food: alimento con que se rompió el ayuno (columna nueva, cliente sin tipar)
+          breaking_food: food || null,
         }).eq('id', sessionId);
       } catch { /* silencioso */ }
     }
     setSessionId(null);
     setElapsed(0);
+    setBreakingFood('');
   };
 
   const isActive = !!startedAt;
@@ -184,13 +237,32 @@ export default function AyunoScreen() {
           })}
         </View>
 
+        {/* GUÍA — preparar, hidratar y romper el ayuno */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>GUÍA</Text>
+          {GUIDE_SECTIONS.map((g, i) => (
+            <View key={i} style={styles.guideCard}>
+              <View style={styles.guideHeader}>
+                <MaterialIcons name={g.icon} size={18} color={palette.gold} />
+                <Text style={styles.guideTitle}>{g.title}</Text>
+              </View>
+              {g.points.map((p, j) => (
+                <View key={j} style={styles.guidePointRow}>
+                  <View style={styles.guideBullet} />
+                  <Text style={styles.guidePointText}>{p}</Text>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+
         {/* Botón de acción */}
         <Pressable
-          onPress={isActive ? endFast : () => setShowDisclaimer(true)}
+          onPress={isActive ? () => setShowBreakModal(true) : () => setShowDisclaimer(true)}
           style={[styles.ctaBtn, isActive && styles.ctaBtnEnd]}
         >
           <Text style={styles.ctaBtnText}>
-            {isActive ? 'TERMINAR AYUNO' : 'INICIAR AYUNO'}
+            {isActive ? 'ROMPER AYUNO' : 'INICIAR AYUNO'}
           </Text>
         </Pressable>
       </ScrollView>
@@ -212,6 +284,41 @@ export default function AyunoScreen() {
               </Pressable>
               <Pressable onPress={startFast} style={styles.modalConfirm}>
                 <Text style={styles.modalConfirmText}>ENTENDIDO · INICIAR</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Romper ayuno (refeeding) — captura breaking_food */}
+      <Modal visible={showBreakModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <MaterialIcons name="restaurant" size={32} color={palette.gold} style={{ marginBottom: 12 }} />
+            <Text style={styles.modalTitle}>ROMPER EL AYUNO</Text>
+            <Text style={styles.modalBody}>
+              Rompe suave para cuidar tu digestión. ¿Con qué alimento vas a romper el ayuno?
+            </Text>
+            <TextInput
+              style={styles.breakInput}
+              value={breakingFood}
+              onChangeText={setBreakingFood}
+              placeholder="Ej: caldo de huesos"
+              placeholderTextColor={palette.smoke}
+            />
+            <View style={styles.breakChips}>
+              {BREAKING_FOOD_SUGGESTIONS.map(s => (
+                <Pressable key={s} onPress={() => setBreakingFood(s)} style={styles.breakChip}>
+                  <Text style={styles.breakChipText}>{s}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setShowBreakModal(false)} style={styles.modalCancel}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={endFast} style={styles.modalConfirm}>
+                <Text style={styles.modalConfirmText}>ROMPER AYUNO</Text>
               </Pressable>
             </View>
           </View>
@@ -256,6 +363,13 @@ const styles = StyleSheet.create({
   stageRowName:     { fontFamily: Fonts.sans, fontSize: 13, color: palette.ash, fontWeight: '600' },
   stageRowInfo:     { fontSize: 12, color: palette.smoke, marginTop: 2 },
 
+  guideCard:        { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, marginBottom: 10, borderLeftWidth: 2, borderLeftColor: palette.gold },
+  guideHeader:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  guideTitle:       { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '700', flex: 1 },
+  guidePointRow:    { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  guideBullet:      { width: 5, height: 5, borderRadius: 3, backgroundColor: palette.gold, marginTop: 7 },
+  guidePointText:   { flex: 1, fontSize: 12, color: palette.ash, lineHeight: 18 },
+
   ctaBtn:           { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center', marginTop: 8 },
   ctaBtnEnd:        { backgroundColor: 'rgba(212,175,55,0.2)', borderWidth: 1, borderColor: palette.gold },
   ctaBtnText:       { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
@@ -269,4 +383,9 @@ const styles = StyleSheet.create({
   modalCancelText:  { color: palette.ash, fontSize: 13 },
   modalConfirm:     { flex: 2, padding: 12, backgroundColor: palette.gold, borderRadius: radii.sm, alignItems: 'center' },
   modalConfirmText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 12, letterSpacing: 1 },
+
+  breakInput:       { width: '100%', backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, marginTop: spacing.md },
+  breakChips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm, justifyContent: 'center' },
+  breakChip:        { borderWidth: 1, borderColor: palette.lineGold, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: palette.goldLight },
+  breakChipText:    { fontSize: 11, color: palette.gold, fontFamily: Fonts.sans },
 });
