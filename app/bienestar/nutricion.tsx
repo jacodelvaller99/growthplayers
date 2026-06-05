@@ -188,13 +188,13 @@ export default function NutricionScreen() {
   const PlanSection = (
     <View style={styles.planCard}>
       <View style={styles.planHeader}>
-        <MaterialIcons name="description" size={18} color={palette.gold} />
+        <MaterialIcons name="description" size={18} color={palette.goldText} />
         <Text style={styles.planTitle}>PLAN DE NUTRICIÓN</Text>
       </View>
 
       {savedPlanUrl ? (
         <Pressable onPress={openPlan} style={styles.planSaved}>
-          <MaterialIcons name="insert-drive-file" size={22} color={palette.gold} />
+          <MaterialIcons name="insert-drive-file" size={22} color={palette.goldText} />
           <View style={styles.planSavedText}>
             <Text style={styles.planSavedLabel} numberOfLines={1}>Plan guardado</Text>
             {!!savedNutritionist && (
@@ -252,7 +252,7 @@ export default function NutricionScreen() {
         </View>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.successContainer}>
-            <MaterialIcons name="check-circle" size={64} color={palette.gold} />
+            <MaterialIcons name="check-circle" size={64} color={palette.goldText} />
             <Text style={styles.successTitle}>PERFIL GUARDADO</Text>
             <Text style={styles.successSub}>
               Tu perfil nutricional está configurado.{'\n'}
@@ -301,7 +301,7 @@ export default function NutricionScreen() {
                 style={[styles.optionRow, answers.dietType === d.id && styles.optionRowActive]}
               >
                 <View style={[styles.optionIcon, answers.dietType === d.id && styles.optionIconActive]}>
-                  <MaterialIcons name={d.icon as any} size={20} color={answers.dietType === d.id ? palette.ink : palette.gold} />
+                  <MaterialIcons name={d.icon as any} size={20} color={answers.dietType === d.id ? palette.ink : palette.goldText} />
                 </View>
                 <View style={styles.optionText}>
                   <Text style={[styles.optionLabel, answers.dietType === d.id && { color: palette.ink }]}>{d.label}</Text>
@@ -376,7 +376,7 @@ export default function NutricionScreen() {
                     onPress={() => setAnswers(prev => ({ ...prev, goal: g.id }))}
                     style={[styles.goalCard, selected && styles.goalCardActive]}
                   >
-                    <MaterialIcons name={g.icon as any} size={28} color={selected ? palette.ink : palette.gold} />
+                    <MaterialIcons name={g.icon as any} size={28} color={selected ? palette.ink : palette.goldText} />
                     <Text style={[styles.goalLabel, selected && { color: palette.ink }]}>{g.label}</Text>
                   </Pressable>
                 );
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:          { padding: 8 },
   title:            { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
-  stepCounter:      { fontFamily: Fonts.mono, fontSize: 13, color: palette.gold, width: 38, textAlign: 'right' },
+  stepCounter:      { fontFamily: Fonts.mono, fontSize: 13, color: palette.goldText, width: 38, textAlign: 'right' },
 
   progressBar:      { height: 2, backgroundColor: palette.line, marginHorizontal: spacing.md },
   progressFill:     { height: '100%', backgroundColor: palette.gold },
@@ -468,14 +468,14 @@ const styles = StyleSheet.create({
   nextBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
   successContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl, gap: 16 },
-  successTitle:     { fontFamily: Fonts.display, fontSize: 22, color: palette.gold, letterSpacing: 2 },
+  successTitle:     { fontFamily: Fonts.display, fontSize: 22, color: palette.goldText, letterSpacing: 2 },
   successSub:       { ...typography.body, color: palette.ash, textAlign: 'center', lineHeight: 22 },
   doneBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: 14, paddingHorizontal: 32, marginTop: spacing.lg, alignSelf: 'center' },
   doneBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
   planCard:         { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.lg, borderWidth: 1, borderColor: palette.lineGoldSubtle, gap: spacing.sm },
   planHeader:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  planTitle:        { ...typography.label, color: palette.gold, fontSize: 11 },
+  planTitle:        { ...typography.label, color: palette.goldText, fontSize: 11 },
   planEmptyText:    { fontSize: 12, color: palette.ash, lineHeight: 18 },
   planSaved:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: palette.goldLight, borderRadius: radii.sm, padding: spacing.sm, borderWidth: 1, borderColor: palette.lineGold },
   planSavedText:    { flex: 1 },

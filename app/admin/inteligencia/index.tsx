@@ -129,7 +129,7 @@ export default function InteligenciaScreen() {
   if (loading) {
     return (
       <View style={[sc.root, s.center]}>
-        <ActivityIndicator color={palette.gold} size="large" />
+        <ActivityIndicator color={palette.goldText} size="large" />
       </View>
     );
   }

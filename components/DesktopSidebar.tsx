@@ -64,7 +64,7 @@ export function DesktopSidebar() {
         <MaterialIcons
           name={item.icon}
           size={20}
-          color={isActive ? palette.gold : palette.muted}
+          color={isActive ? palette.goldText : palette.muted}
         />
         <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
           {item.label}
@@ -78,7 +78,7 @@ export function DesktopSidebar() {
 
       {/* ── Logo oficial — Manual de Marca Polaris (Orgánico Studio 2024) ── */}
       <View style={styles.logoArea}>
-        <PolarisLogo variant="star" size={28} color={palette.gold} />
+        <PolarisLogo variant="star" size={28} color={palette.goldText} />
         <View>
           <Text style={styles.logoText}>POLARIS</Text>
           <Text style={styles.logoSub}>GROWTH INSTITUTE</Text>
@@ -96,7 +96,7 @@ export function DesktopSidebar() {
         {/* ── Streak card (gradiente oro) — datos reales ── */}
         <View style={styles.streakCard}>
           <View style={styles.streakRow}>
-            <MaterialIcons name="local-fire-department" size={20} color={palette.gold} />
+            <MaterialIcons name="local-fire-department" size={20} color={palette.goldText} />
             <Text style={styles.streakNum}>{streak}</Text>
             <Text style={styles.streakUnit}>DÍAS</Text>
           </View>
@@ -120,7 +120,7 @@ export function DesktopSidebar() {
                 <MaterialIcons
                   name={m === 'dark' ? 'dark-mode' : 'light-mode'}
                   size={14}
-                  color={on ? '#0A0A0A' : palette.smoke}
+                  color={on ? palette.ink : palette.smoke}
                 />
                 <Text style={[styles.themeBtnText, on && styles.themeBtnTextOn]}>
                   {m === 'dark' ? 'OSCURO' : 'CLARO'}
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.displayMedium,  // GrandisExtended-Medium
     fontWeight: '500',
   },
-  navLabelActive: { color: palette.gold },
+  navLabelActive: { color: palette.goldText },
 
   // Streak card
   streakCard: {
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 20,
     fontWeight: '700',
-    color: palette.gold,
+    color: palette.goldText,
   },
   streakUnit: {
     fontFamily: Fonts.mono,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: palette.smoke,
   },
-  themeBtnTextOn: { color: '#0A0A0A', fontWeight: '700' },
+  themeBtnTextOn: { color: palette.ink, fontWeight: '700' },
 
   // User card
   userCard: {
@@ -327,11 +327,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 0,
   },
-  avatarText: { color: '#0A0A0A', fontWeight: '800', fontSize: 15, fontFamily: Fonts.display },
+  avatarText: { color: palette.ink, fontWeight: '800', fontSize: 15, fontFamily: Fonts.display },
   userInfo: { flex: 1, minWidth: 0 },
   userName: { color: palette.ivoryWarm, fontSize: 12.5, fontWeight: '600', marginBottom: 2 },
   userTier: {
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 9,
     letterSpacing: 1,
     fontFamily: Fonts.mono,

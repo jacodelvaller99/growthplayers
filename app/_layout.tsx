@@ -13,7 +13,7 @@ import { LifeFlowProvider, useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useSmartNotifications } from '@/hooks/use-smart-notifications';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { Colors } from '@/constants/theme';
+import { Colors, palette } from '@/constants/theme';
 import OfflineBanner from '@/components/OfflineBanner';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
 import { DesktopSidebar } from '@/components/DesktopSidebar';
@@ -121,9 +121,9 @@ function AppShell() {
 
   if (showSidebar) {
     return (
-      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: '#080808' }}>
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: palette.black }}>
         <DesktopSidebar />
-        <View style={{ flex: 1, backgroundColor: '#080808' }}>
+        <View style={{ flex: 1, backgroundColor: palette.black }}>
           <MainStack />
           <StatusBar style="light" />
         </View>
@@ -131,7 +131,7 @@ function AppShell() {
     );
   }
   return (
-    <View style={{ flex: 1, backgroundColor: '#080808' }}>
+    <View style={{ flex: 1, backgroundColor: palette.black }}>
       <MainStack />
       <StatusBar style="light" />
     </View>

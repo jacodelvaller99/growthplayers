@@ -130,7 +130,7 @@ function CheckboxField({
             <MaterialIcons
               name={checked ? 'check-box' : 'check-box-outline-blank'}
               size={20}
-              color={checked ? palette.gold : palette.smoke}
+              color={checked ? palette.goldText : palette.smoke}
             />
             <Text style={[styles.checkLabel, checked && styles.checkLabelSelected]}>{opt}</Text>
           </Pressable>
@@ -254,7 +254,7 @@ function FocusRitualModal({
               <Text style={ritualStyles.eyebrow}>COMPROMISO</Text>
               <Text style={ritualStyles.headline}>ENTRA.{'\n'}COMPLETA.</Text>
               <Text style={ritualStyles.body}>
-                Intención: <Text style={{ color: palette.gold }}>{intention}</Text>
+                Intención: <Text style={{ color: palette.goldText }}>{intention}</Text>
               </Text>
               <Text style={ritualStyles.body}>
                 El cerebro transforma cuando cierra ciclos completos — no cuando consume fragmentos. Una lección. Un bloque de tiempo. Sin interrupciones.
@@ -295,7 +295,7 @@ const ritualStyles = StyleSheet.create({
     width: '100%',
   },
   eyebrow: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 11,
     letterSpacing: 2,
@@ -383,7 +383,7 @@ function ArchetypeModal({
           <Text style={archStyles.moduleLabel}>{moduleTitle}</Text>
           {keyEvidence ? (
             <View style={archStyles.evidenceBox}>
-              <MaterialIcons name="format-quote" size={16} color={palette.gold} />
+              <MaterialIcons name="format-quote" size={16} color={palette.goldText} />
               <Text style={archStyles.evidenceText}>{keyEvidence}</Text>
             </View>
           ) : null}
@@ -466,7 +466,7 @@ function LessonCelebrationModal({
 
           {/* Icon */}
           <View style={celebStyles.iconWrap}>
-            <MaterialIcons name="check-circle" size={48} color={palette.gold} />
+            <MaterialIcons name="check-circle" size={48} color={palette.goldText} />
           </View>
 
           {/* Lesson label */}
@@ -598,7 +598,7 @@ const celebStyles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   timerBar: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: palette.line,
     borderRadius:    2,
     height:          2,
     overflow:        'hidden',
@@ -871,7 +871,7 @@ export default function LessonScreen() {
           <View style={styles.taskCard}>
             {/* Task header */}
             <View style={styles.taskHeader}>
-              <MaterialIcons name="stars" size={18} color={palette.gold} />
+              <MaterialIcons name="stars" size={18} color={palette.goldText} />
               <Text style={styles.taskHeaderLabel}>TAREA DE ESTA LECCIÓN</Text>
               {taskSaved && !editing && (
                 <View style={styles.completedBadge}>
@@ -958,7 +958,7 @@ export default function LessonScreen() {
               style={styles.notesSaveBtn}
               onPress={handleSaveNotes}
               accessibilityLabel="Guardar notas">
-              <MaterialIcons name="save" size={14} color={palette.gold} />
+              <MaterialIcons name="save" size={14} color={palette.goldText} />
               <Text style={styles.notesSaveBtnText}>GUARDAR NOTAS</Text>
             </Pressable>
           )}
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   videoLabel: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 9.5,
     letterSpacing: 1.4,
@@ -1091,7 +1091,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   lessonBadgeText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 10,
     letterSpacing: 1,
@@ -1194,7 +1194,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   wordCountGood: {
-    color: palette.gold,
+    color: palette.goldText,
   },
   inputBox: {
     borderRadius: radii.sm,
@@ -1269,7 +1269,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   normanInsightLabel: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 9,
     letterSpacing: 2,
@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
   },
   nextLessonLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 8,
     letterSpacing: 2,
   },
@@ -1441,7 +1441,7 @@ const archStyles = StyleSheet.create({
   arquetipo: {
     fontFamily: Fonts.display,
     fontSize: 36,
-    color: palette.gold,
+    color: palette.goldText,
     letterSpacing: 4,
     textTransform: 'uppercase',
     textAlign: 'center',
@@ -1484,7 +1484,7 @@ const archStyles = StyleSheet.create({
   },
   bodySecondary: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 1,
     textAlign: 'center',

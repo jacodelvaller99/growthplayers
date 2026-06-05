@@ -117,7 +117,7 @@ export default function OfflineBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: '#B03030',
+    backgroundColor: palette.danger,
     left: 0,
     paddingBottom: spacing.sm,
     position: 'absolute',

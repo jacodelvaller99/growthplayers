@@ -291,7 +291,7 @@ function MeditationPlayer({
         {running && (
           <View style={player.controlRow}>
             <Pressable style={player.pauseBtn} onPress={handlePause}>
-              <MaterialIcons name="pause" size={22} color={palette.gold} />
+              <MaterialIcons name="pause" size={22} color={palette.goldText} />
               <Text style={player.pauseBtnText}>PAUSAR</Text>
             </Pressable>
             <Pressable style={player.stopBtn} onPress={handleStop}>
@@ -411,7 +411,7 @@ export default function MeditacionScreen() {
                 </View>
                 {done
                   ? <MaterialIcons name="check-circle" size={26} color={palette.success} />
-                  : <MaterialIcons name="play-circle" size={26} color={palette.gold} />
+                  : <MaterialIcons name="play-circle" size={26} color={palette.goldText} />
                 }
               </View>
               <Text style={styles.cardDesc}>{session.description}</Text>
@@ -588,7 +588,7 @@ const player = StyleSheet.create({
   },
   pauseBtnText: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 12,
   },
   stopBtn: {

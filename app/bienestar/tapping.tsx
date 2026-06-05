@@ -162,7 +162,7 @@ function PointGlyph({ icon }: { icon: React.ComponentProps<typeof MaterialIcons>
   }, [glow]);
   return (
     <Animated.View style={[styles.glyphCircle, { transform: [{ scale: glow }] }]}>
-      <MaterialIcons name={icon} size={44} color={palette.gold} />
+      <MaterialIcons name={icon} size={44} color={palette.goldText} />
     </Animated.View>
   );
 }
@@ -303,7 +303,7 @@ export default function TappingScreen() {
             ))}
           </View>
           <View style={styles.repsRow}>
-            <MaterialIcons name="touch-app" size={14} color={palette.gold} />
+            <MaterialIcons name="touch-app" size={14} color={palette.goldText} />
             <Text style={styles.repsText}>Golpea suavemente × {point.reps} veces</Text>
           </View>
         </View>
@@ -311,7 +311,7 @@ export default function TappingScreen() {
         {/* Navigation */}
         <View style={styles.navRow}>
           <Pressable style={styles.prevBtn} onPress={prevPoint} accessibilityRole="button" accessibilityLabel="Anterior">
-            <MaterialIcons name="arrow-back" size={18} color={palette.gold} />
+            <MaterialIcons name="arrow-back" size={18} color={palette.goldText} />
             <Text style={styles.prevBtnText}>Anterior</Text>
           </Pressable>
           <Pressable style={styles.nextBtn} onPress={nextPoint} accessibilityRole="button" accessibilityLabel={isLast ? 'Cerrar' : 'Siguiente punto'}>
@@ -330,7 +330,7 @@ export default function TappingScreen() {
         {renderHeader(() => setScreen('tapping'))}
 
         <View style={styles.closeHeader}>
-          <MaterialIcons name="spa" size={40} color={palette.gold} />
+          <MaterialIcons name="spa" size={40} color={palette.goldText} />
           <Text style={styles.closeTitle}>SISTEMA RECALIBRADO</Text>
         </View>
 
@@ -383,7 +383,7 @@ export default function TappingScreen() {
   // ── Done ───────────────────────────────────────────────────────────────────
   return (
     <View style={[sc.root, styles.donePhase, { paddingTop: insets.top + 16 }]}>
-      <MaterialIcons name="check-circle" size={64} color={palette.gold} />
+      <MaterialIcons name="check-circle" size={64} color={palette.goldText} />
       <Text style={styles.doneTitle}>Sesión completada.</Text>
       <Text style={styles.doneSub}>
         Cada sesión de Tapping es un paso hacia un sistema nervioso más libre y una mente más clara.
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
 
   intro: { ...typography.body, color: palette.ash, lineHeight: 22 },
 
-  fieldLabel: { ...typography.label, color: palette.gold, fontSize: 11, letterSpacing: 1.8 },
+  fieldLabel: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
 
   emotionInput: {
     ...typography.body,
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: palette.gold, borderRadius: radii.pill },
-  progressText: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 12 },
+  progressText: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 12 },
 
   // Point block
   pointBlock: { alignItems: 'center', marginTop: spacing.sm },
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   scriptWrap: { marginTop: spacing.xl, maxWidth: 290, gap: 4 },
   scriptLine: { ...typography.body, color: palette.ivory, fontStyle: 'italic', fontSize: 15, lineHeight: 24, textAlign: 'center' },
   repsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.lg },
-  repsText: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 12 },
+  repsText: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 12 },
 
   // Navigation
   navRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xxl },
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     borderColor: palette.lineGold,
     borderRadius: radii.sm,
   },
-  prevBtnText: { fontFamily: Fonts.sans, color: palette.gold, fontSize: 13, fontWeight: '600' },
+  prevBtnText: { fontFamily: Fonts.sans, color: palette.goldText, fontSize: 13, fontWeight: '600' },
   nextBtn: {
     flex: 1.6,
     flexDirection: 'row',

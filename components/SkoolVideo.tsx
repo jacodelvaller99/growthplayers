@@ -104,7 +104,7 @@ export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
     <View style={[styles.container, { height }]}>
       {loading && (
         <View style={styles.skeleton}>
-          <ActivityIndicator color={palette.gold} size="large" />
+          <ActivityIndicator color={palette.goldText} size="large" />
           <Text style={styles.loadingText}>Cargando video...</Text>
         </View>
       )}
@@ -149,14 +149,14 @@ const styles = StyleSheet.create({
   },
   fallback: {
     alignItems: 'center',
-    backgroundColor: '#111',
+    backgroundColor: palette.graphite,
     flex: 1,
     gap: spacing.md,
     justifyContent: 'center',
     padding: spacing.xl,
   },
   playIcon: {
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 36,
   },
   title: {

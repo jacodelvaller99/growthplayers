@@ -222,7 +222,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radii.sm,
   },
-  eyebrow: { ...typography.label, color: palette.gold },
+  eyebrow: { ...typography.label, color: palette.goldText },
   title: {
     fontFamily: Fonts.display,
     fontSize: 20,

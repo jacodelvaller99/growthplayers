@@ -90,7 +90,7 @@ export default function WhoopCallbackScreen() {
 
         {status === 'loading' && (
           <>
-            <ActivityIndicator size="large" color={palette.gold} style={styles.spinner} />
+            <ActivityIndicator size="large" color={palette.goldText} style={styles.spinner} />
             <Text style={styles.headline}>CONECTANDO...</Text>
             <Text style={styles.sub}>Intercambiando tokens con WHOOP</Text>
           </>

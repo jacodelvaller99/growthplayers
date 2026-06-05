@@ -163,7 +163,7 @@ export default function ContenidoScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={palette.gold} style={{ marginTop: spacing.xl }} />
+        <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xl }} />
       ) : tab === 'diarios' ? (
         <>
           <GoldDivider label={`ÚLTIMAS ${journals.length} ENTRADAS`} />
@@ -210,25 +210,25 @@ const s = StyleSheet.create({
   tabBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line },
   tabBtnActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   tabText: { ...typography.section, color: palette.ash, fontSize: 10 },
-  tabTextActive: { color: palette.gold },
+  tabTextActive: { color: palette.goldText },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', padding: spacing.xl },
 });
 
 const jc = StyleSheet.create({
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
-  userId: { fontFamily: Fonts.sans, fontSize: 13, color: palette.gold },
+  userId: { fontFamily: Fonts.sans, fontSize: 13, color: palette.goldText },
   time: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   type: { ...typography.label, color: palette.ash, marginBottom: spacing.xs, fontSize: 8 },
-  mood: { ...typography.mono, color: palette.gold, fontSize: 11, marginBottom: spacing.xs },
+  mood: { ...typography.mono, color: palette.goldText, fontSize: 11, marginBottom: spacing.xs },
   content: { ...typography.body, color: palette.ivory, lineHeight: 20, fontSize: 13 },
-  expand: { ...typography.label, color: palette.gold, marginTop: spacing.xs, fontSize: 9 },
+  expand: { ...typography.label, color: palette.goldText, marginTop: spacing.xs, fontSize: 9 },
 });
 
 const cv = StyleSheet.create({
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  userId: { fontFamily: Fonts.sans, fontSize: 13, color: palette.gold, flex: 1 },
+  userId: { fontFamily: Fonts.sans, fontSize: 13, color: palette.goldText, flex: 1 },
   count: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   thread: { gap: spacing.sm, marginTop: spacing.sm },
   bubble: { borderRadius: radii.sm, padding: spacing.sm, maxWidth: '90%' },

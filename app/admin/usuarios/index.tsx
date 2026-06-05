@@ -113,7 +113,7 @@ export default function UsuariosScreen() {
   if (loading) {
     return (
       <View style={[sc.root, s.center]}>
-        <ActivityIndicator color={palette.gold} />
+        <ActivityIndicator color={palette.goldText} />
       </View>
     );
   }
@@ -197,7 +197,7 @@ const s = StyleSheet.create({
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   badge: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
     backgroundColor: palette.goldLight,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
@@ -240,7 +240,7 @@ const s = StyleSheet.create({
     borderColor: palette.gold,
   },
   filterText: { ...typography.label, color: palette.ash },
-  filterTextActive: { color: palette.gold },
+  filterTextActive: { color: palette.goldText },
 
   row: {
     flexDirection: 'row',
@@ -259,7 +259,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: Fonts.display, fontSize: 14, color: palette.gold },
+  avatarText: { fontFamily: Fonts.display, fontSize: 14, color: palette.goldText },
   rowMain: { flex: 1 },
   rowName: { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   rowMeta: { ...typography.caption, color: palette.smoke, marginTop: 2 },

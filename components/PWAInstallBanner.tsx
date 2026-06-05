@@ -55,7 +55,7 @@ export default function PWAInstallBanner() {
       <View style={styles.row}>
         {/* Icon */}
         <View style={styles.iconWrap}>
-          <MaterialIcons name="install-mobile" size={20} color={palette.gold} />
+          <MaterialIcons name="install-mobile" size={20} color={palette.goldText} />
         </View>
 
         {/* Text */}
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 8,
     borderRightColor: 'transparent',
     borderRightWidth: 8,
-    borderTopColor: '#1A1A1A',
+    borderTopColor: palette.graphiteLight,
     borderTopWidth: 8,
     bottom: -8,
     position: 'absolute',

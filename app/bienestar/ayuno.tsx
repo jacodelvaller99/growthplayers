@@ -17,8 +17,8 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
 
 const FASTING_STAGES = [
-  { h: [0,  4],  name: 'Digestión activa',   info: 'El cuerpo procesa los nutrientes. Insulina elevada.',           color: '#555' },
-  { h: [4,  8],  name: 'Post-absorción',      info: 'Glucosa se normaliza. El cuerpo empieza a usar glucógeno.',     color: '#666' },
+  { h: [0,  4],  name: 'Digestión activa',   info: 'El cuerpo procesa los nutrientes. Insulina elevada.',           color: palette.smoke },
+  { h: [4,  8],  name: 'Post-absorción',      info: 'Glucosa se normaliza. El cuerpo empieza a usar glucógeno.',     color: palette.smoke },
   { h: [8,  12], name: 'Estado de ayuno',     info: 'Glucógeno casi agotado. Transición hacia grasas.',             color: '#EDBA01' },
   { h: [12, 16], name: 'Cetosis temprana',    info: 'Producción de cetonas. Claridad mental aumenta notablemente.', color: '#E8A000' },
   { h: [16, 20], name: 'Autofagia activa',    info: 'Reciclaje celular profundo. Premio Nobel Medicina 2016.',      color: '#D4AF37' },
@@ -188,7 +188,7 @@ export default function AyunoScreen() {
             </>
           ) : (
             <>
-              <MaterialIcons name="timer" size={48} color={palette.gold} />
+              <MaterialIcons name="timer" size={48} color={palette.goldText} />
               <Text style={styles.timerIdleText}>Sin ayuno activo</Text>
               <Text style={styles.timerSub}>Selecciona un protocolo e inicia</Text>
             </>
@@ -243,7 +243,7 @@ export default function AyunoScreen() {
           {GUIDE_SECTIONS.map((g, i) => (
             <View key={i} style={styles.guideCard}>
               <View style={styles.guideHeader}>
-                <MaterialIcons name={g.icon} size={18} color={palette.gold} />
+                <MaterialIcons name={g.icon} size={18} color={palette.goldText} />
                 <Text style={styles.guideTitle}>{g.title}</Text>
               </View>
               {g.points.map((p, j) => (
@@ -271,7 +271,7 @@ export default function AyunoScreen() {
       <Modal visible={showDisclaimer} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <MaterialIcons name="warning" size={32} color={palette.gold} style={{ marginBottom: 12 }} />
+            <MaterialIcons name="warning" size={32} color={palette.goldText} style={{ marginBottom: 12 }} />
             <Text style={styles.modalTitle}>AVISO MÉDICO</Text>
             <Text style={styles.modalBody}>
               El ayuno intermitente puede no ser adecuado para todas las personas.
@@ -294,7 +294,7 @@ export default function AyunoScreen() {
       <Modal visible={showBreakModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <MaterialIcons name="restaurant" size={32} color={palette.gold} style={{ marginBottom: 12 }} />
+            <MaterialIcons name="restaurant" size={32} color={palette.goldText} style={{ marginBottom: 12 }} />
             <Text style={styles.modalTitle}>ROMPER EL AYUNO</Text>
             <Text style={styles.modalBody}>
               Rompe suave para cuidar tu digestión. ¿Con qué alimento vas a romper el ayuno?
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   content:          { paddingHorizontal: spacing.md, paddingBottom: 40 },
 
   timerCard:        { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, alignItems: 'center', marginBottom: spacing.lg, gap: 8 },
-  timerLabel:       { ...typography.label, color: palette.gold },
+  timerLabel:       { ...typography.label, color: palette.goldText },
   timerDisplay:     { fontFamily: Fonts.mono, fontSize: 48, color: palette.ivory, letterSpacing: 4 },
   timerProtocol:    { ...typography.caption, color: palette.ash },
   progressBar:      { width: '100%', height: 3, backgroundColor: palette.line, borderRadius: 2, overflow: 'hidden', marginVertical: 4 },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   timerSub:         { ...typography.caption, color: palette.ash },
 
   section:          { marginBottom: spacing.lg },
-  sectionLabel:     { ...typography.label, color: palette.gold, marginBottom: spacing.sm },
+  sectionLabel:     { ...typography.label, color: palette.goldText, marginBottom: spacing.sm },
 
   protocolRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, gap: spacing.sm },
   protocolRowActive:{ backgroundColor: palette.gold },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
 
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
   modalBox:         { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, borderWidth: 1, borderColor: palette.gold, maxWidth: 440, width: '100%', alignItems: 'center' },
-  modalTitle:       { fontFamily: Fonts.display, fontSize: 16, color: palette.gold, letterSpacing: 2, marginBottom: 12 },
+  modalTitle:       { fontFamily: Fonts.display, fontSize: 16, color: palette.goldText, letterSpacing: 2, marginBottom: 12 },
   modalBody:        { fontSize: 14, color: palette.ash, lineHeight: 22, textAlign: 'center' },
   modalActions:     { flexDirection: 'row', gap: 12, marginTop: spacing.lg, width: '100%' },
   modalCancel:      { flex: 1, padding: 12, backgroundColor: palette.graphite, borderRadius: radii.sm, alignItems: 'center' },
@@ -387,5 +387,5 @@ const styles = StyleSheet.create({
   breakInput:       { width: '100%', backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, marginTop: spacing.md },
   breakChips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm, justifyContent: 'center' },
   breakChip:        { borderWidth: 1, borderColor: palette.lineGold, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: palette.goldLight },
-  breakChipText:    { fontSize: 11, color: palette.gold, fontFamily: Fonts.sans },
+  breakChipText:    { fontSize: 11, color: palette.goldText, fontFamily: Fonts.sans },
 });

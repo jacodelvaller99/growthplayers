@@ -119,7 +119,7 @@ export default function CursosScreen() {
             key={c.id}
             style={[s.courseCard, selectedCourse === c.id && s.courseCardActive]}
             onPress={() => setSelectedCourse(c.id)}>
-            <Text style={[s.courseCardName, selectedCourse === c.id && { color: palette.gold }]}>
+            <Text style={[s.courseCardName, selectedCourse === c.id && { color: palette.goldText }]}>
               {COURSE_LABELS[c.id]}
             </Text>
             <Text style={s.courseCardMeta}>{c.desc}</Text>
@@ -177,7 +177,7 @@ export default function CursosScreen() {
       <GoldDivider label={`USUARIOS CON ACCESO (${access.length})`} />
       <PremiumCard style={s.card}>
         {loading ? (
-          <ActivityIndicator color={palette.gold} style={{ padding: spacing.xl }} />
+          <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />
         ) : access.length === 0 ? (
           <Text style={s.emptyText}>Sin usuarios con acceso a este curso</Text>
         ) : (
@@ -211,7 +211,7 @@ const s = StyleSheet.create({
   courseCardActive: { borderColor: palette.gold, backgroundColor: palette.goldLight },
   courseCardName: { fontFamily: Fonts.display, fontSize: 11, color: palette.ivory, letterSpacing: 1, marginBottom: spacing.xs },
   courseCardMeta: { ...typography.caption, color: palette.smoke, fontSize: 10 },
-  courseCardCount: { ...typography.mono, color: palette.gold, fontSize: 11, marginTop: spacing.xs },
+  courseCardCount: { ...typography.mono, color: palette.goldText, fontSize: 11, marginTop: spacing.xs },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.lg },
   fieldLabel: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs, fontSize: 9 },
   input: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },

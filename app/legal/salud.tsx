@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18 },
 
-  eyebrow: { ...typography.label, color: palette.gold },
+  eyebrow: { ...typography.label, color: palette.goldText },
   lead: { ...typography.body, color: palette.ash, lineHeight: 22 },
 
   alertCard: {

@@ -29,11 +29,15 @@ export const palette = {
   ink:            '#0A0A0A',
 
   // ── Brand accent (Philippine Yellow — constant across themes) ─────────────────
-  gold:           '#FFC804',   // CTA buttons, active states, key metrics ONLY
+  gold:           '#FFC804',   // CTA buttons, active states, key metrics ONLY (FILLS)
   goldLight:      'rgba(255, 200, 4, 0.12)',   // tinted backgrounds
   goldMuted:      'rgba(255, 200, 4, 0.60)',   // secondary gold usage
   goldDim:        '#EDBA01',   // slightly darker variant
   goldGlow:       'rgba(255, 200, 4, 0.08)',   // glow effects
+  // gold AS TEXT/icon on a surface — themeable. Bright gold on cream fails
+  // contrast, so light mode swaps to deep amber. Use for eyebrows/labels/
+  // timestamps/gold icons (color:), NOT for fills (keep palette.gold there).
+  goldText:       cv('--c-gold-text', '#FFC804'),
 
   // ── Text hierarchy — themeable ───────────────────────────────────────────────
   ivory:          cv('--c-text',       '#EBEBEB'),   // primary text

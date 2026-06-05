@@ -173,7 +173,7 @@ export default function ChatThreadScreen() {
 
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={palette.gold} />
+            <ActivityIndicator color={palette.goldText} />
           </View>
         ) : (
           <FlatList
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   backBtn:     { padding: 8, minWidth: 38, alignItems: 'center' },
   headerCenter:{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   headerAvatar:{ width: 30, height: 30, borderRadius: 15, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, alignItems: 'center', justifyContent: 'center' },
-  headerAvatarText: { fontFamily: Fonts.display, fontSize: 13, color: palette.gold },
+  headerAvatarText: { fontFamily: Fonts.display, fontSize: 13, color: palette.goldText },
   headerName:  { fontFamily: Fonts.display, fontSize: 14, color: palette.ivory, letterSpacing: 1, maxWidth: 200 },
 
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },

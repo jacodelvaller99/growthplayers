@@ -182,7 +182,7 @@ export default function SuenoScreen() {
       {/* Premium lock if free */}
       {!isPremium && (
         <PremiumCard style={styles.lockBanner}>
-          <MaterialIcons name="lock" size={18} color={palette.gold} />
+          <MaterialIcons name="lock" size={18} color={palette.goldText} />
           <Text style={styles.lockText}>
             La mayoría del contenido de Sueño es Premium.
             Activa tu cuenta para acceder sin límites.
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     borderColor: palette.gold,
     marginTop: spacing.lg,
   },
-  premiumCtaTitle: { ...typography.section, color: palette.gold, letterSpacing: 2 },
+  premiumCtaTitle: { ...typography.section, color: palette.goldText, letterSpacing: 2 },
   premiumCtaBody: { ...typography.body, color: palette.ash, fontSize: 13 },
   premiumBtn: {
     backgroundColor: palette.gold,

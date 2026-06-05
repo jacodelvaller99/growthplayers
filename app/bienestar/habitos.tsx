@@ -246,7 +246,7 @@ export default function HabitosScreen() {
             <Pressable style={styles.habitInfo} onPress={() => setExpanded(isExpanded ? null : habit.id)}>
               <View style={styles.habitTitleRow}>
                 {tmpl?.icon && (
-                  <MaterialIcons name={tmpl.icon} size={16} color={palette.gold} style={{ marginRight: 6 }} />
+                  <MaterialIcons name={tmpl.icon} size={16} color={palette.goldText} style={{ marginRight: 6 }} />
                 )}
                 <Text style={[styles.habitName, habit.completedToday && styles.habitNameDone]} numberOfLines={1}>
                   {habit.name}
@@ -291,7 +291,7 @@ export default function HabitosScreen() {
                   <Text style={styles.detailLabel}>OPCIONES</Text>
                   {habit.options.map((opt, i) => (
                     <View key={`${opt.label}-${i}`} style={styles.optionRow}>
-                      <MaterialIcons name="chevron-right" size={14} color={palette.gold} />
+                      <MaterialIcons name="chevron-right" size={14} color={palette.goldText} />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.optionLabel}>{opt.label}</Text>
                         {!!opt.detail && <Text style={styles.optionDetail}>{opt.detail}</Text>}
@@ -304,19 +304,19 @@ export default function HabitosScreen() {
               <View style={styles.detailActions}>
                 {!!route && (
                   <Pressable style={styles.detailAction} onPress={() => router.push(route as never)}>
-                    <MaterialIcons name="play-circle-outline" size={16} color={palette.gold} />
+                    <MaterialIcons name="play-circle-outline" size={16} color={palette.goldText} />
                     <Text style={styles.detailActionText}>Abrir práctica</Text>
                   </Pressable>
                 )}
                 {!!habit.guideUrl && (
                   <Pressable style={styles.detailAction} onPress={() => openExternal(habit.guideUrl!)}>
-                    <MaterialIcons name="menu-book" size={16} color={palette.gold} />
+                    <MaterialIcons name="menu-book" size={16} color={palette.goldText} />
                     <Text style={styles.detailActionText}>Guía</Text>
                   </Pressable>
                 )}
                 {!!habit.videoUrl && (
                   <Pressable style={styles.detailAction} onPress={() => openExternal(habit.videoUrl!)}>
-                    <MaterialIcons name="ondemand-video" size={16} color={palette.gold} />
+                    <MaterialIcons name="ondemand-video" size={16} color={palette.goldText} />
                     <Text style={styles.detailActionText}>Video</Text>
                   </Pressable>
                 )}
@@ -325,7 +325,7 @@ export default function HabitosScreen() {
                     <MaterialIcons
                       name={hasReminder ? 'notifications-active' : 'notifications-none'}
                       size={16}
-                      color={hasReminder ? palette.gold : palette.ash}
+                      color={hasReminder ? palette.goldText : palette.ash}
                     />
                     <Text style={[styles.detailActionText, !hasReminder && { color: palette.ash }]}>
                       {hasReminder ? 'Recordatorio activo' : 'Recordarme'}
@@ -364,7 +364,7 @@ export default function HabitosScreen() {
         {pending.map((t) => (
           <Pressable key={t.category} onPress={() => createHabit(t)} style={styles.templateRow}>
             <View style={styles.templateIcon}>
-              <MaterialIcons name={t.icon} size={20} color={palette.gold} />
+              <MaterialIcons name={t.icon} size={20} color={palette.goldText} />
             </View>
             <View style={styles.templateInfo}>
               <Text style={styles.templateName}>{t.name}</Text>
@@ -373,7 +373,7 @@ export default function HabitosScreen() {
             <View style={styles.templatePts}>
               <Text style={styles.templatePtsText}>+{t.points}</Text>
             </View>
-            <MaterialIcons name="add-circle-outline" size={22} color={palette.gold} />
+            <MaterialIcons name="add-circle-outline" size={22} color={palette.goldText} />
           </Pressable>
         ))}
       </View>
@@ -403,7 +403,7 @@ export default function HabitosScreen() {
             <View style={styles.progressDivider} />
             <View style={styles.progressCol}>
               <Text style={styles.progressLabel}>PUNTOS</Text>
-              <Text style={[styles.progressValue, { color: palette.gold }]}>{pointsToday}</Text>
+              <Text style={[styles.progressValue, { color: palette.goldText }]}>{pointsToday}</Text>
               <Text style={styles.progressSub}>de {pointsTotal}</Text>
             </View>
           </View>
@@ -421,7 +421,7 @@ export default function HabitosScreen() {
             return (
               <View key={d} style={styles.dayItem}>
                 <View style={[styles.dayDot, isPast && styles.dayDotPast, isToday && styles.dayDotToday]} />
-                <Text style={[styles.dayLabel, isToday && { color: palette.gold }]}>{d}</Text>
+                <Text style={[styles.dayLabel, isToday && { color: palette.goldText }]}>{d}</Text>
               </View>
             );
           })}
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   progressTop:    { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   progressCol:    { flex: 1, alignItems: 'center' },
   progressDivider:{ width: 1, alignSelf: 'stretch', backgroundColor: palette.line, marginHorizontal: spacing.sm },
-  progressLabel:  { ...typography.label, color: palette.gold, marginBottom: 4 },
+  progressLabel:  { ...typography.label, color: palette.goldText, marginBottom: 4 },
   progressValue:  { fontFamily: Fonts.display, fontSize: 34, color: palette.ivory, lineHeight: 40 },
   progressSub:    { ...typography.caption, color: palette.ash },
   progressBar:    { width: '100%', height: 3, backgroundColor: palette.line, borderRadius: 2, overflow: 'hidden' },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
 
   section:        { marginBottom: spacing.lg },
   routineHeader:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  sectionLabel:   { ...typography.label, color: palette.gold },
+  sectionLabel:   { ...typography.label, color: palette.goldText },
   routineCount:   { fontFamily: Fonts.display, fontSize: 12, color: palette.ash, letterSpacing: 1 },
 
   // ── Secuencia (ruta paso a paso) ─────────────────────────────────────────────
@@ -505,13 +505,13 @@ const styles = StyleSheet.create({
   habitName:      { flex: 1, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   habitNameDone:  { textDecorationLine: 'line-through', color: palette.ash },
   habitMetaRow:   { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 6 },
-  habitPoints:    { fontFamily: Fonts.mono, fontSize: 11, color: palette.gold },
+  habitPoints:    { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
   habitDot:       { color: palette.smoke, fontSize: 11 },
   habitStreak:    { fontSize: 11, color: palette.smoke },
   expandBtn:      { padding: 2 },
 
   habitDetail:    { paddingHorizontal: spacing.sm, paddingBottom: spacing.sm, gap: 4, borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.sm },
-  detailLabel:    { ...typography.label, color: palette.gold, marginTop: 4 },
+  detailLabel:    { ...typography.label, color: palette.goldText, marginTop: 4 },
   detailText:     { ...typography.caption, color: palette.ash },
 
   warningRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, backgroundColor: 'rgba(212,160,23,0.10)', borderRadius: radii.xs, padding: 6 },
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
 
   detailActions:  { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   detailAction:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  detailActionText:{ fontFamily: Fonts.sansBold, fontSize: 12, color: palette.gold },
+  detailActionText:{ fontFamily: Fonts.sansBold, fontSize: 12, color: palette.goldText },
 
   templateRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, gap: spacing.sm },
   templateIcon:   { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.goldLight, alignItems: 'center', justifyContent: 'center' },
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   templateName:   { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   templateScience:{ fontSize: 11, color: palette.smoke, marginTop: 2 },
   templatePts:    { backgroundColor: palette.goldLight, borderRadius: radii.xs, paddingHorizontal: 6, paddingVertical: 2 },
-  templatePtsText:{ fontFamily: Fonts.mono, fontSize: 11, color: palette.gold },
+  templatePtsText:{ fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
 
-  allAdded:       { ...typography.caption, color: palette.gold, textAlign: 'center', paddingVertical: spacing.sm },
+  allAdded:       { ...typography.caption, color: palette.goldText, textAlign: 'center', paddingVertical: spacing.sm },
 });

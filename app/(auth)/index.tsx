@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 2,
   },

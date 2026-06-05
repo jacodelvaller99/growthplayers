@@ -109,7 +109,7 @@ export default function NorteScreen() {
                 <Pressable
                   onPress={() => router.push('/(onboarding)' as never)}
                   style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
-                  <MaterialIcons name="explore" size={20} color={palette.gold} />
+                  <MaterialIcons name="explore" size={20} color={palette.goldText} />
                   <Text style={styles.emptyCtaText}>
                     Tu Norte guía cada decisión. Configúralo ahora →
                   </Text>
@@ -250,7 +250,7 @@ export default function NorteScreen() {
         <Pressable
           onPress={() => router.push('/(onboarding)' as never)}
           style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
-          <MaterialIcons name="explore" size={20} color={palette.gold} />
+          <MaterialIcons name="explore" size={20} color={palette.goldText} />
           <Text style={styles.emptyCtaText}>
             Tu Norte guía cada decisión. Configúralo ahora →
           </Text>
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   norteScoreFull: {
-    color: palette.gold,
+    color: palette.goldText,
   },
 
   // Purpose display
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   },
 
   savedToast: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.sans,
     fontSize: 12,
     fontStyle: 'italic',
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   suggestionText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.sans,
     fontSize: 12,
     lineHeight: 16,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   },
   emptyCtaText: {
     ...typography.body,
-    color: palette.gold,
+    color: palette.goldText,
     flex: 1,
     fontWeight: '600',
   },

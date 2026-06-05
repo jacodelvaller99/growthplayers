@@ -562,15 +562,15 @@ export default function MentorScreen() {
           {todayCheckIn ? (
             <View style={styles.metricsRow}>
               <View style={styles.metricPill}>
-                <MaterialIcons name="bolt" size={12} color={palette.gold} />
+                <MaterialIcons name="bolt" size={12} color={palette.goldText} />
                 <Text style={styles.metricPillText}>ENERGÍA {todayCheckIn.energy}/10</Text>
               </View>
               <View style={styles.metricPill}>
-                <MaterialIcons name="center-focus-strong" size={12} color={palette.gold} />
+                <MaterialIcons name="center-focus-strong" size={12} color={palette.goldText} />
                 <Text style={styles.metricPillText}>CLARIDAD {todayCheckIn.clarity}/10</Text>
               </View>
               <View style={styles.metricPill}>
-                <MaterialIcons name="device-thermostat" size={12} color={palette.gold} />
+                <MaterialIcons name="device-thermostat" size={12} color={palette.goldText} />
                 <Text style={styles.metricPillText}>ESTRÉS {todayCheckIn.stress}/10</Text>
               </View>
             </View>
@@ -617,7 +617,7 @@ export default function MentorScreen() {
                 styles.prompt,
                 pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] },
               ]}>
-              <MaterialIcons name={p.icon} size={16} color={palette.gold} />
+              <MaterialIcons name={p.icon} size={16} color={palette.goldText} />
               <Text style={styles.promptText}>{p.label.toUpperCase()}</Text>
             </Pressable>
           ))}
@@ -627,7 +627,7 @@ export default function MentorScreen() {
         {state.mentorMessages.length >= 6 && (
           <PremiumCard style={styles.memoryCard}>
             <View style={styles.memoryHeader}>
-              <MaterialIcons name="history" size={12} color={palette.gold} />
+              <MaterialIcons name="history" size={12} color={palette.goldText} />
               <Text style={styles.memoryLabel}>ÚLTIMA SESIÓN</Text>
             </View>
             <Text style={styles.memoryText} numberOfLines={2}>
@@ -656,10 +656,10 @@ export default function MentorScreen() {
                   loadingMore && { opacity: 0.5 },
                 ]}>
                 {loadingMore ? (
-                  <ActivityIndicator size="small" color={palette.gold} />
+                  <ActivityIndicator size="small" color={palette.goldText} />
                 ) : (
                   <>
-                    <MaterialIcons name="history" size={14} color={palette.gold} />
+                    <MaterialIcons name="history" size={14} color={palette.goldText} />
                     <Text style={styles.loadMoreText}>CARGAR MENSAJES ANTERIORES</Text>
                   </>
                 )}
@@ -708,7 +708,7 @@ export default function MentorScreen() {
                     key={t.id}
                     onPress={() => setShowThreads(false)}
                     style={styles.threadRow}>
-                    <MaterialIcons name="chat-bubble-outline" size={16} color={palette.gold} />
+                    <MaterialIcons name="chat-bubble-outline" size={16} color={palette.goldText} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.threadTitle} numberOfLines={1}>
                         {t.title || 'Conversación sin título'}
@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
   chatsBtnText: {
     fontFamily: Fonts.display,
     fontSize: 11,
-    color: palette.gold,
+    color: palette.goldText,
     letterSpacing: 1.5,
   },
   threadsOverlay: {
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: palette.lineSoft,
   },
   threadTitle: {
     fontFamily: Fonts.sans,
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
   },
   metricPillText: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
   },
   noCheckin: {
@@ -908,7 +908,7 @@ const styles = StyleSheet.create({
   },
   memoryLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 1.5,
   },
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
   },
   loadMoreText: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 1,
   },

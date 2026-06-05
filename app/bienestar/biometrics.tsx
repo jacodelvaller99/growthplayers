@@ -306,7 +306,7 @@ export default function BiometricsScreen() {
           <GoldDivider label="TENDENCIA 7 DÍAS" />
           <PremiumCard style={styles.weeklyCard}>
             <Text style={styles.weeklyLabel}>RECUPERACIÓN</Text>
-            <WeeklyBars data={dailyData} field="recovery_score" color={palette.gold} />
+            <WeeklyBars data={dailyData} field="recovery_score" color={palette.goldText} />
             <Text style={[styles.weeklyLabel, { marginTop: spacing.md }]}>SUEÑO</Text>
             <WeeklyBars data={dailyData} field="sleep_score" color="#4a6fa5" />
           </PremiumCard>
@@ -318,7 +318,7 @@ export default function BiometricsScreen() {
         <>
           <GoldDivider label="NORMAN DICE" />
           <PremiumCard style={styles.normanCard}>
-            <MaterialIcons name="psychology" size={20} color={palette.gold} />
+            <MaterialIcons name="psychology" size={20} color={palette.goldText} />
             <Text style={styles.normanText}>
               "{normanInsight.charAt(0).toUpperCase() + normanInsight.slice(1)}."
             </Text>

@@ -137,7 +137,7 @@ export default function PaywallScreen() {
           { feat: 'Intelligence Engine — detecta tus patrones', icon: 'insights' },
         ].map(({ feat, icon }) => (
           <View key={feat} style={styles.featureRow}>
-            <MaterialIcons name={icon as any} size={14} color={palette.gold} />
+            <MaterialIcons name={icon as any} size={14} color={palette.goldText} />
             <Text style={styles.featureText}>{feat}</Text>
           </View>
         ))}
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
   },
   title: {
     color: palette.ivory,
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   packageTypeSelected: {
-    color: palette.gold,
+    color: palette.goldText,
   },
   packagePrice: {
     fontFamily: Fonts.display,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   legalLink: {
-    color: palette.gold,
+    color: palette.goldText,
     textDecorationLine: 'underline',
   },
 });

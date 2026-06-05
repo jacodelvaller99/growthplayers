@@ -102,7 +102,7 @@ export default function ModuleDetailScreen() {
         <Text style={styles.heroTitle}>{module.title}</Text>
         {module.arquetipo ? (
           <View style={styles.arquetipoRow}>
-            <MaterialIcons name="person" size={12} color={palette.gold} />
+            <MaterialIcons name="person" size={12} color={palette.goldText} />
             <Text style={styles.arquetipoText}>
               {module.status === 'completed'
                 ? `Ya eres el ${module.arquetipo.toUpperCase()}`
@@ -184,7 +184,7 @@ export default function ModuleDetailScreen() {
 
       {completedCount === module.lessons.length ? (
         <View style={styles.completionBanner}>
-          <MaterialIcons name="emoji-events" size={20} color={palette.gold} />
+          <MaterialIcons name="emoji-events" size={20} color={palette.goldText} />
           <View style={styles.completionCopy}>
             <Text style={styles.completionTitle}>MÓDULO COMPLETADO</Text>
             <Text style={styles.completionBody}>
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   arquetipoText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 10,
     letterSpacing: 1.5,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   // Next module teaser
   nextModuleTeaser: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.lineSoft,
     borderColor: palette.lineSoft,
     borderRadius: radii.sm,
     borderWidth: 1,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   completionTitle: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 10,
     letterSpacing: 2,

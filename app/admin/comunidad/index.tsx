@@ -166,7 +166,7 @@ export default function AdminComunidadScreen() {
   if (loading) {
     return (
       <View style={[sc.root, s.center]}>
-        <ActivityIndicator color={palette.gold} size="large" />
+        <ActivityIndicator color={palette.goldText} size="large" />
         <Text style={s.loadingText}>Cargando reportes…</Text>
       </View>
     );
@@ -213,7 +213,7 @@ export default function AdminComunidadScreen() {
           <View style={s.card}>
             <View style={s.cardTop}>
               <View style={[s.reasonPill]}>
-                <MaterialIcons name="flag" size={12} color={palette.gold} />
+                <MaterialIcons name="flag" size={12} color={palette.goldText} />
                 <Text style={s.reasonText}>{REASON_LABEL[item.reason ?? ''] ?? (item.reason ?? 'Sin razón').toUpperCase()}</Text>
               </View>
               <Text style={s.time}>{timeAgo(item.created_at)}</Text>
@@ -244,7 +244,7 @@ export default function AdminComunidadScreen() {
                     style={s.actionBtn}
                     disabled={busyId === item.id}
                     onPress={() => setStatus(item, 'reviewed')}>
-                    <MaterialIcons name="visibility" size={15} color={palette.gold} />
+                    <MaterialIcons name="visibility" size={15} color={palette.goldText} />
                     <Text style={s.actionText}>REVISADO</Text>
                   </Pressable>
                 )}
@@ -262,7 +262,7 @@ export default function AdminComunidadScreen() {
                   style={s.actionBtn}
                   disabled={busyId === item.id}
                   onPress={() => setStatus(item, 'open')}>
-                  <MaterialIcons name="undo" size={15} color={palette.gold} />
+                  <MaterialIcons name="undo" size={15} color={palette.goldText} />
                   <Text style={s.actionText}>REABRIR</Text>
                 </Pressable>
               </View>
@@ -289,7 +289,7 @@ const s = StyleSheet.create({
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   badge: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
     backgroundColor: palette.goldLight,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
@@ -313,7 +313,7 @@ const s = StyleSheet.create({
   },
   filterChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   filterText: { ...typography.label, color: palette.ash },
-  filterTextActive: { color: palette.gold },
+  filterTextActive: { color: palette.goldText },
 
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', padding: spacing.xl, lineHeight: 18 },
 
@@ -335,7 +335,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
   },
-  reasonText: { ...typography.label, color: palette.gold, fontSize: 9 },
+  reasonText: { ...typography.label, color: palette.goldText, fontSize: 9 },
   time: { ...typography.mono, color: palette.smoke, fontSize: 10 },
 
   postContent: { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, lineHeight: 21, fontStyle: 'italic' },
@@ -355,5 +355,5 @@ const s = StyleSheet.create({
     minHeight: 38,
   },
   actionDanger: { borderColor: palette.danger + '55' },
-  actionText: { ...typography.label, color: palette.gold, fontSize: 9 },
+  actionText: { ...typography.label, color: palette.goldText, fontSize: 9 },
 });

@@ -134,7 +134,7 @@ export default function BibliotecaScreen() {
       <GoldDivider label={activeCategory ? 'CATEGORÍA' : 'EXPLORAR'} />
       {activeCategory && (
         <Pressable onPress={() => setActiveCategory(null)} style={styles.clearFilter}>
-          <MaterialIcons name="close" size={14} color={palette.gold} />
+          <MaterialIcons name="close" size={14} color={palette.goldText} />
           <Text style={styles.clearFilterText}>Mostrar todas</Text>
         </Pressable>
       )}
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   chipText: { ...typography.label, color: palette.ash },
-  chipTextActive: { color: palette.gold },
+  chipTextActive: { color: palette.goldText },
 
   recentCard: {
     flexDirection: 'row',
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     gap: 4,
     marginBottom: spacing.md,
   },
-  clearFilterText: { ...typography.label, color: palette.gold },
+  clearFilterText: { ...typography.label, color: palette.goldText },
 
   grid: {
     flexDirection: 'row',

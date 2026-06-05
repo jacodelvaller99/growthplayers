@@ -123,7 +123,7 @@ export default function MensajesScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={palette.gold} />
+          <ActivityIndicator color={palette.goldText} />
         </View>
       ) : (
         <FlatList
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
 
   row:         { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 64 },
   avatar:      { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  avatarText:  { fontFamily: Fonts.display, fontSize: 18, color: palette.gold },
+  avatarText:  { fontFamily: Fonts.display, fontSize: 18, color: palette.goldText },
   rowMain:     { flex: 1, gap: 3 },
   rowName:     { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600' },
   rowPreview:  { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },

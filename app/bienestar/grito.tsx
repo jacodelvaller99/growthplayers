@@ -136,7 +136,7 @@ function CountdownRing({
 const ringStyles = StyleSheet.create({
   value: {
     fontFamily: Fonts.display,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 36,
     fontWeight: '800',
     letterSpacing: -1,
@@ -276,7 +276,7 @@ export default function GritoScreen() {
             { icon: 'volume-off' as const, t: 'Silencio externo', d: 'Silencia notificaciones y baja estímulos.' },
           ].map((x) => (
             <View key={x.t} style={styles.prepCard}>
-              <MaterialIcons name={x.icon} size={22} color={palette.gold} />
+              <MaterialIcons name={x.icon} size={22} color={palette.goldText} />
               <View style={styles.prepText}>
                 <Text style={styles.prepTitle}>{x.t}</Text>
                 <Text style={styles.prepDesc}>{x.d}</Text>
@@ -341,12 +341,12 @@ export default function GritoScreen() {
                 style={[styles.modalityCard, active && styles.modalityCardActive]}
                 accessibilityRole="button"
                 accessibilityLabel={m.label}>
-                <MaterialIcons name={m.icon} size={26} color={active ? palette.gold : palette.ash} />
+                <MaterialIcons name={m.icon} size={26} color={active ? palette.goldText : palette.ash} />
                 <View style={styles.modalityText}>
-                  <Text style={[styles.modalityLabel, active && { color: palette.gold }]}>{m.label}</Text>
+                  <Text style={[styles.modalityLabel, active && { color: palette.goldText }]}>{m.label}</Text>
                   <Text style={styles.modalitySub}>{m.sub}</Text>
                 </View>
-                {active && <MaterialIcons name="check-circle" size={20} color={palette.gold} />}
+                {active && <MaterialIcons name="check-circle" size={20} color={palette.goldText} />}
               </Pressable>
             );
           })}
@@ -378,14 +378,14 @@ export default function GritoScreen() {
           <Text style={styles.heroEyebrow}>{sel.label}</Text>
           <Text style={styles.heroBody}>{sel.sub}</Text>
           <View style={styles.repsChip}>
-            <MaterialIcons name="repeat" size={14} color={palette.gold} />
+            <MaterialIcons name="repeat" size={14} color={palette.goldText} />
             <Text style={styles.repsText}>{sel.reps}</Text>
           </View>
         </View>
 
         <View style={styles.centerBlock}>
           <View style={styles.integrationIcon}>
-            <MaterialIcons name="self-improvement" size={36} color={palette.gold} />
+            <MaterialIcons name="self-improvement" size={36} color={palette.goldText} />
           </View>
           <Text style={styles.integrationTitle}>INTEGRACIÓN</Text>
           <Text style={styles.centerCopy}>
@@ -409,7 +409,7 @@ export default function GritoScreen() {
   return (
     <View style={[sc.root, styles.donePhase, { paddingTop: insets.top + 16 }]}>
       <View style={styles.integrationIcon}>
-        <MaterialIcons name="check-circle" size={40} color={palette.gold} />
+        <MaterialIcons name="check-circle" size={40} color={palette.goldText} />
       </View>
       <Text style={styles.doneTitle}>Sesión completada.</Text>
       <Text style={styles.doneSub}>
@@ -456,10 +456,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
-  heroEyebrow: { fontFamily: Fonts.display, color: palette.gold, fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  heroEyebrow: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 16, fontWeight: '800', letterSpacing: 1 },
   heroBody: { ...typography.body, color: palette.ivory, lineHeight: 22 },
 
-  sectionLabel: { ...typography.label, color: palette.gold, fontSize: 11, letterSpacing: 1.8 },
+  sectionLabel: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
 
   // Prep list
   prepList: { gap: spacing.md },
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
 
   skipBtn: { marginTop: spacing.xl, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
-  skipBtnText: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 12, letterSpacing: 1 },
+  skipBtnText: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 12, letterSpacing: 1 },
 
   // Modalities
   modalityList: { gap: spacing.md, marginTop: spacing.lg, marginBottom: spacing.xl },
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   modalitySub: { ...typography.caption, color: palette.ash, marginTop: 4, lineHeight: 18 },
 
   repsChip: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.xs },
-  repsText: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 12 },
+  repsText: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 12 },
 
   // Integration
   integrationIcon: {

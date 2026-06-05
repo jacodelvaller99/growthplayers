@@ -309,7 +309,7 @@ export default function ComunidadScreen() {
           onPress={() => router.push('/comunidad/mensajes' as never)}
           style={styles.backBtn}
           accessibilityLabel="Mensajes directos">
-          <MaterialIcons name="forum" size={20} color={palette.gold} />
+          <MaterialIcons name="forum" size={20} color={palette.goldText} />
         </Pressable>
       ) : (
         <View style={{ width: 38 }} />
@@ -324,7 +324,7 @@ export default function ComunidadScreen() {
         {Header}
         <View style={styles.soonWrap}>
           <View style={styles.soonIcon}>
-            <MaterialIcons name="group" size={48} color={palette.gold} />
+            <MaterialIcons name="group" size={48} color={palette.goldText} />
           </View>
           <Text style={styles.soonTitle}>PRÓXIMAMENTE</Text>
           <Text style={styles.soonBody}>
@@ -344,19 +344,19 @@ export default function ComunidadScreen() {
         {Header}
         {eulaState === 'checking' ? (
           <View style={styles.soonWrap}>
-            <ActivityIndicator color={palette.gold} />
+            <ActivityIndicator color={palette.goldText} />
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.eulaWrap} showsVerticalScrollIndicator={false}>
             <View style={styles.soonIcon}>
-              <MaterialIcons name="shield" size={42} color={palette.gold} />
+              <MaterialIcons name="shield" size={42} color={palette.goldText} />
             </View>
             <Text style={styles.eulaTitle}>{COMMUNITY_EULA.title}</Text>
             <Text style={styles.eulaIntro}>{COMMUNITY_EULA.intro}</Text>
             <View style={styles.eulaRules}>
               {COMMUNITY_EULA.rules.map((rule, i) => (
                 <View key={i} style={styles.eulaRuleRow}>
-                  <MaterialIcons name="check-circle" size={16} color={palette.gold} style={{ marginTop: 2 }} />
+                  <MaterialIcons name="check-circle" size={16} color={palette.goldText} style={{ marginTop: 2 }} />
                   <Text style={styles.eulaRuleText}>{rule}</Text>
                 </View>
               ))}
@@ -386,7 +386,7 @@ export default function ComunidadScreen() {
         {/* Notice (reporte/bloqueo) */}
         {notice && (
           <Pressable onPress={() => setNotice(null)} style={styles.notice}>
-            <MaterialIcons name="info" size={16} color={palette.gold} />
+            <MaterialIcons name="info" size={16} color={palette.goldText} />
             <Text style={styles.noticeText}>{notice}</Text>
             <MaterialIcons name="close" size={16} color={palette.smoke} />
           </Pressable>
@@ -451,7 +451,7 @@ export default function ComunidadScreen() {
             <View key={post.id} style={[styles.postCard, post.is_pinned && styles.postCardPinned]}>
               {post.is_pinned && (
                 <View style={styles.pinnedBadge}>
-                  <MaterialIcons name="push-pin" size={11} color={palette.gold} />
+                  <MaterialIcons name="push-pin" size={11} color={palette.goldText} />
                   <Text style={styles.pinnedText}>FIJADO</Text>
                 </View>
               )}
@@ -525,7 +525,7 @@ export default function ComunidadScreen() {
               <Pressable
                 style={styles.sheetRow}
                 onPress={() => { if (actionPost) setReportFor(actionPost); }}>
-                <MaterialIcons name="flag" size={20} color={palette.gold} />
+                <MaterialIcons name="flag" size={20} color={palette.goldText} />
                 <Text style={styles.sheetRowText}>Reportar publicación</Text>
               </Pressable>
               <Pressable
@@ -619,11 +619,11 @@ const styles = StyleSheet.create({
   postCardPinned:  { borderColor: palette.lineGold, borderWidth: 1 },
 
   pinnedBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
-  pinnedText:      { fontFamily: Fonts.display, fontSize: 10, color: palette.gold, letterSpacing: 1 },
+  pinnedText:      { fontFamily: Fonts.display, fontSize: 10, color: palette.goldText, letterSpacing: 1 },
 
   postHeader:      { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   avatarCircle:    { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.goldLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.lineGold },
-  avatarInitial:   { fontFamily: Fonts.display, fontSize: 16, color: palette.gold },
+  avatarInitial:   { fontFamily: Fonts.display, fontSize: 16, color: palette.goldText },
   postMeta:        { flex: 1 },
   postAuthor:      { fontFamily: Fonts.sans, fontSize: 13, color: palette.ivory, fontWeight: '600' },
   postTime:        { fontSize: 11, color: palette.smoke },

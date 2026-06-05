@@ -250,7 +250,7 @@ export default function UserDetailScreen() {
   if (loading || !user) {
     return (
       <View style={[sc.root, s.center]}>
-        <ActivityIndicator color={palette.gold} />
+        <ActivityIndicator color={palette.goldText} />
       </View>
     );
   }
@@ -292,7 +292,7 @@ export default function UserDetailScreen() {
             </View>
           </View>
           <Pressable style={s.normanBtn} onPress={() => setShowNorman(true)}>
-            <MaterialIcons name="send" size={16} color={palette.gold} />
+            <MaterialIcons name="send" size={16} color={palette.goldText} />
             <Text style={s.normanBtnText}>ENVIAR MENSAJE COMO NORMAN</Text>
           </Pressable>
         </PremiumCard>
@@ -347,7 +347,7 @@ export default function UserDetailScreen() {
           <Pressable
             style={s.addBtn}
             onPress={() => router.push(`/admin/membresias?userId=${userId}` as never)}>
-            <MaterialIcons name="add" size={16} color={palette.gold} />
+            <MaterialIcons name="add" size={16} color={palette.goldText} />
             <Text style={s.addBtnText}>ACTIVAR MEMBRESÍA</Text>
           </Pressable>
         </PremiumCard>
@@ -362,7 +362,7 @@ export default function UserDetailScreen() {
           ) : (
             user.course_access!.map(ca => (
               <View key={ca.id} style={s.courseRow}>
-                <MaterialIcons name="school" size={16} color={palette.gold} />
+                <MaterialIcons name="school" size={16} color={palette.goldText} />
                 <Text style={s.courseLabel}>{ca.course_id.replace(/_/g, ' ').toUpperCase()}</Text>
                 {ca.expires_at && <Text style={s.courseMeta}>Expira {formatDate(ca.expires_at)}</Text>}
               </View>
@@ -551,7 +551,7 @@ export default function UserDetailScreen() {
                           : (it?.title ?? it?.task ?? it?.text ?? JSON.stringify(it));
                       return (
                         <View key={i} style={s.planRow}>
-                          <MaterialIcons name="arrow-right" size={14} color={palette.gold} />
+                          <MaterialIcons name="arrow-right" size={14} color={palette.goldText} />
                           <Text style={s.planText}>{label}</Text>
                         </View>
                       );
@@ -582,7 +582,7 @@ export default function UserDetailScreen() {
             style={[s.addBtn, generatingSession && { opacity: 0.6 }]}
             onPress={handleGenerateWeeklySession}
             disabled={generatingSession}>
-            <MaterialIcons name="psychology" size={16} color={palette.gold} />
+            <MaterialIcons name="psychology" size={16} color={palette.goldText} />
             <Text style={s.addBtnText}>
               {generatingSession ? 'GENERANDO...' : 'GENERAR SESIÓN SEMANAL NORMAN'}
             </Text>
@@ -593,7 +593,7 @@ export default function UserDetailScreen() {
               style={s.weeklySessionBox}>
               <View style={s.weeklySessionHeader}>
                 <Text style={s.mlLabel}>SEMANA {weeklySession.week_number} · MENSAJE</Text>
-                <MaterialIcons name="expand-less" size={16} color={palette.gold} />
+                <MaterialIcons name="expand-less" size={16} color={palette.goldText} />
               </View>
               <Text style={s.weeklySessionText}>{weeklySession.ai_message}</Text>
             </Pressable>
@@ -692,13 +692,13 @@ const s = StyleSheet.create({
 
   identityRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   bigAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, alignItems: 'center', justifyContent: 'center' },
-  bigAvatarText: { fontFamily: Fonts.display, fontSize: 20, color: palette.gold },
+  bigAvatarText: { fontFamily: Fonts.display, fontSize: 20, color: palette.goldText },
   userName: { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 16, color: palette.ivory },
   userRole: { ...typography.caption, color: palette.ash, marginTop: 2 },
   userMeta: { ...typography.mono, color: palette.smoke, marginTop: 2, fontSize: 10 },
 
   normanBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderRadius: radii.md, borderWidth: 1, borderColor: palette.lineGold, alignSelf: 'flex-start' },
-  normanBtnText: { ...typography.label, color: palette.gold, fontSize: 10 },
+  normanBtnText: { ...typography.label, color: palette.goldText, fontSize: 10 },
 
   currentTierRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, marginBottom: spacing.sm, backgroundColor: palette.graphite },
   currentTierDot: { width: 10, height: 10, borderRadius: 5 },
@@ -710,13 +710,13 @@ const s = StyleSheet.create({
   membershipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   membershipProduct: { fontFamily: Fonts.display, fontSize: 11, color: palette.ivory, letterSpacing: 1 },
   membershipMeta: { ...typography.caption, color: palette.smoke, marginTop: 2, fontSize: 10 },
-  membershipPrice: { ...typography.mono, color: palette.gold, fontSize: 10 },
+  membershipPrice: { ...typography.mono, color: palette.goldText, fontSize: 10 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   deactivateBtn: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.danger },
   deactivateText: { ...typography.label, color: palette.danger, fontSize: 8 },
 
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm, alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: spacing.sm, backgroundColor: palette.goldLight, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold },
-  addBtnText: { ...typography.label, color: palette.gold, fontSize: 9 },
+  addBtnText: { ...typography.label, color: palette.goldText, fontSize: 9 },
 
   courseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
   courseLabel: { ...typography.section, color: palette.ivory, flex: 1, fontSize: 11 },
@@ -754,7 +754,7 @@ const s = StyleSheet.create({
   taskWeek: { ...typography.mono, color: palette.smoke, fontSize: 9 },
   sessionBox: { marginTop: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: palette.gold },
   sessionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs },
-  sessionWeek: { ...typography.label, color: palette.gold, fontSize: 9, letterSpacing: 1 },
+  sessionWeek: { ...typography.label, color: palette.goldText, fontSize: 9, letterSpacing: 1 },
   sessionDate: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   sessionNotes: { ...typography.caption, color: palette.ash, fontSize: 12, lineHeight: 18 },
   sessionNotesEmpty: { ...typography.caption, color: palette.smoke, fontSize: 11, fontStyle: 'italic' },
@@ -775,7 +775,7 @@ const h = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   title: { ...typography.label, color: palette.smoke, fontSize: 9 },
   actionBtn: { paddingHorizontal: spacing.sm, paddingVertical: 3, backgroundColor: palette.goldLight, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.lineGold },
-  actionText: { ...typography.label, color: palette.gold, fontSize: 9 },
+  actionText: { ...typography.label, color: palette.goldText, fontSize: 9 },
 });
 
 const g = StyleSheet.create({
@@ -796,7 +796,7 @@ const ab = StyleSheet.create({
 const mo = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   sheet: { backgroundColor: palette.graphiteLight, borderRadius: radii.lg, padding: spacing.xl, width: '100%', maxWidth: 480, gap: spacing.md },
-  title: { ...typography.section, color: palette.gold },
+  title: { ...typography.section, color: palette.goldText },
   sub: { ...typography.caption, color: palette.smoke },
   input: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, minHeight: 100, textAlignVertical: 'top' },
   actions: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },

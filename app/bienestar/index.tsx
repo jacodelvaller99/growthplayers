@@ -526,7 +526,7 @@ function HubTile({
         gold && styles.gridCardGold,
         pressed && { opacity: 0.75 },
       ]}>
-      <MaterialIcons name={icon} size={28} color={gold ? palette.gold : palette.ivory} />
+      <MaterialIcons name={icon} size={28} color={gold ? palette.goldText : palette.ivory} />
       <Text style={[styles.gridLabel, gold && styles.gridLabelGold]}>{label}</Text>
     </Pressable>
   );
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   },
   statsLeft: { gap: spacing.xs },
   statsHeadline: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  statsNumber: { fontFamily: Fonts.display, color: palette.gold, fontSize: 26, letterSpacing: 0.5 },
+  statsNumber: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 26, letterSpacing: 0.5 },
   statsUnit: { ...typography.mono, color: palette.ash },
   statsMeta: { ...typography.mono, color: palette.smoke, fontSize: 10, letterSpacing: 1 },
 
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textAlign: 'center',
   },
-  gridLabelGold: { color: palette.gold },
+  gridLabelGold: { color: palette.goldText },
 
   // Frase del día (italic, centered)
   phraseQuote: {

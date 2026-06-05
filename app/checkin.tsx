@@ -167,7 +167,7 @@ export default function CheckInScreen() {
     <PremiumCard style={styles.recoCard}>
       <View style={styles.recoHeader}>
         <View style={styles.recoIconWrap}>
-          <MaterialIcons name={recommendation.icon} size={22} color={palette.gold} />
+          <MaterialIcons name={recommendation.icon} size={22} color={palette.goldText} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.recoTag}>RECOMENDACIÓN DEL SISTEMA · {recommendation.tag}</Text>
@@ -202,7 +202,7 @@ export default function CheckInScreen() {
           ]}
         />
       </View>
-      <Text style={[styles.coherenceStatus, coherenceStrong && { color: palette.gold }]}>
+      <Text style={[styles.coherenceStatus, coherenceStrong && { color: palette.goldText }]}>
         {coherenceLabel}
       </Text>
       {stressReading ? (
@@ -236,7 +236,7 @@ export default function CheckInScreen() {
             ]}
           />
         </View>
-        <Text style={[styles.capacityStatus, coherenceStrong && { color: palette.gold }]}>
+        <Text style={[styles.capacityStatus, coherenceStrong && { color: palette.goldText }]}>
           {coherenceLabel}
         </Text>
         {stressReading ? <Text style={styles.stressReading}>{stressReading}</Text> : null}
@@ -383,7 +383,7 @@ export default function CheckInScreen() {
       <GoldAccentCard>
         {streak >= 3 && (
           <View style={styles.streakRow}>
-            <MaterialIcons name="local-fire-department" size={14} color={palette.gold} />
+            <MaterialIcons name="local-fire-department" size={14} color={palette.goldText} />
             <Text style={styles.streakText}>Racha de {streak} días — no la rompas hoy</Text>
           </View>
         )}
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   streakText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 1.5,
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     lineHeight: 60,
   },
   coherenceScoreStrong: {
-    color: palette.gold,
+    color: palette.goldText,
   },
   coherenceDenom: {
     ...typography.body,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   needPillText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 12,
     lineHeight: 16,
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
   },
   recoTag: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 9,
     letterSpacing: 1.2,
   },

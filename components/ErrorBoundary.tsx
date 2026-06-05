@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 14,
     letterSpacing: 4,
-    color: palette.gold,
+    color: palette.goldText,
     marginBottom: spacing.sm,
   },
   title: {

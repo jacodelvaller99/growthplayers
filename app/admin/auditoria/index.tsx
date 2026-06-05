@@ -115,7 +115,7 @@ export default function AuditoriaScreen() {
 
       <PremiumCard style={s.card}>
         {loading ? (
-          <ActivityIndicator color={palette.gold} style={{ padding: spacing.xl }} />
+          <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />
         ) : log.length === 0 ? (
           <Text style={s.emptyText}>Sin acciones registradas</Text>
         ) : (
@@ -141,7 +141,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   backBtn: { padding: spacing.xs },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
-  badge: { ...typography.mono, color: palette.gold, backgroundColor: palette.goldLight, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 999, fontSize: 12 },
+  badge: { ...typography.mono, color: palette.goldText, backgroundColor: palette.goldLight, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 999, fontSize: 12 },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   icon: { fontSize: 16, width: 24, textAlign: 'center' },

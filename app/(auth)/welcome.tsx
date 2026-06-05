@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     letterSpacing: 2.5,
   },
   goldRule: {
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 22,
   },
-  desktopTaglineGold: { color: palette.gold },
+  desktopTaglineGold: { color: palette.goldText },
   desktopVersion: {
     ...typography.mono,
     position: 'absolute',

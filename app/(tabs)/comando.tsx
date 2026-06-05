@@ -121,7 +121,7 @@ const ringStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   big: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 44,
     fontWeight: '800',
@@ -325,7 +325,7 @@ export default function DashboardScreen() {
     <Pressable
       onPress={() => router.push('/(tabs)/mentor')}
       style={({ pressed }) => [styles.anomalyCard, pressed && { opacity: 0.85 }]}>
-      <MaterialIcons name="warning-amber" size={18} color={palette.gold} />
+      <MaterialIcons name="warning-amber" size={18} color={palette.goldText} />
       <View style={styles.anomalyTextBlock}>
         <Text style={styles.anomalyTitle}>SEÑAL DETECTADA</Text>
         <Text style={styles.anomalyBody}>
@@ -354,7 +354,7 @@ export default function DashboardScreen() {
           <Text style={styles.nbaReason}>{intelligence.next_action_reason}</Text>
         )}
       </View>
-      <MaterialIcons name="arrow-forward" size={16} color={palette.gold} />
+      <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
     </Pressable>
   );
 
@@ -363,7 +363,7 @@ export default function DashboardScreen() {
     <Pressable
       onPress={() => router.push('/(tabs)/norte')}
       style={({ pressed }) => [styles.northAnchor, pressed && { opacity: 0.8 }]}>
-      <MaterialIcons name="north" size={12} color={palette.gold} />
+      <MaterialIcons name="north" size={12} color={palette.goldText} />
       <Text style={styles.northAnchorText} numberOfLines={2}>
         {state.northStar.dailyReminder}
       </Text>
@@ -454,7 +454,7 @@ export default function DashboardScreen() {
         <Pressable
           onPress={() => router.push('/perfil/wearables' as never)}
           style={({ pressed }) => [styles.wearableCta, pressed && { opacity: 0.8 }]}>
-          <MaterialIcons name="watch" size={16} color={palette.gold} />
+          <MaterialIcons name="watch" size={16} color={palette.goldText} />
           <View style={styles.wearableCtaCopy}>
             <Text style={styles.wearableCtaTitle}>CONECTA TU WEARABLE</Text>
             <Text style={styles.wearableCtaSub}>
@@ -593,7 +593,7 @@ export default function DashboardScreen() {
       {/* Header */}
       <View style={styles.normanQPHeader}>
         <View style={styles.normanQPAvatar}>
-          <MaterialIcons name="psychology" size={18} color={palette.gold} />
+          <MaterialIcons name="psychology" size={18} color={palette.goldText} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.normanQPName}>NORMAN · MENTOR IA</Text>
@@ -623,7 +623,7 @@ export default function DashboardScreen() {
                 params: { initialPrompt: chip.prompt },
               } as never)
             }>
-            <MaterialIcons name={chip.icon} size={12} color={palette.gold} />
+            <MaterialIcons name={chip.icon} size={12} color={palette.goldText} />
             <Text style={styles.normanChipText} numberOfLines={2}>{chip.label}</Text>
           </Pressable>
         ))}
@@ -638,7 +638,7 @@ export default function DashboardScreen() {
             onPress={() => router.push('/(tabs)/mentor' as never)}
             style={({ pressed }) => [styles.normanWeeklyBtn, pressed && { opacity: 0.75 }]}>
             <Text style={styles.normanWeeklyBtnText}>RESPONDER A NORMAN</Text>
-            <MaterialIcons name="arrow-forward" size={12} color={palette.gold} />
+            <MaterialIcons name="arrow-forward" size={12} color={palette.goldText} />
           </Pressable>
         </View>
       )}
@@ -674,7 +674,7 @@ export default function DashboardScreen() {
         <MaterialIcons
           name={liveSession.isOngoing ? 'videocam' : 'event'}
           size={16}
-          color={liveSession.isOngoing ? palette.danger : palette.gold}
+          color={liveSession.isOngoing ? palette.danger : palette.goldText}
         />
       </View>
 
@@ -724,7 +724,7 @@ export default function DashboardScreen() {
       accessibilityLabel="Ver comunidad de Operadores Soberanos">
       <View style={styles.communityHeader}>
         <View style={styles.communityIconBox}>
-          <MaterialIcons name="groups" size={22} color={palette.gold} />
+          <MaterialIcons name="groups" size={22} color={palette.goldText} />
         </View>
         <View style={styles.communityCopy}>
           <Text style={styles.communityTitle}>OPERADORES SOBERANOS</Text>
@@ -749,7 +749,7 @@ export default function DashboardScreen() {
       <View style={styles.mentoriaStripe} />
       <View style={styles.mentoriaBody}>
         <View style={styles.mentoriaHead}>
-          <MaterialIcons name="route" size={15} color={palette.gold} />
+          <MaterialIcons name="route" size={15} color={palette.goldText} />
           <Text style={styles.mentoriaEyebrow}>
             MENTORÍA · SEMANA {currentWeekNumber(protocolDay)} DE {TOTAL_WEEKS}
           </Text>
@@ -779,7 +779,7 @@ export default function DashboardScreen() {
         accessibilityRole="button"
         accessibilityLabel="Ir a Mi Norte"
         style={({ pressed }) => [mob.headerAction, pressed && { opacity: 0.7 }]}>
-        <MaterialIcons name="explore" size={20} color={palette.gold} />
+        <MaterialIcons name="explore" size={20} color={palette.goldText} />
       </Pressable>
     </View>
   );
@@ -809,8 +809,8 @@ export default function DashboardScreen() {
       accessibilityLabel="Revisar coherencia de hoy"
       style={({ pressed }) => [mob.checkinDoneCard, pressed && { opacity: 0.9 }]}>
       <View style={mob.rowBetween}>
-        <Text style={[mob.eyebrow, { color: palette.gold }]}>COHERENCIA DE HOY</Text>
-        <MaterialIcons name="check-circle" size={20} color={palette.gold} />
+        <Text style={[mob.eyebrow, { color: palette.goldText }]}>COHERENCIA DE HOY</Text>
+        <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
       </View>
       <View style={mob.coherenceRow}>
         <Text style={mob.coherenceNum}>{coherenceToday}</Text>
@@ -828,13 +828,13 @@ export default function DashboardScreen() {
       accessibilityLabel="Calibrar sistema hoy"
       style={({ pressed }) => [mob.checkinCta, pressed && { opacity: 0.9 }]}>
       <View style={mob.checkinCtaIcon}>
-        <MaterialIcons name="monitor-heart" size={24} color={palette.gold} />
+        <MaterialIcons name="monitor-heart" size={24} color={palette.goldText} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={mob.checkinCtaTitle}>CALIBRAR SISTEMA HOY</Text>
         <Text style={mob.checkinCtaSub}>Aún no lees tu estado de hoy</Text>
       </View>
-      <MaterialIcons name="arrow-forward" size={22} color={palette.gold} />
+      <MaterialIcons name="arrow-forward" size={22} color={palette.goldText} />
     </Pressable>
   );
 
@@ -847,7 +847,7 @@ export default function DashboardScreen() {
       style={({ pressed }) => [mob.normanCard, pressed && { opacity: 0.9 }]}>
       <View style={mob.normanTop}>
         <View style={mob.normanAvatar}>
-          <MaterialIcons name="psychology" size={22} color={palette.gold} />
+          <MaterialIcons name="psychology" size={22} color={palette.goldText} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={mob.normanName}>NORMAN · MENTOR IA</Text>
@@ -912,7 +912,7 @@ export default function DashboardScreen() {
             accessibilityRole="button"
             accessibilityLabel={q.label}
             style={({ pressed }) => [mob.quickTile, pressed && { opacity: 0.85 }]}>
-            <MaterialIcons name={q.icon} size={24} color={palette.gold} />
+            <MaterialIcons name={q.icon} size={24} color={palette.goldText} />
             <Text style={mob.quickLabel}>{q.label}</Text>
           </Pressable>
         ))}
@@ -1169,7 +1169,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: palette.lineSoft,
     borderWidth: 1,
     borderColor: palette.line,
     borderRadius: radii.sm,
@@ -1200,7 +1200,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   northAnchorText: {
-    color: palette.gold,
+    color: palette.goldText,
     flex: 1,
     fontFamily: Fonts.sans,
     fontSize: 13,
@@ -1229,7 +1229,7 @@ const styles = StyleSheet.create({
   wearableCtaTitle: {
     fontFamily: Fonts.display,
     fontWeight: '700',
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: 'uppercase' as const,
@@ -1243,7 +1243,7 @@ const styles = StyleSheet.create({
 
   // ── Shared ────────────────────────────────────────────────────────────────
   time: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 16,
   },
@@ -1378,7 +1378,7 @@ const styles = StyleSheet.create({
   anomalyTitle: {
     fontFamily: Fonts.display,
     fontWeight: '700',
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase' as const,
@@ -1567,7 +1567,7 @@ const styles = StyleSheet.create({
 
   // ── Community Teaser Card ───────────────────────────────────────────────────
   communityCard: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: palette.lineSoft,
     borderColor:     palette.lineSoft,
     borderRadius:    radii.md,
     borderWidth:     1,
@@ -1655,7 +1655,7 @@ const styles = StyleSheet.create({
   // ── Biometrics empty state ──────────────────────────────────────────────────
   estadoEmpty: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.lineSoft,
     borderColor: palette.lineSoft,
     borderRadius: radii.md,
     borderWidth: 1,
@@ -1690,7 +1690,7 @@ const styles = StyleSheet.create({
   },
   normanWeeklyLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 2,
   },
@@ -1713,7 +1713,7 @@ const styles = StyleSheet.create({
   normanWeeklyBtnText: {
     fontFamily: Fonts.display,
     fontWeight: '700',
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: 'uppercase' as const,
@@ -1733,7 +1733,7 @@ const mob = StyleSheet.create({
   },
   headerDate: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: 'uppercase',
@@ -1827,7 +1827,7 @@ const mob = StyleSheet.create({
   },
   coherenceNum: {
     fontFamily: Fonts.display,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 40,
     fontWeight: '800',
     lineHeight: 44,
@@ -1939,7 +1939,7 @@ const mob = StyleSheet.create({
   },
   normanChipText: {
     fontFamily: Fonts.sansBold,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -2004,7 +2004,7 @@ const mob = StyleSheet.create({
     position: 'absolute',
     top: 12,
     left: 14,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 9.5,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
@@ -2152,7 +2152,7 @@ function CommunityPreview() {
         onPress={() => router.push('/bienestar/comunidad' as never)}
         style={({ pressed }) => [cp.viewAll, pressed && { opacity: 0.8 }]}>
         <Text style={cp.viewAllText}>VER TODA LA COMUNIDAD</Text>
-        <MaterialIcons name="arrow-forward" size={14} color={palette.gold} />
+        <MaterialIcons name="arrow-forward" size={14} color={palette.goldText} />
       </Pressable>
     </View>
   );
@@ -2181,7 +2181,7 @@ const cp = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  avatarText: { fontFamily: Fonts.display, fontSize: 14, color: palette.gold },
+  avatarText: { fontFamily: Fonts.display, fontSize: 14, color: palette.goldText },
   body: { flex: 1, gap: 3 },
   author: { fontFamily: Fonts.sans, fontSize: 13, fontWeight: '600', color: palette.ivory },
   content: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 19 },
@@ -2196,7 +2196,7 @@ const cp = StyleSheet.create({
   viewAllText: {
     fontFamily: Fonts.display,
     fontWeight: '700',
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: 'uppercase',

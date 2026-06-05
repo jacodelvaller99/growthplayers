@@ -67,7 +67,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
     ]}>
       {/* Logo / toggle */}
       <Pressable style={s.sidebarLogo} onPress={onToggle}>
-        <MaterialIcons name="dashboard-customize" size={20} color={palette.gold} />
+        <MaterialIcons name="dashboard-customize" size={20} color={palette.goldText} />
         {!collapsed && <Text style={s.sidebarTitle}>CMI POLARIS</Text>}
       </Pressable>
 
@@ -86,7 +86,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
                   <MaterialIcons
                     name={item.icon}
                     size={18}
-                    color={active ? palette.gold : palette.ash}
+                    color={active ? palette.goldText : palette.ash}
                   />
                   {!collapsed && (
                     <Text style={[s.navLabel, active && s.navLabelActive]}>
@@ -220,7 +220,7 @@ const s = StyleSheet.create({
     color: palette.ash,
   },
   navLabelActive: {
-    color: palette.gold,
+    color: palette.goldText,
   },
   navLabelMuted: {
     fontFamily: Fonts.sans,

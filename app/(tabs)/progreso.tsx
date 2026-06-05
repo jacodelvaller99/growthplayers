@@ -347,7 +347,7 @@ function ScoreRing({
 
 const ringStyles = StyleSheet.create({
   value: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 26,
     fontWeight: '800',
@@ -384,7 +384,7 @@ function WeeklyMetricCard({
   return (
     <View style={wmStyles.card}>
       <View style={wmStyles.head}>
-        <MaterialIcons name={icon} size={16} color={palette.gold} />
+        <MaterialIcons name={icon} size={16} color={palette.goldText} />
         <Text style={wmStyles.label}>{label}</Text>
       </View>
       <View style={wmStyles.valueRow}>
@@ -868,7 +868,7 @@ export default function ProgresoScreen() {
 
               <GoldDivider label="BIOMETRÍA PROMEDIO (7D)" />
               <PremiumCard style={styles.sparklineCard}>
-                <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.gold} />
+                <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.goldText} />
                 <View style={styles.sparklineDivider} />
                 <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
               </PremiumCard>
@@ -889,7 +889,7 @@ export default function ProgresoScreen() {
                     <MaterialIcons
                       name={arch.earned ? 'military-tech' : 'lock'}
                       size={18}
-                      color={arch.earned ? palette.gold : palette.smoke}
+                      color={arch.earned ? palette.goldText : palette.smoke}
                     />
                     <View style={styles.archetypeCopy}>
                       <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
@@ -903,7 +903,7 @@ export default function ProgresoScreen() {
                     </View>
                     {arch.earned && (
                       <View style={styles.archetypeCheck}>
-                        <MaterialIcons name="check-circle" size={20} color={palette.gold} />
+                        <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
                       </View>
                     )}
                   </PremiumCard>
@@ -980,7 +980,7 @@ export default function ProgresoScreen() {
                   style={styles.adminBtn}
                   onPress={() => router.push('/admin' as never)}
                   accessibilityLabel="Cuadro de Mando Integral">
-                  <MaterialIcons name="dashboard-customize" size={16} color={palette.gold} />
+                  <MaterialIcons name="dashboard-customize" size={16} color={palette.goldText} />
                   <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
                 </Pressable>
               )}
@@ -1031,7 +1031,7 @@ export default function ProgresoScreen() {
                   onPress={handleExport}
                   disabled={exporting}
                   accessibilityLabel="Exportar mis datos">
-                  <MaterialIcons name="download" size={18} color={palette.gold} />
+                  <MaterialIcons name="download" size={18} color={palette.goldText} />
                   <View style={styles.gdprBtnBody}>
                     <Text style={styles.gdprBtnTitle}>{exporting ? 'EXPORTANDO...' : 'EXPORTAR MIS DATOS'}</Text>
                     <Text style={styles.gdprBtnMeta}>JSON con todo tu historial · check-ins, conversaciones, lecciones</Text>
@@ -1067,7 +1067,7 @@ export default function ProgresoScreen() {
                     onPress={() => router.push(link.route as never)}
                     accessibilityRole="button"
                     accessibilityLabel={link.title}>
-                    <MaterialIcons name={link.icon} size={18} color={palette.gold} />
+                    <MaterialIcons name={link.icon} size={18} color={palette.goldText} />
                     <View style={styles.gdprBtnBody}>
                       <Text style={styles.gdprBtnTitle}>{link.title}</Text>
                       <Text style={styles.gdprBtnMeta}>{link.meta}</Text>
@@ -1111,7 +1111,7 @@ export default function ProgresoScreen() {
           <Text style={styles.profileDay}>DÍA {protocolDay} DE PROTOCOLO</Text>
         </View>
         <View style={styles.streakChip}>
-          <MaterialIcons name="local-fire-department" size={14} color={palette.gold} />
+          <MaterialIcons name="local-fire-department" size={14} color={palette.goldText} />
           <Text style={styles.streakChipText}>{checkinStreak}</Text>
         </View>
       </View>
@@ -1144,7 +1144,7 @@ export default function ProgresoScreen() {
         style={shareStyles.row}
         onPress={() => router.push('/perfil' as never)}
         accessibilityLabel="Ver y compartir tarjeta soberana">
-        <MaterialIcons name="share" size={16} color={palette.gold} />
+        <MaterialIcons name="share" size={16} color={palette.goldText} />
         <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
         <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
       </Pressable>
@@ -1270,7 +1270,7 @@ export default function ProgresoScreen() {
             {/* Cohort badge */}
             {intelligence.cohort_label && (
               <View style={dnaStyles.cohortRow}>
-                <MaterialIcons name="group" size={14} color={palette.gold} />
+                <MaterialIcons name="group" size={14} color={palette.goldText} />
                 <Text style={dnaStyles.cohortLabel}>
                   PERFIL: {intelligence.cohort_label.replace(/_/g, ' ').toUpperCase()}
                 </Text>
@@ -1307,7 +1307,7 @@ export default function ProgresoScreen() {
               { key: 'journaling', label: 'Diario',      value: intelligence.affinity_journaling },
             ].map((af) => (
               <View key={af.key} style={dnaStyles.affinityRow}>
-                <Text style={[dnaStyles.affinityLabel, topAffinity === af.key && { color: palette.gold }]}>
+                <Text style={[dnaStyles.affinityLabel, topAffinity === af.key && { color: palette.goldText }]}>
                   {af.label}{topAffinity === af.key ? ' ★' : ''}
                 </Text>
                 <View style={dnaStyles.affinityTrack}>
@@ -1327,7 +1327,7 @@ export default function ProgresoScreen() {
                 <MaterialIcons
                   name="warning-amber"
                   size={13}
-                  color={intelligence.churn_risk_label === 'critical' ? palette.danger : palette.gold}
+                  color={intelligence.churn_risk_label === 'critical' ? palette.danger : palette.goldText}
                 />
                 <Text style={[dnaStyles.riskText, intelligence.churn_risk_label === 'critical' && { color: palette.danger }]}>
                   Riesgo de abandono: {intelligence.churn_risk_label.toUpperCase()}
@@ -1357,7 +1357,7 @@ export default function ProgresoScreen() {
             <MaterialIcons
               name={arch.earned ? 'military-tech' : 'lock'}
               size={18}
-              color={arch.earned ? palette.gold : palette.smoke}
+              color={arch.earned ? palette.goldText : palette.smoke}
             />
             <View style={styles.archetypeCopy}>
               <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
@@ -1371,7 +1371,7 @@ export default function ProgresoScreen() {
             </View>
             {arch.earned && (
               <View style={styles.archetypeCheck}>
-                <MaterialIcons name="check-circle" size={20} color={palette.gold} />
+                <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
               </View>
             )}
           </PremiumCard>
@@ -1442,7 +1442,7 @@ export default function ProgresoScreen() {
       <PremiumCard style={styles.b2bCard}>
         <View style={styles.b2bHeader}>
           <View style={[styles.b2bIconBox, { backgroundColor: palette.gold + '22' }]}>
-            <MaterialIcons name="business" size={24} color={palette.gold} />
+            <MaterialIcons name="business" size={24} color={palette.goldText} />
           </View>
           <View style={styles.b2bTextCol}>
             <Text style={styles.b2bTitle}>POLARIS PARA TU EMPRESA</Text>
@@ -1455,7 +1455,7 @@ export default function ProgresoScreen() {
         <View style={styles.b2bFeatures}>
           {['Dashboard de equipo', 'Licencias múltiples', 'Soporte prioritario'].map((f) => (
             <View key={f} style={styles.b2bFeatureRow}>
-              <MaterialIcons name="check-circle" size={20} color={palette.gold} />
+              <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
               <Text style={styles.b2bFeatureText}>{f}</Text>
             </View>
           ))}
@@ -1581,7 +1581,7 @@ export default function ProgresoScreen() {
           onPress={handleExport}
           disabled={exporting}
           accessibilityLabel="Exportar mis datos">
-          <MaterialIcons name="download" size={18} color={palette.gold} />
+          <MaterialIcons name="download" size={18} color={palette.goldText} />
           <View style={styles.gdprBtnBody}>
             <Text style={styles.gdprBtnTitle}>{exporting ? 'EXPORTANDO...' : 'EXPORTAR MIS DATOS'}</Text>
             <Text style={styles.gdprBtnMeta}>JSON con todo tu historial · check-ins, conversaciones, lecciones</Text>
@@ -1613,7 +1613,7 @@ export default function ProgresoScreen() {
             onPress={() => router.push(link.route as never)}
             accessibilityRole="button"
             accessibilityLabel={link.title}>
-            <MaterialIcons name={link.icon} size={18} color={palette.gold} />
+            <MaterialIcons name={link.icon} size={18} color={palette.goldText} />
             <View style={styles.gdprBtnBody}>
               <Text style={styles.gdprBtnTitle}>{link.title}</Text>
               <Text style={styles.gdprBtnMeta}>{link.meta}</Text>
@@ -1655,7 +1655,7 @@ export default function ProgresoScreen() {
           style={styles.adminBtn}
           onPress={() => router.push('/admin' as never)}
           accessibilityLabel="Cuadro de Mando Integral">
-          <MaterialIcons name="dashboard-customize" size={16} color={palette.gold} />
+          <MaterialIcons name="dashboard-customize" size={16} color={palette.goldText} />
           <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
         </Pressable>
       )}
@@ -1681,7 +1681,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   narrativeLabel: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 11,
     letterSpacing: 2,
@@ -1710,7 +1710,7 @@ const styles = StyleSheet.create({
     width: 56,
   },
   profileAvatarText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 18,
     fontWeight: '800',
@@ -1729,7 +1729,7 @@ const styles = StyleSheet.create({
   },
   profileDay: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 10,
     letterSpacing: 1.2,
   },
@@ -1745,7 +1745,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   streakChipText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 13,
     fontWeight: '700',
@@ -1771,7 +1771,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   scoreNumber: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 46,
     fontWeight: '800',
@@ -2139,7 +2139,7 @@ const styles = StyleSheet.create({
   },
   gdprBtnTitle: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontWeight: '700',
     fontSize: 11,
@@ -2197,7 +2197,7 @@ const styles = StyleSheet.create({
   },
   adminBtnText: {
     fontFamily: Fonts.sans,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 12,
     letterSpacing: 1,
   },
@@ -2381,7 +2381,7 @@ const dnaStyles = StyleSheet.create({
   },
   riskText: {
     ...typography.body,
-    color: palette.gold,
+    color: palette.goldText,
     flex: 1,
     fontSize: 11,
   },

@@ -61,7 +61,7 @@ function CodeRow({ code, onCopy, onDeactivate }: { code: AccessCode; onCopy: () 
       </View>
       <View style={cr.actions}>
         <Pressable style={cr.copyBtn} onPress={onCopy}>
-          <MaterialIcons name="content-copy" size={14} color={palette.gold} />
+          <MaterialIcons name="content-copy" size={14} color={palette.goldText} />
         </Pressable>
         {code.is_active && (
           <Pressable style={cr.deactivateBtn} onPress={onDeactivate}>
@@ -249,7 +249,7 @@ export default function CodigosScreen() {
       <GoldDivider label={`CÓDIGOS ACTIVOS (${activeCodes.length})`} />
       <PremiumCard style={s.card}>
         {loading ? (
-          <ActivityIndicator color={palette.gold} style={{ padding: spacing.xl }} />
+          <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />
         ) : activeCodes.length === 0 ? (
           <Text style={s.emptyText}>Sin códigos activos</Text>
         ) : (
@@ -284,7 +284,7 @@ const s = StyleSheet.create({
   backBtn: { padding: spacing.xs },
   title: { ...typography.title, color: palette.ivory },
   lastGenCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md, backgroundColor: palette.goldLight, borderColor: palette.gold, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, alignItems: 'center' },
-  lastGenLabel: { ...typography.label, color: palette.gold, marginBottom: spacing.xs },
+  lastGenLabel: { ...typography.label, color: palette.goldText, marginBottom: spacing.xs },
   lastGenCode: { fontFamily: Fonts.mono, fontSize: 20, color: palette.ivory, letterSpacing: 4 },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.lg },
   fieldLabel: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs, fontSize: 9 },
@@ -293,7 +293,7 @@ const s = StyleSheet.create({
   optChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
   optChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   optText: { ...typography.caption, color: palette.ash, fontSize: 11 },
-  optTextActive: { color: palette.gold },
+  optTextActive: { color: palette.goldText },
   submitBtn: { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.lg },
   submitText: { ...typography.section, color: palette.ink },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', padding: spacing.md },
@@ -304,7 +304,7 @@ const cr = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   code: { fontFamily: Fonts.mono, fontSize: 14, color: palette.ivory, letterSpacing: 2 },
   typePill: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: radii.pill, borderWidth: 1 },
-  typeText: { ...typography.label, color: palette.gold, fontSize: 8 },
+  typeText: { ...typography.label, color: palette.goldText, fontSize: 8 },
   meta: { ...typography.caption, color: palette.smoke, fontSize: 10, marginTop: 2 },
   label: { ...typography.mono, color: palette.ash, fontSize: 10, marginTop: 1 },
   track: { height: 3, backgroundColor: palette.charcoal, borderRadius: 2, marginTop: spacing.xs },

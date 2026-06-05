@@ -36,6 +36,8 @@ export const THEME_VARS: Record<'dark' | 'light', Record<string, string>> = {
     '--c-border-soft':  'rgba(255,255,255,0.05)',
     '--c-border-hard':  'rgba(255,255,255,0.13)',
     '--c-border-focus': 'rgba(255,255,255,0.20)',
+    // gold AS TEXT/icon on a surface: bright gold reads great on dark…
+    '--c-gold-text':    '#FFC804',
   },
   light: {
     '--c-bg':           '#F5F3EE',
@@ -54,6 +56,9 @@ export const THEME_VARS: Record<'dark' | 'light', Record<string, string>> = {
     '--c-border-soft':  'rgba(13,13,13,0.06)',
     '--c-border-hard':  'rgba(13,13,13,0.15)',
     '--c-border-focus': 'rgba(13,13,13,0.22)',
+    // …but bright gold fails on cream. Deep amber keeps the brand warmth and
+    // stays readable (AA-ish on #F5F3EE) for eyebrows/labels/timestamps.
+    '--c-gold-text':    '#8A6500',
   },
 };
 

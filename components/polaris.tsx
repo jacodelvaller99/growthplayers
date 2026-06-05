@@ -38,7 +38,7 @@ type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 // ─── Polaris Mark — usa el SVG oficial del Manual de Marca ───────────────────
 
 export function PolarisMark({ size = 34 }: { size?: number }) {
-  return <PolarisLogo variant="star" size={size} color={palette.gold} />;
+  return <PolarisLogo variant="star" size={size} color={palette.goldText} />;
 }
 
 // ─── App Header ──────────────────────────────────────────────────────────────
@@ -385,7 +385,7 @@ export function ScaleSelector({
     <View style={styles.scaleBlock}>
       <View style={styles.rowBetween}>
         <View style={styles.scaleLabelRow}>
-          {icon ? <MaterialIcons name={icon} size={14} color={palette.gold} /> : null}
+          {icon ? <MaterialIcons name={icon} size={14} color={palette.goldText} /> : null}
           <Text style={styles.cardLabel}>{label}</Text>
         </View>
         <Text style={styles.scaleValue}>{value}</Text>
@@ -493,7 +493,7 @@ export function SecondaryButton({ label, icon, onPress }: { label: string; icon?
         onPressOut={handlePressOut}
         style={styles.secondaryButton}>
         <Text style={styles.secondaryButtonText}>{label}</Text>
-        {icon ? <MaterialIcons name={icon} color={palette.gold} size={18} /> : null}
+        {icon ? <MaterialIcons name={icon} color={palette.goldText} size={18} /> : null}
       </Pressable>
     </Animated.View>
   );
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
   },
   headerTitle: {
     ...typography.title,
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   },
   dividerLabel: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
   },
 
   // Editorial panel
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
   },
   sovereignPct: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
   },
 
   // Weekly sparkline (Skia)
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
   },
   progressValue: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
   },
   progressTrack: {
     backgroundColor: palette.charcoal,
@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   scaleValue: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 22,
     fontWeight: '400',

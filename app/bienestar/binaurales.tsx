@@ -132,7 +132,7 @@ interface MixerPreset {
 const MIXER_PRESETS: MixerPreset[] = [
   { id: 'intelligence', label: 'INTELLIGENCE',  description: '40 Hz Gamma — Foco máximo y cognición',      carrierHz: 200, beatHz: 40,   color: palette.info,    icon: 'psychology'       },
   { id: 'intuition',    label: 'INTUITION',     description: '8 Hz Alpha — Creatividad e intuición',       carrierHz: 210, beatHz: 8,    color: palette.purple,  icon: 'auto-awesome'     },
-  { id: 'euphoria',     label: 'EUPHORIA',      description: '10 Hz Alpha — Estados elevados de bienestar', carrierHz: 432, beatHz: 10,   color: palette.gold,    icon: 'sentiment-very-satisfied' },
+  { id: 'euphoria',     label: 'EUPHORIA',      description: '10 Hz Alpha — Estados elevados de bienestar', carrierHz: 432, beatHz: 10,   color: palette.goldText,    icon: 'sentiment-very-satisfied' },
   { id: 'healing',      label: 'CALMA',         description: '7.83 Hz — Frecuencia suave para relajación profunda', carrierHz: 200, beatHz: 7.83, color: palette.success, icon: 'favorite'         },
   { id: 'memory',       label: 'MEMORY',        description: '4 Hz Theta — Memoria profunda y sueños',     carrierHz: 100, beatHz: 4,    color: palette.danger,  icon: 'memory'           },
 ];
@@ -457,7 +457,7 @@ function BinauralPlayer({
       {running && (
         <View style={play.controlRow}>
           <Pressable style={play.pauseBtn} onPress={pauseSession}>
-            <MaterialIcons name="pause" size={20} color={palette.gold} />
+            <MaterialIcons name="pause" size={20} color={palette.goldText} />
             <Text style={play.pauseBtnText}>PAUSAR</Text>
           </Pressable>
           <Pressable style={play.stopBtn} onPress={stopSession}>
@@ -621,7 +621,7 @@ export default function BinauralesScreen() {
 
       {/* Headphone banner */}
       <PremiumCard style={styles.noticeBanner}>
-        <MaterialIcons name="headphones" size={20} color={palette.gold} />
+        <MaterialIcons name="headphones" size={20} color={palette.goldText} />
         <Text style={styles.noticeText}>
           Los beats binaurales requieren audífonos estéreo. El cerebro percibe la diferencia entre el tono izquierdo y el derecho.
         </Text>
@@ -1041,7 +1041,7 @@ const play = StyleSheet.create({
   },
   hzValue: {
     fontFamily: Fonts.display,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 22,
   },
   hzLabel: {
@@ -1080,7 +1080,7 @@ const play = StyleSheet.create({
     fontSize: 12,
   },
   timerBtnTextActive: {
-    color: palette.gold,
+    color: palette.goldText,
   },
   ambienceRow: {
     flexDirection: 'row',
@@ -1178,7 +1178,7 @@ const play = StyleSheet.create({
   },
   pauseBtnText: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 12,
   },
   doneBox: {
@@ -1188,7 +1188,7 @@ const play = StyleSheet.create({
   },
   doneText: {
     ...typography.section,
-    color: palette.gold,
+    color: palette.goldText,
     letterSpacing: 3,
   },
 });

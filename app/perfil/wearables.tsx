@@ -117,7 +117,7 @@ const metricStyles = StyleSheet.create({
     backgroundColor: palette.black,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: '#1a1a1a',
+    borderColor: palette.graphiteLight,
   },
   label: { ...typography.mono, color: palette.ash, fontSize: 9, letterSpacing: 1 },
   value: { ...typography.body, color: palette.ivory, fontWeight: '700', fontSize: 18 },
@@ -225,9 +225,9 @@ function ConnectedCard({
           disabled={isSyncing}
           accessibilityLabel={`Sincronizar ${provider.name}`}>
           {isSyncing
-            ? <ActivityIndicator size="small" color={palette.gold} />
+            ? <ActivityIndicator size="small" color={palette.goldText} />
             : <>
-                <MaterialIcons name="sync" size={15} color={palette.gold} />
+                <MaterialIcons name="sync" size={15} color={palette.goldText} />
                 <Text style={connStyles.syncText}>SINCRONIZAR AHORA</Text>
               </>
           }
@@ -277,7 +277,7 @@ const connStyles = StyleSheet.create({
     gap: spacing.sm, borderWidth: 1, borderColor: palette.gold,
     borderRadius: radii.sm, paddingVertical: spacing.md, minHeight: 44,
   },
-  syncText:       { ...typography.label, color: palette.gold, fontWeight: '700', fontSize: 11 },
+  syncText:       { ...typography.label, color: palette.goldText, fontWeight: '700', fontSize: 11 },
   disconnectBtn:  { paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 44, justifyContent: 'center' },
   disconnectText: { ...typography.caption, color: palette.smoke },
 });
@@ -342,7 +342,7 @@ const discStyles = StyleSheet.create({
   iconWrap: {
     width: 48, height: 48,
     borderRadius: radii.md,
-    backgroundColor: '#111',
+    backgroundColor: palette.graphite,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
@@ -358,12 +358,12 @@ const discStyles = StyleSheet.create({
   description: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tag: {
-    backgroundColor: '#111',
+    backgroundColor: palette.graphite,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#222',
+    borderColor: palette.charcoal,
   },
   tagText: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   connectBtn: {
@@ -529,7 +529,7 @@ export default function WearablesScreen() {
 
       {/* Info card */}
       <PremiumCard style={styles.infoCard}>
-        <MaterialIcons name="monitor-heart" size={28} color={palette.gold} />
+        <MaterialIcons name="monitor-heart" size={28} color={palette.goldText} />
         <View style={styles.infoBody}>
           <Text style={styles.infoTitle}>BIOMETRÍA INTELIGENTE</Text>
           <Text style={styles.infoSub}>
@@ -544,7 +544,7 @@ export default function WearablesScreen() {
       {/* Device list */}
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={palette.gold} />
+          <ActivityIndicator size="large" color={palette.goldText} />
           <Text style={styles.loadingText}>Cargando conexiones...</Text>
         </View>
       ) : (
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radii.sm,
   },
-  countText: { ...typography.label, color: palette.gold, fontSize: 10 },
+  countText: { ...typography.label, color: palette.goldText, fontSize: 10 },
 
   // Banner
   banner: {

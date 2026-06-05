@@ -136,7 +136,7 @@ export default function ProgramasScreen() {
           <Pressable
             style={({ pressed }) => [styles.skoolLink, pressed && { opacity: 0.7 }]}
             onPress={() => Linking.openURL(module.skoolUrl!)}>
-            <MaterialIcons name="open-in-new" size={12} color={palette.gold} />
+            <MaterialIcons name="open-in-new" size={12} color={palette.goldText} />
             <Text style={styles.skoolLinkText}>Explorar en Skool →</Text>
           </Pressable>
         )}
@@ -228,7 +228,7 @@ export default function ProgramasScreen() {
 
         {/* ── Ruta completada ── */}
         <PremiumCard style={styles.routeCard}>
-          <MaterialIcons name="workspace-premium" size={20} color={palette.gold} />
+          <MaterialIcons name="workspace-premium" size={20} color={palette.goldText} />
           <View style={styles.routeBody}>
             <Text style={styles.routeLabel}>RUTA COMPLETADA</Text>
             <View style={styles.routeTrack}>
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   routePct: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.display,
     fontSize: 15,
     fontWeight: '700',
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   moduleNumberActive: {
-    color: palette.gold,
+    color: palette.goldText,
   },
   liveDot: {
     backgroundColor: palette.success,
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   soonBadgeText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 8,
     letterSpacing: 1.5,
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   progressPct: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 9,
   },
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   },
   skoolLinkText: {
     ...typography.mono,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 11,
     letterSpacing: 0.5,
   },

@@ -311,7 +311,7 @@ export default function ConscienciaScreen() {
           <View style={styles.howToRise}>
             <Text style={styles.howToRiseLabel}>CÓMO SUBIR</Text>
             <View style={styles.howToRiseRow}>
-              <MaterialIcons name="arrow-upward" size={20} color={palette.gold} />
+              <MaterialIcons name="arrow-upward" size={20} color={palette.goldText} />
               <Text style={styles.howToRiseText}>
                 Hacia <Text style={styles.howToRiseStrong}>{next.name}</Text> ({next.hz} Hz) — suelta el nivel actual sin juzgarlo.
               </Text>
@@ -347,7 +347,7 @@ export default function ConscienciaScreen() {
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={`${level.name}, ${level.hz} Hz`}>
-                <Text style={[styles.weeklyChipText, on && styles.weeklyChipTextOn, !on && isPoder && { color: palette.gold }]}>
+                <Text style={[styles.weeklyChipText, on && styles.weeklyChipTextOn, !on && isPoder && { color: palette.goldText }]}>
                   {level.name}
                 </Text>
               </Pressable>
@@ -408,16 +408,16 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
-  introTitle: { fontFamily: Fonts.display, color: palette.gold, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
+  introTitle: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
   introBody: { ...typography.caption, color: palette.ivory, fontSize: 13, lineHeight: 20 },
   zoneBar: { flexDirection: 'row', height: 12, borderRadius: radii.pill, overflow: 'hidden' },
   zoneFuerza: { flex: 1, backgroundColor: palette.danger, opacity: 0.6 },
   zonePoder: { flex: 1, backgroundColor: palette.gold },
   zoneLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   zoneLabelFuerza: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10 },
-  zoneLabelPoder: { fontFamily: Fonts.mono, color: palette.gold, fontSize: 10 },
+  zoneLabelPoder: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 10 },
 
-  sectionLabel: { ...typography.label, color: palette.gold, fontSize: 11, letterSpacing: 1.8 },
+  sectionLabel: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
 
   // Grid — 4 columns
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     borderColor: palette.lineGold,
   },
   detailHeader: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
-  detailHz: { fontFamily: Fonts.display, color: palette.gold, fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+  detailHz: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 40, fontWeight: '800', letterSpacing: -1 },
   detailHzUnit: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11 },
   detailName: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 18, fontWeight: '800', letterSpacing: 0.5, marginLeft: 'auto' },
   detailDesc: { ...typography.body, color: palette.ivory, lineHeight: 22 },
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   howToRiseLabel: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
   howToRiseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   howToRiseText: { ...typography.caption, color: palette.ash, fontSize: 13, flex: 1, lineHeight: 20 },
-  howToRiseStrong: { color: palette.gold, fontFamily: Fonts.sansBold },
+  howToRiseStrong: { color: palette.goldText, fontFamily: Fonts.sansBold },
   adviceText: { ...typography.caption, color: palette.smoke, fontSize: 12, lineHeight: 19, fontStyle: 'italic' },
 
   // Weekly check
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   weeklyChipText: { fontFamily: Fonts.sans, color: palette.ash, fontSize: 12 },
   weeklyChipTextOn: { color: palette.ink, fontFamily: Fonts.sansBold },
   weeklyAvg: { ...typography.caption, color: palette.ash, fontSize: 12 },
-  weeklyAvgStrong: { color: palette.gold, fontFamily: Fonts.sansBold },
+  weeklyAvgStrong: { color: palette.goldText, fontFamily: Fonts.sansBold },
   weeklyBtn: {
     flexDirection: 'row',
     alignItems: 'center',

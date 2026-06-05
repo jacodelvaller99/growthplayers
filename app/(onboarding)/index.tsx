@@ -173,7 +173,7 @@ export default function OnboardingScreen() {
               { icon: 'insights' as const, label: 'Score Soberano en tiempo real' },
             ].map(({ icon, label }) => (
               <View key={label} style={styles.featureRow}>
-                <MaterialIcons name={icon} size={16} color={palette.gold} />
+                <MaterialIcons name={icon} size={16} color={palette.goldText} />
                 <Text style={styles.featureText}>{label}</Text>
               </View>
             ))}
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     letterSpacing: 2,
   },
   goldAccent: {
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   consentLink: {
-    color: palette.gold,
+    color: palette.goldText,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },

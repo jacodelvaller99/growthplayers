@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   content:            { paddingHorizontal: spacing.md, paddingBottom: 40 },
 
   bmiCard:            { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, alignItems: 'center', marginBottom: spacing.lg, gap: 4 },
-  bmiLabel:           { ...typography.label, color: palette.gold },
+  bmiLabel:           { ...typography.label, color: palette.goldText },
   bmiValue:           { fontFamily: Fonts.display, fontSize: 56, lineHeight: 64 },
   bmiCategory:        { fontFamily: Fonts.sans, fontSize: 14, fontWeight: '600', marginBottom: 12 },
   bmiBar:             { flexDirection: 'row', width: '100%', height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 2 },
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   bmiPointer:         { position: 'absolute', bottom: 52, width: 3, height: 10, backgroundColor: palette.ivory, borderRadius: 1 },
 
   section:            { marginBottom: spacing.lg },
-  sectionLabel:       { ...typography.label, color: palette.gold, marginBottom: spacing.sm },
+  sectionLabel:       { ...typography.label, color: palette.goldText, marginBottom: spacing.sm },
 
   inputRow:           { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   inputGroup:         { flex: 1 },

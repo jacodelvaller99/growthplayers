@@ -165,7 +165,7 @@ export default function MissionControl() {
   if (loading) {
     return (
       <View style={[sc.root, s.center]}>
-        <ActivityIndicator color={palette.gold} size="large" />
+        <ActivityIndicator color={palette.goldText} size="large" />
         <Text style={s.loadingText}>Cargando CMI...</Text>
       </View>
     );
@@ -250,7 +250,7 @@ export default function MissionControl() {
           style={[s.actionBtn, mlRecalculating && { opacity: 0.5 }]}
           onPress={handleRecalculateML}
           disabled={mlRecalculating}>
-          <MaterialIcons name="psychology" size={18} color={palette.gold} />
+          <MaterialIcons name="psychology" size={18} color={palette.goldText} />
           <Text style={s.actionBtnText}>
             {mlRecalculating ? 'CALCULANDO...' : 'RECALCULAR ML'}
           </Text>
@@ -258,13 +258,13 @@ export default function MissionControl() {
         <Pressable
           style={s.actionBtn}
           onPress={() => router.push('/admin/inteligencia' as never)}>
-          <MaterialIcons name="bar-chart" size={18} color={palette.gold} />
+          <MaterialIcons name="bar-chart" size={18} color={palette.goldText} />
           <Text style={s.actionBtnText}>VER ML</Text>
         </Pressable>
         <Pressable
           style={s.actionBtn}
           onPress={() => router.push('/admin/auditoria' as never)}>
-          <MaterialIcons name="history" size={18} color={palette.gold} />
+          <MaterialIcons name="history" size={18} color={palette.goldText} />
           <Text style={s.actionBtnText}>AUDITORÍA</Text>
         </Pressable>
       </View>
@@ -290,7 +290,7 @@ export default function MissionControl() {
             <Text style={s.sectionIcon}>{sec.icon}</Text>
             <Text style={s.sectionLabel}>{sec.label}</Text>
             <Text style={s.sectionDesc}>{sec.desc}</Text>
-            <MaterialIcons name="arrow-forward" size={14} color={palette.gold} style={{ marginTop: spacing.xs }} />
+            <MaterialIcons name="arrow-forward" size={14} color={palette.goldText} style={{ marginTop: spacing.xs }} />
           </Pressable>
         ))}
       </View>
@@ -417,7 +417,7 @@ const s = StyleSheet.create({
   },
   actionBtnText: {
     ...typography.label,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 9,
   },
 

@@ -193,7 +193,7 @@ export default function PerfilSoberanoScreen() {
           onPress={handleShare}
           disabled={sharing}
           accessibilityLabel="Compartir Score Soberano">
-          <MaterialIcons name="share" size={20} color={palette.gold} />
+          <MaterialIcons name="share" size={20} color={palette.goldText} />
         </Pressable>
       </View>
 
@@ -217,12 +217,12 @@ export default function PerfilSoberanoScreen() {
             ) : null}
             <View style={styles.heroBadgeRow}>
               <View style={styles.heroBadge}>
-                <MaterialIcons name="calendar-today" size={9} color={palette.gold} />
+                <MaterialIcons name="calendar-today" size={9} color={palette.goldText} />
                 <Text style={styles.heroBadgeText}>DÍA {protocolDay}/90</Text>
               </View>
               {earnedArchetypes.length > 0 && (
                 <View style={[styles.heroBadge, styles.heroBadgeArch]}>
-                  <MaterialIcons name="military-tech" size={9} color={palette.gold} />
+                  <MaterialIcons name="military-tech" size={9} color={palette.goldText} />
                   <Text style={styles.heroBadgeText}>
                     {earnedArchetypes[earnedArchetypes.length - 1]}
                   </Text>
@@ -314,7 +314,7 @@ export default function PerfilSoberanoScreen() {
           <View style={styles.archetypeGrid}>
             {earnedArchetypes.map((arch) => (
               <View key={arch} style={styles.archetypeChip}>
-                <MaterialIcons name="military-tech" size={11} color={palette.gold} />
+                <MaterialIcons name="military-tech" size={11} color={palette.goldText} />
                 <Text style={styles.archetypeChipText}>{arch}</Text>
               </View>
             ))}
@@ -329,7 +329,7 @@ export default function PerfilSoberanoScreen() {
         onPress={() => router.push('/perfil/wearables' as never)}
         accessibilityLabel="Ver dispositivos wearables">
         <View style={styles.navIcon}>
-          <MaterialIcons name="monitor-heart" size={22} color={palette.gold} />
+          <MaterialIcons name="monitor-heart" size={22} color={palette.goldText} />
         </View>
         <View style={styles.navCopy}>
           <Text style={styles.navTitle}>DISPOSITIVOS WEARABLES</Text>
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     borderColor: palette.gold + '55',
   },
   heroBadgeText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 8,
     letterSpacing: 1.5,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   declarationLabel: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 8,
     letterSpacing: 2,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   archetypeChipText: {
-    color: palette.gold,
+    color: palette.goldText,
     fontFamily: Fonts.mono,
     fontSize: 10,
     letterSpacing: 1.5,

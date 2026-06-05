@@ -116,7 +116,7 @@ export default function MentoriaScreen() {
       </View>
       <Text style={styles.heroPhase}>{week.phase}</Text>
       <View style={styles.heroDateRow}>
-        <MaterialIcons name="event" size={13} color={palette.gold} />
+        <MaterialIcons name="event" size={13} color={palette.goldText} />
         <Text style={styles.heroDate}>{currentRange}</Text>
       </View>
       <Text style={styles.heroFocus}>{week.focus}</Text>
@@ -190,7 +190,7 @@ export default function MentoriaScreen() {
           accessibilityRole="button"
           accessibilityLabel="Agregar acción"
         >
-          <MaterialIcons name="add" size={20} color={palette.gold} />
+          <MaterialIcons name="add" size={20} color={palette.goldText} />
         </Pressable>
       </View>
     </PremiumCard>
@@ -253,7 +253,7 @@ export default function MentoriaScreen() {
             </Text>
           ) : isProcessing ? (
             <View style={styles.recordProcessing}>
-              <ActivityIndicator size="small" color={palette.gold} />
+              <ActivityIndicator size="small" color={palette.goldText} />
               <Text style={styles.recordProcessingText}>
                 {recLabel[m.recordingPhase] ?? 'PROCESANDO…'}
               </Text>
@@ -403,7 +403,7 @@ function ActionRow({ item, onToggle, onRemove }: { item: ActionItem; onToggle: (
         </View>
       </Pressable>
       <Text style={[styles.itemText, item.done && styles.itemTextDone]}>{item.text}</Text>
-      {item.source === 'ia' && <MaterialIcons name="auto-awesome" size={13} color={palette.gold} style={{ marginRight: 4 }} />}
+      {item.source === 'ia' && <MaterialIcons name="auto-awesome" size={13} color={palette.goldText} style={{ marginRight: 4 }} />}
       <Pressable onPress={onRemove} hitSlop={8} accessibilityLabel="Eliminar acción">
         <MaterialIcons name="close" size={15} color={palette.smoke} />
       </Pressable>
@@ -446,7 +446,7 @@ function WeekRow({
               </View>
             ))}
             <Pressable onPress={onPickForNote} style={styles.noteLink} accessibilityRole="button">
-              <MaterialIcons name="edit-note" size={15} color={palette.gold} />
+              <MaterialIcons name="edit-note" size={15} color={palette.goldText} />
               <Text style={styles.noteLinkText}>{selectedForNote ? 'SELECCIONADA PARA NOTA' : 'TOMAR NOTA DE ESTA SEMANA'}</Text>
             </Pressable>
           </View>
@@ -462,7 +462,7 @@ function NoteCard({ n, weekRange, onRemove }: { n: SessionNote; weekRange: strin
       <View style={styles.noteCardHead}>
         {n.transcript ? (
           <View style={styles.noteCardTag}>
-            <MaterialIcons name="mic" size={11} color={palette.gold} />
+            <MaterialIcons name="mic" size={11} color={palette.goldText} />
             <Text style={styles.noteCardTagText}>GRABADA</Text>
           </View>
         ) : (
@@ -475,7 +475,7 @@ function NoteCard({ n, weekRange, onRemove }: { n: SessionNote; weekRange: strin
       <Text style={styles.noteCardText}>{n.notes}</Text>
       {n.audioUrl && (
         <View style={styles.audioRow}>
-          <MaterialIcons name="play-circle-outline" size={15} color={palette.gold} />
+          <MaterialIcons name="play-circle-outline" size={15} color={palette.goldText} />
           <Text style={styles.audioText}>Grabación de sesión</Text>
         </View>
       )}
@@ -505,7 +505,7 @@ function DraftEditor({
   return (
     <View style={styles.draftBox}>
       <View style={styles.draftHead}>
-        <MaterialIcons name="auto-awesome" size={15} color={palette.gold} />
+        <MaterialIcons name="auto-awesome" size={15} color={palette.goldText} />
         <Text style={styles.draftTitle}>NORMAN REDACTÓ TU SESIÓN</Text>
       </View>
       <Text style={styles.draftSub}>
@@ -527,7 +527,7 @@ function DraftEditor({
       <Text style={styles.draftLabel}>PLAN DE ACCIÓN</Text>
       {draft.actions.map((a, i) => (
         <View key={i} style={styles.draftActionRow}>
-          <MaterialIcons name="chevron-right" size={16} color={palette.gold} />
+          <MaterialIcons name="chevron-right" size={16} color={palette.goldText} />
           <TextInput
             value={a}
             onChangeText={(t) => onChangeAction(i, t)}
@@ -542,7 +542,7 @@ function DraftEditor({
         </View>
       ))}
       <Pressable onPress={onAddAction} style={styles.draftAddAction} accessibilityRole="button">
-        <MaterialIcons name="add" size={16} color={palette.gold} />
+        <MaterialIcons name="add" size={16} color={palette.goldText} />
         <Text style={styles.draftAddActionText}>AGREGAR ACCIÓN</Text>
       </Pressable>
 
@@ -582,11 +582,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 4,
   },
   heroDateRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  heroDate: { ...typography.mono, fontSize: 11, color: palette.gold, letterSpacing: 0.5 },
+  heroDate: { ...typography.mono, fontSize: 11, color: palette.goldText, letterSpacing: 0.5 },
   heroFocus: { ...typography.body, color: palette.ash, fontSize: 14, lineHeight: 21 },
   heroBar: { height: 4, borderRadius: 2, backgroundColor: palette.charcoal, overflow: 'hidden', marginTop: 6 },
   heroBarFill: { height: '100%', backgroundColor: palette.gold, borderRadius: 2 },
-  heroMeta: { ...typography.mono, fontSize: 11, color: palette.gold, letterSpacing: 0.5 },
+  heroMeta: { ...typography.mono, fontSize: 11, color: palette.goldText, letterSpacing: 0.5 },
 
   // Section
   section: { gap: spacing.md },
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
   weekBody: { flex: 1, paddingBottom: spacing.lg },
   weekHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   weekNum: { ...typography.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1.5 },
-  weekNumActive: { color: palette.gold },
+  weekNumActive: { color: palette.goldText },
   weekRange: { ...typography.mono, fontSize: 9.5, color: palette.smoke, letterSpacing: 0.3, flex: 1 },
   weekRangeActive: { color: palette.goldMuted },
   weekPhase: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14.5, color: palette.ivory, marginTop: 3, letterSpacing: 0.3 },
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   taskText: { ...typography.body, fontSize: 12.5, color: palette.smoke, flex: 1 },
   noteLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, minHeight: 36 },
-  noteLinkText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.gold, letterSpacing: 1 },
+  noteLinkText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.goldText, letterSpacing: 1 },
 
   // Note composer
   noteComposer: { gap: 10 },
@@ -675,10 +675,10 @@ const styles = StyleSheet.create({
   noteCard: { borderRadius: 10, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.graphiteLight, padding: 12, gap: 6 },
   noteCardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   noteCardTag: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  noteCardTagText: { ...typography.mono, fontSize: 9, color: palette.gold, letterSpacing: 1 },
+  noteCardTagText: { ...typography.mono, fontSize: 9, color: palette.goldText, letterSpacing: 1 },
   noteCardText: { ...typography.body, fontSize: 13, color: palette.ivory, lineHeight: 19 },
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  audioText: { ...typography.mono, fontSize: 10, color: palette.gold, letterSpacing: 0.5 },
+  audioText: { ...typography.mono, fontSize: 10, color: palette.goldText, letterSpacing: 0.5 },
   noteCardFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: palette.line },
   noteCardFooterText: { ...typography.mono, fontSize: 9.5, color: palette.smoke, letterSpacing: 0.3 },
 
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
   recStartText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12.5, color: palette.ink, letterSpacing: 1.5 },
   recordUnavailable: { ...typography.body, fontSize: 12, color: palette.smoke, lineHeight: 18, textAlign: 'center', paddingVertical: 8 },
   recordProcessing: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48 },
-  recordProcessingText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.gold, letterSpacing: 1 },
+  recordProcessingText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText, letterSpacing: 1 },
   recordActive: {
     gap: 10, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: palette.lineGold, backgroundColor: palette.goldGlow,
   },
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
   draftHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   draftTitle: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, color: palette.ivory, letterSpacing: 1.5 },
   draftSub: { ...typography.body, fontSize: 12, color: palette.ash, lineHeight: 17 },
-  draftLabel: { ...typography.mono, fontSize: 10, color: palette.gold, letterSpacing: 1.5, marginTop: 2 },
+  draftLabel: { ...typography.mono, fontSize: 10, color: palette.goldText, letterSpacing: 1.5, marginTop: 2 },
   draftNotes: {
     minHeight: 110, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: palette.line,
     backgroundColor: palette.graphiteLight, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13.5, lineHeight: 20,
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.graphiteLight, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13,
   },
   draftAddAction: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
-  draftAddActionText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.gold, letterSpacing: 1 },
+  draftAddActionText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.goldText, letterSpacing: 1 },
   draftBtns: { flexDirection: 'row', gap: 8, marginTop: 4 },
   draftDiscard: {
     minHeight: 44, paddingHorizontal: 16, borderRadius: 10, borderWidth: 1, borderColor: palette.line,

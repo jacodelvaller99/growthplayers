@@ -253,7 +253,7 @@ export default function RespiracionScreen() {
           <MaterialIcons
             name={running ? 'stop' : 'play-arrow'}
             size={20}
-            color={running ? palette.gold : palette.ink}
+            color={running ? palette.goldText : palette.ink}
           />
           <Text style={[styles.ctaText, running ? styles.ctaTextOutline : styles.ctaTextGold]}>
             {running ? 'DETENER' : 'COMENZAR SESIÓN'}
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   },
   orbPhase: {
     fontFamily: Fonts.display,
-    color: palette.gold,
+    color: palette.goldText,
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: 2,
@@ -426,5 +426,5 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   ctaTextGold: { color: palette.ink },
-  ctaTextOutline: { color: palette.gold },
+  ctaTextOutline: { color: palette.goldText },
 });

@@ -306,7 +306,7 @@ export default function MembresiasScreen() {
         <GoldDivider label={`${filterStatus.toUpperCase()} (${displayed.length})`} />
         <PremiumCard style={s.card}>
           {loading ? (
-            <ActivityIndicator color={palette.gold} style={{ padding: spacing.xl }} />
+            <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />
           ) : displayed.length === 0 ? (
             <Text style={s.emptyText}>Sin membresías</Text>
           ) : (
@@ -329,7 +329,7 @@ export default function MembresiasScreen() {
                   <View style={s.rowActions}>
                     {getTiersAbove(m.product).length > 0 && (
                       <Pressable style={s.rowBtn} onPress={() => openAction(m, 'upgrade')}>
-                        <MaterialIcons name="arrow-upward" size={12} color={palette.gold} />
+                        <MaterialIcons name="arrow-upward" size={12} color={palette.goldText} />
                         <Text style={s.rowBtnText}>SUBIR</Text>
                       </Pressable>
                     )}
@@ -626,7 +626,7 @@ const s = StyleSheet.create({
   filterChip:  { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
   filterChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   filterText:  { ...typography.label, color: palette.ash, fontSize: 9 },
-  filterTextActive: { color: palette.gold },
+  filterTextActive: { color: palette.goldText },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -668,7 +668,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  rowBtnText:    { ...typography.label, color: palette.gold, fontSize: 8 },
+  rowBtnText:    { ...typography.label, color: palette.goldText, fontSize: 8 },
   toastContainer: {
     position: 'absolute',
     bottom: 100,
@@ -761,7 +761,7 @@ const modal = StyleSheet.create({
   },
   durationChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   durationText:       { ...typography.caption, color: palette.ash, fontSize: 12 },
-  durationTextActive: { color: palette.gold },
+  durationTextActive: { color: palette.goldText },
   footer: {
     flexDirection: 'row',
     gap: spacing.md,

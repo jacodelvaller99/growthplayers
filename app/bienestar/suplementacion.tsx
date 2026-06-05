@@ -197,7 +197,7 @@ export default function SuplementacionScreen() {
                   style={styles.editBtn}
                   accessibilityLabel={isEditing ? 'Cerrar edición' : `Editar dosis de ${s.name}`}
                 >
-                  <MaterialIcons name={isEditing ? 'check' : 'edit'} size={16} color={palette.gold} />
+                  <MaterialIcons name={isEditing ? 'check' : 'edit'} size={16} color={palette.goldText} />
                 </Pressable>
               </View>
 
@@ -226,7 +226,7 @@ export default function SuplementacionScreen() {
                 </View>
               ) : (
                 <View style={styles.timingRow}>
-                  <MaterialIcons name="schedule" size={13} color={palette.gold} />
+                  <MaterialIcons name="schedule" size={13} color={palette.goldText} />
                   <Text style={styles.timingText}>{s.timing}</Text>
                 </View>
               )}
@@ -280,10 +280,10 @@ const styles = StyleSheet.create({
   colorDot:      { width: 10, height: 10, borderRadius: 5 },
   cardName:      { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory, fontWeight: '700', flex: 1 },
   doseChip:      { backgroundColor: 'rgba(212,175,55,0.15)', borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  doseText:      { fontFamily: Fonts.mono, fontSize: 11, color: palette.gold },
+  doseText:      { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
   editBtn:       { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight },
   timingRow:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
-  timingText:    { fontSize: 12, color: palette.gold },
+  timingText:    { fontSize: 12, color: palette.goldText },
   evidenceText:  { fontSize: 12, color: palette.ash, lineHeight: 18 },
 
   editGrid:      { gap: spacing.sm, marginBottom: 10 },
