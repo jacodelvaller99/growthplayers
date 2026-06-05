@@ -1018,7 +1018,7 @@ export default function LessonScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: palette.ink },
+  flex: { flex: 1, backgroundColor: palette.black },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1 },
   content: {
     gap: 0,

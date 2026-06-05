@@ -424,7 +424,7 @@ export default function NutricionScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:             { flex: 1, backgroundColor: palette.ink },
+  root:             { flex: 1, backgroundColor: palette.black },
   header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:          { padding: 8 },
   title:            { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
