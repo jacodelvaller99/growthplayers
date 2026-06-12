@@ -669,7 +669,7 @@ export async function streamMentorResponse(
   const isAbort = (err: unknown) =>
     signal?.aborted || (err as Error)?.name === 'AbortError';
 
-  if (ENV.isDev && !ENV.nvidiaApiKey && !ENV.groqApiKey && !ENV.openaiApiKey) {
+  if (ENV.isDev && !ENV.nvidiaApiKey && !ENV.groqApiKey && !ENV.openaiApiKey && !ENV.aiProxyUrl) {
     return streamDevSimulation(userMessage, onChunk);
   }
 
@@ -685,9 +685,10 @@ export async function streamMentorResponse(
   ];
 
   // NVIDIA NIM no soporta CORS desde el navegador — solo se usa desde un servidor.
-  // En web siempre se salta directamente a Groq u OpenAI.
+  // En web siempre se salta directamente a Groq u OpenAI… salvo con ai-proxy,
+  // que hace la llamada server-side y elimina la restricción CORS.
   const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
-  if (ENV.nvidiaApiKey && !isWeb) {
+  if (ENV.aiProxyUrl || (ENV.nvidiaApiKey && !isWeb)) {
     try {
       return await streamNvidia(messages, onChunk, signal);
     } catch (err) {
@@ -696,7 +697,7 @@ export async function streamMentorResponse(
     }
   }
 
-  if (ENV.groqApiKey) {
+  if (ENV.groqApiKey || ENV.aiProxyUrl) {
     try {
       return await streamGroq(messages, onChunk, signal);
     } catch (err) {
@@ -707,7 +708,7 @@ export async function streamMentorResponse(
 
   // Guard: skip OpenAI if the key is clearly a Groq key (starts with 'gsk_').
   // This prevents a 401 waste when EXPO_PUBLIC_OPENAI_API_KEY is misconfigured.
-  if (ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) {
+  if ((ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) || ENV.aiProxyUrl) {
     try {
       return await streamOpenAI(messages, onChunk, signal);
     } catch (err) {

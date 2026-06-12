@@ -29,6 +29,7 @@ import {
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useToast } from '@/context/ToastContext';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useMentorMemory } from '@/hooks/useMentorMemory';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
@@ -204,10 +205,13 @@ export default function MentorScreen() {
   const { today: latestWearable } = useWearableDaily(3);
   const wearableProvider = connections.find((c) => c.is_active)?.provider ?? null;
 
+  const { showToast } = useToast();
   const [input, setInput]               = useState('');
   const [isStreaming, setIsStreaming]   = useState(false);
   // Controla la petición de streaming en curso para poder cancelarla / hacer timeout.
   const abortRef = useRef<AbortController | null>(null);
+  // Distingue timeout del sistema vs cancelación del usuario (feedback distinto).
+  const timedOutRef = useRef(false);
   const [streamingText, setStreamingText] = useState('');
   const [pendingUserMsg, setPendingUserMsg] = useState<MentorMessage | null>(null);
   const [loadingMore, setLoadingMore]   = useState(false);
@@ -350,7 +354,11 @@ export default function MentorScreen() {
     // colgada deje el chat bloqueado indefinidamente.
     const controller = new AbortController();
     abortRef.current = controller;
-    const timeoutId = setTimeout(() => controller.abort(), 45_000); // 45s tope
+    timedOutRef.current = false;
+    const timeoutId = setTimeout(() => {
+      timedOutRef.current = true;
+      controller.abort();
+    }, 45_000); // 45s tope
 
     let fullText = '';
     try {
@@ -471,6 +479,11 @@ export default function MentorScreen() {
         // Cancelado/timeout antes de cualquier respuesta → no perdemos lo que
         // escribió: devolvemos su texto al input para que pueda reenviarlo.
         setInput(clean);
+        // Si fue timeout del sistema (no cancelación del usuario), se dice:
+        // el silencio se lee como "se tragó mi mensaje".
+        if (timedOutRef.current) {
+          showToast('El mentor tardó demasiado. Tu mensaje sigue en el campo — reintenta.', 'warning');
+        }
       } else {
         // Error real, o cancelación con texto parcial: NO descartamos el intercambio.
         // Guardamos el mensaje del usuario + lo que se alcanzó a generar (o un aviso).

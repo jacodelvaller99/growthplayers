@@ -20,6 +20,7 @@ import { DesktopSidebar } from '@/components/DesktopSidebar';
 import { ToastProvider } from '@/context/ToastContext';
 import { AppThemeProvider } from '@/hooks/use-app-theme';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { initCrashCapture } from '@/lib/crash';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -55,54 +56,68 @@ function SmartNotificationsInitializer() {
 }
 
 function MainStack() {
+  // Guard de auth para TODA ruta privada (deep links incluidos). `!isLoaded`
+  // mantiene montado el destino durante la carga de sesión para no eyectar
+  // deep links de notificaciones; al resolver sin sesión, Protected desmonta
+  // → anchor (tabs) → su propio guard → /(auth). Sin loops: (auth),
+  // (onboarding), legal, pricing y oauth callbacks quedan fuera del bloque.
+  const { isLoaded, isAuthenticated, state } = useLifeFlow();
+  const guard = !isLoaded || (isAuthenticated && state.onboardingCompleted);
+
   return (
     <Stack>
+      {/* ── Públicas ── */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-      <Stack.Screen name="checkin" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
-      <Stack.Screen name="mentoria/index" options={{ headerShown: false }} />
-      <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
-      <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/index" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/binaurales" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/meditacion" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/respiracion" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/sueno" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/diario" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/biblioteca" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/biometrics" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/habitos" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/ayuno" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/nutricion" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/cuerpo" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
-      <Stack.Screen name="comunidad/mensajes" options={{ headerShown: false }} />
-      <Stack.Screen name="comunidad/chat/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
-      <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />
       <Stack.Screen name="legal/privacidad" options={{ headerShown: false }} />
       <Stack.Screen name="legal/terminos" options={{ headerShown: false }} />
       <Stack.Screen name="legal/salud" options={{ headerShown: false }} />
-      <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
-      <Stack.Screen name="admin" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/usuarios/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/usuarios/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/membresias/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/cursos/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/codigos/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
-      <Stack.Screen name="admin/comunidad/index" options={{ headerShown: false }} />
       <Stack.Screen name="pricing" options={{ headerShown: false }} />
       <Stack.Screen name="oauth/whoop/callback" options={{ headerShown: false }} />
       <Stack.Screen name="oauth/oura/callback"  options={{ headerShown: false }} />
+
+      {/* ── Privadas — requieren sesión + onboarding completo ── */}
+      <Stack.Protected guard={guard}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="checkin" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
+        <Stack.Screen name="mentoria/index" options={{ headerShown: false }} />
+        <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
+        <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/index" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/binaurales" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/meditacion" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/respiracion" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/sueno" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/diario" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/biblioteca" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/biometrics" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/habitos" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/ayuno" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/nutricion" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/cuerpo" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/mensajes" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/chat/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />
+        <Stack.Screen name="perfil/index" options={{ headerShown: false }} />
+        <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
+        <Stack.Screen name="admin" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/usuarios/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/usuarios/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/membresias/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/cursos/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/codigos/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/comunidad/index" options={{ headerShown: false }} />
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -181,6 +196,12 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [ready]);
+
+  // Captura global de crashes (no-render): web error/unhandledrejection,
+  // nativo ErrorUtils. Complementa al ErrorBoundary (que solo ve crashes de render).
+  useEffect(() => {
+    initCrashCapture();
+  }, []);
 
   // Register SW directly — useEffect already defers past page load,
   // so window.addEventListener('load',...) would be a no-op (event already fired)

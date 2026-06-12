@@ -78,19 +78,31 @@ const DEFAULT_INTELLIGENCE: UserIntelligence = {
 export function useUserIntelligence(userId: string | null) {
   const [intelligence, setIntelligence] = useState<UserIntelligence>(DEFAULT_INTELLIGENCE);
   const [isLoading, setIsLoading]       = useState(true);
+  const [hasError, setHasError]         = useState(false);
 
   const fetch = useCallback(async (uid: string) => {
     setIsLoading(true);
-    const { data, error } = await intel.intelligence()
-      .select('*')
-      .eq('user_id', uid)
-      .single();
+    try {
+      const { data, error } = await intel.intelligence()
+        .select('*')
+        .eq('user_id', uid)
+        .single();
 
-    if (data && !error) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setIntelligence(data as unknown as UserIntelligence);
+      if (data && !error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setIntelligence(data as unknown as UserIntelligence);
+        setHasError(false);
+      } else if (error && error.code !== 'PGRST116') {
+        // PGRST116 = sin filas (usuario nuevo, aún sin cálculo) — no es error.
+        setHasError(true);
+      }
+    } catch {
+      // Red caída / fetch lanzó: conservamos los defaults y NUNCA dejamos
+      // isLoading colgado (antes esto dejaba el dashboard en blanco).
+      setHasError(true);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -152,6 +164,7 @@ export function useUserIntelligence(userId: string | null) {
   return {
     intelligence,
     isLoading,
+    hasError,
     topAffinity,
     engagementTier,
     refetch: () => userId && fetch(userId),

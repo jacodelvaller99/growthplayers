@@ -12,6 +12,8 @@ export type ChatMessage = { role: string; content: string };
 
 /**
  * Hace streaming de la respuesta NVIDIA NIM.
+ * Con EXPO_PUBLIC_AI_PROXY_URL configurada, va por el ai-proxy (clave en el
+ * servidor); si el proxy falla y hay clave client-side, cae al camino directo.
  * @param messages  Array de mensajes en formato OpenAI.
  * @param onChunk   Callback invocado con cada fragmento de texto recibido.
  * @returns         Texto completo de la respuesta.
@@ -21,6 +23,18 @@ export async function streamNvidia(
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
+  if (ENV.aiProxyUrl) {
+    try {
+      const { proxyChatFetch } = await import('./aiProxy');
+      const response = await proxyChatFetch('nvidia', messages, signal);
+      return await parseSSEStream(response, onChunk, signal);
+    } catch (err) {
+      if (signal?.aborted || (err as Error)?.name === 'AbortError') throw err;
+      if (!ENV.nvidiaApiKey) throw err; // sin clave directa no hay fallback local
+      console.warn('[NVIDIA] proxy falló, usando llamada directa:', err);
+    }
+  }
+
   const response = await fetch(`${NVIDIA_BASE}/chat/completions`, {
     method: 'POST',
     headers: {

@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { ENV } from '@/app/config/env';
 
@@ -20,9 +21,16 @@ const supa: any = supabase;
 // ─── Constants ────────────────────────────────────────────────────────────────
 export type WearableProvider = 'oura' | 'whoop';
 
-const REDIRECT_BASE = ENV.isDev
-  ? 'exp://localhost:8081'
-  : 'https://growthplayers.vercel.app';
+// Nativo usa el scheme registrado en app.json ("polaris") para que
+// openAuthSessionAsync — que cierra en 'polaris://oauth' (perfil/wearables.tsx)
+// — reciba el callback. Web/dev-web mantienen el redirect https.
+// ⚠ Handoff: las redirect URIs nativas (polaris://oauth/<provider>/callback)
+// deben registrarse en las consolas de desarrollador de Oura y WHOOP.
+const REDIRECT_BASE = Platform.OS !== 'web'
+  ? 'polaris://oauth'
+  : ENV.isDev
+    ? 'exp://localhost:8081'
+    : 'https://growthplayers.vercel.app';
 
 export const OAUTH_URLS: Record<WearableProvider, (state: string) => string> = {
   oura: (state) => {

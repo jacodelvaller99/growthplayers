@@ -1,0 +1,40 @@
+# ─── CI — calidad mínima en cada push/PR ──────────────────────────────────────
+# lint + typecheck + tests. El export web corre como job aparte para no
+# bloquear el feedback rápido de calidad.
+name: CI
+
+on:
+  push:
+    branches: [main, 'launch-**']
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install (legacy peer deps — react-native-purchases + expo 54)
+        run: npm ci --legacy-peer-deps
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests
+        run: npm test -- --ci
+
+  web-export:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Expo export (web smoke build)
+        run: npx expo export --platform web

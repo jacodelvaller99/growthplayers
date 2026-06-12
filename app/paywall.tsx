@@ -145,7 +145,7 @@ export default function PaywallScreen() {
 
       <PremiumCard style={styles.socialProof}>
         <Text style={styles.socialProofText}>
-          "El método que usé para pasar de 60 a 20 horas de trabajo semanales sin perder ingresos." — Operador activo
+          “El método que usé para pasar de 60 a 20 horas de trabajo semanales sin perder ingresos.” — Operador activo
         </Text>
       </PremiumCard>
 

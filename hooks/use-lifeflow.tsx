@@ -82,7 +82,9 @@ type LifeFlowContextValue = {
   }) => Promise<void>;
   updateProfile: (profile: UserProfile) => Promise<void>;
   updateNorthStar: (northStar: NorthStar) => Promise<void>;
-  saveCheckIn: (checkIn: Omit<CheckIn, 'id' | 'date'>) => Promise<void>;
+  /** Resultado honesto del guardado: 'synced' (en Supabase), 'queued' (sin red,
+   *  encolado para reintento) o 'local' (sin sesión — solo dispositivo). */
+  saveCheckIn: (checkIn: Omit<CheckIn, 'id' | 'date'>) => Promise<'synced' | 'queued' | 'local'>;
   sendMentorMessage: (text: string) => Promise<void>;
   addMentorMessages: (userMsg: MentorMessage, mentorMsg: MentorMessage) => Promise<void>;
   saveLessonTask: (lessonId: string, responses: Record<string, string>) => Promise<void>;
@@ -586,7 +588,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   );
 
   const saveCheckIn = useCallback(
-    async (checkIn: Omit<CheckIn, 'id' | 'date'>) => {
+    async (checkIn: Omit<CheckIn, 'id' | 'date'>): Promise<'synced' | 'queued' | 'local'> => {
       const now     = new Date();
       const dateStr = todayDateStr();
       const id      = `ci-${dateStr}`;
@@ -599,7 +601,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       await persist(next);
 
       const uid = uidRef.current;
-      if (!uid) return;
+      if (!uid) return 'local';
 
       // Compute sovereign score for profile update
       const newScore = Math.round(
@@ -616,11 +618,13 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         system_need:     checkIn.systemNeed,
         sovereign_score: newScore,
       };
+      let syncStatus: 'synced' | 'queued' = 'synced';
       try {
         await db.checkins().upsert(checkInPayload, { onConflict: 'user_id,date' });
       } catch (e) {
         console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
         await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });
+        syncStatus = 'queued';
       }
 
       // Also update profile with latest score
@@ -635,6 +639,8 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.warn('[Supabase] updateProfile score:', e);
       }
+
+      return syncStatus;
     },
     [persist, state],
   );

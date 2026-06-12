@@ -18,6 +18,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
@@ -49,6 +50,7 @@ export default function CheckInScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { todayCheckIn, saveCheckIn, state } = useLifeFlow();
+  const { showToast } = useToast();
 
   // Streak data for protection warning
   const streak = (() => {
@@ -94,7 +96,7 @@ export default function CheckInScreen() {
           : null;
 
   const submit = async () => {
-    await saveCheckIn({
+    const syncStatus = await saveCheckIn({
       energy,
       clarity,
       stress,
@@ -103,6 +105,10 @@ export default function CheckInScreen() {
     });
     analytics.checkinSubmit(energy, clarity, stress, sleep);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Honestidad de guardado: si no hubo red, el dato quedó encolado — se dice.
+    if (syncStatus === 'queued') {
+      showToast('Guardado en este dispositivo — se sincronizará al recuperar conexión', 'warning');
+    }
     // Revela la recomendación de cierre antes de redirigir (WS-3).
     setSaved(true);
   };

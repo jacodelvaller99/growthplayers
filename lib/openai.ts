@@ -19,6 +19,19 @@ export async function streamOpenAI(
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
+  // Camino proxy (clave server-side); fallback al directo si hay clave local.
+  if (ENV.aiProxyUrl) {
+    try {
+      const { proxyChatFetch } = await import('./aiProxy');
+      const response = await proxyChatFetch('openai', messages, signal);
+      return await parseSSEStream(response, onChunk, signal);
+    } catch (err) {
+      if (signal?.aborted || (err as Error)?.name === 'AbortError') throw err;
+      if (!ENV.openaiApiKey) throw err;
+      console.warn('[OpenAI] proxy falló, usando llamada directa:', err);
+    }
+  }
+
   const response = await fetch(`${OPENAI_BASE}/chat/completions`, {
     method: 'POST',
     headers: {

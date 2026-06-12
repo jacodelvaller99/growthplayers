@@ -64,7 +64,7 @@ export default function PWAInstallBanner() {
           <Text style={styles.body}>
             Toca{' '}
             <MaterialIcons name="ios-share" size={12} color={palette.ash} />
-            {' '}luego "Agregar a inicio"
+            {' '}luego “Agregar a inicio”
           </Text>
         </View>
 

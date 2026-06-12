@@ -265,15 +265,23 @@ export default function DashboardScreen() {
     : 0;
 
   // Next lesson — first non-completed lesson in the active module.
+  // Day-zero (0 lecciones completadas) reframes the lane as the entry point.
   const nextLesson = useMemo(() => {
     const done = new Set(state.completedLessons ?? []);
+    const isDayZero = done.size === 0;
     const lesson = ACTIVE_MODULE.lessons.find((l) => !done.has(l.id)) ?? ACTIVE_MODULE.lessons[0];
     const total = ACTIVE_MODULE.lessons.length || 1;
     const completedInModule = ACTIVE_MODULE.lessons.filter((l) => done.has(l.id)).length;
     return {
       lesson,
+      isDayZero,
+      sectionLabel: isDayZero ? 'EMPIEZA AQUÍ' : 'PRÓXIMA LECCIÓN',
       moduleLabel: `MÓDULO ${ACTIVE_MODULE.order} · ${(ACTIVE_MODULE.arquetipo ?? ACTIVE_MODULE.title.split(/[\s:]/)[0]).toUpperCase()}`,
-      lessonTitle: lesson ? `L${lesson.order} · ${lesson.title}` : ACTIVE_MODULE.title,
+      lessonTitle: lesson
+        ? isDayZero
+          ? `Tu primera lección · ${lesson.title}`
+          : `L${lesson.order} · ${lesson.title}`
+        : ACTIVE_MODULE.title,
       pct: Math.round((completedInModule / total) * 100),
     };
   }, [state.completedLessons]);
@@ -868,7 +876,7 @@ export default function DashboardScreen() {
   const mNextLessonBlock = (
     <View style={mob.section}>
       <View style={mob.sectionLabelRow}>
-        <Text style={mob.sectionLabel}>PRÓXIMA LECCIÓN</Text>
+        <Text style={mob.sectionLabel}>{nextLesson.sectionLabel}</Text>
         <View style={mob.sectionRule} />
       </View>
       <Pressable

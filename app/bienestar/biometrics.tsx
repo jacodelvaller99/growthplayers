@@ -320,7 +320,7 @@ export default function BiometricsScreen() {
           <PremiumCard style={styles.normanCard}>
             <MaterialIcons name="psychology" size={20} color={palette.goldText} />
             <Text style={styles.normanText}>
-              "{normanInsight.charAt(0).toUpperCase() + normanInsight.slice(1)}."
+              “{normanInsight.charAt(0).toUpperCase() + normanInsight.slice(1)}.”
             </Text>
           </PremiumCard>
         </>

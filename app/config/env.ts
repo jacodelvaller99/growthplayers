@@ -17,4 +17,11 @@ export const ENV = {
 
   /** RevenueCat SDK key (iOS o Android según plataforma) */
   revenueCatApiKey: (process.env.EXPO_PUBLIC_REVENUECAT_KEY ?? '') as string,
+
+  /**
+   * URL del ai-proxy (Edge Function) — si está seteada, el chat del mentor y la
+   * transcripción Whisper van por el servidor (las claves de IA dejan de usarse
+   * en el cliente). Ej: https://<ref>.supabase.co/functions/v1/ai-proxy
+   */
+  aiProxyUrl: (process.env.EXPO_PUBLIC_AI_PROXY_URL ?? '') as string,
 } as const;

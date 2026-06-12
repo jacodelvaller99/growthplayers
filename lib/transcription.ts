@@ -1,11 +1,11 @@
 // ─── Transcripción de audio — OpenAI Whisper ─────────────────────────────────
 // Pipeline de mentoría: audio de sesión → transcripción → Norman redacta notas.
-// Client-side, mismo patrón que lib/openai.ts (EXPO_PUBLIC_OPENAI_API_KEY).
 //
-// Nota de arquitectura: la key viaja al cliente (inlineada en build). A mediano
-// plazo conviene mover esto a una Edge Function `transcribe-session` para que la
-// key viva en el servidor (handoff de deploy). Por ahora se mantiene la línea
-// client-side ya establecida en el resto de la capa IA.
+// Dos caminos:
+//   1. ai-proxy (EXPO_PUBLIC_AI_PROXY_URL seteada) — la key vive en el servidor
+//      (supabase/functions/ai-proxy, ruta /transcribe). Preferido.
+//   2. Directo (transicional) — usa EXPO_PUBLIC_OPENAI_API_KEY en el cliente,
+//      misma línea client-side del resto de la capa IA.
 
 import { Platform } from 'react-native';
 import { ENV } from '@/app/config/env';
@@ -60,33 +60,27 @@ export async function transcribeAudio(
   source: AudioSource,
   options: TranscribeOptions = {},
 ): Promise<string> {
+  const fileName = options.fileName ?? defaultFileName(source);
+
+  // ── Camino proxy (clave server-side) ──────────────────────────────────────
+  if (ENV.aiProxyUrl) {
+    const { proxyTranscribeFetch } = await import('./aiProxy');
+    const form = new FormData();
+    if (options.language) form.append('language', options.language);
+    await appendAudio(form, source, fileName);
+    return proxyTranscribeFetch(form, options.signal);
+  }
+
+  // ── Camino directo (transicional, requiere clave en el cliente) ───────────
   if (!ENV.openaiApiKey) {
     throw new Error('OpenAI API key ausente — no se puede transcribir.');
   }
 
-  const fileName = options.fileName ?? defaultFileName(source);
   const form = new FormData();
   form.append('model', MODEL);
   form.append('response_format', 'text');
   if (options.language) form.append('language', options.language);
-
-  if (typeof source === 'string') {
-    if (Platform.OS === 'web') {
-      // En web un "uri" suele ser blob:/data: → materializamos el Blob.
-      const blob = await fetch(source).then((r) => r.blob());
-      form.append('file', blob, fileName);
-    } else {
-      // En nativo, RN FormData adjunta el archivo por referencia (uri).
-      form.append('file', {
-        uri: source,
-        name: fileName,
-        type: guessMime(fileName),
-        // RN espera este shape; TS no lo conoce → cast puntual.
-      } as unknown as Blob);
-    }
-  } else {
-    form.append('file', source, fileName);
-  }
+  await appendAudio(form, source, fileName);
 
   const response = await fetch(OPENAI_TRANSCRIPTIONS, {
     method: 'POST',
@@ -114,4 +108,29 @@ function defaultFileName(source: AudioSource): string {
     if (tail.includes('.')) return tail;
   }
   return 'session.m4a';
+}
+
+/** Adjunta la fuente de audio al FormData según plataforma/tipo. */
+async function appendAudio(
+  form: FormData,
+  source: AudioSource,
+  fileName: string,
+): Promise<void> {
+  if (typeof source === 'string') {
+    if (Platform.OS === 'web') {
+      // En web un "uri" suele ser blob:/data: → materializamos el Blob.
+      const blob = await fetch(source).then((r) => r.blob());
+      form.append('file', blob, fileName);
+    } else {
+      // En nativo, RN FormData adjunta el archivo por referencia (uri).
+      form.append('file', {
+        uri: source,
+        name: fileName,
+        type: guessMime(fileName),
+        // RN espera este shape; TS no lo conoce → cast puntual.
+      } as unknown as Blob);
+    }
+  } else {
+    form.append('file', source, fileName);
+  }
 }

@@ -237,7 +237,7 @@ export default function PerfilSoberanoScreen() {
           <View style={styles.declaration}>
             <Text style={styles.declarationLabel}>DECLARACIÓN DE IDENTIDAD</Text>
             <Text style={styles.declarationText}>
-              "{state.northStar.identity.slice(0, 140)}"
+              “{state.northStar.identity.slice(0, 140)}”
             </Text>
           </View>
         ) : null}

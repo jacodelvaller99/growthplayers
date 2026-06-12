@@ -237,39 +237,44 @@ function buildFillPath(pts: { x: number; y: number }[], H: number) {
   return path;
 }
 
-export function WeeklySparkline({
-  label,
-  values,
-  color = palette.gold,
-}: {
+type SparklineProps = {
   label: string;
   values: number[];
   color?: string;
-}) {
-  // ── Web fallback — @shopify/react-native-skia doesn't run in browsers ────────
-  if (Platform.OS === 'web') {
-    const max = Math.max(...values, 1);
-    return (
-      <View style={styles.sparklineBlock}>
-        <Text style={styles.sparklineLabel}>{label}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: SPARKLINE_H, gap: 4 }}>
-          {values.map((v, i) => (
-            <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
-              <View style={{
-                width: '100%',
-                height: Math.max(4, Math.round((v / max) * (SPARKLINE_H - 8))),
-                backgroundColor: color,
-                borderRadius: radii.xs,
-                opacity: 0.85,
-              }} />
-              <Text style={[styles.sparklineDay, { textAlign: 'center' }]}>{DAY_LABELS[i % 7]}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  }
+};
 
+// Dispatcher: Platform.OS is constant per session, so each branch renders a
+// dedicated component with its own (unconditional) hook order.
+export function WeeklySparkline(props: SparklineProps) {
+  if (Platform.OS === 'web') return <SparklineWebBars {...props} />;
+  return <SparklineNativeSkia {...props} />;
+}
+
+// ── Web fallback — @shopify/react-native-skia doesn't run in browsers ────────
+function SparklineWebBars({ label, values, color = palette.gold }: SparklineProps) {
+  const max = Math.max(...values, 1);
+  return (
+    <View style={styles.sparklineBlock}>
+      <Text style={styles.sparklineLabel}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: SPARKLINE_H, gap: 4 }}>
+        {values.map((v, i) => (
+          <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+            <View style={{
+              width: '100%',
+              height: Math.max(4, Math.round((v / max) * (SPARKLINE_H - 8))),
+              backgroundColor: color,
+              borderRadius: radii.xs,
+              opacity: 0.85,
+            }} />
+            <Text style={[styles.sparklineDay, { textAlign: 'center' }]}>{DAY_LABELS[i % 7]}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function SparklineNativeSkia({ label, values, color = palette.gold }: SparklineProps) {
   const { width: screenWidth } = useWindowDimensions();
   const canvasW = Math.min(screenWidth - 72, 366);
   const H       = SPARKLINE_H;
