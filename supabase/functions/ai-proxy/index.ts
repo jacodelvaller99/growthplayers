@@ -6,14 +6,16 @@
  * sin esa var, sigue el camino directo actual (transicional).
  *
  * Rutas (POST, JWT de usuario requerido):
- *   /ai-proxy/chat        { provider: 'nvidia'|'groq'|'openai', messages: [...] }
- *                         → passthrough SSE del upstream (text/event-stream).
+ *   /ai-proxy/chat        { provider: 'anthropic'|'nvidia'|'groq'|'openai', messages: [...] }
+ *                         → SSE en formato OpenAI (text/event-stream).
  *                           El cliente lo parsea con parseSSEStream sin cambios.
+ *                           'anthropic' (Claude Sonnet 4.6, primario de Norman) usa el
+ *                           Messages API y se TRADUCE al formato OpenAI en el servidor.
  *   /ai-proxy/transcribe  multipart { file, language? }
  *                         → OpenAI Whisper (whisper-1), respuesta text/plain.
  *
  * Secrets requeridos (Dashboard → Edge Functions → Secrets):
- *   NVIDIA_API_KEY · GROQ_API_KEY · OPENAI_API_KEY
+ *   ANTHROPIC_API_KEY · NVIDIA_API_KEY · GROQ_API_KEY · OPENAI_API_KEY
  */
 
 import { corsHeaders, adminSupabase, json } from '../_shared/supabase.ts';
@@ -69,6 +71,106 @@ const PROVIDERS: Record<
     }),
   },
 };
+
+// ─── Claude (Anthropic) — Messages API + traducción SSE → formato OpenAI ─────
+// El parseSSEStream del cliente espera chunks `choices[0].delta.content`;
+// Anthropic emite `content_block_delta` con `delta.text`. Traducimos aquí para
+// que el cliente no cambie. Modelo fijo: claude-sonnet-4-6 (restricción de la clave).
+
+const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
+
+function anthropicToOpenAISSE(upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  return upstream.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data: ')) continue; // 'event:' y vacías se ignoran
+          try {
+            const parsed = JSON.parse(trimmed.slice(6));
+            if (
+              parsed.type === 'content_block_delta' &&
+              parsed.delta?.type === 'text_delta' &&
+              parsed.delta.text
+            ) {
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ choices: [{ delta: { content: parsed.delta.text } }] })}\n\n`,
+              ));
+            } else if (parsed.type === 'message_stop') {
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            }
+          } catch {
+            /* línea malformada — se ignora, igual que el parser del cliente */
+          }
+        }
+      },
+    }),
+  );
+}
+
+async function handleAnthropicChat(
+  messages: ChatMessage[],
+  origin: string | undefined,
+): Promise<Response> {
+  const key = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
+  if (!key) return json({ error: 'anthropic key not configured' }, 503, origin);
+
+  // El Messages API separa el system prompt y exige que messages inicie con 'user'.
+  let system: string | undefined;
+  let msgs = [...messages];
+  if (msgs[0]?.role === 'system') {
+    system = msgs[0].content;
+    msgs = msgs.slice(1);
+  }
+  // Descarta turnos assistant iniciales (el opener canned de Norman).
+  while (msgs[0]?.role === 'assistant') msgs = msgs.slice(1);
+  if (msgs.length === 0) {
+    return json({ error: 'messages must include a user turn' }, 400, origin);
+  }
+
+  const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 1024,
+      stream: true,
+      // Chat conversacional: sin thinking + effort medio = respuesta ágil.
+      thinking: { type: 'disabled' },
+      output_config: { effort: 'medium' },
+      ...(system ? { system } : {}),
+      messages: msgs,
+    }),
+  });
+
+  if (!upstream.ok || !upstream.body) {
+    const detail = await upstream.text().catch(() => '');
+    return json(
+      { error: `upstream ${upstream.status}`, detail: detail.slice(0, 300) },
+      502,
+      origin,
+    );
+  }
+
+  return new Response(anthropicToOpenAISSE(upstream.body), {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      ...corsHeaders(origin),
+    },
+  });
+}
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin') ?? undefined;
@@ -139,9 +241,6 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'Invalid JSON body' }, 400, origin);
     }
 
-    const provider = PROVIDERS[body.provider ?? ''];
-    if (!provider) return json({ error: 'Unknown provider' }, 400, origin);
-
     const messages = body.messages;
     if (!Array.isArray(messages) || messages.length === 0) {
       return json({ error: 'messages is required' }, 400, origin);
@@ -149,6 +248,14 @@ Deno.serve(async (req: Request) => {
     if (JSON.stringify(messages).length > MAX_MESSAGES_BYTES) {
       return json({ error: 'payload too large' }, 413, origin);
     }
+
+    // Claude (primario de Norman) requiere transformación de formato → rama propia.
+    if (body.provider === 'anthropic') {
+      return handleAnthropicChat(messages, origin);
+    }
+
+    const provider = PROVIDERS[body.provider ?? ''];
+    if (!provider) return json({ error: 'Unknown provider' }, 400, origin);
 
     const key = Deno.env.get(provider.keyEnv) ?? '';
     if (!key) return json({ error: `${body.provider} key not configured` }, 503, origin);

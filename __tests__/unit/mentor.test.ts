@@ -9,8 +9,10 @@ jest.mock('@/app/config/env', () => ({
     groqApiKey: 'gq-test',
     openaiApiKey: 'sk-test',
     revenueCatApiKey: '',
+    aiProxyUrl: '', // sin proxy → Claude se salta, cadena clásica intacta
   },
 }));
+jest.mock('@/lib/anthropic', () => ({ streamAnthropic: jest.fn() }));
 jest.mock('@/lib/nvidia', () => ({
   streamNvidia: jest.fn(),
   parseSSEStream: jest.fn(),

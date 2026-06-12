@@ -112,10 +112,13 @@ Other domain state lives in dedicated hooks: `hooks/use-mentorship.tsx` (mentors
 
 ### AI Mentor — `lib/mentor.ts`
 
-Streaming chat with a **3-level fallback chain**:
-1. **NVIDIA NIM** (`deepseek-ai/deepseek-v4-pro`) — primary (native; web only via ai-proxy)
-2. **Groq** (`llama-3.3-70b-versatile`) — secondary
-3. **OpenAI** (`gpt-4o-mini`) — final fallback
+Streaming chat with a **4-level fallback chain**:
+1. **Claude Sonnet 4.6** (`claude-sonnet-4-6`) — PRIMARY. Solo vía ai-proxy (la clave
+   `ANTHROPIC_API_KEY` es secret del servidor; NO existe camino client-side — deliberado).
+   Sin `EXPO_PUBLIC_AI_PROXY_URL`, este eslabón se salta.
+2. **NVIDIA NIM** (`deepseek-ai/deepseek-v4-pro`) — native; web only via ai-proxy
+3. **Groq** (`llama-3.3-70b-versatile`)
+4. **OpenAI** (`gpt-4o-mini`) — final fallback
 
 **ai-proxy (server-side keys):** `supabase/functions/ai-proxy` (deployed) proxies chat (SSE passthrough) + Whisper with JWT auth and server-held provider keys. The client opts in via `EXPO_PUBLIC_AI_PROXY_URL`; without it, the direct client-key path runs unchanged (transitional). Activation requires the `NVIDIA_API_KEY`/`GROQ_API_KEY`/`OPENAI_API_KEY` secrets in the Supabase dashboard + the env var in Vercel, then rotate the old client keys.
 

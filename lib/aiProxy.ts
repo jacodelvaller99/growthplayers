@@ -7,7 +7,7 @@ import { ENV } from '@/app/config/env';
 import { supabase } from '@/lib/supabase';
 import type { ChatMessage } from './nvidia';
 
-export type ProxyProvider = 'nvidia' | 'groq' | 'openai';
+export type ProxyProvider = 'anthropic' | 'nvidia' | 'groq' | 'openai';
 
 function proxyBase(): string {
   return ENV.aiProxyUrl.replace(/\/+$/, '');

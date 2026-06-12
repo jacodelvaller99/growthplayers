@@ -1,7 +1,9 @@
 // ─── Mentor Polaris IA ────────────────────────────────────────────────────────
-// Orquesta: dev simulation → NVIDIA NIM (primary) → Groq (secondary) → OpenAI (fallback)
+// Orquesta: Claude Sonnet 4.6 (primario, vía ai-proxy) → NVIDIA NIM → Groq → OpenAI
+// (dev simulation cuando no hay ningún proveedor configurado)
 
 import { ENV } from '@/app/config/env';
+import { streamAnthropic } from './anthropic';
 import { streamNvidia } from './nvidia';
 import { streamGroq } from './groq';
 import { streamOpenAI } from './openai';
@@ -683,6 +685,18 @@ export async function streamMentorResponse(
     })),
     { role: 'user' as const, content: userMessage },
   ];
+
+  // ── 1. Claude Sonnet 4.6 — primario de Norman (solo vía ai-proxy) ──────────
+  // La clave de Anthropic vive en el servidor; sin EXPO_PUBLIC_AI_PROXY_URL este
+  // eslabón se salta y la cadena clásica corre idéntica.
+  if (ENV.aiProxyUrl) {
+    try {
+      return await streamAnthropic(messages, onChunk, signal);
+    } catch (err) {
+      if (isAbort(err)) throw err;
+      console.warn('[Mentor] Claude falló, cambiando a NVIDIA/Groq:', err);
+    }
+  }
 
   // NVIDIA NIM no soporta CORS desde el navegador — solo se usa desde un servidor.
   // En web siempre se salta directamente a Groq u OpenAI… salvo con ai-proxy,

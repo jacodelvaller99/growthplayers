@@ -128,16 +128,7 @@ export default function AdminLayout() {
         .eq('id', userId)
         .single();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const admin = (data as any)?.is_admin === true;
-      // If column doesn't exist yet (migration pending), allow access for known owner IDs
-      if (error && (error.code === '42703' || error.code === 'PGRST116')) {
-        const OWNER_IDS = [
-          '43d011f5-631f-4dcf-a1eb-d0e68005bff7', // ncapuozzo
-          '2ecdb025-0bbd-4291-8f3f-404f36f87d19', // Juan Jacobo (jacodelvalle)
-        ];
-        setIsAdmin(OWNER_IDS.includes(userId));
-        return;
-      }
+      const admin = !error && (data as any)?.is_admin === true;
       setIsAdmin(admin);
       if (!admin) router.replace('/(tabs)/comando' as never);
     };
