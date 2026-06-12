@@ -19,12 +19,18 @@ npm run android         # Android emulator
 npm run lint            # ESLint via expo lint
 npx tsc --noEmit        # TypeScript check (no build output)
 
-# Tests
+# Quality gates
+npm run typecheck       # tsc --noEmit — debe salir 0
+
+# Tests — suite real en __tests__/unit/ (53 tests, 6 suites):
+#   utils (protocolDay/sovereignScore) · mentorship (weekDateRange/semanas)
+#   themeColors (paridad dark/light + cv) · moderation (filtro UGC)
+#   mentor (cadena de fallback + contrato honestidad/crisis) · sse (parseSSEStream)
 npm test                              # Jest — all tests
 npm run test:watch                    # Watch mode
 npm run test:coverage                 # Coverage report
-npx jest path/to/__tests__/file.test.ts  # Single test file
-# Coverage is collected from: lib/utils.ts, lib/mentor.ts, hooks/use-lifeflow.tsx, components/polaris.tsx
+npx jest __tests__/unit/mentor.test.ts   # Single test file
+# CI (.github/workflows/ci.yml): lint + typecheck + test + export web en cada push/PR
 
 # Web build & deploy
 npx expo export --platform web        # Outputs to dist/
@@ -32,6 +38,8 @@ npx expo export --platform web        # Outputs to dist/
 # vercel.json: buildCommand = "npx expo export --platform web"
 
 # Native builds (EAS)
+# ⚠ BLOQUEADO: app.json extra.eas.projectId es placeholder (00000000-…) —
+#   correr `eas init` con la cuenta del proyecto antes de cualquier build nativo.
 eas build --profile preview --platform ios
 eas build --profile production --platform all
 
@@ -85,7 +93,7 @@ app/
   paywall.tsx          # Subscription upsell modal · pricing.tsx — plans
 ```
 
-Auth guard in `app/_layout.tsx`: not authenticated → `/(auth)`, onboarding not completed → `/(onboarding)`.
+**Auth guards (3 capas):** `app/index.tsx` redirige al entrar (no auth → `/(auth)`, sin onboarding → `/(onboarding)`); `app/(tabs)/_layout.tsx:143` repite el check para el grupo de tabs; y `MainStack` en `app/_layout.tsx` envuelve TODAS las rutas privadas en `<Stack.Protected guard={…}>` — un deep link sin sesión nunca renderiza contenido privado (verificado E2E en prod). Públicas: `index`, `(auth)`, `(onboarding)`, `legal/*`, `pricing`, `oauth/*/callback`.
 
 Desktop (web ≥1200px): `DesktopSidebar` is rendered as a flex row sibling to the main stack. Bottom tab bar is hidden (`display: 'none'`). Controlled by `useBreakpoint()`.
 
@@ -105,9 +113,11 @@ Other domain state lives in dedicated hooks: `hooks/use-mentorship.tsx` (mentors
 ### AI Mentor — `lib/mentor.ts`
 
 Streaming chat with a **3-level fallback chain**:
-1. **NVIDIA NIM** (`meta/llama-3.3-70b-instruct`) — primary
+1. **NVIDIA NIM** (`deepseek-ai/deepseek-v4-pro`) — primary (native; web only via ai-proxy)
 2. **Groq** (`llama-3.3-70b-versatile`) — secondary
 3. **OpenAI** (`gpt-4o-mini`) — final fallback
+
+**ai-proxy (server-side keys):** `supabase/functions/ai-proxy` (deployed) proxies chat (SSE passthrough) + Whisper with JWT auth and server-held provider keys. The client opts in via `EXPO_PUBLIC_AI_PROXY_URL`; without it, the direct client-key path runs unchanged (transitional). Activation requires the `NVIDIA_API_KEY`/`GROQ_API_KEY`/`OPENAI_API_KEY` secrets in the Supabase dashboard + the env var in Vercel, then rotate the old client keys.
 
 `MentorContext` passed to each call includes the user's northStar, recent check-ins, completed lessons, biometric data, and ML scores (engagement, churn risk, next action) from Supabase's `user_intelligence` table.
 
@@ -210,7 +220,9 @@ WHOOP + Oura via OAuth (`app/oauth/whoop/callback`, `app/oauth/oura/callback`), 
 
 **Subscription gating:** Check `isSubscribed` from `useLifeFlow()` or `useSubscription()` hook. Free tier gets limited mentor messages and locked modules. RevenueCat is the source of truth; Supabase `subscription_tier` is synced via webhook.
 
-**Admin panel** (`app/admin/`): separate auth check — requires `role = 'admin'` in user profile. Never expose admin routes to regular users.
+**Admin panel** (`app/admin/`): separate auth check — requires `is_admin` in user profile (checked in `app/admin/_layout.tsx`, with a hardcoded `OWNER_IDS` fallback ~line 134 kept as migration safety net — candidate for removal now that the migration is applied in prod). Never expose admin routes to regular users. Server-side enforcement is the BEFORE-UPDATE anti-escalation trigger + RLS (migration `20260602000000_security_hardening_p0.sql`).
+
+**Wearables OAuth (handoff abierto):** native redirect is `polaris://oauth/<provider>/callback` (`lib/wearables.ts`) matching `scheme: "polaris"` — these URIs must still be **registered in the Oura/WHOOP developer consoles** before the native flow works end-to-end. Web redirect stays `https://growthplayers.vercel.app/oauth/*`.
 
 **Theming:** never hard-code dark hex values as a background (it breaks light mode) — use `palette.*` tokens. `goldText` for gold text/icons, `gold` for fills, `ink` only on gold/light surfaces. See "Color rules" under Design System.
 

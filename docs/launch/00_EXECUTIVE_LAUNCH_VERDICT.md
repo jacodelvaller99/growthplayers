@@ -1,5 +1,27 @@
 # POLARIS — VEREDICTO EJECUTIVO DE LANZAMIENTO
 
+> ⚠️ **ADDENDUM — ESTADO AL 2026-06-12 (leer primero).** Este documento retrata el estado
+> al **2026-06-02**, ANTES de las olas de remediación. Desde entonces:
+>
+> | # Blocker (top-10 original) | Estado 2026-06-12 | Evidencia |
+> |---|---|---|
+> | 1 Escalación a admin | ✅ CERRADO | Trigger BEFORE-UPDATE, migración `20260602000000_security_hardening_p0.sql` **aplicada en prod** (dashboard) |
+> | 2 generate-embeddings sin auth | ✅ CERRADO **y desplegado** | JWT + `user_id=auth.uid()`; deploy vía dashboard 2026-06-12; curl sin auth → 401 |
+> | 3 Auto-grant membresía/tier | ✅ CERRADO | Políticas dropped + trigger (misma migración, aplicada) |
+> | 4 access_codes abierto | ✅ CERRADO | Políticas dropped; solo RPC `redeem_access_code()`; residuo dropped en `20260604000000` |
+> | 5 UGC sin moderación | ✅ CERRADO | Reportar/bloquear/EULA/filtro + cola admin (`2e403f0`) |
+> | 6 Sin links legales | ✅ CERRADO | `app/legal/*` + links en paywall/onboarding |
+> | 7 Norman sin disclosure/crisis | ✅ CERRADO | REGLA DE HONESTIDAD + bloque SEGURIDAD (`lib/mentor.ts:310-325`), protegido por test |
+> | 8 Borrado de cuenta incompleto | ✅ CERRADO **y desplegado** | 33 tablas + CASCADE; deploy dashboard 2026-06-12 |
+> | 9 Chat colgado / writes silenciosos | ✅ CERRADO | Abort+timeout 45s + cancelar; cola offline + toast honesto 'queued' |
+> | 10 ErrorBoundary / projectId / userId | 🟡 PARCIAL | ErrorBoundary ✅ + captura global (`lib/crash.ts`) ✅ · userId ✅ · **eas projectId sigue placeholder (handoff)** |
+>
+> Además (2026-06-12): guards `Stack.Protected` en ~37 rutas privadas (verificado E2E en prod),
+> suite Jest real (53 tests) + CI, **ai-proxy** desplegado (claves IA server-side, opt-in),
+> `smart-notifications`/`sync-wearables` redesplegados con auth. Pendientes: `eas init`,
+> secrets del ai-proxy + rotación de claves, registro de redirect URIs Oura/WHOOP, cron
+> service-role config. Detalle: `docs/investor/00_EXECUTIVE_READINESS_VERDICT.md` y `EXECUTION_LOG.md`.
+
 > War room de 6 equipos (Seguridad, QA, App Store/Compliance, Privacidad/Legal, Copy, Release Ops).
 > Fecha: 2026-06-02. Rama `main` · commit `d68c122` · prod live en Vercel.
 > Evidencia con `archivo:línea`. Severidades verificadas — los P0 de seguridad/admin fueron

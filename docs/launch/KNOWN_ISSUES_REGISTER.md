@@ -4,6 +4,20 @@ Concrete issues and risks found by reading the code, with `file:line` evidence a
 
 All paths are relative to the worktree root `.../sweet-diffie/lifeflow/`.
 
+> ⚠️ **ESTADO AL 2026-06-12** — snapshot original 2026-06-02; estados actuales verificados en código y prod:
+>
+> | # | Issue | Estado |
+> |---|---|---|
+> | 1 | userId ref stale | ✅ CERRADO — `userId` es estado reactivo (`use-lifeflow.tsx:337`); `uidRef` queda solo para lecturas síncronas en callbacks |
+> | 2 | Chat sin timeout/abort | ✅ CERRADO — AbortController + timeout 45s + cancelar + toast de timeout (`mentor.tsx:351-360, 470-480`) |
+> | 3 | Claves IA en el bundle | 🟡 MITIGACIÓN LISTA — `ai-proxy` desplegado (JWT, claves server-side); activar con secrets + `EXPO_PUBLIC_AI_PROXY_URL` y rotar claves. Hasta entonces sigue el camino directo |
+> | 4 | OAuth scheme mismatch | 🟡 CÓDIGO CERRADO — nativo usa `polaris://oauth` (`lib/wearables.ts:23`, `wearables.tsx:434`); falta **registrar las URIs en consolas Oura/WHOOP** (handoff) |
+> | 5 | Writes silenciosos | 🟡 PARCIAL — check-ins/lecciones/tareas con cola offline + retry; `saveCheckIn` retorna estado + toast honesto. Outbox client-id para inserts no-idempotentes (mensajes/wellness) sigue pendiente |
+>
+> Cambios adicionales 2026-06-12: guards `Stack.Protected` (37 rutas, E2E prod), 53 tests + CI,
+> 4 Edge Functions redesplegadas con auth (curl sin token → 401), captura global de crashes.
+> Ver `EXECUTION_LOG.md` + `docs/investor/02_REPO_GAP_REGISTER.md` para el registro vivo.
+
 ---
 
 ### #1 — `userId` exposed as a ref read; consumers see stale `null` — **S0**
