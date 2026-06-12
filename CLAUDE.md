@@ -38,6 +38,10 @@ eas build --profile production --platform all
 # Supabase edge functions
 supabase functions deploy calculate-intelligence
 supabase functions deploy generate-embeddings
+supabase functions deploy smart-notifications
+supabase functions deploy sync-wearables
+supabase functions deploy delete-account        # GDPR account deletion
+supabase functions deploy ml-dashboard
 ```
 
 ## Environment Variables (`.env.local`)
@@ -47,7 +51,7 @@ EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_NVIDIA_API_KEY=        # Primary AI (NVIDIA NIM)
 EXPO_PUBLIC_GROQ_API_KEY=          # Secondary AI (Groq)
-EXPO_PUBLIC_OPENAI_API_KEY=        # Fallback AI
+EXPO_PUBLIC_OPENAI_API_KEY=        # Fallback AI + Whisper (transcripción de sesiones de mentoría)
 EXPO_PUBLIC_REVENUECAT_KEY=        # Subscriptions
 ```
 
@@ -61,16 +65,24 @@ All are `EXPO_PUBLIC_*` (inlined at build time, client-side only). Defined in `a
 
 ```
 app/
-  _layout.tsx          # Root: font loading, auth guard, ThemeProvider, DesktopSidebar
+  _layout.tsx          # Root: fonts, auth guard, ThemeProvider, ErrorBoundary, DesktopSidebar
   (auth)/              # Login / register / welcome — redirected to when unauthenticated
-  (onboarding)/        # Profile setup wizard — redirected to when !onboardingCompleted
+  (onboarding)/        # Profile wizard + CONSENT GATE (términos/privacidad/salud) — redirected to when !onboardingCompleted
   (tabs)/              # Main app: comando, norte, programas, mentor, progreso
-  bienestar/           # Wellness tools: binaurales, meditacion, respiracion, grito, tapping, consciencia, diario, etc.
-  admin/               # Internal admin panel (usuarios, membresías, inteligencia, etc.)
+  bienestar/           # Wellness hub (see "Wellness integral system" below):
+                       #   prácticas:           binaurales, meditacion, respiracion, sueno, diario, biblioteca
+                       #   sistema integral:    habitos, ayuno, nutricion, cuerpo, suplementacion, biometrics
+                       #   liberación emocional: grito, tapping, consciencia · comunidad (feed)
+  mentoria/            # Weekly mentorship journey + voice session recording → AI notes/plan
+  comunidad/           # Internal DM: mensajes (inbox), chat/[id] (1-a-1)
+  legal/               # privacidad, terminos, salud (health disclaimer)
+  perfil/              # wearables (WHOOP / Oura connect)
+  oauth/               # whoop/callback, oura/callback
+  admin/               # Admin panel: usuarios, membresías, cursos, codigos, inteligencia, contenido, auditoria, comunidad
   lesson/[id].tsx      # Individual lesson player
   module/[id].tsx      # Module overview
   checkin.tsx          # Daily check-in modal
-  paywall.tsx          # Subscription upsell modal
+  paywall.tsx          # Subscription upsell modal · pricing.tsx — plans
 ```
 
 Auth guard in `app/_layout.tsx`: not authenticated → `/(auth)`, onboarding not completed → `/(onboarding)`.
@@ -88,6 +100,8 @@ Access anywhere: `const { state, updateProfile, addCheckIn, ... } = useLifeFlow(
 
 Wellness-player state (mini-player across tabs) lives separately in `store/wellnessStore.ts` (Zustand).
 
+Other domain state lives in dedicated hooks: `hooks/use-mentorship.tsx` (mentorship sessions + AI action plan), `hooks/use-app-theme.tsx` (light/dark toggle + persistence), `hooks/useSubscription.ts`, `hooks/useUserIntelligence.ts`. `state.profile.consents` records accepted términos/privacidad/salud (onboarding consent gate).
+
 ### AI Mentor — `lib/mentor.ts`
 
 Streaming chat with a **3-level fallback chain**:
@@ -97,6 +111,12 @@ Streaming chat with a **3-level fallback chain**:
 
 `MentorContext` passed to each call includes the user's northStar, recent check-ins, completed lessons, biometric data, and ML scores (engagement, churn risk, next action) from Supabase's `user_intelligence` table.
 
+Each provider has its own module — `lib/nvidia.ts`, `lib/groq.ts`, `lib/openai.ts` — orchestrated by the fallback chain in `lib/mentor.ts`. Mentor memory (embedding retrieval) is read via `hooks/useMentorMemory.ts`.
+
+**Voice transcription — `lib/transcription.ts`:** records a mentorship session (audio) and POSTs it to OpenAI Whisper (`whisper-1`); the transcript is then fed back through `streamMentorResponse` so Norman drafts structured session notes + a 3–5 item action plan, persisted to `mentorship_sessions` (see Mentorship below). Uses `EXPO_PUBLIC_OPENAI_API_KEY` client-side today — moving it server-side is on the roadmap.
+
+> **AI disclosure & safety:** Norman discloses it is AI and routes crisis/self-harm topics to professional help — keep these guardrails when editing the mentor prompt.
+
 ### Design System — `constants/theme.ts`
 
 **Brand font:** GrandisExtended (Manual de Marca Polaris — Orgánico Studio 2024)
@@ -104,7 +124,16 @@ Streaming chat with a **3-level fallback chain**:
 - Web: `@font-face` declarations in `app/+html.tsx`
 - Font token names: `Fonts.display` (Bold), `Fonts.displayMedium`, `Fonts.displayRegular`, `Fonts.displayLight`, `Fonts.displayBlack`
 
-**Color tokens:** use `palette.*` for raw colors, `Colors.dark.*` for semantic tokens. Primary accent: `palette.gold = '#FFC804'`. Never use raw hex in components — always reference tokens.
+**Color tokens:** use `palette.*` for raw colors, `Colors.dark.*` for semantic tokens. Never use raw hex in components — always reference tokens.
+
+**Theming (light/dark) — `constants/themeColors.ts`:** neutral/text/border tokens are theme-aware via the `cv(varName, nativeHex)` helper.
+- On **web**, `cv()` returns `var(--c-*)`; `themeColors.ts` injects a `<style>` (`injectThemeVars()`) holding the dark + light values of ~17 `--c-*` variables, and the active theme is selected by the `data-theme` attribute on `<html>`. Every screen re-themes instantly — no per-screen refactor.
+- On **native**, `cv()` returns the real dark hex (static StyleSheet). The light/dark toggle is a **web/desktop feature**; native stays dark. Toggle + persistence live in `hooks/use-app-theme.tsx`.
+
+**Color rules (critical — prevents the "black background in light mode" bug):**
+- `palette.gold` + its opacity variants are **CONSTANT** (brand accent). Use for **fills** (`backgroundColor` / `borderColor`).
+- `palette.goldText` (`--c-gold-text`: dark `#FFC804` / light `#8A6500` deep amber) is **theme-aware** — use for gold **text/icons** (`color:`), NOT fills.
+- `palette.ink` = **CONSTANT `#0A0A0A`**, only for text/icons sitting **on gold or light surfaces** (e.g. button labels on gold). Never use it as a background — use `palette.black` / `Colors.dark.background`, which adapt to the theme.
 
 **Button system** (5 unified variants — enforced across all screens):
 - `btn-primary`: gold fill, 52px height, r:10px, GrandisExtended Bold, uppercase
@@ -135,10 +164,37 @@ Static content lives in `data/`:
 - `modules.ts` — program modules and lessons (ACTIVE_MODULE drives the current 90-day program)
 - `tasks.ts` — lesson completion tasks
 - `wellness.ts` — binaural / meditation session catalog
+- `mentorship.ts` — weekly mentorship journey + per-week date ranges
+- `habits.ts` — morning / evening habit routines (points, guides, sequence order)
+- `moderation.ts` — community content filters + zero-tolerance EULA copy
+- `sleep.ts` — sleep practice catalog · `live-sessions.ts` — scheduled live sessions
 
 ### Analytics
 
 `lib/analytics.ts` — singleton that batches behavioral events and flushes to `supabase.user_events`. Respects `ml_consent` flag. Zero-latency: all writes are fire-and-forget.
+
+### Mentorship — `app/mentoria/`, `hooks/use-mentorship.tsx`
+
+90-day journey split into weeks with real date ranges (`weekDateRange` in `data/mentorship.ts`). Each session supports an optional **voice recording → Whisper → Norman notes + action plan** (see `lib/transcription.ts`), persisted to the `mentorship_sessions` table (local cache via the offline queue as fallback). Admin sees per-user progress — notes, action plan, completed `mentorship_tasks` — in `app/admin/usuarios/[id].tsx`. Native recording depends on `expo-av` (pending install — handoff; web shows a "grabación disponible en la app móvil" notice).
+
+### Community & Moderation — `app/comunidad/`, `app/bienestar/comunidad.tsx`
+
+Feed with UGC moderation (App Store requirement 1.2): report posts (`community_reports`), block users (`user_blocks` → filters the feed), zero-tolerance EULA acceptance, basic content filter (`data/moderation.ts`). Admin moderation queue in `app/admin/comunidad`. Internal 1-a-1 **direct messages** via the `direct_messages` table (`comunidad/mensajes` inbox + `comunidad/chat/[id]`), respecting blocks — distinct from the Norman AI chat. Reactivation gated by the `COMMUNITY_ENABLED` flag.
+
+### Wellness integral system — `app/bienestar/`
+
+Beyond the audio practices: **habits** (morning/evening routines with check + points + guide, deep-linked from notifications), **fasting** timer with 24/48/72h presets + prep/break-fast guide (`ayuno`), **nutrition** plan upload to Storage (`nutricion`), **body** measurements (`cuerpo`), a structured **supplement** stack with dose/timing (`suplementacion`), and the **Hawkins consciousness scale** weekly calibration (`consciencia`). Emotional release: `grito`, `tapping` (EFT). Practice screens keep their `SafetyWarning` guards.
+
+### Compliance & Robustness
+
+- **Consent gate** in onboarding (términos/privacidad/salud) → `state.profile.consents`; legal screens in `app/legal/`.
+- **GDPR account deletion** via the `delete-account` edge function.
+- **`components/ErrorBoundary.tsx`** — root render-crash fallback (brand screen + retry), independent of any context/theme.
+- **Offline write queue** — `lib/offlineQueue.ts` enqueues non-critical writes and retries on reconnect.
+
+### Wearables — `lib/wearables.ts`, `app/perfil/wearables`
+
+WHOOP + Oura via OAuth (`app/oauth/whoop/callback`, `app/oauth/oura/callback`), synced server-side by the `sync-wearables` edge function into the agnostic `WearableDaily` layer. Apple Watch (HealthKit) + Garmin are on the roadmap (require a native dev build — not Expo Go / web).
 
 ## Key Patterns
 
@@ -155,3 +211,32 @@ Static content lives in `data/`:
 **Subscription gating:** Check `isSubscribed` from `useLifeFlow()` or `useSubscription()` hook. Free tier gets limited mentor messages and locked modules. RevenueCat is the source of truth; Supabase `subscription_tier` is synced via webhook.
 
 **Admin panel** (`app/admin/`): separate auth check — requires `role = 'admin'` in user profile. Never expose admin routes to regular users.
+
+**Theming:** never hard-code dark hex values as a background (it breaks light mode) — use `palette.*` tokens. `goldText` for gold text/icons, `gold` for fills, `ink` only on gold/light surfaces. See "Color rules" under Design System.
+
+**Supabase migrations:** no service-role key is available locally → migrations are applied via the dashboard SQL Editor (Chrome MCP), not the CLI. Files live in `supabase/migrations/` (latest: `…_security_hardening_p0.sql`, `…_meeting_features.sql`).
+
+**Offline writes:** non-critical inserts go through `lib/offlineQueue.ts` (enqueue + retry on reconnect). A full client-id outbox for non-idempotent inserts (messages, wellness) is still pending.
+
+## Strategic Roadmap — Consejo Asesor (2026-06-12)
+
+> **Advisory, not technical.** Synthesis of a board-of-directors review (CEO / CPO / CTO / CMO / CFO / Chief Design Officer / Legal / Wellness) run via Perplexity on 2026-06-12. Strategic direction for taking Polaris to world-class — not a spec.
+
+**Core thesis:** the priority is **not more features — it's sharpening the core**: reduce perceived complexity, protect the premium positioning, and turn Norman + the Protocolo Soberano into a *measurable change mechanism*, not just an elegant interface.
+
+**Priorities (in order):**
+1. **Refocus on one outcome** — the founder's operating capacity in 90 days; a crisp loop: check-in → diagnosis → action → review → progress.
+2. **Norman as a decision & accountability system** (explicit modes: diagnosis / decision / accountability / reflection; memory that confronts: "you said X, did Y, today's risk is Z") — not a generic chat.
+3. **Simplify the functional architecture** into a few domains (Comando · Protocolo · Norman · Recuperación); lower the visible complexity of the wellness hub.
+4. **Harden AI governance + data** — move AI keys to a server-side proxy (debt, not roadmap), budgets per interaction, traceability, risk-tiered recommendation policy.
+5. **Redesign onboarding + Week 1** for strong activation (health/fitness D30 retention is ~3%; the first two weeks decide habit survival).
+6. **Curate wellness by evidence** — an epistemic hierarchy; lower the prominence of the more debatable practices to protect premium credibility.
+7. **Defer supplement e-commerce** until retention is proven and the advice/sales separation is ethically clean.
+
+**Top 3 risks:** (1) lack of product focus; (2) reputational/regulatory exposure from AI + biometrics + sensitive wellness (crisis, fasting, supplementation, implicit health claims); (3) fragile unit economics (Norman / voice / memory / audio / premium support can outrun a price-worthy retention).
+
+**Maps to the existing technical backlog:** priority 4 ↔ #22 (server-side AI-key proxy); robustness ↔ #21 (full offline outbox); #19 (deploy edge functions + `eas init`) remains an open handoff.
+
+## Launch readiness docs
+
+Launch-prep documentation (security audit, legal drafts, QA plan, store metadata, runbooks) lives in `docs/launch/` — start with `docs/launch/00_EXECUTIVE_LAUNCH_VERDICT.md` and `docs/launch/KNOWN_ISSUES_REGISTER.md`.
