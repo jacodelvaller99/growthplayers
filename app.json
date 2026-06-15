@@ -8,12 +8,19 @@
     "scheme": "polaris",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "runtimeVersion": { "policy": "appVersion" },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.polarisgrowthinstitute.lifeflow"
+      "bundleIdentifier": "com.polarisgrowthinstitute.lifeflow",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Polaris usa el micrófono solo cuando grabas una sesión de mentoría, para transcribirla y generar tus notas. La grabación es opcional y requiere tu consentimiento."
+      }
     },
     "android": {
       "package": "com.polarisgrowthinstitute.lifeflow",
+      "versionCode": 1,
+      "permissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
         "backgroundColor": "#0F0F0F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
+import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
@@ -380,6 +381,10 @@ export default function MeditacionScreen() {
       <Text style={styles.intro}>
         Sesiones guiadas con audio ambiental. Usa auriculares para mejor experiencia.
       </Text>
+
+      <SafetyWarning
+        body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria."
+      />
 
       <GoldDivider label="SESIONES" />
 

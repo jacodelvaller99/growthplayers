@@ -1,6 +1,6 @@
 # POLÍTICA DE ELIMINACIÓN DE CUENTA Y DATOS
 
-> **ESTADO: BORRADOR PARA REVISIÓN LEGAL + ACCIÓN DE INGENIERÍA REQUERIDA.** Este documento se ha **verificado contra la función real `delete-account`** (`supabase/functions/delete-account/index.ts`). Contiene una **brecha crítica de cobertura**: la función NO borra varias tablas con datos personales. Hasta que se corrija, las afirmaciones de "eliminación total" no son ciertas. Los campos `[ ]` deben completarse.
+> **ESTADO: BORRADOR PARA REVISIÓN LEGAL.** Re-verificado contra la función real `delete-account` (`supabase/functions/delete-account/index.ts`) el **2026-06-15**: la **brecha de cobertura de datos personales está CERRADA** — la función ahora borra explícitamente las 30+ tablas con PII/salud (incl. `north_stars`, `habits`, `fasting_sessions`, `body_measurements`, `nutrition_profiles`, `supplement_stacks`, `community_posts`, `access_code_uses`, `org_members`) y, por último, `auth.users`. Residual menor: la titularidad de `b2b_organizations` (`admin_user_id` sin cascada). Los campos `[ ]` (razón social, email, fecha) siguen pendientes de completar antes del lanzamiento.
 
 **Responsable:** [RAZÓN SOCIAL] · Contacto: [EMAIL LEGAL]
 **Última actualización:** [FECHA]
@@ -44,9 +44,16 @@ Al eliminar su cuenta, se borran sus filas en las siguientes tablas y, finalment
 
 > Las tablas que usan `ON DELETE CASCADE` respecto a `auth.users` también se purgan al borrar el usuario de autenticación en el paso final; aun así, la función las borra explícitamente antes para mayor robustez.
 
-### 2.2 ⚠ BRECHA CRÍTICA — Qué NO borra la función actual
+### 2.2 ✅ RESUELTO (2026-06-15) — cobertura ampliada
 
-Las siguientes tablas **contienen datos personales y/o sensibles** y **NO se eliminan** en la función `delete-account` actual. Algunas referencian `auth.users` con `ON DELETE CASCADE` (y por tanto se purgarían al borrar la cuenta de auth en el paso final), pero **otras NO tienen cascada** y **quedarían huérfanas/persistentes**. Esto debe corregirse antes del lanzamiento.
+**Las tablas listadas abajo YA se borran explícitamente** en la función `delete-account` actual
+(verificado en `index.ts`: `north_stars` L42, `habits` L50, `habit_logs` L51, `fasting_sessions`
+L52, `nutrition_profiles` L53, `supplement_stacks` L54, `body_measurements` L55, `weekly_sessions`
+L45, `mentor_threads` L38, `community_posts` L61, `community_reactions` L62, `access_code_uses`
+L70, `org_members` L71). La tabla siguiente se conserva como **registro histórico de la brecha ya
+cerrada**. Único residual abierto: **`b2b_organizations`** — su `admin_user_id` no declara cascada,
+por lo que la organización podría quedar sin propietario; resolver poniendo el campo a NULL o
+transfiriendo la titularidad (no contiene PII del usuario, es un registro de organización).
 
 | Tabla | Contenido | ¿Tiene `ON DELETE CASCADE` a auth.users? | Riesgo |
 |---|---|---|---|
@@ -114,7 +121,7 @@ Solicitudes y dudas: **[EMAIL LEGAL]** — **[RAZÓN SOCIAL]**.
 
 ## Anexo A — Lista de acción para ingeniería (resumen de brechas)
 
-1. **Ampliar `delete-account`** para borrar explícitamente: `north_stars`, `habits`, `habit_logs`, `fasting_sessions`, `body_measurements`, `nutrition_profiles`, `supplement_stacks`, `weekly_sessions`, `mentor_threads`, `community_posts`, `community_reactions`, `access_code_uses` (según decisión de retención), `org_members`, y resolver `b2b_organizations` (titularidad).
+1. ✅ **HECHO (2026-06-15)** — `delete-account` ahora borra explícitamente `north_stars`, `habits`, `habit_logs`, `fasting_sessions`, `body_measurements`, `nutrition_profiles`, `supplement_stacks`, `weekly_sessions`, `mentor_threads`, `community_posts`, `community_reactions`, `access_code_uses`, `org_members`. **Pendiente menor:** resolver `b2b_organizations` (poner `admin_user_id` a NULL / transferir titularidad).
 2. **Verificar/añadir** una función de **exportación/portabilidad** de datos (la App promete "exportar" en onboarding).
 3. **Registrar fallos parciales** del borrado (`allSettled`) para reintento/auditoría en lugar de ignorarlos.
 4. **Confirmar** la cobertura de `wellness_sessions` y otras tablas de bienestar (`store/wellnessStore.ts` es estado local; verificar que la tabla `wellness_sessions` en BD se purga — actualmente sí está en la lista).

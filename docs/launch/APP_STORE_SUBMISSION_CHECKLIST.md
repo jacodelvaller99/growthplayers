@@ -7,6 +7,39 @@ Each row cites the guideline and the file/config evidence. "Blocker" = must fix 
 
 ---
 
+## ⏱ ADDENDUM — Estado al 2026-06-15 (re-verificado contra el código real)
+
+Las filas de abajo son del **2026-06-02** (estado pre-fixes). Re-auditoría 2026-06-15 con
+3 pasadas (build/compliance/verificación dirigida). **Resueltos desde entonces** (≠ a lo que dicen
+las filas):
+
+- ✅ **1.2 UGC** (filas 1.1–1.4): moderación viva — reportar (`community_reports`), bloquear
+  (`user_blocks`), filtro (`data/moderation.ts`), gate EULA tolerancia-cero antes de postear, cola
+  admin. Flag `COMMUNITY_ENABLED=true`.
+- ✅ **1.4.1 IA** (fila 1.7): `lib/mentor.ts` enruta crisis/autolesión a ayuda profesional + admite
+  ser IA; banner persistente "Norman es un mentor de IA…" en `app/(tabs)/mentor.tsx`.
+- ✅ **1.4.1 prácticas** (filas 1.5–1.6): `SafetyWarning` no-descartable en respiración, grito,
+  tapping, consciencia, **meditación y sueño (añadidos hoy)** + ayuno/suplementación. 9/9 prácticas
+  cubiertas.
+- ✅ **3.1.2 suscripción** (fila 2.3): auto-renovación 24h + "gestiónala en ajustes" + restaurar
+  compras + links legales en `paywall.tsx`. Promesa "sin preguntas" eliminada.
+- ✅ **Permisos nativos** (hoy): `NSMicrophoneUsageDescription` (iOS) + `RECORD_AUDIO` (Android) en
+  `app.json`; `expo-av` instalado; `buildNumber`/`versionCode`/`runtimeVersion` añadidos.
+- ✅ **delete-account** (5.1.1(v)): borra 30+ tablas PII/salud + `auth.users` (ver
+  `legal/ACCOUNT_DELETION_POLICY.md`).
+- ✅ **OAuth scheme**: `polaris://oauth` nativo (coincide con `app.json`).
+
+**Blockers REALES que quedan:**
+- 🔴 `eas.projectId` placeholder → `eas init` (handoff Expo).
+- 🔴 **Placeholders legales** visibles en `app/legal/{privacidad,terminos,salud}.tsx`
+  (`[RAZÓN SOCIAL]`, `[EMAIL LEGAL]`, `[JURISDICCIÓN]`, edad, líneas de crisis) → rellenar con datos
+  reales de la entidad.
+- 🟠 Cuentas de tienda + `google-service-account.json` + EAS secrets + assets de tienda
+  (screenshots/descripción) + RevenueCat productos en consola.
+- 🟠 Marca: estandarizar a "Polaris Growth Institute" en listing (display name ya es ese).
+
+---
+
 ## 1. Apple App Store Review Guidelines
 
 | # | Guideline | Requirement | Status | Evidence / Notes |

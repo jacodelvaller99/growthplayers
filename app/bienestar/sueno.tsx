@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import SafetyWarning from '@/components/SafetyWarning';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useWellnessStore } from '@/store/wellnessStore';
 
@@ -178,6 +179,10 @@ export default function SuenoScreen() {
           </Text>
         </View>
       </PremiumCard>
+
+      <SafetyWarning
+        body="Estas prácticas favorecen el descanso, pero no tratan el insomnio crónico, la apnea del sueño ni otros trastornos. Si tienes problemas de sueño persistentes, consulta a un profesional de la salud. No las uses mientras conduces u operas maquinaria."
+      />
 
       {/* Premium lock if free */}
       {!isPremium && (
