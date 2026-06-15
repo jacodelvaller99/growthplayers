@@ -101,3 +101,12 @@ export const db2 = {
   weeklySessions:     () => anyClient.from('weekly_sessions'),
   mentorThreads:      () => anyClient.from('mentor_threads'),
 };
+
+// ─── Memory OS table helpers — untyped (migración 20260615000000_memory_system) ──
+// user_memory_profile/memory_summaries: dueño+admin · admin_briefings/admin_notes: admin-only (RLS).
+export const mem = {
+  memoryProfile: () => anyClient.from('user_memory_profile'),
+  summaries:     () => anyClient.from('memory_summaries'),
+  briefings:     () => anyClient.from('admin_briefings'),
+  adminNotes:    () => anyClient.from('admin_notes'),
+};

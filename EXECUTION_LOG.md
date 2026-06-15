@@ -103,3 +103,24 @@ y fue **descartado** (sus hallazgos contradecían el árbol real verificado).
   siendo `supabase/functions/ai-proxy/index.ts` del repo (re-deploys por CLI usarán esa).
 - Tras la prueba E2E del guard se restauró la sesión del navegador del usuario (token guardado
   y devuelto en localStorage del mismo origen; nunca salió del dispositivo).
+
+## Memory OS — 2026-06-15 (5 fases internas)
+
+- **F1 — fundación:** migración `20260615000000_memory_system.sql` (4 tablas + ALTER mentor_memories);
+  helpers `mem` en `lib/supabase.ts`; `lib/memoryLogic.ts` (pura, 17 tests) + `lib/memory.ts` (IO
+  degradable). tsc 0 · 17 tests.
+- **F2 — integración:** `lib/memorySummarizer.ts` (resumen/perfil/briefing vía streamMentorResponse);
+  bloque "MEMORIA DEL CLIENTE" en `buildSystemPrompt`; trigger al cerrar chat (`mentor.tsx`, throttle
+  ≥4 turnos) + en `confirmDraft` (`use-mentorship.tsx`). Fix 2 errores de tipo. tsc 0 · 74 tests.
+- **F3 — UI admin:** `components/memory.tsx` (6 cards); sección Memoria en `admin/usuarios/[id]`;
+  dashboard cross-client `admin/memoria.tsx` + NAV + ruta; `fetchUserMemory`/`fetchMemoryDashboard`
+  en `lib/admin/queries.ts`. tsc 0.
+- **F4 — cliente + import:** `app/perfil/cliente.tsx` (vista de apoyo, `clientSafeProfile`) + ruta +
+  enlace en `perfil/index`; `components/PlaudImport.tsx` (pegar transcripción → resumen+perfil) en
+  `mentoria/index`. tsc 0 · lint 0 · 74 tests · export web OK.
+- **F5 — docs/deploy:** coverage en package.json; `docs/investor/10_MEMORY_SYSTEM.md`; CLAUDE.md
+  (subsección Memory OS); este log + changelog. Migración aplicada vía dashboard (Chrome MCP).
+- **Decisiones de diseño:** reusar tablas existentes (no duplicar memory_items/conversation_*);
+  summarización client-side (sin deploy); `admin_briefings`/`admin_notes` admin-only por RLS (notas
+  privadas fuera del perfil para evitar RLS por-columna); `generateAdminBriefing` solo desde contexto
+  admin (no en confirmDraft del cliente) para cuadrar con RLS admin-only.

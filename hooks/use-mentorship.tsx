@@ -20,6 +20,8 @@ import { Platform } from 'react-native';
 import { readLocal, writeLocal } from '@/storage/local';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
 import { transcribeAudio } from '@/lib/transcription';
+import { insertSummary } from '@/lib/memory';
+import { makeMinimalContext, updateProfileFromSummary } from '@/lib/memorySummarizer';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { currentWeekNumber } from '@/data/mentorship';
@@ -586,6 +588,23 @@ export function useMentorship() {
       const keep = plan.filter((it) => !(it.source === 'ia' && it.week === d.week));
       persistPlan([...items, ...keep]);
     }
+
+    // ── Memory OS: la sesión alimenta el resumen unificado + el perfil vivo ──────
+    // Las notas YA son el resumen estructurado de Norman → no re-resumimos; sí
+    // sintetizamos el perfil (un solo paso IA, fire-and-forget).
+    if (userId) {
+      const parsed = {
+        summary: d.notes,
+        key_topics: [] as string[],
+        commitments: d.actions.map((a) => a.trim()).filter(Boolean),
+        unresolved_questions: [] as string[],
+        emotional_tone: '',
+        suggested_next_focus: '',
+      };
+      void insertSummary({ user_id: userId, source_type: 'mentorship', source_id: rowId, ...parsed });
+      void updateProfileFromSummary(userId, makeMinimalContext(), parsed);
+    }
+
     setDraft(null);
   }, [draft, notes, plan, userId, persistNotes, persistPlan]);
 

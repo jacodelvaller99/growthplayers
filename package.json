@@ -31,6 +31,9 @@
     "collectCoverageFrom": [
       "lib/utils.ts",
       "lib/mentor.ts",
+      "lib/memory.ts",
+      "lib/memoryLogic.ts",
+      "lib/memorySummarizer.ts",
       "hooks/use-lifeflow.tsx",
       "components/polaris.tsx"
     ]

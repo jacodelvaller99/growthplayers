@@ -130,6 +130,16 @@ Each provider has its own module — `lib/nvidia.ts`, `lib/groq.ts`, `lib/openai
 
 > **AI disclosure & safety:** Norman discloses it is AI and routes crisis/self-harm topics to professional help — keep these guardrails when editing the mentor prompt.
 
+### Memory OS — `lib/memory.ts`, `lib/memoryLogic.ts`, `lib/memorySummarizer.ts`
+
+Per-user memory that lets Norman remember across sessions + gives admins a coaching dossier. **Reuses** existing infra (`mentor_memories` + pgvector + `search_mentor_memories`, `mentor_conversations`, `mentor_threads`) and adds **4 new tables** (migration `20260615000000_memory_system.sql`): `user_memory_profile` (living synthesized profile — owner+admin RLS), `memory_summaries` (unified chat/mentorship/plaud summaries — owner+admin), `admin_briefings` + `admin_notes` (**admin-only** RLS).
+
+- **Pure logic** (`lib/memoryLogic.ts`, unit-tested): `mergeMemoryProfile` (synthesizes, doesn't bloat — dedup + per-field caps + open→completed commitments), `parseSummaryBlocks`/`extractSection`/`splitList` (tolerant parsing of Norman's `===LABEL===` blocks), `assembleMentorMemory`, `clientSafeProfile`.
+- **IO** (`lib/memory.ts`): all reads degrade to empty if tables absent. `buildMentorMemoryContext()` feeds the "MEMORIA DEL CLIENTE" block in `buildSystemPrompt` (`lib/mentor.ts`) — Norman confronts only from stored `commitments_open`.
+- **IA generation** (`lib/memorySummarizer.ts`, client-side via `streamMentorResponse`): `summarizeConversation`, `updateProfileFromSummary`, `generateAdminBriefing`. Triggered on chat blur (`app/(tabs)/mentor.tsx`, throttled ≥4 new turns) and on `confirmDraft` (`hooks/use-mentorship.tsx`).
+- **UI:** admin section in `app/admin/usuarios/[id].tsx` + cross-client dashboard `app/admin/memoria.tsx`; client view `app/perfil/cliente.tsx`; transcript import `components/PlaudImport.tsx`; cards in `components/memory.tsx`.
+- **Privacy:** admin briefings/notes never enter Norman's context or the client view (RLS + `clientSafeProfile`).
+
 ### Design System — `constants/theme.ts`
 
 **Brand font:** GrandisExtended (Manual de Marca Polaris — Orgánico Studio 2024)

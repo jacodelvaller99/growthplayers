@@ -8,6 +8,7 @@ import { streamNvidia } from './nvidia';
 import { streamGroq } from './groq';
 import { streamOpenAI } from './openai';
 import type { CheckIn } from '@/types/lifeflow';
+import type { AssembledMentorMemory } from '@/lib/memoryLogic';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,8 @@ export interface MentorContext {
     importance: number;
     similarity?: number;
   }>;
+  /** Memoria narrativa del cliente (perfil vivo + loops abiertos) — capa Memory OS */
+  clientMemory?: AssembledMentorMemory | null;
 
   // ── Biometric fields (optional — present when wearable is connected) ─────────
   /** Wearable provider: 'oura' | 'whoop' */
@@ -305,6 +308,25 @@ export function buildSystemPrompt(ctx: MentorContext): string {
     return `MEMORIAS RELEVANTES (contexto de sesiones anteriores):\n${entries}`;
   })();
 
+  // ── Client memory block (perfil vivo: identidad, compromisos, loops) ──────────
+  const clientMemoryBlock = (() => {
+    const m = ctx.clientMemory;
+    if (!m) return '';
+    const parts: string[] = [];
+    if (m.synopsis) parts.push(`Síntesis: ${m.synopsis}`);
+    if (m.openCommitments.length)
+      parts.push(`Compromisos abiertos (lo que dijo que haría):\n${m.openCommitments.map((c) => `- ${c}`).join('\n')}`);
+    if (m.recentWins.length)
+      parts.push(`Logros recientes:\n${m.recentWins.map((w) => `- ${w}`).join('\n')}`);
+    if (m.recurringBlockers.length)
+      parts.push(`Bloqueos recurrentes:\n${m.recurringBlockers.map((b) => `- ${b}`).join('\n')}`);
+    if (m.openLoops.length)
+      parts.push(`Preguntas/loops sin cerrar:\n${m.openLoops.map((q) => `- ${q}`).join('\n')}`);
+    if (m.nextFocus) parts.push(`Foco sugerido: ${m.nextFocus}`);
+    if (parts.length === 0) return '';
+    return `MEMORIA DEL CLIENTE (sesiones anteriores — úsala con naturalidad. Puedes confrontar SOLO desde un compromiso aquí listado, p. ej. "La semana pasada te comprometiste a X, ¿qué pasó?". Nunca inventes un compromiso que no esté aquí):\n${parts.join('\n')}`;
+  })();
+
   return `═══════════════════════════════════════════════
 QUIÉN ERES
 ═══════════════════════════════════════════════
@@ -452,7 +474,7 @@ ${checkInBlock}
 TAREAS COMPLETADAS:
 ${tasksBlock}
 
-${patternsBlock ? `${patternsBlock}\n` : ''}${intelligenceBlock ? `\n${intelligenceBlock}\n` : ''}${biometricBlock ? `\n${biometricBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
+${patternsBlock ? `${patternsBlock}\n` : ''}${intelligenceBlock ? `\n${intelligenceBlock}\n` : ''}${biometricBlock ? `\n${biometricBlock}\n` : ''}${clientMemoryBlock ? `\n${clientMemoryBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
 ═══════════════════════════════════════════════
 EL MÉTODO POLARIS — TU CONOCIMIENTO COMPLETO
 ═══════════════════════════════════════════════

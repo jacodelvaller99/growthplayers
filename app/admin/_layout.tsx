@@ -39,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { route: '/admin/cursos',        label: 'Cursos',           icon: 'school',         group: 'top' },
   { route: '/admin/codigos',       label: 'Códigos Acceso',   icon: 'vpn-key',        group: 'top' },
   { route: '/admin/inteligencia',  label: 'Inteligencia ML',  icon: 'psychology',     group: 'data' },
+  { route: '/admin/memoria',       label: 'Memoria',          icon: 'memory',         group: 'data' },
   { route: '/admin/contenido',     label: 'Contenido',        icon: 'article',        group: 'data' },
   { route: '/admin/comunidad',     label: 'Moderación',       icon: 'flag',           group: 'data' },
   { route: '/admin/auditoria',     label: 'Auditoría',        icon: 'history',        group: 'data' },

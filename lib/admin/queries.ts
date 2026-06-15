@@ -11,7 +11,17 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import { supabase, intel } from '@/lib/supabase';
+import { supabase, intel, mem } from '@/lib/supabase';
+import {
+  fetchAdminBriefing,
+  fetchAdminNotes,
+  fetchLatestSummaries,
+  fetchMemoryProfile,
+  type AdminBriefing,
+  type AdminNote,
+  type MemoryProfile,
+  type MemorySummaryRow,
+} from '@/lib/memory';
 import type {
   AccessCode,
   AccessCodeUse,
@@ -30,6 +40,98 @@ import type {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supa: any = supabase;
+
+// ─── Memory OS — dossier por usuario (admin) ─────────────────────────────────────
+export interface UserMemoryBundle {
+  profile: MemoryProfile | null;
+  summaries: MemorySummaryRow[];
+  briefing: AdminBriefing | null;
+  notes: AdminNote[];
+}
+
+/** Agrega el dossier de memoria de un usuario (perfil + resúmenes + briefing + notas). */
+export async function fetchUserMemory(userId: string): Promise<UserMemoryBundle> {
+  const [profile, summaries, briefing, notes] = await Promise.all([
+    fetchMemoryProfile(userId),
+    fetchLatestSummaries(userId, 8),
+    fetchAdminBriefing(userId),
+    fetchAdminNotes(userId),
+  ]);
+  return { profile, summaries, briefing, notes };
+}
+
+export interface MemoryDashboardRow {
+  user_id: string;
+  name: string;
+  openLoops: number;
+  summaryCount: number;
+  lastSummaryAt: string | null;
+  staleDays: number | null;
+  churnLabel: string | null;
+  topThemes: string[];
+}
+
+/**
+ * Dashboard cross-client del Memory OS (admin): agrega los resúmenes recientes de
+ * TODOS los usuarios (visible por RLS admin) y calcula loops abiertos, antigüedad
+ * del último resumen (follow-up estancado) y temas recurrentes. Degrada a [].
+ */
+export async function fetchMemoryDashboard(): Promise<MemoryDashboardRow[]> {
+  try {
+    const { data: sums } = await mem.summaries()
+      .select('user_id,unresolved_questions,key_topics,created_at')
+      .order('created_at', { ascending: false })
+      .limit(600);
+    const rows = (sums ?? []) as Array<{
+      user_id: string; unresolved_questions?: string[]; key_topics?: string[]; created_at?: string;
+    }>;
+    if (rows.length === 0) return [];
+
+    const agg = new Map<string, { openLoops: number; count: number; last: string | null; themes: Map<string, number> }>();
+    for (const r of rows) {
+      const a = agg.get(r.user_id) ?? { openLoops: 0, count: 0, last: null, themes: new Map<string, number>() };
+      a.openLoops += r.unresolved_questions?.length ?? 0;
+      a.count += 1;
+      if (!a.last || (r.created_at && r.created_at > a.last)) a.last = r.created_at ?? a.last;
+      for (const t of r.key_topics ?? []) {
+        const k = t.trim();
+        if (k) a.themes.set(k, (a.themes.get(k) ?? 0) + 1);
+      }
+      agg.set(r.user_id, a);
+    }
+
+    const ids = [...agg.keys()];
+    const nameMap: Record<string, string> = {};
+    try {
+      const { data: prog } = await supa.from('user_progress').select('user_id,name').in('user_id', ids);
+      for (const p of (prog ?? []) as Array<{ user_id: string; name: string }>) nameMap[p.user_id] = p.name;
+    } catch { /* noop */ }
+    const churnMap: Record<string, string> = {};
+    try {
+      const { data: ints } = await intel.intelligence().select('user_id,churn_risk_label').in('user_id', ids);
+      for (const r of (ints ?? []) as Array<{ user_id: string; churn_risk_label: string }>) churnMap[r.user_id] = r.churn_risk_label;
+    } catch { /* noop */ }
+
+    const now = Date.now();
+    return ids.map((id) => {
+      const a = agg.get(id)!;
+      const staleDays = a.last ? Math.floor((now - new Date(a.last).getTime()) / 86_400_000) : null;
+      const topThemes = [...a.themes.entries()].sort((x, y) => y[1] - x[1]).map(([t]) => t).slice(0, 5);
+      return {
+        user_id: id,
+        name: nameMap[id] ?? 'Usuario',
+        openLoops: a.openLoops,
+        summaryCount: a.count,
+        lastSummaryAt: a.last,
+        staleDays,
+        churnLabel: churnMap[id] ?? null,
+        topThemes,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
 
 // ─── Dashboard KPIs ───────────────────────────────────────────────────────────
 

@@ -322,6 +322,22 @@ export default function PerfilSoberanoScreen() {
         </>
       )}
 
+      {/* ── Navigation: Mi Memoria ── */}
+      <GoldDivider label="MI PROCESO" />
+      <Pressable
+        style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
+        onPress={() => router.push('/perfil/cliente' as never)}
+        accessibilityLabel="Ver mi memoria">
+        <View style={styles.navIcon}>
+          <MaterialIcons name="auto-stories" size={22} color={palette.goldText} />
+        </View>
+        <View style={styles.navCopy}>
+          <Text style={styles.navTitle}>MI MEMORIA</Text>
+          <Text style={styles.navSub}>Tu resumen, compromisos y avances</Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
+      </Pressable>
+
       {/* ── Navigation: Wearables ── */}
       <GoldDivider label="INTEGRACIONES" />
       <Pressable

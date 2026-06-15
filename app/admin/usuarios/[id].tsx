@@ -34,13 +34,37 @@ import {
   fetchUserEvents,
   fetchUserMemberships,
   fetchUserMentorship,
+  fetchUserMemory,
 } from '@/lib/admin/queries';
-import type { AdminMentorshipData } from '@/lib/admin/queries';
+import type { AdminMentorshipData, UserMemoryBundle } from '@/lib/admin/queries';
+import {
+  AdminBriefingCard,
+  AdminNotesCard,
+  CommitmentsCard,
+  ConversationTimeline,
+  ProfileSynopsisCard,
+  RepeatedThemesCard,
+} from '@/components/memory';
+import { addAdminNote } from '@/lib/memory';
+import { generateAdminBriefing } from '@/lib/memorySummarizer';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman } from '@/lib/admin/actions';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Agrega los temas más recurrentes de los resúmenes (más frecuentes primero). */
+function aggregateThemes(summaries: { key_topics?: string[] }[]): string[] {
+  const counts = new Map<string, number>();
+  for (const s of summaries) {
+    for (const t of s.key_topics ?? []) {
+      const k = t.trim();
+      if (!k) continue;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 10);
+}
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -167,15 +191,21 @@ export default function UserDetailScreen() {
   const [generatingSession, setGeneratingSession] = useState(false);
   const [showWeeklySession, setShowWeeklySession] = useState(false);
 
+  // Memory OS state
+  const [memory, setMemory] = useState<UserMemoryBundle>({ profile: null, summaries: [], briefing: null, notes: [] });
+  const [genBrief, setGenBrief] = useState(false);
+  const [noteBusy, setNoteBusy] = useState(false);
+
   const load = useCallback(async () => {
     if (!userId) return;
-    const [userDetail, evts, convs, cis, ment, audit] = await Promise.all([
+    const [userDetail, evts, convs, cis, ment, audit, memo] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
       fetchMentorConversations(userId, 30),
       fetchUserCheckIns(userId),
       fetchUserMentorship(userId),
       fetchUserAuditLog(userId),
+      fetchUserMemory(userId),
     ]);
     setUser(userDetail);
     setEvents(evts);
@@ -183,10 +213,33 @@ export default function UserDetailScreen() {
     setCheckIns(cis as typeof checkIns);
     setMentorship(ment);
     setAuditLog(audit);
+    setMemory(memo);
     setLoading(false);
   }, [userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleGenerateBriefing = useCallback(async () => {
+    if (!userId) return;
+    setGenBrief(true);
+    try {
+      await generateAdminBriefing(userId, { userName: user?.name });
+      setMemory(await fetchUserMemory(userId));
+    } finally {
+      setGenBrief(false);
+    }
+  }, [userId, user?.name]);
+
+  const handleAddNote = useCallback(async (note: string) => {
+    if (!userId || !adminId) return;
+    setNoteBusy(true);
+    try {
+      await addAdminNote(userId, adminId, note);
+      setMemory(await fetchUserMemory(userId));
+    } finally {
+      setNoteBusy(false);
+    }
+  }, [userId, adminId]);
 
   const handleDeactivateMembership = async (membership: UserMembership) => {
     if (!adminId) return;
@@ -562,6 +615,21 @@ export default function UserDetailScreen() {
             ))
           )}
         </PremiumCard>
+
+        {/* ─────────────────────────────────────────────────── */}
+        {/* M2. MEMORIA — perfil vivo + briefing operativo + notas */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label="MEMORIA & BRIEFING" />
+        <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} />
+        <ProfileSynopsisCard profile={memory.profile} variant="admin" />
+        <CommitmentsCard
+          open={memory.profile?.commitments_open}
+          completed={memory.profile?.commitments_completed}
+          variant="admin"
+        />
+        <RepeatedThemesCard themes={aggregateThemes(memory.summaries)} />
+        <ConversationTimeline summaries={memory.summaries} variant="admin" />
+        <AdminNotesCard notes={memory.notes} busy={noteBusy} onAdd={handleAddNote} />
 
         {/* ─────────────────────────────────────────────────── */}
         {/* I. PREDICCIÓN & SESIÓN SEMANAL */}

@@ -3,6 +3,23 @@
 Cambios con impacto en la tesis de inversión, en orden cronológico inverso.
 Cada entrada referencia commits/evidencia real. Complementa `EXECUTION_LOG.md` (operacional).
 
+## 2026-06-15 — Memory OS (memoria de cliente + inteligencia de mentoría)
+
+**De "chat con contexto" a sistema de cambio medible** (prioridad #2 del consejo asesor: Norman
+como sistema de decisión/accountability). Norman ahora recuerda entre sesiones — identidad, metas,
+**compromisos** y loops abiertos — y confronta solo desde compromisos almacenados. El admin obtiene
+un dossier por cliente: síntesis, temas recurrentes, **briefing pre-mentoría** (preguntas + challenge
+points + riesgo) y notas privadas, más un dashboard cross-client para priorizar.
+
+- **Reutiliza** la infra existente (mentor_memories+pgvector, conversaciones, hilos) y añade 4 tablas
+  (perfil vivo, resúmenes unificados, briefings admin-only, notas admin-only). Síntesis IA client-side
+  vía la misma cadena de Norman (sin servidor nuevo). El perfil sintetiza, no acumula (anti-bloat →
+  protege la economía unitaria, riesgo #3 del consejo).
+- **Privacidad por diseño:** briefings/notas del coach son admin-only (RLS) y nunca entran al contexto
+  de Norman ni a la vista del cliente.
+- Validado: 17 tests de lógica pura (74 total) · tsc 0 · lint 0 · export web OK. Docs:
+  `docs/investor/10_MEMORY_SYSTEM.md`. Migración pendiente de aplicar en dashboard.
+
 ## 2026-06-12 — Hardening pass (commits `f8a0b01`, `e198e6b` + deploys)
 
 **Riesgo de seguridad eliminado en producción.** Las 4 Edge Functions con fixes de

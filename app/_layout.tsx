@@ -105,6 +105,7 @@ function MainStack() {
         <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />
         <Stack.Screen name="perfil/index" options={{ headerShown: false }} />
+        <Stack.Screen name="perfil/cliente" options={{ headerShown: false }} />
         <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
         <Stack.Screen name="admin/index" options={{ headerShown: false }} />
@@ -114,6 +115,7 @@ function MainStack() {
         <Stack.Screen name="admin/cursos/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/codigos/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/memoria" options={{ headerShown: false }} />
         <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/comunidad/index" options={{ headerShown: false }} />

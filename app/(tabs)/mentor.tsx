@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -35,6 +35,8 @@ import { useMentorMemory } from '@/hooks/useMentorMemory';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { analytics } from '@/lib/analytics';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
+import { buildMentorMemoryContext } from '@/lib/memory';
+import { makeMinimalContext, summarizeConversation, updateProfileFromSummary } from '@/lib/memorySummarizer';
 import { db2, intel } from '@/lib/supabase';
 import { useWearableConnections, useWearableDaily } from '@/lib/wearables';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
@@ -199,6 +201,37 @@ export default function MentorScreen() {
   // ── Intelligence Engine hooks ──────────────────────────────────────────────
   const { intelligence } = useUserIntelligence(userId);
   const { addMemory, searchMemories } = useMentorMemory(userId);
+
+  // ── Memory OS: resume la sesión al SALIR de la pantalla (throttled) ──────────
+  // Ref-mirror para leer el estado más reciente desde el cleanup de useFocusEffect
+  // sin closures obsoletos. Solo resume si hay ≥4 turnos nuevos del operador.
+  const lastSummarizedRef = useRef(0);
+  const sessionRef = useRef({ messages: [] as MentorMessage[], uid: '', name: '', role: '' });
+  useEffect(() => {
+    sessionRef.current = {
+      messages: state.mentorMessages,
+      uid: userId ?? '',
+      name: state.profile.name,
+      role: state.profile.role,
+    };
+  });
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        const { messages, uid, name, role } = sessionRef.current;
+        if (!uid) return;
+        const userTurns = messages.filter((m) => m.role === 'user').length;
+        if (userTurns - lastSummarizedRef.current < 4) return;
+        lastSummarizedRef.current = userTurns;
+        const turns = messages.slice(-12).map((m) => ({ role: m.role, text: m.text }));
+        const ctx = makeMinimalContext(name, role);
+        void summarizeConversation(uid, ctx, turns, 'chat').then((parsed) => {
+          if (parsed) void updateProfileFromSummary(uid, ctx, parsed);
+        });
+      },
+      [],
+    ),
+  );
 
   // ── Wearable hooks ─────────────────────────────────────────────────────────
   const { connections } = useWearableConnections();
@@ -372,11 +405,13 @@ export default function MentorScreen() {
         : sovereignScore >= 200 ? 'Mercader'
         : 'Explorador';
 
-      // ── Step 1: Semantic memory search (parallel with build) ──────────────
+      // ── Step 1: Semantic memory search + narrative memory (parallel) ──────
       const memoriesPromise = searchMemories(clean, 3);
+      const clientMemoryPromise = buildMentorMemoryContext(userId ?? '');
 
       // ── Step 2: Build context with Intelligence fields ─────────────────────
       const relevantMemories = await memoriesPromise;
+      const clientMemory = await clientMemoryPromise;
 
       // Dynamic module progress (based on completed lessons)
       const activeModLessons = ACTIVE_MODULE.lessons.length;
@@ -421,6 +456,7 @@ export default function MentorScreen() {
           importance:  m.importance,
           similarity:  m.similarity,
         })),
+        clientMemory,
         // Biometric enrichment (wearable)
         biometricProvider:  wearableProvider,
         biometricReadiness: latestWearable?.recovery_score ?? null,
