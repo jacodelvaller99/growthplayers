@@ -1,6 +1,16 @@
 # 19 — Final Production GO / NO-GO
 
 > Fecha: 2026-06-16. Veredicto basado en evidencia verificada, no en aspiración.
+> **Paquete de cierre accionable:** `docs/launch/OWNER_HANDOFF_PACKET.md` (datos/comandos/URIs exactos).
+
+## Smoke test de cierre (2026-06-16, prod en vivo)
+- Pantallas legales `/legal/salud` y `/legal/privacidad`: **renderizan sin crash**, pero con placeholders
+  **visibles** (`[COMPLETAR` crisis, `[RAZÓN SOCIAL]`, `[DIRECCIÓN FISCAL]`, `[EMAIL LEGAL]`, `[FECHA]`,
+  `[DEFINIR retención]`) → confirma que LEGAL es el bloqueante de web-ship, vivo en prod.
+- Rutas OAuth de callback existen (`app/oauth/{oura,whoop}/callback.tsx`) → handoff = registrar URIs, no construir.
+- `app.json` correcto salvo `eas.projectId` (placeholder). CLI `eas` instalado pero **no logueado**; `supabase`
+  CLI no instalado → ni `eas init` ni `functions deploy` ejecutables por el agente (handoffs del dueño).
+- Gate: `tsc 0 · lint 0 errores · 134 tests · export web OK`.
 
 ## VEREDICTO: **PRODUCTION CANDIDATE**
 - **Web (PWA):** **GO condicional** — desplegable hoy tras rellenar datos legales (no-código).

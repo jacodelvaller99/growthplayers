@@ -189,3 +189,16 @@ los del agente que no resistieron evidencia se descartaron, no se propagaron). D
 - **Validación:** `tsc 0` · `lint 0 errores` · `134 tests` · `export web OK`.
 - **Veredicto:** PRODUCTION CANDIDATE. Web lanzable tras datos legales; native tras `eas init` + cuentas.
   Bloqueantes restantes = handoffs del dueño (no-código). Doc 19.
+
+## Owner Handoffs Closure — 2026-06-16 (verificación, sin features)
+
+Pase de cierre de handoffs (NO se construyó nada nuevo). Verificación de realidad + documentación exacta:
+- **CLIs:** `eas` instalado pero **no logueado** (`eas whoami` → Not logged in) → `eas init` = handoff.
+  `supabase` CLI no instalado → `functions deploy delete-account` = handoff (cascada ya protege el GDPR).
+- **Legal:** inventario completo de placeholders en `app/legal/*` (incl. crisis Apple 1.4.1). 100% owner-gated
+  (no se inventan datos de entidad ni líneas de crisis). Smoke en prod confirma que se ven en `/legal/*`.
+- **Native:** `app.json` verificado correcto salvo `eas.projectId`. Rutas OAuth callback existen.
+- **Entregable:** `docs/launch/OWNER_HANDOFF_PACKET.md` — los 5 handoffs con dato/comando/URI exacto +
+  criterio de verificación. Doc 19 actualizado con el smoke test.
+- **Gate:** `tsc 0 · lint 0 errores · 134 tests · export web OK`. Estado **sin cambio**: PRODUCTION CANDIDATE
+  (no pasa a shipped porque depende de datos/credenciales del dueño — declarado honestamente, no fingido).
