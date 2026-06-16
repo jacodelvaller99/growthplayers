@@ -56,4 +56,11 @@ Biometric (lógica pura testeada) · ErrorBoundary + crash capture · RLS/anti-e
 - Registrar URIs OAuth en consolas Oura/WHOOP.
 
 ## Validación de este pase
-`tsc 0` · `lint 0 errores` · `134 tests` · `export web OK`. `delete-account` redeployado vía dashboard.
+`tsc 0` · `lint 0 errores` · `134 tests` · `export web OK`.
+
+**Nota de deploy honesta:** el código de `delete-account` está commiteado. El dashboard de Supabase de este
+proyecto **ya no permite editar/desplegar edge functions en el navegador** (es CLI-only), así que el redeploy
+queda como handoff de 1 comando: `supabase functions deploy delete-account`. **No hay exposición GDPR viva
+mientras tanto:** las tablas nuevas tienen `ON DELETE CASCADE` sobre `auth.users`, y la función desplegada ya
+ejecuta `auth.admin.deleteUser` al final → cascada las borra. Los deletes explícitos añadidos son robustez
+(defensa en profundidad ante drift de schema), no la única garantía.

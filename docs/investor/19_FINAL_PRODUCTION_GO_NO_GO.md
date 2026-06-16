@@ -15,7 +15,7 @@ son credenciales y datos de entidad que solo el dueño puede aportar.
 |---|---|---|---|---|
 | 1 | `app.json` `eas.projectId` placeholder | Build nativo | Dueño (`eas init`) | ⛔ abierto |
 | 2 | Placeholders legales visibles (`[RAZÓN SOCIAL]`, `[EMAIL LEGAL]`, `[DIRECCIÓN]`, crisis) | Submission | Dueño (datos entidad) | ⛔ abierto |
-| 3 | `delete-account` cobertura de tablas nuevas (GDPR/5.1.1) | Compliance | **Agente** | ✅ **cerrado este pase** |
+| 3 | `delete-account` cobertura de tablas nuevas (GDPR/5.1.1) | Compliance | **Agente (código) + Dueño (deploy CLI)** | ✅ código cerrado; cascada ya protege en vivo; redeploy = `supabase functions deploy delete-account` |
 | 4 | `journal_entries` faltaba en prod | Datos | **Agente** | ✅ cerrado (migración) |
 | 5 | Claves IA en bundle web | Seguridad | Dueño (activar ai-proxy) | 🟡 mitigado (proxy listo, inactivo) |
 | 6 | URIs OAuth Oura/WHOOP sin registrar | Wearables nativos | Dueño (consolas) | ⛔ abierto (no bloquea web/v1) |
@@ -39,7 +39,7 @@ son credenciales y datos de entidad que solo el dueño puede aportar.
 1. [Dueño · 0.5d] Rellenar `app/legal/*` con entidad real + líneas de crisis.
 2. [Dueño · 0.5d] `eas init` → projectId real.
 3. [Dueño · 0.5d] Activar ai-proxy (secrets + env var + rotar claves).
-4. [Agente · hecho] Redeploy `delete-account`.
+4. [Dueño · 1 comando] `supabase functions deploy delete-account` (código listo; cascada ya protege).
 → Con 1+2: **web lanzable**. Con 1+2+3: **native submittable** (tras assets de tienda + cuentas dev).
 
 ## Recomendación
