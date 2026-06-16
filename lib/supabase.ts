@@ -110,3 +110,12 @@ export const mem = {
   briefings:     () => anyClient.from('admin_briefings'),
   adminNotes:    () => anyClient.from('admin_notes'),
 };
+
+// ─── Mentor Execution OS table helpers — untyped (migración 20260616000000) ──────
+// mentor_tasks: dueño+admin · reviews/scores/queue: admin-only (RLS).
+export const mex = {
+  tasks:        () => anyClient.from('mentor_tasks'),
+  reviews:      () => anyClient.from('mentor_task_reviews'),
+  scores:       () => anyClient.from('mentor_client_scores'),
+  interventions:() => anyClient.from('mentor_intervention_queue'),
+};

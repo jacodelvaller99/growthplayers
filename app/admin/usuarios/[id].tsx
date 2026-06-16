@@ -47,6 +47,16 @@ import {
 } from '@/components/memory';
 import { addAdminNote } from '@/lib/memory';
 import { generateAdminBriefing } from '@/lib/memorySummarizer';
+import {
+  ClientTaskList,
+  ExecutionScoreCard,
+  FailurePatternCard,
+  InterventionQueueCard,
+  MentorReviewDrawer,
+  NextMentorshipAgendaCard,
+} from '@/components/mentor-execution';
+import { fetchUserExecution, submitReview, type ExecutionBundle, type MentorTask } from '@/lib/mentorExecution';
+import { buildInterventions } from '@/lib/mentorExecutionLogic';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman } from '@/lib/admin/actions';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
@@ -196,9 +206,14 @@ export default function UserDetailScreen() {
   const [genBrief, setGenBrief] = useState(false);
   const [noteBusy, setNoteBusy] = useState(false);
 
+  // Mentor Execution OS state
+  const [execution, setExecution] = useState<ExecutionBundle>({ tasks: [], scores: null, reviews: [], prep: null });
+  const [reviewTask, setReviewTask] = useState<MentorTask | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
+
   const load = useCallback(async () => {
     if (!userId) return;
-    const [userDetail, evts, convs, cis, ment, audit, memo] = await Promise.all([
+    const [userDetail, evts, convs, cis, ment, audit, memo, exec] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
       fetchMentorConversations(userId, 30),
@@ -206,6 +221,7 @@ export default function UserDetailScreen() {
       fetchUserMentorship(userId),
       fetchUserAuditLog(userId),
       fetchUserMemory(userId),
+      fetchUserExecution(userId),
     ]);
     setUser(userDetail);
     setEvents(evts);
@@ -214,8 +230,24 @@ export default function UserDetailScreen() {
     setMentorship(ment);
     setAuditLog(audit);
     setMemory(memo);
+    setExecution(exec);
     setLoading(false);
   }, [userId]);
+
+  const handleSubmitReview = useCallback(
+    async (review: { review_status: string; quality: string; evidence_confidence: string; failure_type: string; mentor_action: string; notes: string }) => {
+      if (!reviewTask?.id || !userId) return;
+      setReviewBusy(true);
+      try {
+        await submitReview({ task_id: reviewTask.id, user_id: userId, reviewer_id: adminId ?? undefined, ...review });
+        setExecution(await fetchUserExecution(userId));
+        setReviewTask(null);
+      } finally {
+        setReviewBusy(false);
+      }
+    },
+    [reviewTask, userId, adminId],
+  );
 
   useEffect(() => { load(); }, [load]);
 
@@ -615,6 +647,28 @@ export default function UserDetailScreen() {
             ))
           )}
         </PremiumCard>
+
+        {/* ─────────────────────────────────────────────────── */}
+        {/* M3. EJECUCIÓN — tareas + scores + review + intervención */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label="EJECUCIÓN" />
+        <ExecutionScoreCard scores={execution.scores} />
+        <InterventionQueueCard items={execution.scores ? buildInterventions(execution.scores, execution.tasks) : []} />
+        <NextMentorshipAgendaCard prep={execution.prep} />
+        <ClientTaskList
+          tasks={execution.tasks}
+          onReview={setReviewTask}
+          title="TAREAS DEL CLIENTE"
+          emptyLabel="Sin tareas operativas todavía (se generan desde mentorías y Norman)."
+        />
+        <FailurePatternCard reviews={execution.reviews} />
+        <MentorReviewDrawer
+          task={reviewTask}
+          visible={!!reviewTask}
+          busy={reviewBusy}
+          onClose={() => setReviewTask(null)}
+          onSubmit={handleSubmitReview}
+        />
 
         {/* ─────────────────────────────────────────────────── */}
         {/* M2. MEMORIA — perfil vivo + briefing operativo + notas */}

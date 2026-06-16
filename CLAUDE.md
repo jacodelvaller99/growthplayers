@@ -140,6 +140,15 @@ Per-user memory that lets Norman remember across sessions + gives admins a coach
 - **UI:** admin section in `app/admin/usuarios/[id].tsx` + cross-client dashboard `app/admin/memoria.tsx`; client view `app/perfil/cliente.tsx`; transcript import `components/PlaudImport.tsx`; cards in `components/memory.tsx`.
 - **Privacy:** admin briefings/notes never enter Norman's context or the client view (RLS + `clientSafeProfile`).
 
+### Mentor Execution OS — `lib/mentorExecution.ts`, `lib/mentorExecutionLogic.ts`
+
+Operational coaching layer: turns client tasks into evaluable objects + gives mentors scoring, review, intervention queue and pre-session prep. **Reuses** existing task sources (mentorship action plans, `mentorship_tasks`, Memory OS `commitments_open`) by **normalizing** them into a unified `mentor_tasks` object — does not duplicate. Migration `20260616000000_mentor_execution.sql` adds 4 tables: `mentor_tasks` (owner+admin RLS), `mentor_task_reviews` / `mentor_client_scores` / `mentor_intervention_queue` (**admin-only** RLS).
+
+- **Pure logic** (`lib/mentorExecutionLogic.ts`, 29 unit tests): `deriveStatus` (overdue is time-derived, not stored), 6 explainable scores (`scoreAdherence`/`scoreExecutionQuality`/`scoreFollowThrough`/`scoreFriction`/`scoreMentorAttention`/`momentumState` → `computeClientScores` with `drivers`), `buildInterventions`, `assembleMentorPrep`, `tierDepth`, `clientSafeTasks`/`clientProgress`. Friction/attention: **higher = worse/more urgent**.
+- **IO + automation** (`lib/mentorExecution.ts`): `normalizeSources` (mentorship_tasks + Norman commitments → `mentor_tasks`, insert-if-missing), `createTasksFromActionPlan` (on `confirmDraft`), `suggestTasksFromCommitments` (chat blur → `ai_suggested`), `computeAndPersistScores` (+ regenerates intervention queue), `generateMentorPrep`, `fetchUserExecution` (admin bundle), `fetchExecutionDashboard` (live cross-client). AI **proposes** tasks; **mentor approves** (`mentor_task_reviews` is authoritative, admin-only).
+- **UI:** review rubric + score/intervention/prep cards in `components/mentor-execution.tsx`; "EJECUCIÓN" section in `app/admin/usuarios/[id].tsx`; cross-client dashboard `app/admin/mentores/ejecucion.tsx`; client-safe tasks in `app/perfil/cliente.tsx` (gated by `isSubscribed`/`tierDepth`).
+- **Tier differential:** free → light; premium → full; premium_plus/polaris/growthplayers → deep. Client never sees raw scores/reviews.
+
 ### Design System — `constants/theme.ts`
 
 **Brand font:** GrandisExtended (Manual de Marca Polaris — Orgánico Studio 2024)

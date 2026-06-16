@@ -22,6 +22,7 @@ import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
 import { transcribeAudio } from '@/lib/transcription';
 import { insertSummary } from '@/lib/memory';
 import { makeMinimalContext, updateProfileFromSummary } from '@/lib/memorySummarizer';
+import { createTasksFromActionPlan } from '@/lib/mentorExecution';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { currentWeekNumber } from '@/data/mentorship';
@@ -603,6 +604,8 @@ export function useMentorship() {
       };
       void insertSummary({ user_id: userId, source_type: 'mentorship', source_id: rowId, ...parsed });
       void updateProfileFromSummary(userId, makeMinimalContext(), parsed);
+      // Automatización: el plan de acción se materializa como tareas operativas.
+      void createTasksFromActionPlan(userId, parsed.commitments, d.week);
     }
 
     setDraft(null);

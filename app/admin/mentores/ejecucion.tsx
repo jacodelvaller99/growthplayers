@@ -1,0 +1,122 @@
+/**
+ * Admin — Mentor Execution OS (dashboard cross-client).
+ *
+ * Operación del equipo de mentoría: quién necesita intervención, quién está más
+ * retrasado, quién está en caída. Computado en vivo desde mentor_tasks (RLS admin).
+ */
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import { palette, radii, spacing, typography } from '@/constants/theme';
+import { fetchExecutionDashboard, type ExecutionDashboardRow } from '@/lib/mentorExecution';
+
+const MOMENTUM_LABEL: Record<string, string> = {
+  rising: 'ascenso', stable: 'estable', fragile: 'frágil', declining: 'caída', critical: 'crítico',
+};
+const MOMENTUM_RANK: Record<string, number> = { rising: 0, stable: 1, fragile: 2, declining: 3, critical: 4 };
+
+function Row({ row, metric, metricColor, onPress }: {
+  row: ExecutionDashboardRow; metric: string; metricColor?: string; onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={s.rowName}>{row.name}</Text>
+        <Text style={s.rowSub} numberOfLines={1}>
+          {row.openTasks} abiertas · {row.overdue} vencidas · momentum {MOMENTUM_LABEL[row.momentum] ?? row.momentum}
+        </Text>
+        {!!row.topReason && <Text style={s.rowReason} numberOfLines={1}>{row.topReason}</Text>}
+      </View>
+      <Text style={[s.rowMetric, metricColor ? { color: metricColor } : null]}>{metric}</Text>
+      <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
+    </Pressable>
+  );
+}
+
+export default function AdminEjecucionScreen() {
+  const sc = useScreen();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [rows, setRows] = useState<ExecutionDashboardRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setRows(await fetchExecutionDashboard());
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const go = (id: string) => router.push(`/admin/usuarios/${id}` as never);
+
+  const byAttention = [...rows].filter((r) => r.attention >= 50).sort((a, b) => b.attention - a.attention).slice(0, 12);
+  const byOverdue = [...rows].filter((r) => r.overdue > 0).sort((a, b) => b.overdue - a.overdue).slice(0, 12);
+  const byMomentum = [...rows]
+    .filter((r) => (MOMENTUM_RANK[r.momentum] ?? 0) >= 3)
+    .sort((a, b) => (MOMENTUM_RANK[b.momentum] ?? 0) - (MOMENTUM_RANK[a.momentum] ?? 0))
+    .slice(0, 12);
+
+  const attColor = (n: number) => (n >= 80 ? palette.danger : n >= 60 ? palette.warning : palette.goldText);
+
+  return (
+    <ScrollView
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
+      showsVerticalScrollIndicator={false}>
+
+      <View style={s.topRow}>
+        <Pressable onPress={() => router.back()} style={s.backBtn}>
+          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
+        </Pressable>
+        <Text style={s.title}>EJECUCIÓN</Text>
+        <View style={{ width: 36 }} />
+      </View>
+      <Text style={s.intro}>Operación del equipo: a quién intervenir, quién está retrasado, quién en caída.</Text>
+
+      {loading ? (
+        <ActivityIndicator color={palette.gold} style={{ marginTop: spacing.xxxl }} />
+      ) : rows.length === 0 ? (
+        <PremiumCard style={s.card}>
+          <Text style={s.empty}>Aún no hay tareas operativas. Aparecerán al confirmar mentorías y al detectar compromisos en los chats.</Text>
+        </PremiumCard>
+      ) : (
+        <>
+          <GoldDivider label="NECESITAN INTERVENCIÓN" />
+          <PremiumCard style={s.card}>
+            {byAttention.length === 0 ? <Text style={s.empty}>Nadie en alerta.</Text> :
+              byAttention.map((r) => <Row key={r.user_id} row={r} metric={`${r.attention}`} metricColor={attColor(r.attention)} onPress={() => go(r.user_id)} />)}
+          </PremiumCard>
+
+          <GoldDivider label="MÁS RETRASADOS" />
+          <PremiumCard style={s.card}>
+            {byOverdue.length === 0 ? <Text style={s.empty}>Sin tareas vencidas.</Text> :
+              byOverdue.map((r) => <Row key={r.user_id} row={r} metric={`${r.overdue}`} metricColor={palette.warning} onPress={() => go(r.user_id)} />)}
+          </PremiumCard>
+
+          <GoldDivider label="MOMENTUM EN RIESGO" />
+          <PremiumCard style={s.card}>
+            {byMomentum.length === 0 ? <Text style={s.empty}>Momentum saludable en todos.</Text> :
+              byMomentum.map((r) => <Row key={r.user_id} row={r} metric={(MOMENTUM_LABEL[r.momentum] ?? '').toUpperCase()} metricColor={palette.danger} onPress={() => go(r.user_id)} />)}
+          </PremiumCard>
+        </>
+      )}
+    </ScrollView>
+  );
+}
+
+const s = StyleSheet.create({
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  title: { ...typography.title, color: palette.ivory, fontSize: 18 },
+  intro: { ...typography.body, color: palette.ash, marginBottom: spacing.lg },
+  card: { gap: 2, marginBottom: spacing.md },
+  empty: { ...typography.caption, color: palette.smoke, fontSize: 12, fontStyle: 'italic' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.line },
+  rowName: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },
+  rowSub: { ...typography.caption, color: palette.smoke, fontSize: 11 },
+  rowReason: { ...typography.caption, color: palette.ash, fontSize: 11, marginTop: 1 },
+  rowMetric: { ...typography.label, color: palette.goldText, fontSize: 13, marginRight: 2 },
+});

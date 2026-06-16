@@ -37,6 +37,7 @@ import { analytics } from '@/lib/analytics';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
 import { buildMentorMemoryContext } from '@/lib/memory';
 import { makeMinimalContext, summarizeConversation, updateProfileFromSummary } from '@/lib/memorySummarizer';
+import { suggestTasksFromCommitments } from '@/lib/mentorExecution';
 import { db2, intel } from '@/lib/supabase';
 import { useWearableConnections, useWearableDaily } from '@/lib/wearables';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
@@ -226,7 +227,11 @@ export default function MentorScreen() {
         const turns = messages.slice(-12).map((m) => ({ role: m.role, text: m.text }));
         const ctx = makeMinimalContext(name, role);
         void summarizeConversation(uid, ctx, turns, 'chat').then((parsed) => {
-          if (parsed) void updateProfileFromSummary(uid, ctx, parsed);
+          if (parsed) {
+            void updateProfileFromSummary(uid, ctx, parsed);
+            // Norman propone tareas (ai_suggested) desde los compromisos detectados.
+            void suggestTasksFromCommitments(uid, parsed.commitments);
+          }
         });
       },
       [],

@@ -124,3 +124,21 @@ y fue **descartado** (sus hallazgos contradecían el árbol real verificado).
   summarización client-side (sin deploy); `admin_briefings`/`admin_notes` admin-only por RLS (notas
   privadas fuera del perfil para evitar RLS por-columna); `generateAdminBriefing` solo desde contexto
   admin (no en confirmDraft del cliente) para cuadrar con RLS admin-only.
+
+## Mentor Execution OS — 2026-06-16 (5 fases internas)
+
+- **F1:** migración `20260616…` (mentor_tasks + reviews/scores/queue) · helpers `mex` · lógica pura
+  `lib/mentorExecutionLogic.ts` (6 scores, deriveStatus, intervención, mentor-prep, tierDepth) + 29 tests.
+- **F2:** `lib/mentorExecution.ts` (IO degradable; normalización de fuentes insert-if-missing; compute
+  +persist scores + regenera cola; mentor-prep; dashboard live) · automatización en confirmDraft
+  (action plan → tareas) y en chat blur (compromisos → ai_suggested).
+- **F3:** `components/mentor-execution.tsx` (score/task/intervención/review-drawer/failure/prep) ·
+  sección Ejecución en admin/usuarios/[id] · dashboard admin/mentores/ejecucion + NAV + ruta.
+- **F4:** vista cliente en perfil/cliente (Lo siguiente + tareas activas, `clientSafeTasks`, gate por
+  `isSubscribed`/tierDepth, tono de apoyo).
+- **F5:** coverage + docs (investor 11/12 + CLAUDE.md + este log + changelog) · validación · migración
+  vía dashboard · push.
+- **Decisiones:** `mentor_tasks` = objeto unificado nuevo (mentorship_tasks/action_plan/commitments =
+  fuentes normalizadas, no se borran); reviews/scores/queue admin-only por RLS; scores computados
+  client-side on-read (cron = handoff); IA propone, mentor aprueba; `overdue` derivado del tiempo.
+  Surfacing en comando diferido (el cliente ya ve "Lo siguiente" en perfil/cliente).

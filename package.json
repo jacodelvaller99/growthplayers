@@ -34,6 +34,8 @@
       "lib/memory.ts",
       "lib/memoryLogic.ts",
       "lib/memorySummarizer.ts",
+      "lib/mentorExecution.ts",
+      "lib/mentorExecutionLogic.ts",
       "hooks/use-lifeflow.tsx",
       "components/polaris.tsx"
     ]

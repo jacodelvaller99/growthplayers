@@ -3,6 +3,23 @@
 Cambios con impacto en la tesis de inversión, en orden cronológico inverso.
 Cada entrada referencia commits/evidencia real. Complementa `EXECUTION_LOG.md` (operacional).
 
+## 2026-06-16 — Mentor Execution OS (operaciones de coaching)
+
+**La capa operativa que faltaba para escalar coaching premium.** Convierte las tareas del cliente en
+objetos evaluables y le da al mentor scoring, review por rúbrica, cola de intervención y preparación
+de sesión — el "operating leverage" del modelo high-touch (ataca el riesgo #3 del consejo: que la
+operación no escale por cada N clientes).
+
+- 4 tablas nuevas (`mentor_tasks` + reviews/scores/queue admin-only). **Reutiliza** las fuentes
+  (planes de acción, mentorship_tasks, compromisos del Memory OS) normalizándolas — no duplica.
+- 6 scores **explicables** (adherencia, calidad, follow-through, fricción, atención, momentum) con
+  *drivers* visibles; cola de intervención (atención alta, crítica vencida, evitación repetida, falso
+  cumplimiento); mentor-prep determinista (dijo-vs-hizo, confrontar, simplificar, celebrar, 3 preguntas).
+- IA **propone** tareas (compromisos de Norman → ai_suggested); el **mentor aprueba**. Diferencial por
+  tier (free ligero / premium completo / elite profundo); el cliente nunca ve scoring crudo.
+- Validado: 29 tests de lógica pura (103 total) · tsc 0 · lint 0 · export web OK. Docs:
+  `docs/investor/11_MENTOR_EXECUTION_OS.md` + `12_TASK_EVALUATION_SYSTEM.md`.
+
 ## 2026-06-15 — Memory OS (memoria de cliente + inteligencia de mentoría)
 
 **De "chat con contexto" a sistema de cambio medible** (prioridad #2 del consejo asesor: Norman
