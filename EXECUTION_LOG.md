@@ -142,3 +142,26 @@ y fue **descartado** (sus hallazgos contradecían el árbol real verificado).
   fuentes normalizadas, no se borran); reviews/scores/queue admin-only por RLS; scores computados
   client-side on-read (cron = handoff); IA propone, mentor aprueba; `overdue` derivado del tiempo.
   Surfacing en comando diferido (el cliente ya ve "Lo siguiente" en perfil/cliente).
+
+## Biometric Intelligence Layer — 2026-06-16 (5 fases internas)
+
+- **F1:** migración `20260617000000_biometric_intelligence.sql` (ALTER wearable_daily/connections +
+  journal_entries + memory_summaries source_type 'wellness' + proveedor 'synthetic'; tabla nueva
+  `biometric_insights` owner+admin) · `lib/biometricLogic.ts` (6 estados + computeInsight con drivers +
+  coach/client summaries + reflectionMismatch) + `lib/biometricSimulator.ts` (PRNG mulberry32 sembrado,
+  7 escenarios narrativos, sin Math.random/Date) + 31 tests · helpers `bio` en `lib/supabase.ts`.
+- **F2:** `lib/biometric.ts` (IO degradable): series/insights, `interpretSeries` (último día + baseline
+  rodante) + `computeAndPersistInsight`, `saveReflection`→`ingestReflectionToMemory` (reflexión →
+  memory_summaries 'wellness', la lee Norman), `seedSyntheticData`/`clearSyntheticData`, snapshot por
+  usuario + dashboard cross-client (severidad; nombres vía user_progress). Fix tipo source_type 'wellness'.
+- **F3:** `components/biometric.tsx` (insight admin/cliente + sparkline + conexiones + seed demo +
+  composer de reflexión) · sección "K. BIOMÉTRICOS" enriquecida en admin/usuarios/[id] · dashboard
+  `admin/biometria.tsx` + NAV (`monitor-heart`) + ruta en MainStack.
+- **F4:** vista cliente en `perfil/cliente` ("Tu cuerpo hoy" con `client_safe_summary` + captura de
+  reflexión → Memory OS). Ungated (la reflexión es para todos; el insight muestra empty sin wearable).
+- **F5:** docs (investor 13 + CLAUDE.md subsección + este log + changelog) · validación (tsc 0 · lint 0
+  errores · 134 tests · export web OK) · migración vía dashboard · push.
+- **Decisiones:** coaching intelligence, NO diagnóstico clínico; reusar wearable_daily/connections/
+  journal_entries + 1 tabla nueva (biometric_insights); diferencial de audiencia coach_safe/client_safe
+  (la UI cliente nunca renderiza coach_safe); insights desde datos reales client-side on-read (cron =
+  handoff, igual que ejecución); simulador determinista para demo/ventas sin wearable físico.

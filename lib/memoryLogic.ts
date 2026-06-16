@@ -51,7 +51,7 @@ export interface ParsedSummary {
 export interface MemorySummaryRow extends ParsedSummary {
   id?: string;
   user_id?: string;
-  source_type?: 'chat' | 'mentorship' | 'plaud' | 'manual' | 'aggregate';
+  source_type?: 'chat' | 'mentorship' | 'plaud' | 'manual' | 'aggregate' | 'wellness';
   source_id?: string | null;
   created_at?: string;
 }

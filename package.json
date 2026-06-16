@@ -36,6 +36,9 @@
       "lib/memorySummarizer.ts",
       "lib/mentorExecution.ts",
       "lib/mentorExecutionLogic.ts",
+      "lib/biometric.ts",
+      "lib/biometricLogic.ts",
+      "lib/biometricSimulator.ts",
       "hooks/use-lifeflow.tsx",
       "components/polaris.tsx"
     ]

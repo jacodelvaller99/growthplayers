@@ -3,6 +3,25 @@
 Cambios con impacto en la tesis de inversión, en orden cronológico inverso.
 Cada entrada referencia commits/evidencia real. Complementa `EXECUTION_LOG.md` (operacional).
 
+## 2026-06-16 — Biometric Intelligence Layer (el cuerpo entra al circuito de decisión)
+
+**De números de wearable a una lectura accionable del cuerpo.** Cierra el loop medir→diagnosticar→actuar
+del consejo asesor (prioridad #1, capacidad operativa en 90 días): HRV/sueño/recuperación dejan de ser
+vanity metrics y se vuelven input de carga/recuperación, para el cliente (acompañamiento) y el mentor
+(decisión).
+
+- **Reutiliza** la capa de wearables existente (wearable_daily/timeseries/connections + journal_entries) y
+  añade **una** tabla nueva (`biometric_insights`, owner+admin). No duplica.
+- 6 estados **explicables** (sueño, recuperación, coherencia HRV/FC, fatiga, tendencia, nivel de
+  intervención) con *drivers* visibles; **diferencial de audiencia**: el mentor ve la lectura técnica, el
+  cliente una versión de apoyo sin jerga ni alarma (`client_safe_summary`).
+- Las **reflexiones de bienestar** del cliente entran al Memory OS (`source_type='wellness'`) — Norman
+  conecta lo subjetivo con lo objetivo y confronta el desajuste.
+- **Simulador determinista** (PRNG sembrado, 7 escenarios narrativos) para demo/ventas/QA sin wearable
+  físico — ataca el riesgo de economía unitaria (no se necesita hardware para demostrar el valor).
+- Validado: 31 tests de lógica pura (134 total) · tsc 0 · lint 0 errores · export web OK. Migración
+  aplicada en producción. Docs: `docs/investor/13_BIOMETRIC_INTELLIGENCE.md`.
+
 ## 2026-06-16 — Mentor Execution OS (operaciones de coaching)
 
 **La capa operativa que faltaba para escalar coaching premium.** Convierte las tareas del cliente en

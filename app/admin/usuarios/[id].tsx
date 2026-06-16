@@ -57,6 +57,19 @@ import {
 } from '@/components/mentor-execution';
 import { fetchUserExecution, submitReview, type ExecutionBundle, type MentorTask } from '@/lib/mentorExecution';
 import { buildInterventions } from '@/lib/mentorExecutionLogic';
+import {
+  BiometricInsightCard,
+  BiometricSparkline,
+  ConnectionStatusCard,
+  SeedSyntheticControls,
+} from '@/components/biometric';
+import {
+  clearSyntheticData,
+  fetchBiometricSnapshot,
+  seedSyntheticData,
+  type BiometricSnapshot,
+} from '@/lib/biometric';
+import type { Scenario } from '@/lib/biometricSimulator';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman } from '@/lib/admin/actions';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
@@ -211,9 +224,13 @@ export default function UserDetailScreen() {
   const [reviewTask, setReviewTask] = useState<MentorTask | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
 
+  // Biometric Intelligence state
+  const [bio, setBio] = useState<BiometricSnapshot>({ series: [], latestInsight: null, connections: [] });
+  const [seeding, setSeeding] = useState(false);
+
   const load = useCallback(async () => {
     if (!userId) return;
-    const [userDetail, evts, convs, cis, ment, audit, memo, exec] = await Promise.all([
+    const [userDetail, evts, convs, cis, ment, audit, memo, exec, bioSnap] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
       fetchMentorConversations(userId, 30),
@@ -222,6 +239,7 @@ export default function UserDetailScreen() {
       fetchUserAuditLog(userId),
       fetchUserMemory(userId),
       fetchUserExecution(userId),
+      fetchBiometricSnapshot(userId),
     ]);
     setUser(userDetail);
     setEvents(evts);
@@ -231,7 +249,30 @@ export default function UserDetailScreen() {
     setAuditLog(audit);
     setMemory(memo);
     setExecution(exec);
+    setBio(bioSnap);
     setLoading(false);
+  }, [userId]);
+
+  const handleSeed = useCallback(async (scenario: Scenario) => {
+    if (!userId) return;
+    setSeeding(true);
+    try {
+      await seedSyntheticData(userId, scenario, 14);
+      setBio(await fetchBiometricSnapshot(userId));
+    } finally {
+      setSeeding(false);
+    }
+  }, [userId]);
+
+  const handleClearSynthetic = useCallback(async () => {
+    if (!userId) return;
+    setSeeding(true);
+    try {
+      await clearSyntheticData(userId);
+      setBio(await fetchBiometricSnapshot(userId));
+    } finally {
+      setSeeding(false);
+    }
   }, [userId]);
 
   const handleSubmitReview = useCallback(
@@ -726,6 +767,10 @@ export default function UserDetailScreen() {
         {/* K. BIOMÉTRICOS */}
         {/* ─────────────────────────────────────────────────── */}
         <GoldDivider label="K. BIOMÉTRICOS" />
+        <BiometricInsightCard insight={bio.latestInsight} variant="admin" />
+        <BiometricSparkline series={bio.series} />
+        <ConnectionStatusCard connections={bio.connections} />
+        <SeedSyntheticControls onSeed={handleSeed} onClear={handleClearSynthetic} busy={seeding} />
         <PremiumCard style={s.card}>
           {!user.biometric_provider ? (
             <Text style={s.emptyText}>Sin wearable conectado</Text>

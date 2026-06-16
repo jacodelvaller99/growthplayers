@@ -12,6 +12,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CommitmentsCard, ConversationTimeline, ProfileSynopsisCard } from '@/components/memory';
+import { BiometricInsightCard, ReflectionComposer } from '@/components/biometric';
 import { PremiumCard, useScreen } from '@/components/polaris';
 import { palette, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -19,6 +20,7 @@ import { fetchLatestSummaries, fetchMemoryProfile, type MemoryProfile, type Memo
 import { clientSafeProfile } from '@/lib/memoryLogic';
 import { fetchTasks, type MentorTask } from '@/lib/mentorExecution';
 import { clientProgress, clientSafeTasks } from '@/lib/mentorExecutionLogic';
+import { fetchLatestInsight, saveReflection, type InsightRow, type ReflectionInput } from '@/lib/biometric';
 
 // Estado de tarea en tono de apoyo (sin "vencida/evitada" duro hacia el cliente).
 const CLIENT_STATUS: Record<string, { label: string; color: string }> = {
@@ -38,21 +40,36 @@ export default function ClienteMemoriaScreen() {
   const [profile, setProfile] = useState<MemoryProfile | null>(null);
   const [summaries, setSummaries] = useState<MemorySummaryRow[]>([]);
   const [tasks, setTasks] = useState<MentorTask[]>([]);
+  const [insight, setInsight] = useState<InsightRow | null>(null);
+  const [reflBusy, setReflBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
-    const [p, s, t] = await Promise.all([
+    const [p, s, t, ins] = await Promise.all([
       fetchMemoryProfile(userId),
       fetchLatestSummaries(userId, 8),
       fetchTasks(userId),
+      fetchLatestInsight(userId),
     ]);
     setProfile(clientSafeProfile(p));
     setSummaries(s);
     setTasks(t);
+    setInsight(ins);
     setLoading(false);
   }, [userId]);
   useEffect(() => { load(); }, [load]);
+
+  const handleSaveReflection = useCallback(async (r: ReflectionInput) => {
+    if (!userId) return;
+    setReflBusy(true);
+    try {
+      await saveReflection(userId, r, insight);
+      setSummaries(await fetchLatestSummaries(userId, 8));
+    } finally {
+      setReflBusy(false);
+    }
+  }, [userId, insight]);
 
   const wins = profile?.recent_wins ?? [];
   const safeTasks = clientSafeTasks(tasks);
@@ -80,6 +97,13 @@ export default function ClienteMemoriaScreen() {
       ) : (
         <>
           <ProfileSynopsisCard profile={profile} variant="client" />
+
+          <BiometricInsightCard insight={insight} variant="client" />
+          <ReflectionComposer
+            onSave={handleSaveReflection}
+            busy={reflBusy}
+            linkedMetricDate={insight?.metric_date ?? null}
+          />
 
           {nextTask && (
             <PremiumCard style={[s.card, { borderColor: palette.lineGold }]}>

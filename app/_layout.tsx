@@ -117,6 +117,7 @@ function MainStack() {
         <Stack.Screen name="admin/inteligencia/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/memoria" options={{ headerShown: false }} />
         <Stack.Screen name="admin/mentores/ejecucion" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/biometria" options={{ headerShown: false }} />
         <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/comunidad/index" options={{ headerShown: false }} />

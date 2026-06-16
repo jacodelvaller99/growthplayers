@@ -149,6 +149,16 @@ Operational coaching layer: turns client tasks into evaluable objects + gives me
 - **UI:** review rubric + score/intervention/prep cards in `components/mentor-execution.tsx`; "EJECUCIÓN" section in `app/admin/usuarios/[id].tsx`; cross-client dashboard `app/admin/mentores/ejecucion.tsx`; client-safe tasks in `app/perfil/cliente.tsx` (gated by `isSubscribed`/`tierDepth`).
 - **Tier differential:** free → light; premium → full; premium_plus/polaris/growthplayers → deep. Client never sees raw scores/reviews.
 
+### Biometric Intelligence Layer — `lib/biometric.ts`, `lib/biometricLogic.ts`, `lib/biometricSimulator.ts`
+
+Turns raw wearable signal into an **interpretable read of the body** — coaching intelligence, NOT clinical diagnosis. **Reuses** the existing `wearable_daily`/`wearable_timeseries`/`wearable_connections` + `journal_entries` (no duplication); migration `20260617000000_biometric_intelligence.sql` extends them (adds `respiratory_rate`/`signal_confidence`, provider `'synthetic'`, richer sync status, reflection columns, `memory_summaries` source_type `'wellness'`) and adds **one** new table `biometric_insights` (owner+admin RLS).
+
+- **Pure logic** (`lib/biometricLogic.ts`, 31 unit tests): `sleepState`/`recoveryState`/`coherenceState` (HRV+RHR vs baseline)/`fatigueRisk`/`trendState` (7d window)/`interventionLevel` → `computeInsight` (with explicit `drivers` + `coach_safe_summary` + `client_safe_summary`), `reflectionMismatch` (subjective energy vs objective recovery), `computeBaseline`. Coherence/fatigue/intervention: **higher disturbance = more urgent**.
+- **Deterministic simulator** (`lib/biometricSimulator.ts`): seeded PRNG (mulberry32, **no `Math.random`/`Date`**) → 7 narrative scenarios (`good_week`/`burnout_week`/`recovery_week`/`unstable_sleep`/`post_travel`/`high_strain`/`low_recovery`). Same seed → same series (testable). For demo/sales/QA without a physical wearable.
+- **IO** (`lib/biometric.ts`, degrades to empty): `fetchDailySeries`/`fetchInsights`, `computeAndPersistInsight` (`interpretSeries` = last day + rolling baseline), `saveReflection`→`ingestReflectionToMemory` (wellness reflection → `memory_summaries` source_type `'wellness'`, read by Norman), `seedSyntheticData`/`clearSyntheticData`, `fetchBiometricSnapshot` (per-user), `fetchBiometricDashboard` (cross-client, sorted by intervention severity, names from `user_progress`).
+- **UI:** cards in `components/biometric.tsx` (`BiometricInsightCard` variant admin/client, `BiometricSparkline`, `ConnectionStatusCard`, `SeedSyntheticControls` admin demo, `ReflectionComposer`); "K. BIOMÉTRICOS" section in `app/admin/usuarios/[id].tsx`; cross-client dashboard `app/admin/biometria.tsx`; "Tu cuerpo hoy" + reflection capture in `app/perfil/cliente.tsx`.
+- **Audience differential:** mentor sees technical states + drivers + `coach_safe_summary`; client sees only the supportive `client_safe_summary` (no jargon/alarm). `biometric_insights` owner+admin by RLS; client UI never renders `coach_safe_summary`. Insight generation from **real** wearable data runs client-side on-read today (cron in `sync-wearables` = handoff, like execution scoring).
+
 ### Design System — `constants/theme.ts`
 
 **Brand font:** GrandisExtended (Manual de Marca Polaris — Orgánico Studio 2024)

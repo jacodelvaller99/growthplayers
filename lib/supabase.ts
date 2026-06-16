@@ -119,3 +119,12 @@ export const mex = {
   scores:       () => anyClient.from('mentor_client_scores'),
   interventions:() => anyClient.from('mentor_intervention_queue'),
 };
+
+// ─── Biometric Intelligence helpers — untyped (migración 20260617000000) ─────────
+export const bio = {
+  daily:       () => anyClient.from('wearable_daily'),
+  timeseries:  () => anyClient.from('wearable_timeseries'),
+  connections: () => anyClient.from('wearable_connections'),
+  insights:    () => anyClient.from('biometric_insights'),
+  reflections: () => anyClient.from('journal_entries'),
+};
