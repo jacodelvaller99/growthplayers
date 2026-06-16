@@ -236,6 +236,7 @@ export default function NorteScreen() {
           onPress={() => router.replace('/(tabs)/comando')}
           accessibilityRole="button"
           accessibilityLabel="Volver al centro de comando"
+          hitSlop={8}
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.65 }]}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>

@@ -57,9 +57,29 @@ Deno.serve(async (req: Request) => {
       adminSupabase.from('wearable_connections').delete().eq('user_id', userId),
       adminSupabase.from('wearable_daily').delete().eq('user_id', userId),
       adminSupabase.from('wearable_timeseries').delete().eq('user_id', userId),
+      adminSupabase.from('biometric_insights').delete().eq('user_id', userId),
+      // Mentoría (sesiones + tareas)
+      adminSupabase.from('mentorship_sessions').delete().eq('user_id', userId),
+      adminSupabase.from('mentorship_tasks').delete().eq('user_id', userId),
+      // Memory OS (perfil vivo, resúmenes, briefings/notas admin sobre el usuario)
+      adminSupabase.from('user_memory_profile').delete().eq('user_id', userId),
+      adminSupabase.from('memory_summaries').delete().eq('user_id', userId),
+      adminSupabase.from('admin_briefings').delete().eq('user_id', userId),
+      adminSupabase.from('admin_notes').delete().eq('user_id', userId),
+      // Mentor Execution OS (tareas normalizadas + reviews/scores/cola)
+      adminSupabase.from('mentor_tasks').delete().eq('user_id', userId),
+      adminSupabase.from('mentor_task_reviews').delete().eq('user_id', userId),
+      adminSupabase.from('mentor_client_scores').delete().eq('user_id', userId),
+      adminSupabase.from('mentor_intervention_queue').delete().eq('user_id', userId),
       // Comunidad (UGC)
       adminSupabase.from('community_posts').delete().eq('user_id', userId),
       adminSupabase.from('community_reactions').delete().eq('user_id', userId),
+      adminSupabase.from('community_reports').delete().eq('reporter_id', userId),
+      // Bloqueos (como bloqueador y como bloqueado) + mensajes directos (enviados y recibidos)
+      adminSupabase.from('user_blocks').delete().eq('blocker_id', userId),
+      adminSupabase.from('user_blocks').delete().eq('blocked_id', userId),
+      adminSupabase.from('direct_messages').delete().eq('sender_id', userId),
+      adminSupabase.from('direct_messages').delete().eq('recipient_id', userId),
       // Inteligencia / analytics / notificaciones
       adminSupabase.from('user_intelligence').delete().eq('user_id', userId),
       adminSupabase.from('user_events').delete().eq('user_id', userId),

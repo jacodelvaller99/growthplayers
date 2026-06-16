@@ -46,7 +46,11 @@ const PRODUCT_TO_TIER: Record<string, string> = {
   growthplayers:         'premium_plus',
 };
 
-async function syncTier(userId: string, tier: string, expiresAt?: string | null) {
+async function syncTier(
+  userId: string,
+  tier: string,
+  expiresAt?: string | null,
+): Promise<{ ok: boolean; errors: string[] }> {
   // Normalize product names to canonical tier values expected by the app
   const normalizedTier = PRODUCT_TO_TIER[tier] ?? tier;
 
@@ -56,12 +60,31 @@ async function syncTier(userId: string, tier: string, expiresAt?: string | null)
   };
   if (expiresAt !== undefined) payload.subscription_expires_at = expiresAt ?? null;
 
-  await Promise.allSettled([
-    // profiles: id = auth.uid()
-    intel.profiles().update(payload).eq('id', userId),
-    // user_profiles: user_id = auth.uid()
-    supa.from('user_profiles').update(payload).eq('user_id', userId),
+  // El tier vive en dos tablas (profiles + user_profiles). Si una se actualiza y
+  // la otra no, el app muestra un tier inconsistente. allSettled tolera la red,
+  // pero NO debemos tragarnos un fallo parcial en silencio: lo inspeccionamos y
+  // lo reportamos para que el admin sepa que quedó a medias.
+  const results = await Promise.allSettled([
+    intel.profiles().update(payload).eq('id', userId),          // profiles: id = auth.uid()
+    supa.from('user_profiles').update(payload).eq('user_id', userId), // user_profiles
   ]);
+
+  const errors: string[] = [];
+  results.forEach((r, i) => {
+    const table = i === 0 ? 'profiles' : 'user_profiles';
+    if (r.status === 'rejected') {
+      errors.push(`${table}: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
+    } else {
+      // fulfilled todavía puede traer un error de Supabase en el cuerpo.
+      const err = (r.value as { error?: { message?: string } } | null)?.error;
+      if (err) errors.push(`${table}: ${err.message ?? 'update failed'}`);
+    }
+  });
+
+  if (errors.length > 0) {
+    console.warn(`[admin] syncTier parcial para ${userId}:`, errors.join(' · '));
+  }
+  return { ok: errors.length === 0, errors };
 }
 
 // ─── Trigger ML recalculation (fire & forget) ────────────────────────────────

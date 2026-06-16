@@ -165,3 +165,27 @@ y fue **descartado** (sus hallazgos contradecían el árbol real verificado).
   journal_entries + 1 tabla nueva (biometric_insights); diferencial de audiencia coach_safe/client_safe
   (la UI cliente nunca renderiza coach_safe); insights desde datos reales client-side on-read (cron =
   handoff, igual que ejecución); simulador determinista para demo/ventas sin wearable físico.
+
+## Apple-grade Final Audit — 2026-06-16 (gate auditoría → ejecución)
+
+Pase de auditoría rigurosa (4 frentes en paralelo + **verificación manual** de cada hallazgo crítico —
+los del agente que no resistieron evidencia se descartaron, no se propagaron). Docs: `docs/investor/16-19`.
+
+- **Verdad de modo claro:** el reporte automático marcó "38 sitios rotos" → **falso**. `palette.black`/etc.
+  son theme-aware (`cv`); prueba en vivo sobre prod (`/bienestar`, `/bienestar/meditacion`, `data-theme=light`):
+  `--c-bg`=`#F5F3EE`, **0 fondos oscuros opacos**. Único hex crudo real = `SkoolVideo` (y su `#000` es
+  letterbox de video intencional). Se tokenizó solo el skeleton (`#111`→`palette.graphite`).
+- **Verdad de degradación silenciosa:** los 5 "CRÍTICOS" del agente eran MEDIOS — la app es local-first
+  (`persist()` antes del write), el dato visible no se pierde; solo el sync a la nube falla callado (= #21).
+- **GDPR / Apple 5.1.1 — `delete-account` completo:** +14 deletes (user_memory_profile, memory_summaries,
+  admin_briefings/notes, mentor_tasks/reviews/scores/queue, biometric_insights, mentorship_sessions/tasks,
+  community_reports, user_blocks ×2, direct_messages ×2). Redeploy vía dashboard.
+- **tier-sync (`lib/admin/actions.ts`):** `syncTier` inspecciona `allSettled` (rechazos + error de Supabase
+  en cumplidos), registra y devuelve estado — ya no traga fallos parciales de tier.
+- **Polish selectivo:** `welcome` fuentes 9→11 / 9.5→10; `norte` back button `hitSlop={8}`. SIN refactor del
+  design system (mandato: no rewrite impulsivo; `comando.tsx` densa = deuda de pulido post-launch).
+- **Librerías externas:** evaluadas 8, **instaladas 0** (rechazo de 2º design system; usar Reanimated ya
+  presente). Doc 18.
+- **Validación:** `tsc 0` · `lint 0 errores` · `134 tests` · `export web OK`.
+- **Veredicto:** PRODUCTION CANDIDATE. Web lanzable tras datos legales; native tras `eas init` + cuentas.
+  Bloqueantes restantes = handoffs del dueño (no-código). Doc 19.

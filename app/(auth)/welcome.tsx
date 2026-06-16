@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   statLabel: {
     ...typography.label,
     color:        palette.smoke,
-    fontSize:     9,
+    fontSize:     11,
     letterSpacing: 1.5,
   },
   statDivider: {
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 28,
     color: palette.muted,
-    fontSize: 9.5,
+    fontSize: 10,
     letterSpacing: 4,
   },
   desktopForm: {

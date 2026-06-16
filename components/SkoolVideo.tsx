@@ -127,18 +127,20 @@ export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
 
 const styles = StyleSheet.create({
   container: {
+    // Letterbox de video: negro constante a propósito (el video se ve mejor sobre
+    // negro en ambos temas, igual que YouTube/Vimeo). NO es un bug de modo claro.
     backgroundColor: '#000',
     borderRadius: radii.md,
     overflow: 'hidden',
   },
   webview: {
-    backgroundColor: '#000',
+    backgroundColor: '#000',   // letterbox de video (ver container)
     flex: 1,
   },
   skeleton: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    backgroundColor: '#111',
+    backgroundColor: palette.graphite,   // placeholder de carga = superficie del tema
     gap: spacing.md,
     justifyContent: 'center',
   },

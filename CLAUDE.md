@@ -230,7 +230,7 @@ Beyond the audio practices: **habits** (morning/evening routines with check + po
 ### Compliance & Robustness
 
 - **Consent gate** in onboarding (términos/privacidad/salud) → `state.profile.consents`; legal screens in `app/legal/`.
-- **GDPR account deletion** via the `delete-account` edge function.
+- **GDPR account deletion** via the `delete-account` edge function — explicitly purges **all** PII tables (core loop, wellness, wearables, Memory OS, Mentor Execution OS, Biometric, mentorship, community/DM/blocks) as defense-in-depth on top of `ON DELETE CASCADE`. When adding a new user-scoped table, add its delete here too.
 - **`components/ErrorBoundary.tsx`** — root render-crash fallback (brand screen + retry), independent of any context/theme.
 - **Offline write queue** — `lib/offlineQueue.ts` enqueues non-critical writes and retries on reconnect.
 

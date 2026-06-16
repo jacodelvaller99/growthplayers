@@ -3,6 +3,24 @@
 Cambios con impacto en la tesis de inversión, en orden cronológico inverso.
 Cada entrada referencia commits/evidencia real. Complementa `EXECUTION_LOG.md` (operacional).
 
+## 2026-06-16 — Apple-grade Final Audit (verdad de producción + cierre GDPR)
+
+**Pase de auditoría con disciplina de verdad.** Auditoría rigurosa de 4 frentes con **verificación manual**
+de cada hallazgo — se corrigieron las sobreestimaciones de los sub-agentes en vez de propagarlas:
+
+- **GDPR / Apple 5.1.1 cerrado en código:** `delete-account` ahora borra **todas** las tablas PII (incluidas
+  Memory OS, Mentor Execution OS, Biometric, mentoría, DM y bloqueos) — 14 deletes añadidos. El borrado de
+  cuenta vuelve a ser veraz y completo.
+- **Bug oculto descubierto y arreglado:** `journal_entries` no existía en producción — el diario degradaba en
+  silencio; la migración ahora lo crea.
+- **Verdad sobre el modo claro:** verificado **en vivo sobre prod** que el sistema de tema funciona (0 fondos
+  oscuros en claro); el "bug de bienestar en negro" no es reproducible. Sin fixes fabricados.
+- **Resiliencia:** tier-sync ya no traga fallos parciales (consistencia de suscripción entre tablas).
+- **Pulido Apple-grade selectivo** (legibilidad/táctil) sin rewrite del design system.
+- **Cero librerías nuevas** (rechazo explícito de un 2º design system).
+- Validado: `tsc 0` · `lint 0 errores` · `134 tests` · `export web OK`. Veredicto: **PRODUCTION CANDIDATE**
+  (web lanzable tras datos legales; native tras `eas init`). Docs: `docs/investor/16–19`.
+
 ## 2026-06-16 — Biometric Intelligence Layer (el cuerpo entra al circuito de decisión)
 
 **De números de wearable a una lectura accionable del cuerpo.** Cierra el loop medir→diagnosticar→actuar
