@@ -31,7 +31,32 @@ ALTER TABLE public.wearable_connections
   ADD COLUMN IF NOT EXISTS last_error      text,
   ADD COLUMN IF NOT EXISTS sync_mode       text DEFAULT 'live';  -- live|synthetic
 
--- ── 3. journal_entries — capa de reflexión enriquecida (reutiliza la tabla) ──────
+-- ── 3. journal_entries — capa de reflexión enriquecida ───────────────────────────
+-- La tabla puede no existir en algunos entornos (el diario degradaba en silencio);
+-- la creamos con su esquema base esperado por la app antes de extenderla.
+CREATE TABLE IF NOT EXISTS public.journal_entries (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content     text NOT NULL DEFAULT '',
+  entry_type  text DEFAULT 'reflection',
+  mood_score  integer,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_journal_entries_user ON public.journal_entries(user_id, created_at DESC);
+
+ALTER TABLE public.journal_entries ENABLE ROW LEVEL SECURITY;
+
+-- Dueño escribe lo suyo; admin lee (panel de contenido muestra diarios).
+DROP POLICY IF EXISTS "je_owner_or_admin" ON public.journal_entries;
+CREATE POLICY "je_owner_or_admin" ON public.journal_entries FOR ALL TO authenticated
+  USING (user_id = auth.uid()
+         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true))
+  WITH CHECK (user_id = auth.uid()
+         OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.journal_entries TO authenticated;
+
 ALTER TABLE public.journal_entries
   ADD COLUMN IF NOT EXISTS title             text,
   ADD COLUMN IF NOT EXISTS energy_tag        text,
