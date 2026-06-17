@@ -36,6 +36,8 @@ export interface AdminBriefing {
   open_loops?: string[];
   suggested_mentorship_topics?: string[];
   challenge_points?: string[];
+  /** Fricciones DIJO vs HIZO pre-rankeadas por Confrontation OS. */
+  frictions?: string[];
   recent_progress?: string[];
   risk_level?: 'low' | 'medium' | 'high';
   generated_at?: string;
@@ -162,6 +164,7 @@ export async function insertBriefing(row: AdminBriefing): Promise<boolean> {
       open_loops:                  row.open_loops ?? [],
       suggested_mentorship_topics: row.suggested_mentorship_topics ?? [],
       challenge_points:            row.challenge_points ?? [],
+      frictions:                   row.frictions ?? [],
       recent_progress:             row.recent_progress ?? [],
       risk_level:                  row.risk_level ?? 'low',
     });

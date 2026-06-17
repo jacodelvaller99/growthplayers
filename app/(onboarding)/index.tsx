@@ -26,12 +26,13 @@ import type { NorthStar } from '@/types/lifeflow';
 const TOTAL_STEPS = 5;
 
 // Consent gate — Términos, Privacidad y Descargo de Salud (compliance de lanzamiento)
-type ConsentKey = 'terms' | 'privacy' | 'health';
+type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation';
 
 const CONSENT_ITEMS: { key: ConsentKey; label: string; route: '/legal/terminos' | '/legal/privacidad' | '/legal/salud' }[] = [
-  { key: 'terms',   label: 'Términos y Condiciones',          route: '/legal/terminos' },
-  { key: 'privacy', label: 'Política de Privacidad (RGPD)',   route: '/legal/privacidad' },
-  { key: 'health',  label: 'Descargo de Salud y Bienestar',   route: '/legal/salud' },
+  { key: 'terms',         label: 'Términos y Condiciones',                                   route: '/legal/terminos' },
+  { key: 'privacy',       label: 'Política de Privacidad (RGPD)',                            route: '/legal/privacidad' },
+  { key: 'health',        label: 'Descargo de Salud y Bienestar',                            route: '/legal/salud' },
+  { key: 'confrontation', label: 'Norman puede confrontarme con datos registrados del sistema cuando mis acciones no coincidan con lo que declaré', route: '/legal/privacidad' },
 ];
 
 export default function OnboardingScreen() {
@@ -53,8 +54,9 @@ export default function OnboardingScreen() {
     terms: false,
     privacy: false,
     health: false,
+    confrontation: false,
   });
-  const allConsented = consents.terms && consents.privacy && consents.health;
+  const allConsented = consents.terms && consents.privacy && consents.health && consents.confrontation;
 
   const toggleConsent = (key: ConsentKey) => {
     setConsents((c) => ({ ...c, [key]: !c[key] }));
@@ -70,9 +72,10 @@ export default function OnboardingScreen() {
       try {
         await intel.profiles().update({
           consents: {
-            terms:   { accepted: true, at: now },
-            privacy: { accepted: true, at: now },
-            health:  { accepted: true, at: now },
+            terms:                   { accepted: true, at: now },
+            privacy:                 { accepted: true, at: now },
+            health:                  { accepted: true, at: now },
+            confrontation_with_data: { accepted: true, at: now },
           },
           terms_accepted_at: now,
           ml_consent: true,

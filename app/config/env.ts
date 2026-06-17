@@ -24,4 +24,13 @@ export const ENV = {
    * en el cliente). Ej: https://<ref>.supabase.co/functions/v1/ai-proxy
    */
   aiProxyUrl: (process.env.EXPO_PUBLIC_AI_PROXY_URL ?? '') as string,
+
+  /**
+   * Feature flag — Confrontation OS (motor "DIJO vs HIZO"). Default false:
+   * cohorte gradual primero. Cuando se active, Norman puede abrir confrontando
+   * con dato (severity high+) si el cliente firmó el consent específico
+   * `confrontation_with_data` en onboarding. La capa IO en lib/confrontation.ts
+   * verifica este flag antes de hacer cualquier query.
+   */
+  confrontationOsEnabled: ((process.env.EXPO_PUBLIC_CONFRONTATION_OS_ENABLED ?? '').toLowerCase() === 'true') as boolean,
 } as const;

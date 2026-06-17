@@ -28,6 +28,8 @@ import {
   type AdminBriefing,
   type MemorySummaryRow,
 } from '@/lib/memory';
+import { fetchConfrontationItems } from '@/lib/confrontation';
+import type { ConfrontationItem } from '@/lib/confrontationLogic';
 
 export type SummarySource = 'chat' | 'mentorship' | 'plaud' | 'manual';
 
@@ -176,6 +178,7 @@ const BRIEFING_INSTRUCTION =
   '===LOOPS===\n- compromisos hechos sin cerrar / asuntos abiertos\n' +
   '===TOPICOS===\n- 3 temas a tratar en la próxima sesión\n' +
   '===CHALLENGE===\n- 1-2 afirmaciones que confronten su patrón real (ej: "Pides foco, pero el problema es que evitas decidir")\n' +
+  '===FRICCIONES===\n(lista las fricciones pre-rankeadas que recibiste. Cada línea: "[fecha] DIJO X — HIZO Y — gap Z". NO infieras nuevas. Si no recibiste fricciones en el digest, deja este bloque VACÍO)\n' +
   '===PROGRESO===\n- progreso o regresión visible desde la última vez\n' +
   '===RIESGO===\n(una palabra: low | medium | high)';
 
@@ -192,16 +195,25 @@ export async function generateAdminBriefing(
 ): Promise<AdminBriefing | null> {
   if (!userId) return null;
   try {
-    const [profile, summaries] = await Promise.all([
+    const [profile, summaries, confrontations] = await Promise.all([
       fetchMemoryProfile(userId),
       fetchLatestSummaries(userId, 6),
+      fetchConfrontationItems(userId).catch(() => [] as ConfrontationItem[]),
     ]);
     const ctx = opts?.ctx ?? makeMinimalContext(opts?.userName);
+    const friccionesBlock = confrontations.length > 0
+      ? `\n\nFRICCIONES DETECTADAS (pre-rankeadas — incluí las TOP 3 en el bloque ===FRICCIONES=== citando el dato literal; NO inventes otras):\n` +
+        confrontations.slice(0, 3).map((c, i) => {
+          const said = c.evidence.said ? `"${c.evidence.said.text}"${c.evidence.said.source_date ? ` (${new Date(c.evidence.said.source_date).toLocaleDateString('es-CO')})` : ''}` : '(sin verbo registrado)';
+          return `${i + 1}. [${c.dimension} · ${c.severity}] DIJO: ${said} — HIZO: ${c.evidence.did.value} (${c.evidence.did.detail}) — sugerencia: ${c.confrontation_prompt}`;
+        }).join('\n')
+      : '';
     const digest =
       `PERFIL: ${profile ? JSON.stringify(profile).slice(0, 2500) : '(sin perfil)'}\n\n` +
       `ÚLTIMOS RESÚMENES:\n${summaries
         .map((s, i) => `${i + 1}. [${s.source_type}] ${s.summary} (temas: ${(s.key_topics ?? []).join(', ')}; loops: ${(s.unresolved_questions ?? []).join(', ')})`)
-        .join('\n') || '(sin resúmenes)'}`;
+        .join('\n') || '(sin resúmenes)'}` +
+      friccionesBlock;
 
     let out = '';
     await streamMentorResponse(ctx, `${BRIEFING_INSTRUCTION}\n\n${digest}`, [], (d) => { out += d; });
@@ -214,6 +226,7 @@ export async function generateAdminBriefing(
       open_loops:                  splitList(extractSection(out, 'LOOPS')),
       suggested_mentorship_topics: splitList(extractSection(out, 'TOPICOS')),
       challenge_points:            splitList(extractSection(out, 'CHALLENGE')),
+      frictions:                   splitList(extractSection(out, 'FRICCIONES')),
       recent_progress:             splitList(extractSection(out, 'PROGRESO')),
       risk_level:                  parseRisk(extractSection(out, 'RIESGO')),
     };

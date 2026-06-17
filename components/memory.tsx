@@ -256,6 +256,12 @@ export function AdminBriefingCard({
               <Bullets items={briefing.challenge_points} color={palette.goldText} />
             </View>
           )}
+          {(briefing.frictions?.length ?? 0) > 0 && (
+            <View>
+              <Text style={s.subLabel}>Confrontar esta semana — dato por dato</Text>
+              <Bullets items={briefing.frictions} color={palette.danger} />
+            </View>
+          )}
           {(briefing.suggested_mentorship_topics?.length ?? 0) > 0 && (
             <View>
               <Text style={s.subLabel}>Temas sugeridos</Text>

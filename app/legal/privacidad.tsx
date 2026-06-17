@@ -96,6 +96,15 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    heading: '10.bis Modo confrontación con dato (Norman)',
+    body: [
+      'Cuando usted otorga el consentimiento específico de "confrontación con dato" en el onboarding, Norman puede citar literalmente datos registrados por usted en el sistema (check-ins, compromisos textuales del Memory OS, hábitos, sesiones de prácticas) para confrontar brechas entre lo que declaró y lo que hizo. La confrontación se aplica únicamente sobre compromisos EXPLÍCITOS suyos (con verbos de obligación fuerte) y conducta registrada en sus propias acciones.',
+      'Fuentes que NUNCA se usan para confrontar: el contenido de mensajes directos entre pares (DMs) — esos espacios son privados; las publicaciones en comunidad — esos espacios son de soporte mutuo, no de coaching; inferencias de modelos de ML sin evidencia textual del cliente. Su contenido de journal puede emplearse SOLO como salvaguarda (para no confrontar a un cliente en estado vulnerable), nunca como evidencia para inferir brechas.',
+      'Datos biométricos (HRV, recuperación, sueño) solo se usan en este modo si usted otorga el consentimiento adicional "confrontación biométrica". Sin él, el motor de confrontación no accede a su wearable.',
+      'Puede retirar el consentimiento en cualquier momento desde Perfil → Privacidad y Datos; el motor de confrontación dejará de operar inmediatamente y los items pendientes se descartan.',
+    ],
+  },
+  {
     heading: '11. Menores de edad',
     body: [
       'La App no está dirigida a menores de [18] años y no recopilamos conscientemente sus datos. Si detectamos una cuenta de un menor, la eliminaremos.',

@@ -8,12 +8,13 @@
  * Presentacional; toma todo del bundle. Solo tokens de tema.
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PremiumCard } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import type { UserActivityBundle } from '@/lib/admin/queries';
+import type { ConfrontationItem } from '@/lib/confrontationLogic';
 
 function fmtDate(iso?: string | null) {
   if (!iso) return '—';
@@ -302,4 +303,142 @@ const s = StyleSheet.create({
   statN: { ...typography.section, color: palette.ivory, fontSize: 16 },
   statL: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 0.8, marginTop: 1 },
   privacyNote: { ...typography.caption, color: palette.smoke, fontSize: 10, fontStyle: 'italic', marginTop: spacing.sm },
+});
+
+// ─── FRICCIONES DETECTADAS — DIJO vs HIZO ─────────────────────────────────────────
+const SEV_META: Record<string, { label: string; color: string }> = {
+  critical: { label: 'CRÍTICA', color: palette.danger },
+  high:     { label: 'ALTA',    color: palette.warning },
+  medium:   { label: 'MEDIA',   color: palette.goldText },
+  low:      { label: 'BAJA',    color: palette.smoke },
+};
+const DIM_LABEL: Record<string, string> = {
+  state: 'CUERPO',
+  commitments: 'COMPROMISO',
+  behavior: 'CONDUCTA',
+  engagement: 'CONTACTO',
+};
+
+export function FriccionesCard({
+  items, loading, onDismiss,
+}: {
+  items: ConfrontationItem[];
+  loading?: boolean;
+  onDismiss?: (itemId: string, reason: string) => Promise<void> | void;
+}) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const handleDismiss = async (itemId: string) => {
+    if (!onDismiss) return;
+    setBusyId(itemId);
+    try { await onDismiss(itemId, 'mentor_dismissed'); } finally { setBusyId(null); }
+  };
+
+  return (
+    <PremiumCard style={fs.card}>
+      <View style={fs.head}>
+        <Text style={fs.label}>FRICCIONES DETECTADAS</Text>
+        <Text style={fs.sub}>DIJO vs HIZO · solo dato real</Text>
+      </View>
+
+      {loading && items.length === 0 ? (
+        <Text style={fs.empty}>Calculando…</Text>
+      ) : items.length === 0 ? (
+        <Text style={fs.empty}>Sin fricciones críticas — momentum aceptable.</Text>
+      ) : (
+        items.slice(0, 5).map((it) => {
+          const sev = SEV_META[it.severity] ?? SEV_META.medium;
+          const dim = DIM_LABEL[it.dimension] ?? it.dimension.toUpperCase();
+          const said = it.evidence.said;
+          return (
+            <View key={it.id} style={fs.row}>
+              <View style={fs.rowHead}>
+                <View style={[fs.sevPill, { borderColor: sev.color }]}>
+                  <Text style={[fs.sevText, { color: sev.color }]}>{sev.label}</Text>
+                </View>
+                <Text style={fs.dimText}>{dim}</Text>
+              </View>
+
+              {said && (
+                <View style={fs.evidenceLine}>
+                  <MaterialIcons name="format-quote" size={14} color={palette.goldText} />
+                  <Text style={fs.evidenceTxt}>
+                    <Text style={fs.evidenceLabel}>DIJO: </Text>
+                    <Text style={{ fontStyle: 'italic' }}>{said.text}</Text>
+                    {said.source_date ? (
+                      <Text style={fs.evidenceDate}> · {new Date(said.source_date).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}</Text>
+                    ) : null}
+                  </Text>
+                </View>
+              )}
+              <View style={fs.evidenceLine}>
+                <MaterialIcons name="block" size={14} color={palette.danger} />
+                <Text style={fs.evidenceTxt}>
+                  <Text style={fs.evidenceLabel}>HIZO: </Text>
+                  <Text>{it.evidence.did.value}</Text>
+                  {it.evidence.did.detail ? <Text style={fs.evidenceDate}> · {it.evidence.did.detail}</Text> : null}
+                </Text>
+              </View>
+              {it.evidence.gap_metric.summary && (
+                <Text style={fs.gapTxt}>Brecha: {it.evidence.gap_metric.summary}</Text>
+              )}
+
+              {it.confrontation_prompt && (
+                <View style={fs.promptBox}>
+                  <Text style={fs.promptLabel}>SUGERIDO POR NORMAN</Text>
+                  <Text style={fs.promptTxt}>{it.confrontation_prompt}</Text>
+                </View>
+              )}
+
+              {onDismiss && (
+                <Pressable
+                  onPress={() => handleDismiss(it.id)}
+                  disabled={busyId === it.id}
+                  style={[fs.dismissBtn, busyId === it.id && { opacity: 0.5 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Silenciar fricción 7 días"
+                  hitSlop={6}>
+                  <MaterialIcons name="snooze" size={13} color={palette.smoke} />
+                  <Text style={fs.dismissTxt}>NO APLICA · 7d</Text>
+                </Pressable>
+              )}
+            </View>
+          );
+        })
+      )}
+    </PremiumCard>
+  );
+}
+
+const fs = StyleSheet.create({
+  card: { gap: spacing.sm, marginBottom: spacing.md },
+  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  label: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
+  sub: { ...typography.caption, color: palette.smoke, fontSize: 10, letterSpacing: 0.8 },
+  empty: { ...typography.caption, color: palette.smoke, fontSize: 12, fontStyle: 'italic' },
+  row: {
+    gap: 6, paddingTop: spacing.sm,
+    borderTopWidth: 1, borderTopColor: palette.lineSoft,
+  },
+  rowHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sevPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  sevText: { ...typography.label, fontSize: 9, letterSpacing: 1 },
+  dimText: { ...typography.caption, color: palette.smoke, fontSize: 10, letterSpacing: 0.8 },
+  evidenceLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  evidenceTxt: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 18, flex: 1 },
+  evidenceLabel: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 0.8 },
+  evidenceDate: { ...typography.caption, color: palette.smoke, fontSize: 11 },
+  gapTxt: { ...typography.caption, color: palette.smoke, fontSize: 11, marginLeft: 20 },
+  promptBox: {
+    backgroundColor: palette.charcoal, borderRadius: radii.sm, padding: spacing.sm,
+    gap: 4,
+  },
+  promptLabel: { ...typography.label, color: palette.goldText, fontSize: 9, letterSpacing: 1.2 },
+  promptTxt: { ...typography.body, color: palette.ivory, fontSize: 13, lineHeight: 19, fontFamily: Fonts.sans },
+  dismissBtn: {
+    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: palette.line, borderRadius: radii.sm,
+    paddingHorizontal: 8, paddingVertical: 4,
+  },
+  dismissTxt: { ...typography.label, color: palette.smoke, fontSize: 10, letterSpacing: 0.8 },
 });

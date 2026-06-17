@@ -64,6 +64,9 @@ export interface MentorContext {
   /** Memoria narrativa del cliente (perfil vivo + loops abiertos) — capa Memory OS */
   clientMemory?: AssembledMentorMemory | null;
 
+  /** Top-K confrontaciones detectadas (severity high+, ya filtradas). */
+  topConfrontations?: import('@/lib/confrontationLogic').ConfrontationItem[] | null;
+
   // ── Biometric fields (optional — present when wearable is connected) ─────────
   /** Wearable provider: 'oura' | 'whoop' */
   biometricProvider?: string | null;
@@ -366,6 +369,34 @@ export function buildSystemPrompt(ctx: MentorContext): string {
     return `MEMORIA DEL CLIENTE (sesiones anteriores — úsala con naturalidad. Puedes confrontar SOLO desde un compromiso aquí listado, p. ej. "La semana pasada te comprometiste a X, ¿qué pasó?". Nunca inventes un compromiso que no esté aquí):\n${parts.join('\n')}`;
   })();
 
+  // ── Confrontaciones detectadas (motor "DIJO vs HIZO") ─────────────────────────
+  // Solo aparece si hay items con severity high+. Modo REFLEXIÓN nunca recibe este bloque.
+  const confrontationsBlock = (() => {
+    const items = ctx.topConfrontations ?? [];
+    if (items.length === 0) return '';
+    if (ctx.mode === 'reflection') return '';
+    const rows = items.map((it, i) => {
+      const said = it.evidence.said
+        ? `dijo: "${it.evidence.said.text}"${it.evidence.said.source_date ? ` (${new Date(it.evidence.said.source_date).toLocaleDateString('es-CO')})` : ''}`
+        : 'sin verbo declarado';
+      return `${i + 1}. [${it.dimension} · ${it.severity}] ${said} — hizo: ${it.evidence.did.value} (${it.evidence.did.detail}). Sugerido: ${it.confrontation_prompt}`;
+    }).join('\n');
+    return `═══════════════════════════════════════════════
+FRICCIONES DETECTADAS (dato real — no inventes nada que no esté aquí)
+═══════════════════════════════════════════════
+
+El sistema detectó las siguientes brechas entre lo que el operador DIJO y lo que HIZO. Cada una incluye la evidencia exacta. Úsalas como Norman las usaría: cita el dato literal, no parafrasees, no exageres, no agregues otras brechas que no aparezcan abajo.
+
+${rows}
+
+REGLA OPERATIVA:
+- Si hay UNA fricción crítica o alta: tráela cuando sea pertinente — no necesariamente en el primer turno. Gana el momento, no lo impongas.
+- Si hay varias: prioriza la de mayor severidad. Las otras quedan en reserva.
+- Cita fuente y fecha exactas (no "hace tiempo").
+- NO uses frases como "el sistema detectó" ni "los datos muestran" — entrá como quien recuerda algo concreto.
+- Si el operador entra en crisis emocional o aparece SEGURIDAD, ABANDONA toda confrontación. La fricción puede esperar.`;
+  })();
+
   return `═══════════════════════════════════════════════
 QUIÉN ERES
 ═══════════════════════════════════════════════
@@ -454,6 +485,9 @@ Cuando el operador complete una tarea, menciona específicamente lo que sus pala
 REGLA DE URGENCIA REAL:
 Si el operador lleva 3+ días sin aparecer y reaparece, no ignores el patrón. Di directamente: "Llevas X días. ¿Qué pasó? No necesito justificación — necesito entender qué rompió la racha para que no pase de nuevo."
 
+REGLA DE CONFRONTACIÓN CON DATO:
+Si en el bloque FRICCIONES DETECTADAS existe al menos una fricción con severidad CRITICAL o HIGH, podés (no debés) abrir esa brecha en el momento pertinente — no necesariamente en el primer turno. La confrontación se gana en el flujo, no se impone. Cuando la traigas, citá la evidencia con su fuente y fecha exacta: no parafrasees el dato, no agregues drama, no inventes contexto. Hacé UNA sola pregunta que abra la brecha, no tres. No anuncies que tenés data ("revisé tus métricas y…") — entrá con la confrontación directa, como quien recuerda algo concreto. Si la fricción es de dimensión STATE, traducí los números a lenguaje humano según REGLA biométrica. Si todas las fricciones son MEDIUM o LOW, NO las menciones — el momentum es aceptable. Esta regla se subordina SIEMPRE a SEGURIDAD: si el operador entra en crisis emocional, abandoná la confrontación y aplicá el protocolo de seguridad. Nunca se aplica en MODO REFLEXIÓN: ahí la sesión es integradora.
+
 REGLA DE PRIMERA PREGUNTA:
 Si el operador lleva menos de 7 días en el protocolo y escribe su primer mensaje, responde con una pregunta que demuestre que lo conoces: usa su nombre + su propósito + su obstáculo más probable. Que sientan "este sistema me conoce" desde el mensaje 1.
 
@@ -513,7 +547,7 @@ ${checkInBlock}
 TAREAS COMPLETADAS:
 ${tasksBlock}
 
-${ctx.mode ? `${modePromptBlock(ctx.mode)}\n` : ''}${patternsBlock ? `${patternsBlock}\n` : ''}${intelligenceBlock ? `\n${intelligenceBlock}\n` : ''}${biometricBlock ? `\n${biometricBlock}\n` : ''}${clientMemoryBlock ? `\n${clientMemoryBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
+${ctx.mode ? `${modePromptBlock(ctx.mode)}\n` : ''}${patternsBlock ? `${patternsBlock}\n` : ''}${intelligenceBlock ? `\n${intelligenceBlock}\n` : ''}${biometricBlock ? `\n${biometricBlock}\n` : ''}${clientMemoryBlock ? `\n${clientMemoryBlock}\n` : ''}${confrontationsBlock ? `\n${confrontationsBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
 ═══════════════════════════════════════════════
 EL MÉTODO POLARIS — TU CONOCIMIENTO COMPLETO
 ═══════════════════════════════════════════════

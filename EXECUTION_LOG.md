@@ -240,3 +240,38 @@ comunidad). Score honesto antes: 4/10. Cierre completo:
 - **Hallazgo corregido:** la auditoría reportó "wellness_sessions sin escritura" → falso, ya se escribe
   en `hooks/use-lifeflow.tsx:793` (saveWellnessSession). Estaba sin LEERSE en admin, no sin escribirse.
 - **Gate:** `tsc 0 · lint 0 errores · 138 tests · export web OK`. Sin tablas nuevas, sin migración.
+
+## Confrontation OS — 2026-06-18 (motor "DIJO vs HIZO")
+
+Pase de Ultracode: workflow de 9 agentes (4 mapeadores → 1 arquitecto → 3 adversarios → 1 sintetizador) para
+diseñar exhaustivamente el motor de confrontación con dato. 850k tokens, 25 min, 72 findings adversariales
+(54 critical/high). De 25 detectores propuestos → 8 supervivientes tras 3 capas de review (FP / privacy / scope).
+
+- **Migración `20260618000000_confrontation_os.sql`**: profiles.consents/pause_state + admin_briefings.frictions +
+  tabla confrontation_dismissals (admin silencia 7d).
+- **`lib/confrontationLogic.ts`** (pura, 46 tests): 6 detectores + 2 adapters (false_compliance, high_attention →
+  program_drift reusan buildInterventions existente — cero duplicación). Severity TaskPriority enum (no 0-100
+  frágil). Helpers: STRONG_OBLIGATION_RE, ACTION_VERB_RE, commitmentKeywordsMatchActivity, globalGuards.
+- **`lib/confrontation.ts`** (IO degradable): assembleConfrontationBundle paraleliza 13 fuentes (sin duplicar
+  queries existentes). fetchConfrontationItems / getTopConfrontationsForMentor (sev high+) / dismissConfrontation.
+  Feature flag ENV.confrontationOsEnabled gate primero.
+- **Norman integration:** MentorContext.topConfrontations + confrontationsBlock tras clientMemoryBlock (skip si
+  mode='reflection') + REGLA DE CONFRONTACIÓN CON DATO en CÓMO ACOMPAÑAS, subordinada a SEGURIDAD. Norman cita
+  dato literal, no re-infiere. Cableado en mentor.tsx (getTopConfrontationsForMentor con catch).
+- **UI admin:** sección "FRICCIONES DETECTADAS" antes de MEMORIA & BRIEFING en usuarios/[id].tsx. FriccionesCard
+  en components/admin-activity.tsx con evidence + sugerido + botón "NO APLICA · 7d".
+- **Briefing extension:** generateAdminBriefing pasa fricciones pre-rankeadas a Norman (cita, no re-infiere) +
+  bloque ===FRICCIONES===. AdminBriefing.frictions renderizado en AdminBriefingCard.
+- **Consent gate:** 4to checkbox confrontation en onboarding + sección "10.bis Modo confrontación con dato" en
+  app/legal/privacidad.tsx (DMs y posts NUNCA usados como evidencia).
+- **Decisiones del owner aplicadas:** lanzar con gate adicional (no bloquear hasta flip de ml_consent — handoff
+  P0 paralelo); STATE capeado a 'medium' (no inyección Norman) hasta revisión clínica; tono uniforme suave;
+  feature flag default false + cohorte gradual.
+- **Cuts del adversarial:** 10 detectores cortados — body_metric_drift (TCA/legal), mood_journal_vs_body
+  (psicoanálisis amateur), community_avoidance (push de adopción), coherence_words_vs_actions (rompe sala segura),
+  commitment_completed_no_evidence (redundante → adapter), commitment_made_no_task / wellness_practice_silence
+  (merge en commitments_drift con regex de obligación fuerte), fasting_session_overflow (bug UI no fricción),
+  silent_withdrawal_3d (umbral subido a 5d + canal lastAppOpenAt), program_drift_module_stalled (→ adapter).
+- **Handoffs P0/P1:** flip ml_consent → opt-in (P0 paralelo); commitment_strength field en summarizer (P1);
+  timezone-travel detection (P1); revisión clínica de detectores STATE (gate para subir severity).
+- **Gate:** `tsc 0 · lint 0 errores · 184 tests · export web OK`. Migración pendiente de aplicar en dashboard.

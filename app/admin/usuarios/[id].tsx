@@ -42,12 +42,15 @@ import {
   BodyCard,
   CommunityCard,
   FastingCard,
+  FriccionesCard,
   HabitsCard,
   JournalCard,
   NutritionCard,
   SupplementsCard,
   WellnessSessionsCard,
 } from '@/components/admin-activity';
+import { dismissConfrontation, fetchConfrontationItems } from '@/lib/confrontation';
+import type { ConfrontationItem } from '@/lib/confrontationLogic';
 import {
   AdminBriefingCard,
   AdminNotesCard,
@@ -251,9 +254,12 @@ export default function UserDetailScreen() {
     journal: [], wellness: [], posts: [], reactionsGiven: 0, dmsSent: 0, dmLastActivity: null,
   });
 
+  // Confrontaciones detectadas (DIJO vs HIZO)
+  const [frictions, setFrictions] = useState<ConfrontationItem[]>([]);
+
   const load = useCallback(async () => {
     if (!userId) return;
-    const [userDetail, evts, convs, cis, ment, audit, memo, exec, bioSnap, act] = await Promise.all([
+    const [userDetail, evts, convs, cis, ment, audit, memo, exec, bioSnap, act, frix] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
       fetchMentorConversations(userId, 30),
@@ -264,6 +270,7 @@ export default function UserDetailScreen() {
       fetchUserExecution(userId),
       fetchBiometricSnapshot(userId),
       fetchUserActivityBundle(userId),
+      fetchConfrontationItems(userId).catch(() => [] as ConfrontationItem[]),
     ]);
     setUser(userDetail);
     setEvents(evts);
@@ -275,8 +282,16 @@ export default function UserDetailScreen() {
     setExecution(exec);
     setBio(bioSnap);
     setActivity(act);
+    setFrictions(frix);
     setLoading(false);
   }, [userId]);
+
+  const handleDismissFriction = useCallback(async (itemId: string, reason: string) => {
+    if (!userId) return;
+    await dismissConfrontation({ userId, itemId, reason, adminId: adminId ?? undefined });
+    const next = await fetchConfrontationItems(userId).catch(() => [] as ConfrontationItem[]);
+    setFrictions(next);
+  }, [userId, adminId]);
 
   const handleSeed = useCallback(async (scenario: Scenario) => {
     if (!userId) return;
@@ -761,6 +776,12 @@ export default function UserDetailScreen() {
           onClose={() => setReviewTask(null)}
           onSubmit={handleSubmitReview}
         />
+
+        {/* ─────────────────────────────────────────────────── */}
+        {/* FRICCIONES DETECTADAS — DIJO vs HIZO (Confrontation OS) */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label="FRICCIONES DETECTADAS" />
+        <FriccionesCard items={frictions} onDismiss={handleDismissFriction} />
 
         {/* ─────────────────────────────────────────────────── */}
         {/* M2. MEMORIA — perfil vivo + briefing operativo + notas */}

@@ -35,6 +35,7 @@ import { useMentorMemory } from '@/hooks/useMentorMemory';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { analytics } from '@/lib/analytics';
 import { streamMentorResponse, type MentorContext, type MentorMode } from '@/lib/mentor';
+import { getTopConfrontationsForMentor } from '@/lib/confrontation';
 import { buildMentorMemoryContext } from '@/lib/memory';
 import { makeMinimalContext, summarizeConversation, updateProfileFromSummary } from '@/lib/memorySummarizer';
 import { suggestTasksFromCommitments } from '@/lib/mentorExecution';
@@ -422,10 +423,15 @@ export default function MentorScreen() {
       // ── Step 1: Semantic memory search + narrative memory (parallel) ──────
       const memoriesPromise = searchMemories(clean, 3);
       const clientMemoryPromise = buildMentorMemoryContext(userId ?? '');
+      // Confrontaciones: top 2 con severity high+ (gates ya verificados en confrontation.ts).
+      const topConfrontationsPromise = userId
+        ? getTopConfrontationsForMentor(userId, 2).catch(() => null)
+        : Promise.resolve(null);
 
       // ── Step 2: Build context with Intelligence fields ─────────────────────
       const relevantMemories = await memoriesPromise;
       const clientMemory = await clientMemoryPromise;
+      const topConfrontations = await topConfrontationsPromise;
 
       // Dynamic module progress (based on completed lessons)
       const activeModLessons = ACTIVE_MODULE.lessons.length;
@@ -472,6 +478,7 @@ export default function MentorScreen() {
           similarity:  m.similarity,
         })),
         clientMemory,
+        topConfrontations,
         // Biometric enrichment (wearable)
         biometricProvider:  wearableProvider,
         biometricReadiness: latestWearable?.recovery_score ?? null,
