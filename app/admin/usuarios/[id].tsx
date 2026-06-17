@@ -8,7 +8,7 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -129,6 +129,20 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
     </View>
   );
 }
+
+// ─── Section anchors para navegación rápida (chip strip) ────────────────────
+const NAV_SECTIONS: { id: string; label: string }[] = [
+  { id: 'identity',   label: 'IDENTIDAD' },
+  { id: 'memberships',label: 'MEMBRESÍAS' },
+  { id: 'ml',         label: 'ML' },
+  { id: 'mentorship', label: 'MENTORÍA' },
+  { id: 'execution',  label: 'EJECUCIÓN' },
+  { id: 'frictions',  label: 'FRICCIONES' },
+  { id: 'memory',     label: 'MEMORIA' },
+  { id: 'biometrics', label: 'BIOMÉTRICOS' },
+  { id: 'body',       label: 'CUERPO' },
+  { id: 'reflections',label: 'REFLEXIONES' },
+];
 
 // ─── Engagement Gauge ────────────────────────────────────────────────────────
 
@@ -256,6 +270,19 @@ export default function UserDetailScreen() {
 
   // Confrontaciones detectadas (DIJO vs HIZO)
   const [frictions, setFrictions] = useState<ConfrontationItem[]>([]);
+
+  // Section anchors (navegación por chips) — cada sección guarda su Y al onLayout.
+  const scrollRef = useRef<ScrollView | null>(null);
+  const sectionYs = useRef<Record<string, number>>({});
+  const onSectionLayout = useCallback((id: string) => (e: { nativeEvent: { layout: { y: number } } }) => {
+    sectionYs.current[id] = e.nativeEvent.layout.y;
+  }, []);
+  const scrollToSection = useCallback((id: string) => {
+    const y = sectionYs.current[id];
+    if (y == null) return;
+    // -56: deja espacio para el strip sticky.
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 56), animated: true });
+  }, []);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -444,22 +471,44 @@ export default function UserDetailScreen() {
   return (
     <>
       <ScrollView
+        ref={scrollRef}
         style={sc.root}
         contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }}
+        stickyHeaderIndices={[1]}
         showsVerticalScrollIndicator={false}>
 
         {/* ── Back + title ── */}
         <View style={s.header}>
-          <Pressable onPress={() => router.back()} style={s.backBtn}>
+          <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
             <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
           </Pressable>
-          <Text style={s.headerTitle}>PERFIL DE USUARIO</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerTitle}>{user.name}</Text>
+            <Text style={s.headerSub}>{user.role ?? 'Aprendiz'}</Text>
+          </View>
+        </View>
+
+        {/* ── Chip strip sticky: navegación entre secciones ── */}
+        <View style={s.navStrip}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.navStripInner}>
+            {NAV_SECTIONS.map((sec) => (
+              <Pressable
+                key={sec.id}
+                onPress={() => scrollToSection(sec.id)}
+                hitSlop={4}
+                style={({ pressed }) => [s.navChip, pressed && { opacity: 0.6 }]}>
+                <Text style={s.navChipTxt}>{sec.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
         {/* ─────────────────────────────────────────────────── */}
         {/* A. IDENTIDAD */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="A. IDENTIDAD" />
+        <View onLayout={onSectionLayout('identity')}>
+          <GoldDivider label="A. IDENTIDAD" />
+        </View>
         <PremiumCard style={s.card}>
           <View style={s.identityRow}>
             <View style={s.bigAvatar}>
@@ -492,7 +541,9 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* B. MEMBRESÍAS */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="B. MEMBRESÍAS Y ACCESO" />
+        <View onLayout={onSectionLayout('memberships')}>
+          <GoldDivider label="B. MEMBRESÍAS Y ACCESO" />
+        </View>
         <PremiumCard style={s.card}>
           {/* Current tier badge */}
           {(() => {
@@ -565,7 +616,9 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* D. INTELLIGENCE ML */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="D. INTELIGENCIA ML" />
+        <View onLayout={onSectionLayout('ml')}>
+          <GoldDivider label="D. INTELIGENCIA ML" />
+        </View>
         <PremiumCard style={s.card}>
           <SectionHeader
             title=""
@@ -690,7 +743,9 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* M. MENTORÍA (sesiones + tareas) */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label={`M. MENTORÍA (${mentorship.sessions.length} sesiones · ${mentorship.tasks.filter(t => t.completed).length}/${mentorship.tasks.length} tareas)`} />
+        <View onLayout={onSectionLayout('mentorship')}>
+          <GoldDivider label={`M. MENTORÍA (${mentorship.sessions.length} sesiones · ${mentorship.tasks.filter(t => t.completed).length}/${mentorship.tasks.length} tareas)`} />
+        </View>
         <PremiumCard style={s.card}>
           {/* Tareas */}
           <Text style={s.mlLabel}>TAREAS DE LA SEMANA</Text>
@@ -758,7 +813,9 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* M3. EJECUCIÓN — tareas + scores + review + intervención */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="EJECUCIÓN" />
+        <View onLayout={onSectionLayout('execution')}>
+          <GoldDivider label="EJECUCIÓN" />
+        </View>
         <ExecutionScoreCard scores={execution.scores} />
         <InterventionQueueCard items={execution.scores ? buildInterventions(execution.scores, execution.tasks) : []} />
         <NextMentorshipAgendaCard prep={execution.prep} />
@@ -780,13 +837,17 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* FRICCIONES DETECTADAS — DIJO vs HIZO (Confrontation OS) */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="FRICCIONES DETECTADAS" />
+        <View onLayout={onSectionLayout('frictions')}>
+          <GoldDivider label="FRICCIONES DETECTADAS" />
+        </View>
         <FriccionesCard items={frictions} onDismiss={handleDismissFriction} />
 
         {/* ─────────────────────────────────────────────────── */}
         {/* M2. MEMORIA — perfil vivo + briefing operativo + notas */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="MEMORIA & BRIEFING" />
+        <View onLayout={onSectionLayout('memory')}>
+          <GoldDivider label="MEMORIA & BRIEFING" />
+        </View>
         <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} />
         <ProfileSynopsisCard profile={memory.profile} variant="admin" />
         <CommitmentsCard
@@ -838,7 +899,9 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* K. BIOMÉTRICOS */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="K. BIOMÉTRICOS" />
+        <View onLayout={onSectionLayout('biometrics')}>
+          <GoldDivider label="K. BIOMÉTRICOS" />
+        </View>
         <BiometricInsightCard insight={bio.latestInsight} variant="admin" />
         <BiometricSparkline series={bio.series} />
         <ConnectionStatusCard connections={bio.connections} />
@@ -894,7 +957,9 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* L. CUERPO & PROTOCOLO (lo que el cliente HACE) */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="L. CUERPO & PROTOCOLO" />
+        <View onLayout={onSectionLayout('body')}>
+          <GoldDivider label="L. CUERPO & PROTOCOLO" />
+        </View>
         <HabitsCard habits={activity.habits} logs={activity.habitLogs} />
         <WellnessSessionsCard sessions={activity.wellness} />
         <FastingCard sessions={activity.fasting} />
@@ -905,7 +970,9 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* N. REFLEXIONES & COMUNIDAD (lo que el cliente PIENSA y CONECTA) */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="N. REFLEXIONES & COMUNIDAD" />
+        <View onLayout={onSectionLayout('reflections')}>
+          <GoldDivider label="N. REFLEXIONES & COMUNIDAD" />
+        </View>
         <JournalCard entries={activity.journal} />
         <CommunityCard
           posts={activity.posts}
@@ -988,7 +1055,27 @@ const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   backBtn: { padding: spacing.xs },
-  headerTitle: { ...typography.title, color: palette.ivory },
+  headerTitle: { ...typography.title, color: palette.ivory, fontSize: 18, letterSpacing: 0.5 },
+  headerSub: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 0.8, marginTop: 2 },
+
+  // Chip strip de navegación (sticky)
+  navStrip: {
+    backgroundColor: palette.blackDeep,
+    borderBottomColor: palette.line,
+    borderBottomWidth: 1,
+    marginBottom: spacing.sm,
+    paddingVertical: 8,
+  },
+  navStripInner: { paddingHorizontal: spacing.lg, gap: 6 },
+  navChip: {
+    backgroundColor: palette.graphite,
+    borderRadius: 999,
+    borderColor: palette.line,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  navChipTxt: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 1 },
 
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', paddingVertical: spacing.sm },

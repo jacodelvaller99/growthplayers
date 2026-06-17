@@ -22,8 +22,8 @@ import { GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/compo
 import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { fetchDashboardKPIs, fetchLiveEvents, fetchTierCounts } from '@/lib/admin/queries';
-import type { DashboardKPIs, LiveEvent } from '@/lib/admin/types';
+import { fetchAtRiskUsers, fetchDashboardKPIs, fetchLiveEvents, fetchTierCounts } from '@/lib/admin/queries';
+import type { AtRiskUser, DashboardKPIs, LiveEvent } from '@/lib/admin/types';
 import { recalculateAllMLAction } from '@/lib/admin/actions';
 import { intel } from '@/lib/supabase';
 
@@ -119,6 +119,8 @@ export default function MissionControl() {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
+  const [atRiskUsers, setAtRiskUsers] = useState<AtRiskUser[]>([]);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [mlRecalculating, setMlRecalculating] = useState(false);
@@ -126,14 +128,17 @@ export default function MissionControl() {
   const channelRef = useRef<ReturnType<typeof intel.events> | null>(null);
 
   const loadData = useCallback(async () => {
-    const [kpiData, evtData, tierData] = await Promise.all([
+    const [kpiData, evtData, tierData, riskData] = await Promise.all([
       fetchDashboardKPIs(),
       fetchLiveEvents(10),
       fetchTierCounts(),
+      fetchAtRiskUsers(),
     ]);
     setKpis(kpiData);
     setEvents(evtData);
     setTierCounts(tierData);
+    setAtRiskUsers(riskData);
+    setLastSyncAt(new Date());
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -184,24 +189,42 @@ export default function MissionControl() {
         <View>
           <Text style={s.headerEyebrow}>POLARIS GROWTH INSTITUTE</Text>
           <Text style={s.headerTitle}>CUADRO DE MANDO</Text>
-          <Text style={s.headerSub}>Colombia {colombiaTime} · actualizado hace 0s</Text>
+          <Text style={s.headerSub}>
+            Colombia {colombiaTime} · actualizado hace {lastSyncAt ? Math.max(0, Math.floor((now.getTime() - lastSyncAt.getTime()) / 1000)) : 0}s
+          </Text>
         </View>
         <StatusPill label="ADMIN" tone="gold" dot />
       </View>
 
-      {/* ── KPIs ── */}
-      <GoldDivider label="KPIs EN TIEMPO REAL" />
+      {/* ── HERO: KPIs críticos arriba (semantic colors: red=urgent, gold=warning, green=ok) ── */}
+      {kpis && (
+        <View style={s.heroRow}>
+          <View style={[s.heroStat, { borderColor: kpis.critical_churn > 0 ? palette.danger : palette.line }]}>
+            <Text style={[s.heroValue, { color: kpis.critical_churn > 0 ? palette.danger : palette.ivory }]}>
+              {kpis.critical_churn}
+            </Text>
+            <Text style={s.heroLabel}>RIESGO CRÍTICO</Text>
+          </View>
+          <View style={[s.heroStat, { borderColor: atRiskUsers.length > 0 ? palette.warning : palette.line }]}>
+            <Text style={[s.heroValue, { color: atRiskUsers.length > 0 ? palette.warning : palette.ivory }]}>
+              {atRiskUsers.length}
+            </Text>
+            <Text style={s.heroLabel}>EN RIESGO ALTO</Text>
+          </View>
+          <View style={[s.heroStat, { borderColor: palette.line }]}>
+            <Text style={[s.heroValue, { color: palette.ivory }]}>{kpis.active_today}</Text>
+            <Text style={s.heroLabel}>ACTIVOS HOY</Text>
+          </View>
+        </View>
+      )}
+
+      {/* ── KPIs operativos ── */}
+      <GoldDivider label="KPIs OPERATIVOS" />
       {kpis && (
         <View style={s.kpiGrid}>
           <KpiCard value={kpis.total_users}    label="USUARIOS TOTALES" />
-          <KpiCard value={kpis.active_today}   label="ACTIVOS HOY" />
           <KpiCard value={kpis.active_7d}      label="ACTIVOS 7D" />
           <KpiCard value={kpis.avg_engagement} label="AVG ENGAGEMENT" />
-          <KpiCard
-            value={kpis.critical_churn}
-            label="RIESGO CRÍTICO"
-            accent={kpis.critical_churn > 0 ? palette.danger : palette.success}
-          />
         </View>
       )}
 
@@ -242,6 +265,34 @@ export default function MissionControl() {
           />
         )}
       </View>
+
+      {/* ── Usuarios en Riesgo (Top 5) — accionable: tap navega al dossier ── */}
+      <GoldDivider label={`USUARIOS EN RIESGO (${atRiskUsers.length})`} />
+      <PremiumCard style={s.feedCard}>
+        {atRiskUsers.length === 0 ? (
+          <Text style={s.emptyText}>Ningún usuario en riesgo alto/crítico</Text>
+        ) : (
+          atRiskUsers.slice(0, 5).map((u) => (
+            <Pressable
+              key={u.user_id}
+              onPress={() => router.push(`/admin/usuarios/${u.user_id}` as never)}
+              hitSlop={6}
+              style={({ pressed }) => [s.riskRow, pressed && { opacity: 0.7 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.riskName}>{u.name ?? 'Usuario'}</Text>
+                <Text style={s.riskMeta}>
+                  {u.churn_risk_label.toUpperCase()} · {u.days_since_last_act}d sin actividad
+                  {u.anomaly_detected ? ' · ⚠ anomalía' : ''}
+                </Text>
+              </View>
+              <Text style={[s.riskScore, { color: u.churn_risk_label === 'critical' ? palette.danger : palette.warning }]}>
+                {Math.round(u.churn_risk * 100)}%
+              </Text>
+              <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+            </Pressable>
+          ))
+        )}
+      </PremiumCard>
 
       {/* ── Quick Actions ── */}
       <GoldDivider label="ACCIONES RÁPIDAS" />
@@ -313,6 +364,51 @@ const s = StyleSheet.create({
   headerEyebrow: { ...typography.label, color: palette.smoke, marginBottom: 2 },
   headerTitle: { ...typography.title, color: palette.ivory },
   headerSub: { ...typography.mono, color: palette.ash, marginTop: 4 },
+
+  // Hero bar — 3 KPIs críticos arriba (kpi-dashboard-design: 5-7 hero max, semantic color)
+  heroRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  heroStat: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: palette.graphite,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    minHeight: 76,
+    justifyContent: 'center',
+  },
+  heroValue: {
+    fontFamily: Fonts.display,
+    fontSize: 30,
+    letterSpacing: 1,
+    lineHeight: 34,
+  },
+  heroLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+
+  // At-risk users — accionable, va al dossier
+  riskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.lineSoft,
+  },
+  riskName: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },
+  riskMeta: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
+  riskScore: { ...typography.label, fontSize: 13, marginRight: 2 },
 
   kpiGrid: {
     flexDirection: 'row',

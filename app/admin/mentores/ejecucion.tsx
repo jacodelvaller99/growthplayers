@@ -23,7 +23,7 @@ function Row({ row, metric, metricColor, onPress }: {
   row: ExecutionDashboardRow; metric: string; metricColor?: string; onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+    <Pressable onPress={onPress} hitSlop={4} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
       <View style={{ flex: 1 }}>
         <Text style={s.rowName}>{row.name}</Text>
         <Text style={s.rowSub} numberOfLines={1}>
@@ -34,6 +34,51 @@ function Row({ row, metric, metricColor, onPress }: {
       <Text style={[s.rowMetric, metricColor ? { color: metricColor } : null]}>{metric}</Text>
       <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
     </Pressable>
+  );
+}
+
+/** Hero: distribución de momentum + % equipo en alerta. */
+function MomentumHero({ rows }: { rows: ExecutionDashboardRow[] }) {
+  const total = rows.length;
+  if (total === 0) return null;
+  const counts = {
+    rising:    rows.filter((r) => r.momentum === 'rising').length,
+    stable:    rows.filter((r) => r.momentum === 'stable').length,
+    fragile:   rows.filter((r) => r.momentum === 'fragile').length,
+    declining: rows.filter((r) => r.momentum === 'declining').length,
+    critical:  rows.filter((r) => r.momentum === 'critical').length,
+  };
+  const inAlert = counts.fragile + counts.declining + counts.critical;
+  const alertPct = Math.round((inAlert / total) * 100);
+  const segments = [
+    { count: counts.critical,  color: palette.danger,   label: 'CRÍTICO' },
+    { count: counts.declining, color: palette.warning,  label: 'CAÍDA' },
+    { count: counts.fragile,   color: palette.goldText, label: 'FRÁGIL' },
+    { count: counts.stable,    color: palette.ash,      label: 'ESTABLE' },
+    { count: counts.rising,    color: palette.success,  label: 'ASCENSO' },
+  ];
+  return (
+    <PremiumCard style={s.heroCard}>
+      <View style={s.heroHead}>
+        <Text style={s.heroTotal}>EQUIPO: {total}</Text>
+        <Text style={[s.heroAlert, { color: alertPct >= 30 ? palette.danger : alertPct >= 15 ? palette.warning : palette.success }]}>
+          {alertPct}% MOMENTUM EN RIESGO
+        </Text>
+      </View>
+      <View style={s.heroBar}>
+        {segments.map((seg, i) => seg.count > 0 ? (
+          <View key={i} style={[s.heroSeg, { flex: seg.count, backgroundColor: seg.color }]} />
+        ) : null)}
+      </View>
+      <View style={s.heroCounts}>
+        {segments.map((seg, i) => (
+          <View key={i} style={s.heroCount}>
+            <View style={[s.heroCountDot, { backgroundColor: seg.color }]} />
+            <Text style={s.heroCountTxt}>{seg.label} {seg.count}</Text>
+          </View>
+        ))}
+      </View>
+    </PremiumCard>
   );
 }
 
@@ -84,6 +129,8 @@ export default function AdminEjecucionScreen() {
         </PremiumCard>
       ) : (
         <>
+          <MomentumHero rows={rows} />
+
           <GoldDivider label="NECESITAN INTERVENCIÓN" />
           <PremiumCard style={s.card}>
             {byAttention.length === 0 ? <Text style={s.empty}>Nadie en alerta.</Text> :
@@ -119,4 +166,16 @@ const s = StyleSheet.create({
   rowSub: { ...typography.caption, color: palette.smoke, fontSize: 11 },
   rowReason: { ...typography.caption, color: palette.ash, fontSize: 11, marginTop: 1 },
   rowMetric: { ...typography.label, color: palette.goldText, fontSize: 13, marginRight: 2 },
+
+  // Momentum distribution hero
+  heroCard: { gap: spacing.sm, marginBottom: spacing.md, paddingVertical: spacing.md },
+  heroHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  heroTotal: { ...typography.label, color: palette.smoke, fontSize: 10, letterSpacing: 1.2 },
+  heroAlert: { ...typography.label, fontSize: 12, letterSpacing: 1 },
+  heroBar: { flexDirection: 'row', height: 10, borderRadius: 4, overflow: 'hidden', backgroundColor: palette.charcoal },
+  heroSeg: { height: 10 },
+  heroCounts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: 4 },
+  heroCount: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  heroCountDot: { width: 8, height: 8, borderRadius: 4 },
+  heroCountTxt: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 0.8 },
 });

@@ -32,18 +32,63 @@ const TREND_LABEL: Record<TrendState, string> = {
 function Row({ row, onPress }: { row: BiometricDashboardRow; onPress: () => void }) {
   const lvl = LEVEL_META[row.intervention_level] ?? LEVEL_META.low;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
-      <View style={{ flex: 1 }}>
+    <Pressable onPress={onPress} hitSlop={4} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+      <View style={{ flex: 1, gap: 2 }}>
         <Text style={s.rowName}>{row.name ?? 'Usuario'}</Text>
         <Text style={s.rowSub} numberOfLines={1}>
           {RECOVERY_LABEL[row.recovery_state as RecoveryState] ?? row.recovery_state} · tendencia {TREND_LABEL[row.trend_state as TrendState] ?? row.trend_state}
         </Text>
+        {row.summary ? (
+          <Text style={s.rowDriver} numberOfLines={2}>{row.summary}</Text>
+        ) : null}
       </View>
       <View style={[s.lvlPill, { borderColor: lvl.color }]}>
         <Text style={[s.lvlText, { color: lvl.color }]}>{lvl.label}</Text>
       </View>
       <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
     </Pressable>
+  );
+}
+
+/** Distribution hero: visibility instantánea del estado del equipo. */
+function DistributionHero({ rows }: { rows: BiometricDashboardRow[] }) {
+  const total = rows.length;
+  if (total === 0) return null;
+  const counts = {
+    urgent: rows.filter((r) => r.intervention_level === 'urgent').length,
+    high:   rows.filter((r) => r.intervention_level === 'high').length,
+    medium: rows.filter((r) => r.intervention_level === 'medium').length,
+    low:    rows.filter((r) => r.intervention_level === 'low').length,
+  };
+  const alertPct = Math.round(((counts.urgent + counts.high) / total) * 100);
+  const segments = [
+    { count: counts.urgent, color: palette.danger,  label: 'URG' },
+    { count: counts.high,   color: palette.warning, label: 'ATD' },
+    { count: counts.medium, color: palette.goldText, label: 'OBS' },
+    { count: counts.low,    color: palette.success, label: 'OK' },
+  ];
+  return (
+    <PremiumCard style={s.heroCard}>
+      <View style={s.heroHead}>
+        <Text style={s.heroTotal}>EQUIPO: {total}</Text>
+        <Text style={[s.heroAlert, { color: alertPct >= 25 ? palette.danger : alertPct >= 10 ? palette.warning : palette.success }]}>
+          {alertPct}% EN ALERTA
+        </Text>
+      </View>
+      <View style={s.heroBar}>
+        {segments.map((seg, i) => seg.count > 0 ? (
+          <View key={i} style={[s.heroSeg, { flex: seg.count, backgroundColor: seg.color }]} />
+        ) : null)}
+      </View>
+      <View style={s.heroCounts}>
+        {segments.map((seg, i) => (
+          <View key={i} style={s.heroCount}>
+            <View style={[s.heroCountDot, { backgroundColor: seg.color }]} />
+            <Text style={s.heroCountTxt}>{seg.label} {seg.count}</Text>
+          </View>
+        ))}
+      </View>
+    </PremiumCard>
   );
 }
 
@@ -92,6 +137,8 @@ export default function AdminBiometriaScreen() {
         </PremiumCard>
       ) : (
         <>
+          <DistributionHero rows={rows} />
+
           <GoldDivider label={`NECESITAN ATENCIÓN (${needAttention.length})`} />
           <PremiumCard style={s.card}>
             {needAttention.length === 0 ? <Text style={s.empty}>Nadie en alerta fisiológica.</Text> :
@@ -125,6 +172,19 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.line },
   rowName: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },
   rowSub: { ...typography.caption, color: palette.smoke, fontSize: 11 },
+  rowDriver: { ...typography.caption, color: palette.ash, fontSize: 11, fontStyle: 'italic' },
   lvlPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
   lvlText: { ...typography.label, fontSize: 9, letterSpacing: 0.8 },
+
+  // Distribution hero — instantánea del estado del equipo
+  heroCard: { gap: spacing.sm, marginBottom: spacing.md, paddingVertical: spacing.md },
+  heroHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  heroTotal: { ...typography.label, color: palette.smoke, fontSize: 10, letterSpacing: 1.2 },
+  heroAlert: { ...typography.label, fontSize: 12, letterSpacing: 1 },
+  heroBar: { flexDirection: 'row', height: 10, borderRadius: 4, overflow: 'hidden', backgroundColor: palette.charcoal },
+  heroSeg: { height: 10 },
+  heroCounts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: 4 },
+  heroCount: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  heroCountDot: { width: 8, height: 8, borderRadius: 4 },
+  heroCountTxt: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 0.8 },
 });
