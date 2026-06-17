@@ -202,3 +202,20 @@ Pase de cierre de handoffs (NO se construyó nada nuevo). Verificación de reali
   criterio de verificación. Doc 19 actualizado con el smoke test.
 - **Gate:** `tsc 0 · lint 0 errores · 134 tests · export web OK`. Estado **sin cambio**: PRODUCTION CANDIDATE
   (no pasa a shipped porque depende de datos/credenciales del dueño — declarado honestamente, no fingido).
+
+## Admin: crear/editar perfiles — 2026-06-17
+
+El admin solo gestionaba usuarios existentes (verificado: no había `createUser`, identidad solo-lectura).
+Añadido sin reconstruir nada:
+- **Edge function `create-user`** (`supabase/functions/create-user/index.ts`): gate `is_admin` del JWT del
+  caller (crítico — no como delete-account que solo afecta al dueño) → `adminSupabase.auth.admin.createUser`
+  (email_confirm + user_metadata.name) → refuerza name en user_profiles. Deploy = handoff CLI.
+- **Acciones** (`lib/admin/actions.ts`): `createUserProfile` (invoke create-user + `activateMembership`
+  para tier inicial + audit) · `updateUserProfile` (name + etiqueta/rol a user_profiles + audit).
+- **UI:** botón "Crear perfil" + modal (email/nombre/contraseña temporal/tier, espeja el modal de
+  membresías) en `usuarios/index.tsx`; botón "Editar" + modal de identidad en `usuarios/[id].tsx`.
+  El tier de suscripción ya era editable (sección Membresías).
+- **Decisión:** usuario real con login (no ficha CRM); contraseña temporal que el admin comparte; reusa
+  `activateMembership` para el entitlement. Habilita la Parte C (perfiles Norman/Juan Jacobo = usar esto).
+- **Gate:** `tsc 0 · lint 0 errores · 138 tests · export web OK`. **Bloqueado-en-ti:** `supabase functions
+  deploy create-user` (CLI no está en el entorno del agente).

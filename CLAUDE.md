@@ -49,6 +49,7 @@ supabase functions deploy generate-embeddings
 supabase functions deploy smart-notifications
 supabase functions deploy sync-wearables
 supabase functions deploy delete-account        # GDPR account deletion
+supabase functions deploy create-user           # admin crea usuario real (service-role, gate is_admin)
 supabase functions deploy ml-dashboard
 ```
 
@@ -255,6 +256,8 @@ WHOOP + Oura via OAuth (`app/oauth/whoop/callback`, `app/oauth/oura/callback`), 
 **Subscription gating:** Check `isSubscribed` from `useLifeFlow()` or `useSubscription()` hook. Free tier gets limited mentor messages and locked modules. RevenueCat is the source of truth; Supabase `subscription_tier` is synced via webhook.
 
 **Admin panel** (`app/admin/`): separate auth check — requires `is_admin` in user profile (checked in `app/admin/_layout.tsx`, with a hardcoded `OWNER_IDS` fallback ~line 134 kept as migration safety net — candidate for removal now that the migration is applied in prod). Never expose admin routes to regular users. Server-side enforcement is the BEFORE-UPDATE anti-escalation trigger + RLS (migration `20260602000000_security_hardening_p0.sql`).
+
+**Admin crea/edita perfiles** (`app/admin/usuarios/`): el admin puede **crear** un usuario real con login (botón "Crear perfil" en `usuarios/index.tsx` → `createUserProfile` en `lib/admin/actions.ts` → edge function `create-user`, que verifica `is_admin` del caller y usa `adminSupabase.auth.admin.createUser`; el tier inicial reusa `activateMembership`) y **editar** nombre/etiqueta-rol (`updateUserProfile` → `user_profiles`, en `usuarios/[id].tsx`). El tier de suscripción se cambia en la sección Membresías. Crear el auth user necesita service-role → vive en edge function (deploy = handoff CLI).
 
 **Wearables OAuth (handoff abierto):** native redirect is `polaris://oauth/<provider>/callback` (`lib/wearables.ts`) matching `scheme: "polaris"` — these URIs must still be **registered in the Oura/WHOOP developer consoles** before the native flow works end-to-end. Web redirect stays `https://growthplayers.vercel.app/oauth/*`.
 

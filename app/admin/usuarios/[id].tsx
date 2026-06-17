@@ -71,7 +71,7 @@ import {
 } from '@/lib/biometric';
 import type { Scenario } from '@/lib/biometricSimulator';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
-import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman } from '@/lib/admin/actions';
+import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, updateUserProfile } from '@/lib/admin/actions';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -209,6 +209,12 @@ export default function UserDetailScreen() {
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [expandedConv, setExpandedConv] = useState<string | null>(null);
 
+  // Editar identidad (nombre + etiqueta/rol)
+  const [editOpen, setEditOpen] = useState(false);
+  const [eName, setEName] = useState('');
+  const [eLabel, setELabel] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // Weekly session state
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
   const [generatingSession, setGeneratingSession] = useState(false);
@@ -314,6 +320,24 @@ export default function UserDetailScreen() {
     }
   }, [userId, adminId]);
 
+  const openEditIdentity = () => {
+    setEName(user?.name ?? '');
+    setELabel(user?.role ?? '');
+    setEditOpen(true);
+  };
+
+  const handleSaveIdentity = useCallback(async () => {
+    if (!userId || !adminId) return;
+    setSavingEdit(true);
+    try {
+      await updateUserProfile({ adminId, userId, name: eName, label: eLabel });
+      setEditOpen(false);
+      await load();
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [userId, adminId, eName, eLabel, load]);
+
   const handleDeactivateMembership = async (membership: UserMembership) => {
     if (!adminId) return;
     Alert.alert('Desactivar membresía', `¿Desactivar ${membership.product} de este usuario?`, [
@@ -416,6 +440,14 @@ export default function UserDetailScreen() {
                 <Text style={s.userMeta}>Último acceso {timeAgo(user.last_sign_in_at)}</Text>
               )}
             </View>
+            <Pressable
+              onPress={openEditIdentity}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Editar identidad"
+              style={mo.editIconBtn}>
+              <MaterialIcons name="edit" size={18} color={palette.goldText} />
+            </Pressable>
           </View>
           <Pressable style={s.normanBtn} onPress={() => setShowNorman(true)}>
             <MaterialIcons name="send" size={16} color={palette.goldText} />
@@ -842,6 +874,47 @@ export default function UserDetailScreen() {
         onClose={() => setShowNorman(false)}
         onSend={handleSendNorman}
       />
+
+      {/* ── Modal: Editar identidad ── */}
+      <Modal visible={editOpen} transparent animationType="fade" onRequestClose={() => setEditOpen(false)}>
+        <View style={mo.overlay}>
+          <View style={mo.sheet}>
+            <Text style={mo.edTitle}>EDITAR IDENTIDAD</Text>
+            <Text style={mo.edLabel}>NOMBRE</Text>
+            <TextInput
+              style={mo.edInput}
+              value={eName}
+              onChangeText={setEName}
+              placeholder="Nombre"
+              placeholderTextColor={palette.smoke}
+            />
+            <Text style={[mo.edLabel, { marginTop: spacing.md }]}>ROL / ETIQUETA</Text>
+            <TextInput
+              style={mo.edInput}
+              value={eLabel}
+              onChangeText={setELabel}
+              placeholder="Ej. Fundadora, Aprendiz…"
+              placeholderTextColor={palette.smoke}
+            />
+            <Text style={mo.edHint}>El tier de suscripción se cambia en “B. Membresías y acceso”.</Text>
+            <View style={mo.edFooter}>
+              <Pressable style={mo.edCancel} onPress={() => setEditOpen(false)}>
+                <Text style={mo.edCancelText}>CANCELAR</Text>
+              </Pressable>
+              <Pressable
+                style={[mo.edSave, savingEdit && { opacity: 0.6 }]}
+                onPress={handleSaveIdentity}
+                disabled={savingEdit}>
+                {savingEdit ? (
+                  <ActivityIndicator color={palette.ink} size="small" />
+                ) : (
+                  <Text style={mo.edSaveText}>GUARDAR</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -963,6 +1036,16 @@ const ab = StyleSheet.create({
 const mo = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   sheet: { backgroundColor: palette.graphiteLight, borderRadius: radii.lg, padding: spacing.xl, width: '100%', maxWidth: 480, gap: spacing.md },
+  editIconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: radii.sm },
+  edTitle: { ...typography.section, color: palette.ivory, fontSize: 15, marginBottom: spacing.sm },
+  edLabel: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.5, marginBottom: 6 },
+  edInput: { ...typography.body, color: palette.ivory, fontSize: 14, backgroundColor: palette.charcoal, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  edHint: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: spacing.sm },
+  edFooter: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  edCancel: { flex: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.line, borderRadius: radii.sm, paddingVertical: spacing.md },
+  edCancelText: { ...typography.label, color: palette.smoke, fontSize: 12, letterSpacing: 1 },
+  edSave: { flex: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.gold, borderRadius: radii.sm, paddingVertical: spacing.md },
+  edSaveText: { ...typography.label, color: palette.ink, fontSize: 12, letterSpacing: 1 },
   title: { ...typography.section, color: palette.goldText },
   sub: { ...typography.caption, color: palette.smoke },
   input: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, minHeight: 100, textAlignVertical: 'top' },

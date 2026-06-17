@@ -9,9 +9,12 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -20,7 +23,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, screen, useScreen } from '@/components/polaris';
+import { TIER_ORDER, getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { createUserProfile } from '@/lib/admin/actions';
 import { fetchUsers } from '@/lib/admin/queries';
 import type { AdminUser } from '@/lib/admin/types';
 
@@ -90,6 +96,15 @@ export default function UsuariosScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Crear perfil
+  const { userId: adminId } = useLifeFlow();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [cEmail, setCEmail] = useState('');
+  const [cName, setCName] = useState('');
+  const [cPassword, setCPassword] = useState('');
+  const [cTier, setCTier] = useState<string>('free');
+  const [creating, setCreating] = useState(false);
+
   const load = useCallback(async () => {
     const data = await fetchUsers();
     setUsers(data);
@@ -98,6 +113,36 @@ export default function UsuariosScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const resetCreate = () => { setCEmail(''); setCName(''); setCPassword(''); setCTier('free'); };
+
+  const handleCreate = useCallback(async () => {
+    if (!adminId) return;
+    if (!cEmail.trim() || !cName.trim() || cPassword.length < 8) {
+      Alert.alert('Campos incompletos', 'Email, nombre y contraseña (mínimo 8 caracteres) son requeridos.');
+      return;
+    }
+    setCreating(true);
+    const res = await createUserProfile({
+      adminId,
+      email: cEmail.trim(),
+      name: cName.trim(),
+      password: cPassword,
+      tier: cTier === 'free' ? undefined : cTier,
+    });
+    setCreating(false);
+    if (res.success) {
+      Alert.alert(
+        'Perfil creado',
+        `Usuario "${cName.trim()}" creado.\n\nEmail: ${cEmail.trim()}\nContraseña temporal: ${cPassword}\n\nCompártela con el cliente para su primer ingreso.`,
+      );
+      setCreateOpen(false);
+      resetCreate();
+      load();
+    } else {
+      Alert.alert('No se pudo crear', res.error ?? 'Error desconocido');
+    }
+  }, [adminId, cEmail, cName, cPassword, cTier, load]);
 
   useEffect(() => {
     let list = users;
@@ -126,6 +171,14 @@ export default function UsuariosScreen() {
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>USUARIOS</Text>
+        <Pressable
+          onPress={() => setCreateOpen(true)}
+          style={s.createBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Crear perfil">
+          <MaterialIcons name="person-add" size={15} color={palette.ink} />
+          <Text style={s.createBtnText}>CREAR</Text>
+        </Pressable>
         <Text style={s.badge}>{filtered.length}</Text>
       </View>
 
@@ -180,6 +233,87 @@ export default function UsuariosScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxxl }}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* ── Modal: Crear perfil ── */}
+      <Modal visible={createOpen} transparent animationType="slide" onRequestClose={() => setCreateOpen(false)}>
+        <View style={m.overlay}>
+          <View style={m.sheet}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <View style={m.header}>
+                <Text style={m.title}>CREAR PERFIL</Text>
+                <Pressable onPress={() => setCreateOpen(false)} hitSlop={8}>
+                  <MaterialIcons name="close" size={20} color={palette.ash} />
+                </Pressable>
+              </View>
+
+              <Text style={m.label}>EMAIL *</Text>
+              <TextInput
+                style={m.input}
+                placeholder="cliente@email.com"
+                placeholderTextColor={palette.smoke}
+                value={cEmail}
+                onChangeText={setCEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+
+              <Text style={[m.label, { marginTop: spacing.md }]}>NOMBRE *</Text>
+              <TextInput
+                style={m.input}
+                placeholder="Nombre del cliente"
+                placeholderTextColor={palette.smoke}
+                value={cName}
+                onChangeText={setCName}
+              />
+
+              <Text style={[m.label, { marginTop: spacing.md }]}>CONTRASEÑA TEMPORAL *</Text>
+              <TextInput
+                style={m.input}
+                placeholder="Mínimo 8 caracteres"
+                placeholderTextColor={palette.smoke}
+                value={cPassword}
+                onChangeText={setCPassword}
+                autoCapitalize="none"
+              />
+              <Text style={m.hint}>El cliente la usa para su primer ingreso y luego la cambia.</Text>
+
+              <Text style={[m.label, { marginTop: spacing.md }]}>TIER INICIAL</Text>
+              <View style={m.tierWrap}>
+                {TIER_ORDER.map((t) => {
+                  const active = cTier === t;
+                  return (
+                    <Pressable
+                      key={t}
+                      onPress={() => setCTier(t)}
+                      style={[m.tierChip, active && { backgroundColor: getTierColor(t), borderColor: getTierColor(t) }]}>
+                      <Text style={[m.tierChipText, active && { color: palette.ink }]}>{getTierLabel(t)}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={m.footer}>
+                <Pressable style={m.cancelBtn} onPress={() => setCreateOpen(false)}>
+                  <Text style={m.cancelText}>CANCELAR</Text>
+                </Pressable>
+                <Pressable
+                  style={[m.submitBtn, creating && { opacity: 0.6 }]}
+                  onPress={handleCreate}
+                  disabled={creating}>
+                  {creating ? (
+                    <ActivityIndicator color={palette.ink} size="small" />
+                  ) : (
+                    <>
+                      <Text style={m.submitText}>CREAR PERFIL</Text>
+                      <MaterialIcons name="arrow-forward" size={14} color={palette.ink} />
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -204,6 +338,16 @@ const s = StyleSheet.create({
     borderRadius: radii.pill,
     fontSize: 12,
   },
+  createBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: palette.gold,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  createBtnText: { ...typography.label, color: palette.ink, fontSize: 11, letterSpacing: 1 },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -276,4 +420,53 @@ const rb = StyleSheet.create({
     borderWidth: 1,
   },
   pillText: { ...typography.label, fontSize: 8 },
+});
+
+const m = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: palette.graphiteLight,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    padding: spacing.xl,
+    maxHeight: '88%',
+  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  title: { ...typography.section, color: palette.ivory, fontSize: 15 },
+  label: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.5, marginBottom: 6 },
+  input: {
+    ...typography.body,
+    color: palette.ivory,
+    fontSize: 14,
+    backgroundColor: palette.charcoal,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  hint: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 4 },
+  tierWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tierChip: { borderWidth: 1, borderColor: palette.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  tierChipText: { ...typography.label, color: palette.ash, fontSize: 11 },
+  footer: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  cancelBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+  },
+  cancelText: { ...typography.label, color: palette.smoke, fontSize: 12, letterSpacing: 1 },
+  submitBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+  },
+  submitText: { ...typography.label, color: palette.ink, fontSize: 12, letterSpacing: 1 },
 });

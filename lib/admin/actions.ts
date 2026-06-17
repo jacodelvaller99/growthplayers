@@ -208,6 +208,63 @@ export async function changeTier(params: {
   });
 }
 
+// ─── CREATE USER PROFILE (el admin provisiona un usuario auth real) ───────────
+// Crear un auth user necesita service-role → va por la edge function `create-user`
+// (que verifica is_admin del caller). El tier inicial reusa activateMembership.
+export async function createUserProfile(params: {
+  adminId: string;
+  email: string;
+  name: string;
+  password: string;
+  tier?: string;            // tier de suscripción inicial; '' o 'free' = ninguno
+}): Promise<{ success: boolean; userId?: string; error?: string }> {
+  const { adminId, email, name, password, tier } = params;
+  try {
+    const { data, error } = await supabase.functions.invoke('create-user', {
+      body: { email, name, password },
+    });
+    if (error) return { success: false, error: error.message };
+    const res = data as { userId?: string; error?: string } | null;
+    const userId = res?.userId;
+    if (!userId) return { success: false, error: res?.error ?? 'No se pudo crear el usuario' };
+
+    // Tier de suscripción inicial opcional (reusa el flujo de membresía existente).
+    if (tier && tier !== 'free') {
+      await activateMembership({ adminId, userId, product: tier, activatedBy: 'admin_create' });
+    }
+
+    await auditLog(adminId, 'create_user', 'user', userId, { email, name, tier: tier ?? null });
+    return { success: true, userId };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
+}
+
+// ─── EDIT USER PROFILE FIELDS (nombre + etiqueta/badge mostrada como "rol") ────
+// El tier de suscripción se cambia con changeTier/activateMembership (ya existente).
+export async function updateUserProfile(params: {
+  adminId: string;
+  userId: string;
+  name?: string;
+  label?: string;           // user_profiles.tier — el badge que el admin ve como "rol"
+}): Promise<{ success: boolean; error?: string }> {
+  const { adminId, userId, name, label } = params;
+  const patch: Record<string, unknown> = {};
+  if (typeof name === 'string') patch.name = name.trim();
+  if (typeof label === 'string') patch.tier = label.trim();
+  if (Object.keys(patch).length === 0) return { success: true };
+  try {
+    const { error } = await supa.from('user_profiles').update(patch).eq('user_id', userId);
+    if (error) return { success: false, error: error.message };
+    await auditLog(adminId, 'update_user_profile', 'user', userId, patch);
+    return { success: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
+}
+
 // ─── EXTEND MEMBERSHIP ────────────────────────────────────────────────────────
 export async function extendMembership(params: {
   membershipId: string;
