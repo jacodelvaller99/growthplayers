@@ -683,6 +683,160 @@ export async function recalculateAllML() {
   });
 }
 
+// ─── ACTIVIDAD COMPLETA DEL CLIENTE (cierre de gap: el coach veía solo lo que dice) ──
+// El audit de 2026-06-17 reveló que el dossier admin no leía las tablas de bienestar
+// (hábitos, ayuno, cuerpo, nutrición, suplementos, journal, prácticas de wellness ni
+// comunidad). Aquí están las queries — todas degradan a vacío si la tabla falta o
+// la RLS bloquea (la RLS de bienestar es dueño+admin via is_admin → admin pasa).
+
+export interface UserActivityBundle {
+  habits:        ClientHabit[];
+  habitLogs:     ClientHabitLog[];
+  fasting:       ClientFasting[];
+  body:          ClientBodyMeasurement[];
+  nutrition:     ClientNutritionProfile | null;
+  supplements:   ClientSupplementStack[];
+  journal:       ClientJournalEntry[];
+  wellness:      ClientWellnessSession[];
+  posts:         ClientCommunityPost[];
+  reactionsGiven:number;
+  dmsSent:       number;
+  dmLastActivity:string | null;
+}
+
+export interface ClientHabit {
+  id: string; name: string; category: string | null; streak: number;
+  best_streak: number; is_active: boolean; created_at: string;
+}
+export interface ClientHabitLog {
+  habit_id: string; date: string; completed: boolean; notes: string | null;
+}
+export interface ClientFasting {
+  id: string; type: string; target_hours: number; started_at: string;
+  ended_at: string | null; completed: boolean; actual_hours: number | null; notes: string | null;
+}
+export interface ClientBodyMeasurement {
+  id: string; weight_kg: number; height_cm: number | null; bmi: number | null;
+  measured_at: string; notes: string | null;
+}
+export interface ClientNutritionProfile {
+  diet_type: string; restrictions: string[] | null; allergies: string[] | null;
+  goals: string[] | null; daily_cal_goal: number | null; updated_at: string;
+}
+export interface ClientSupplementStack {
+  id: string; name: string; goal: string | null;
+  supplements: Record<string, unknown>[] | null; is_active: boolean; created_at: string;
+}
+export interface ClientJournalEntry {
+  id: string; content: string; entry_type: string | null;
+  mood_score: number | null; created_at: string;
+}
+export interface ClientWellnessSession {
+  id: string; type: string; session_name: string | null;
+  duration_seconds: number; completed_at: string;
+}
+export interface ClientCommunityPost {
+  id: string; content: string; type: string | null;
+  likes_count: number; is_pinned: boolean; created_at: string;
+}
+
+async function safeSelect<T>(
+  table: string, cols: string, build: (q: ReturnType<typeof supa.from>) => unknown, fallback: T,
+): Promise<T> {
+  try {
+    const q = supa.from(table).select(cols);
+    const built = build(q) as { then: (cb: (r: { data: T | null }) => void) => void };
+    const res = (await (built as unknown as Promise<{ data: T | null }>));
+    return (res.data ?? fallback) as T;
+  } catch { return fallback; }
+}
+
+export async function fetchUserActivityBundle(userId: string): Promise<UserActivityBundle> {
+  if (!userId) return emptyBundle();
+  const [
+    habits, habitLogs, fasting, body, nutrition, supplements,
+    journal, wellness, posts, reactionsGiven, dmsSent, dmLast,
+  ] = await Promise.all([
+    safeSelect<ClientHabit[]>('habits',
+      'id,name,category,streak,best_streak,is_active,created_at',
+      (q) => q.eq('user_id', userId).order('is_active', { ascending: false }).order('created_at', { ascending: false }),
+      [] as ClientHabit[]),
+    safeSelect<ClientHabitLog[]>('habit_logs',
+      'habit_id,date,completed,notes',
+      (q) => q.eq('user_id', userId).order('date', { ascending: false }).limit(120),
+      [] as ClientHabitLog[]),
+    safeSelect<ClientFasting[]>('fasting_sessions',
+      'id,type,target_hours,started_at,ended_at,completed,actual_hours,notes',
+      (q) => q.eq('user_id', userId).order('started_at', { ascending: false }).limit(20),
+      [] as ClientFasting[]),
+    safeSelect<ClientBodyMeasurement[]>('body_measurements',
+      'id,weight_kg,height_cm,bmi,measured_at,notes',
+      (q) => q.eq('user_id', userId).order('measured_at', { ascending: false }).limit(30),
+      [] as ClientBodyMeasurement[]),
+    (async () => {
+      try {
+        const { data } = await supa.from('nutrition_profiles')
+          .select('diet_type,restrictions,allergies,goals,daily_cal_goal,updated_at')
+          .eq('user_id', userId).maybeSingle();
+        return (data ?? null) as ClientNutritionProfile | null;
+      } catch { return null; }
+    })(),
+    safeSelect<ClientSupplementStack[]>('supplement_stacks',
+      'id,name,goal,supplements,is_active,created_at',
+      (q) => q.eq('user_id', userId).order('is_active', { ascending: false }).order('created_at', { ascending: false }),
+      [] as ClientSupplementStack[]),
+    safeSelect<ClientJournalEntry[]>('journal_entries',
+      'id,content,entry_type,mood_score,created_at',
+      (q) => q.eq('user_id', userId).order('created_at', { ascending: false }).limit(25),
+      [] as ClientJournalEntry[]),
+    safeSelect<ClientWellnessSession[]>('wellness_sessions',
+      'id,type,session_name,duration_seconds,completed_at',
+      (q) => q.eq('user_id', userId).order('completed_at', { ascending: false }).limit(30),
+      [] as ClientWellnessSession[]),
+    safeSelect<ClientCommunityPost[]>('community_posts',
+      'id,content,type,likes_count,is_pinned,created_at',
+      (q) => q.eq('user_id', userId).order('created_at', { ascending: false }).limit(20),
+      [] as ClientCommunityPost[]),
+    // count de reacciones que el cliente DIO (engagement con peers)
+    (async () => {
+      try {
+        const { count } = await supa.from('community_reactions')
+          .select('id', { count: 'exact', head: true }).eq('user_id', userId);
+        return (count ?? 0) as number;
+      } catch { return 0; }
+    })(),
+    // DMs ENVIADOS (sin exponer contenido — solo señal de actividad)
+    (async () => {
+      try {
+        const { count } = await supa.from('direct_messages')
+          .select('id', { count: 'exact', head: true }).eq('sender_id', userId);
+        return (count ?? 0) as number;
+      } catch { return 0; }
+    })(),
+    // última actividad de DM (envío o recepción) — fecha solamente
+    (async () => {
+      try {
+        const { data } = await supa.from('direct_messages')
+          .select('created_at').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        return ((data as { created_at?: string } | null)?.created_at ?? null) as string | null;
+      } catch { return null; }
+    })(),
+  ]);
+
+  return {
+    habits, habitLogs, fasting, body, nutrition, supplements,
+    journal, wellness, posts, reactionsGiven, dmsSent, dmLastActivity: dmLast,
+  };
+}
+
+function emptyBundle(): UserActivityBundle {
+  return {
+    habits: [], habitLogs: [], fasting: [], body: [], nutrition: null, supplements: [],
+    journal: [], wellness: [], posts: [], reactionsGiven: 0, dmsSent: 0, dmLastActivity: null,
+  };
+}
+
 // ─── Search users ─────────────────────────────────────────────────────────────
 
 export async function searchUsers(query: string): Promise<AdminUser[]> {

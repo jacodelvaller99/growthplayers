@@ -219,3 +219,24 @@ Añadido sin reconstruir nada:
   `activateMembership` para el entitlement. Habilita la Parte C (perfiles Norman/Juan Jacobo = usar esto).
 - **Gate:** `tsc 0 · lint 0 errores · 138 tests · export web OK`. **Bloqueado-en-ti:** `supabase functions
   deploy create-user` (CLI no está en el entorno del agente).
+
+## Admin: cierre del gap "historia completa" — 2026-06-17
+
+Auditoría mostró que el dossier del coach veía solo lo que el cliente DICE (check-ins, conversaciones,
+compromisos), no lo que HACE (hábitos diarios, ayunos, cuerpo, nutrición, suplementos, prácticas, journal,
+comunidad). Score honesto antes: 4/10. Cierre completo:
+
+- **`lib/admin/queries.ts`**: `fetchUserActivityBundle(userId)` paraleliza 12 lecturas (habits, habit_logs,
+  fasting, body, nutrition, supplements, journal, wellness_sessions, posts, count de reactions, count de
+  DMs enviados, última actividad DM) con helper `safeSelect` que degrada a vacío.
+- **`components/admin-activity.tsx`** (NUEVO): HabitsCard (rachas + completados últimos 14d) ·
+  WellnessSessionsCard (totales + breakdown por tipo) · FastingCard · BodyCard (peso actual + delta) ·
+  NutritionCard · SupplementsCard · JournalCard (últimas 8 entradas con tipo + ánimo) · CommunityCard
+  (posts + likes dados + DMs enviados + días desde último DM).
+- **`app/admin/usuarios/[id].tsx`**: 2 secciones nuevas — **L. CUERPO & PROTOCOLO** y **N. REFLEXIONES &
+  COMUNIDAD** — antes de H. AUDITORÍA. `load()` ahora hace 10 fetches en paralelo.
+- **Privacidad de DMs:** solo metadata (conteo + última actividad), nunca contenido — el coach ve señal
+  de actividad, no surveillance.
+- **Hallazgo corregido:** la auditoría reportó "wellness_sessions sin escritura" → falso, ya se escribe
+  en `hooks/use-lifeflow.tsx:793` (saveWellnessSession). Estaba sin LEERSE en admin, no sin escribirse.
+- **Gate:** `tsc 0 · lint 0 errores · 138 tests · export web OK`. Sin tablas nuevas, sin migración.

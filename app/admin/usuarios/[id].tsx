@@ -28,6 +28,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import {
   fetchMentorConversations,
+  fetchUserActivityBundle,
   fetchUserAuditLog,
   fetchUserCheckIns,
   fetchUserDetail,
@@ -36,7 +37,17 @@ import {
   fetchUserMentorship,
   fetchUserMemory,
 } from '@/lib/admin/queries';
-import type { AdminMentorshipData, UserMemoryBundle } from '@/lib/admin/queries';
+import type { AdminMentorshipData, UserActivityBundle, UserMemoryBundle } from '@/lib/admin/queries';
+import {
+  BodyCard,
+  CommunityCard,
+  FastingCard,
+  HabitsCard,
+  JournalCard,
+  NutritionCard,
+  SupplementsCard,
+  WellnessSessionsCard,
+} from '@/components/admin-activity';
 import {
   AdminBriefingCard,
   AdminNotesCard,
@@ -234,9 +245,15 @@ export default function UserDetailScreen() {
   const [bio, setBio] = useState<BiometricSnapshot>({ series: [], latestInsight: null, connections: [] });
   const [seeding, setSeeding] = useState(false);
 
+  // Actividad completa del cliente (cierre del gap "historia completa")
+  const [activity, setActivity] = useState<UserActivityBundle>({
+    habits: [], habitLogs: [], fasting: [], body: [], nutrition: null, supplements: [],
+    journal: [], wellness: [], posts: [], reactionsGiven: 0, dmsSent: 0, dmLastActivity: null,
+  });
+
   const load = useCallback(async () => {
     if (!userId) return;
-    const [userDetail, evts, convs, cis, ment, audit, memo, exec, bioSnap] = await Promise.all([
+    const [userDetail, evts, convs, cis, ment, audit, memo, exec, bioSnap, act] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
       fetchMentorConversations(userId, 30),
@@ -246,6 +263,7 @@ export default function UserDetailScreen() {
       fetchUserMemory(userId),
       fetchUserExecution(userId),
       fetchBiometricSnapshot(userId),
+      fetchUserActivityBundle(userId),
     ]);
     setUser(userDetail);
     setEvents(evts);
@@ -256,6 +274,7 @@ export default function UserDetailScreen() {
     setMemory(memo);
     setExecution(exec);
     setBio(bioSnap);
+    setActivity(act);
     setLoading(false);
   }, [userId]);
 
@@ -850,6 +869,29 @@ export default function UserDetailScreen() {
             </>
           )}
         </PremiumCard>
+
+        {/* ─────────────────────────────────────────────────── */}
+        {/* L. CUERPO & PROTOCOLO (lo que el cliente HACE) */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label="L. CUERPO & PROTOCOLO" />
+        <HabitsCard habits={activity.habits} logs={activity.habitLogs} />
+        <WellnessSessionsCard sessions={activity.wellness} />
+        <FastingCard sessions={activity.fasting} />
+        <BodyCard measurements={activity.body} />
+        <NutritionCard profile={activity.nutrition} />
+        <SupplementsCard stacks={activity.supplements} />
+
+        {/* ─────────────────────────────────────────────────── */}
+        {/* N. REFLEXIONES & COMUNIDAD (lo que el cliente PIENSA y CONECTA) */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label="N. REFLEXIONES & COMUNIDAD" />
+        <JournalCard entries={activity.journal} />
+        <CommunityCard
+          posts={activity.posts}
+          reactionsGiven={activity.reactionsGiven}
+          dmsSent={activity.dmsSent}
+          dmLastActivity={activity.dmLastActivity}
+        />
 
         {/* ─────────────────────────────────────────────────── */}
         {/* H. AUDITORÍA DE ESTE USUARIO */}
