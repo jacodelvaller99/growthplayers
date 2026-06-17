@@ -34,7 +34,7 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useMentorMemory } from '@/hooks/useMentorMemory';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { analytics } from '@/lib/analytics';
-import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
+import { streamMentorResponse, type MentorContext, type MentorMode } from '@/lib/mentor';
 import { buildMentorMemoryContext } from '@/lib/memory';
 import { makeMinimalContext, summarizeConversation, updateProfileFromSummary } from '@/lib/memorySummarizer';
 import { suggestTasksFromCommitments } from '@/lib/mentorExecution';
@@ -182,6 +182,14 @@ function TypingBubble({ text }: { text: string }) {
   );
 }
 
+// Modos explícitos de Norman (afinan el foco de la sesión; null = adaptativo).
+const MENTOR_MODES: { key: MentorMode; label: string }[] = [
+  { key: 'diagnosis',      label: 'Diagnóstico' },
+  { key: 'decision',       label: 'Decisión' },
+  { key: 'accountability', label: 'Cuentas' },
+  { key: 'reflection',     label: 'Reflexión' },
+];
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function MentorScreen() {
   const sc = useScreen();
@@ -245,6 +253,7 @@ export default function MentorScreen() {
 
   const { showToast } = useToast();
   const [input, setInput]               = useState('');
+  const [mentorMode, setMentorMode]     = useState<MentorMode | null>(null);
   const [isStreaming, setIsStreaming]   = useState(false);
   // Controla la petición de streaming en curso para poder cancelarla / hacer timeout.
   const abortRef = useRef<AbortController | null>(null);
@@ -443,6 +452,7 @@ export default function MentorScreen() {
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 14),
         messageCount:         userMsgCount,
+        mode:                 mentorMode ?? undefined,
         completedTasks:       Object.values(state.completedTasks ?? {}).map((t) => ({
           lessonId:    t.lessonId,
           lessonTitle: t.title,
@@ -780,6 +790,24 @@ export default function MentorScreen() {
         </View>
       </Modal>
 
+      {/* ── Selector de modo ── */}
+      <View style={[styles.modeRow, { maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}>
+        {MENTOR_MODES.map((m) => {
+          const active = mentorMode === m.key;
+          return (
+            <Pressable
+              key={m.key}
+              accessibilityRole="button"
+              accessibilityLabel={`Modo ${m.label}${active ? ' activo' : ''}`}
+              hitSlop={6}
+              onPress={() => setMentorMode(active ? null : m.key)}
+              style={[styles.modeChip, active && styles.modeChipActive]}>
+              <Text style={[styles.modeChipText, active && styles.modeChipTextActive]}>{m.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* ── Input Bar ── */}
       <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.md, maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}>
         <PremiumInput
@@ -1091,6 +1119,38 @@ const styles = StyleSheet.create({
     color: palette.smoke,
     fontSize: 13,
     textAlign: 'center',
+  },
+
+  // Selector de modo
+  modeRow: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
+  },
+  modeChip: {
+    borderColor: palette.line,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  modeChipActive: {
+    backgroundColor: palette.gold,
+    borderColor: palette.gold,
+  },
+  modeChipText: {
+    ...typography.label,
+    color: palette.ash,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  modeChipTextActive: {
+    color: palette.ink,
   },
 
   // Input bar

@@ -20,7 +20,7 @@ jest.mock('@/lib/nvidia', () => ({
 jest.mock('@/lib/groq', () => ({ streamGroq: jest.fn() }));
 jest.mock('@/lib/openai', () => ({ streamOpenAI: jest.fn() }));
 
-import { streamMentorResponse, buildSystemPrompt, MentorContext } from '@/lib/mentor';
+import { streamMentorResponse, buildSystemPrompt, modePromptBlock, MentorContext, MentorMode } from '@/lib/mentor';
 import { streamNvidia } from '@/lib/nvidia';
 import { streamGroq } from '@/lib/groq';
 import { streamOpenAI } from '@/lib/openai';
@@ -128,5 +128,32 @@ describe('buildSystemPrompt — contrato de compliance (no regresionar)', () => 
 
   it('mantiene el bloque de SEGURIDAD (ruteo de crisis)', () => {
     expect(prompt).toContain('SEGURIDAD');
+  });
+});
+
+describe('modePromptBlock — modos explícitos de Norman', () => {
+  const MODES: MentorMode[] = ['diagnosis', 'decision', 'accountability', 'reflection'];
+
+  it('devuelve vacío sin modo', () => {
+    expect(modePromptBlock(undefined)).toBe('');
+  });
+
+  it('cada modo produce un bloque no vacío y distinto', () => {
+    const blocks = MODES.map((m) => modePromptBlock(m));
+    blocks.forEach((b) => {
+      expect(b).toContain('MODO ACTIVO');
+      expect(b).toContain('SEGURIDAD'); // el modo nunca anula la seguridad
+    });
+    expect(new Set(blocks).size).toBe(MODES.length); // todos distintos
+  });
+
+  it('etiqueta correcta por modo', () => {
+    expect(modePromptBlock('accountability')).toContain('RENDICIÓN DE CUENTAS');
+    expect(modePromptBlock('diagnosis')).toContain('DIAGNÓSTICO');
+  });
+
+  it('buildSystemPrompt inyecta el modo cuando ctx.mode está presente y no cuando no', () => {
+    expect(buildSystemPrompt(ctx)).not.toContain('MODO ACTIVO');
+    expect(buildSystemPrompt({ ...ctx, mode: 'decision' })).toContain('MODO ACTIVO — DECISIÓN');
   });
 });

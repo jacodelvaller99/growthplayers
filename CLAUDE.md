@@ -126,6 +126,8 @@ Streaming chat with a **4-level fallback chain**:
 
 Each provider has its own module — `lib/nvidia.ts`, `lib/groq.ts`, `lib/openai.ts` — orchestrated by the fallback chain in `lib/mentor.ts`. Mentor memory (embedding retrieval) is read via `hooks/useMentorMemory.ts`.
 
+**Explicit modes:** `MentorContext.mode?: MentorMode` (`'diagnosis' | 'decision' | 'accountability' | 'reflection'`) lets the operator choose how Norman accompanies. `modePromptBlock(mode)` (pure, tested) injects a focus block into `buildSystemPrompt` (default = adaptive). Mode never overrides the SEGURIDAD/crisis routing. UI: chip selector above the input in `app/(tabs)/mentor.tsx`.
+
 **Voice transcription — `lib/transcription.ts`:** records a mentorship session (audio) and POSTs it to OpenAI Whisper (`whisper-1`); the transcript is then fed back through `streamMentorResponse` so Norman drafts structured session notes + a 3–5 item action plan, persisted to `mentorship_sessions` (see Mentorship below). Uses `EXPO_PUBLIC_OPENAI_API_KEY` client-side today — moving it server-side is on the roadmap.
 
 > **AI disclosure & safety:** Norman discloses it is AI and routes crisis/self-harm topics to professional help — keep these guardrails when editing the mentor prompt.

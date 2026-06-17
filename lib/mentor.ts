@@ -12,6 +12,8 @@ import type { AssembledMentorMemory } from '@/lib/memoryLogic';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
+export type MentorMode = 'diagnosis' | 'decision' | 'accountability' | 'reflection';
+
 export interface MentorContext {
   userName: string;
   role: string;
@@ -31,6 +33,8 @@ export interface MentorContext {
   /** Last 14 check-ins sorted newest-first — used for pattern detection */
   recentCheckIns?: CheckIn[];
   messageCount: number;
+  /** Modo conversacional explícito elegido por el operador (opcional; default = adaptativo) */
+  mode?: MentorMode;
   completedTasks?: Array<{
     lessonId: string;
     lessonTitle: string;
@@ -207,6 +211,41 @@ function analyzeUserPatterns(ctx: MentorContext): string {
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
+
+// ─── Modos explícitos de Norman ───────────────────────────────────────────────
+// El operador puede elegir cómo quiere ser acompañado. El modo afina el FOCO de la
+// sesión; nunca anula la SEGURIDAD (crisis) ni la REGLA DE HONESTIDAD.
+const MODE_BLOCKS: Record<MentorMode, { label: string; body: string }> = {
+  diagnosis: {
+    label: 'DIAGNÓSTICO',
+    body: 'El operador quiere ENTENDER qué está pasando. Ve a la raíz, no des soluciones todavía. Haz preguntas que revelen el patrón debajo del síntoma. Nombra lo que ves con precisión ("lo que describes no es falta de tiempo, es falta de decisión"). Cierra cuando el operador VEA algo que no veía — una sola pregunta poderosa vale más que tres consejos.',
+  },
+  decision: {
+    label: 'DECISIÓN',
+    body: 'El operador enfrenta una DECISIÓN. Dale claridad para decidir, no decidas por él. Saca a la luz la decisión que está evitando. Pon las opciones reales sobre la mesa con su costo. Llévalo a decidir desde su identidad futura ("la versión de ti a 90 días ya decidió — ¿qué eligió?"). Termina con la decisión tomada y la primera acción en 24h, no con más análisis.',
+  },
+  accountability: {
+    label: 'RENDICIÓN DE CUENTAS',
+    body: 'Modo de confrontación con amor. Contrasta lo que el operador DIJO que haría con lo que HIZO — solo desde compromisos realmente registrados (nunca inventes uno). Si hubo brecha, no la dejes pasar: "dijiste X, hiciste Y — ¿qué rompió eso?". Exige un compromiso concreto, medible, con fecha. No aceptes justificación vaga. El amor aquí es no dejarlo escapar de su propia palabra.',
+  },
+  reflection: {
+    label: 'REFLEXIÓN',
+    body: 'Modo lento e integrador. No hay tareas nuevas ni retos. Ayuda al operador a procesar y dar sentido a lo vivido. Devuélvele sus propias palabras como espejo. Conecta lo de hoy con su proceso. Haz preguntas de significado, no de acción. Cierra con una semilla para que siga operando en segundo plano, no con un pendiente.',
+  },
+};
+
+/** Bloque de prompt para el modo activo. Puro y testeable. Vacío si no hay modo. */
+export function modePromptBlock(mode?: MentorMode): string {
+  if (!mode || !MODE_BLOCKS[mode]) return '';
+  const m = MODE_BLOCKS[mode];
+  return `═══════════════════════════════════════════════
+MODO ACTIVO — ${m.label}
+═══════════════════════════════════════════════
+
+El operador eligió hablar contigo en modo ${m.label}. ${m.body}
+
+(La SEGURIDAD siempre prevalece sobre el modo: ante crisis emocional, abandona el modo y aplica el protocolo de seguridad.)`;
+}
 
 export function buildSystemPrompt(ctx: MentorContext): string {
   const checkInBlock = ctx.todayCheckIn
@@ -474,7 +513,7 @@ ${checkInBlock}
 TAREAS COMPLETADAS:
 ${tasksBlock}
 
-${patternsBlock ? `${patternsBlock}\n` : ''}${intelligenceBlock ? `\n${intelligenceBlock}\n` : ''}${biometricBlock ? `\n${biometricBlock}\n` : ''}${clientMemoryBlock ? `\n${clientMemoryBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
+${ctx.mode ? `${modePromptBlock(ctx.mode)}\n` : ''}${patternsBlock ? `${patternsBlock}\n` : ''}${intelligenceBlock ? `\n${intelligenceBlock}\n` : ''}${biometricBlock ? `\n${biometricBlock}\n` : ''}${clientMemoryBlock ? `\n${clientMemoryBlock}\n` : ''}${memoriesBlock ? `\n${memoriesBlock}\n` : ''}
 ═══════════════════════════════════════════════
 EL MÉTODO POLARIS — TU CONOCIMIENTO COMPLETO
 ═══════════════════════════════════════════════
