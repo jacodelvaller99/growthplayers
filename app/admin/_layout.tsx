@@ -35,6 +35,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { route: '/admin',               label: 'Mission Control',  icon: 'dashboard',      group: 'top' },
   { route: '/admin/usuarios',      label: 'Usuarios',         icon: 'people',         group: 'top' },
+  { route: '/admin/ranking',       label: 'Ranking',          icon: 'leaderboard',    group: 'top' },
   { route: '/admin/membresias',    label: 'Membresías',       icon: 'credit-card',    group: 'top' },
   { route: '/admin/cursos',        label: 'Cursos',           icon: 'school',         group: 'top' },
   { route: '/admin/codigos',       label: 'Códigos Acceso',   icon: 'vpn-key',        group: 'top' },
