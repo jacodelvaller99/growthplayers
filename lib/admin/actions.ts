@@ -211,34 +211,115 @@ export async function changeTier(params: {
 // ─── CREATE USER PROFILE (el admin provisiona un usuario auth real) ───────────
 // Crear un auth user necesita service-role → va por la edge function `create-user`
 // (que verifica is_admin del caller). El tier inicial reusa activateMembership.
+/** ¿El error de invoke significa que la edge function NO está desplegada? */
+function isFunctionUndeployed(err: unknown): boolean {
+  const e = err as { name?: string; message?: string; status?: number } | null;
+  const msg = (e?.message ?? String(err ?? '')).toLowerCase();
+  return (
+    e?.name === 'FunctionsFetchError' ||
+    e?.status === 404 ||
+    msg.includes('failed to fetch') ||
+    msg.includes('not found') ||
+    msg.includes('404') ||
+    msg.includes('functionsfetcherror')
+  );
+}
+
+/**
+ * Fallback client-side: crea el usuario auth vía `signUp` en un cliente AISLADO
+ * (`persistSession: false` + storageKey propio) para NO tocar la sesión del admin.
+ * Se usa cuando la edge function `create-user` aún no está desplegada.
+ * Diferencia con la edge function: no puede auto-confirmar el email (eso requiere
+ * service-role) → si el proyecto exige confirmación, el usuario recibe un correo.
+ */
+async function createUserViaSignUp(params: {
+  email: string; name: string; password: string;
+}): Promise<{ userId?: string; needsConfirm: boolean; error?: string }> {
+  const url  = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+  if (!url || !anon) return { needsConfirm: false, error: 'Configuración de Supabase ausente.' };
+
+  const { createClient } = await import('@supabase/supabase-js');
+  const tmp = createClient(url, anon, {
+    auth: {
+      persistSession: false,        // NO escribe en storage → sesión del admin intacta
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: 'sb-admin-create-temp',
+    },
+  });
+
+  const { data, error } = await tmp.auth.signUp({
+    email: params.email,
+    password: params.password,
+    options: { data: { name: params.name } },   // → user_metadata, leído por handle_new_user
+  });
+  if (error) return { needsConfirm: false, error: error.message };
+  const userId = data.user?.id;
+  if (!userId) return { needsConfirm: false, error: 'No se pudo crear el usuario.' };
+
+  // Refuerza el name en user_profiles (el trigger lo crea desde el metadata; esto
+  // cubre entornos donde el trigger no copia el name). Best-effort.
+  try { await supa.from('user_profiles').update({ name: params.name }).eq('user_id', userId); }
+  catch { /* el trigger ya lo puso, o RLS no deja — no es crítico */ }
+
+  // Sin `session` inmediata = el proyecto exige confirmación de email.
+  return { userId, needsConfirm: !data.session };
+}
+
 export async function createUserProfile(params: {
   adminId: string;
   email: string;
   name: string;
   password: string;
   tier?: string;            // tier de suscripción inicial; '' o 'free' = ninguno
-}): Promise<{ success: boolean; userId?: string; error?: string }> {
-  const { adminId, email, name, password, tier } = params;
+}): Promise<{ success: boolean; userId?: string; error?: string; needsConfirm?: boolean; viaFallback?: boolean }> {
+  const { adminId, name, password, tier } = params;
+  const email = params.email.trim().toLowerCase();
+
+  let userId: string | undefined;
+  let viaFallback = false;
+  let needsConfirm = false;
+
+  // ── 1. Primario: edge function `create-user` (service-role, usuario ya confirmado) ──
   try {
     const { data, error } = await supabase.functions.invoke('create-user', {
       body: { email, name, password },
     });
-    if (error) return { success: false, error: error.message };
-    const res = data as { userId?: string; error?: string } | null;
-    const userId = res?.userId;
-    if (!userId) return { success: false, error: res?.error ?? 'No se pudo crear el usuario' };
-
-    // Tier de suscripción inicial opcional (reusa el flujo de membresía existente).
-    if (tier && tier !== 'free') {
-      await activateMembership({ adminId, userId, product: tier, activatedBy: 'admin_create' });
+    if (error) {
+      // Si la función NO está desplegada → caemos al fallback. Otro error real
+      // (email duplicado, password corto) se propaga tal cual.
+      if (!isFunctionUndeployed(error)) return { success: false, error: error.message };
+    } else {
+      const res = data as { userId?: string; ok?: boolean; error?: string } | null;
+      if (res?.userId) userId = res.userId;
+      else if (res?.error) return { success: false, error: res.error };
     }
-
-    await auditLog(adminId, 'create_user', 'user', userId, { email, name, tier: tier ?? null });
-    return { success: true, userId };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Error desconocido';
-    return { success: false, error: msg };
+    if (!isFunctionUndeployed(err)) {
+      return { success: false, error: err instanceof Error ? err.message : 'Error desconocido' };
+    }
   }
+
+  // ── 2. Fallback: signUp aislado si la edge function no respondió ──
+  if (!userId) {
+    const fb = await createUserViaSignUp({ email, name, password });
+    if (fb.error) return { success: false, error: fb.error };
+    userId = fb.userId;
+    needsConfirm = fb.needsConfirm;
+    viaFallback = true;
+  }
+
+  if (!userId) return { success: false, error: 'No se pudo crear el usuario.' };
+
+  // ── 3. Tier de suscripción inicial opcional (reusa el flujo de membresía) ──
+  if (tier && tier !== 'free') {
+    try { await activateMembership({ adminId, userId, product: tier, activatedBy: 'admin_create' }); }
+    catch { /* el usuario quedó creado; el tier se puede fijar luego en Membresías */ }
+  }
+
+  await auditLog(adminId, 'create_user', 'user', userId, { email, name, tier: tier ?? null, viaFallback });
+  return { success: true, userId, needsConfirm, viaFallback };
 }
 
 // ─── EDIT USER PROFILE FIELDS (nombre + etiqueta/badge mostrada como "rol") ────

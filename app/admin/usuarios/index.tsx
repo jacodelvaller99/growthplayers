@@ -132,10 +132,10 @@ export default function UsuariosScreen() {
     });
     setCreating(false);
     if (res.success) {
-      Alert.alert(
-        'Perfil creado',
-        `Usuario "${cName.trim()}" creado.\n\nEmail: ${cEmail.trim()}\nContraseña temporal: ${cPassword}\n\nCompártela con el cliente para su primer ingreso.`,
-      );
+      const ingreso = res.needsConfirm
+        ? `Le enviamos un email de confirmación a ${cEmail.trim()}. Debe confirmarlo y luego entrar con la contraseña: ${cPassword}`
+        : `Email: ${cEmail.trim()}\nContraseña temporal: ${cPassword}\n\nCompártela con el cliente para su primer ingreso.`;
+      Alert.alert(`Usuario "${cName.trim()}" creado`, ingreso);
       setCreateOpen(false);
       resetCreate();
       load();
