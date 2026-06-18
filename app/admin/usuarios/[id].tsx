@@ -90,6 +90,8 @@ import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, upd
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
 import type { CoachIntelligence } from '@/lib/coachIntelligenceLogic';
+import { WellbeingAlarmCard, WellbeingDot } from '@/components/admin-decision';
+import { wellbeingAlarm, wellbeingScore } from '@/lib/wellbeingLogic';
 import {
   ChurnDriversCard,
   CoachNextActionCard,
@@ -766,18 +768,24 @@ export default function UserDetailScreen() {
         {/* G. CHECK-INS HISTÓRICOS */}
         {/* ─────────────────────────────────────────────────── */}
         <GoldDivider label={`G. CHECK-INS (${checkIns.length})`} />
+        {/* Alarma de bienestar — semáforo de "cómo se va sintiendo" (A1) */}
+        {checkIns.length > 0 && <WellbeingAlarmCard alarm={wellbeingAlarm(checkIns)} />}
         <PremiumCard style={s.card}>
           {checkIns.length === 0 ? (
             <Text style={s.emptyText}>Sin check-ins</Text>
           ) : (
             <View>
               <View style={s.checkInHeader}>
+                <View style={{ width: 14 }} />
                 {['FECHA', 'E', 'C', 'S', 'D'].map(col => (
                   <Text key={col} style={s.checkInHeaderCell}>{col}</Text>
                 ))}
               </View>
               {checkIns.slice(0, 14).map(ci => (
                 <View key={ci.date} style={s.checkInRow}>
+                  <View style={{ width: 14, alignItems: 'center' }}>
+                    <WellbeingDot score={wellbeingScore(ci)} />
+                  </View>
                   <Text style={[s.checkInCell, { flex: 2 }]}>{ci.date}</Text>
                   <Text style={s.checkInCell}>{ci.energy}</Text>
                   <Text style={s.checkInCell}>{ci.clarity}</Text>
