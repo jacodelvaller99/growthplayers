@@ -275,3 +275,23 @@ diseñar exhaustivamente el motor de confrontación con dato. 850k tokens, 25 mi
 - **Handoffs P0/P1:** flip ml_consent → opt-in (P0 paralelo); commitment_strength field en summarizer (P1);
   timezone-travel detection (P1); revisión clínica de detectores STATE (gate para subir severity).
 - **Gate:** `tsc 0 · lint 0 errores · 184 tests · export web OK`. Migración pendiente de aplicar en dashboard.
+
+---
+
+## 2026-06-17 · Apple-Grade Launch Hardening (auditoría 8 agentes → 6 batches)
+Auditoría read-only (7 dimensiones) → veredicto `INTERNALLY_READY · EXTERNALLY_BLOCKED` (readiness 62,
+design 72, apple-UX 55). Cierre código-fixable de los 25 issues en 6 batches (detalle: `docs/investor/20_LAUNCH_HARDENING_PASS.md`).
+- **B1 AI Stability:** stream guard (timeout 45s + watchdog idle 8s + failover por proveedor) en
+  nvidia/groq/openai/anthropic; Whisper retry exponencial + fallback a notas manuales.
+- **B2 Write Resilience:** outbox idempotente vía `client_id` (mentor_messages) auto-ajustable sin
+  regresión pre-migración; journal solo limpia tras éxito; recordatorios de hábitos rehidratados desde el SO.
+- **B3 Observability:** `logSilentError` (rastro de degradación) + `checkCriticalSchema` (healthcheck
+  post-login); admin Mission Control `allSettled`+`finally` (no más spinner infinito).
+- **B4 Auth/Subscription:** `resolveEntitlement` (RC+DB+expiry, fix split-brain + enforce expiración);
+  recuperación de contraseña web (`detectSessionInUrl` + ruta `reset-password`); descope honesto del paywall web.
+- **B5 UX Polish:** permiso HealthKit/HC denegado → "Abrir Ajustes"; cue de tarea IA pendiente de coach;
+  sync wearable OAuth con mensaje honesto; memory summary umbral 4→2.
+- **B6 Compliance/Docs:** `ml_consent` → opt-in explícito (migración DEFAULT false + checkbox opcional);
+  doc-truth (42 rutas, 204 tests, 48 deletes).
+- **Migraciones nuevas (handoff dashboard):** `…_client_id_outbox`, `…_ml_consent_opt_in` (+ `…_wearables_native_providers`).
+- **Gate:** `tsc 0 · lint 0 errores · 204 tests · export web OK`.

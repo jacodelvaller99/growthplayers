@@ -5,7 +5,7 @@
 
 import { ENV } from '@/app/config/env';
 import type { ChatMessage } from './nvidia';
-import { parseSSEStream } from './nvidia';
+import { parseSSEStream, createStreamGuard } from './nvidia';
 
 const GROQ_BASE = 'https://api.groq.com/openai/v1';
 const MODEL = 'llama-3.3-70b-versatile'; // qwen3-32b daba 413 (payload too large con system prompts largos)
@@ -27,40 +27,50 @@ export async function streamGroq(
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
-  // Camino proxy (clave server-side); fallback al directo si hay clave local.
-  if (ENV.aiProxyUrl) {
-    try {
-      const { proxyChatFetch } = await import('./aiProxy');
-      const response = await proxyChatFetch('groq', messages, signal);
-      return await parseSSEStream(response, onChunk, signal);
-    } catch (err) {
-      if (signal?.aborted || (err as Error)?.name === 'AbortError') throw err;
-      if (!ENV.groqApiKey) throw err;
-      console.warn('[Groq] proxy falló, usando llamada directa:', err);
+  const guard = createStreamGuard(signal);
+  try {
+    // Camino proxy (clave server-side); fallback al directo si hay clave local.
+    if (ENV.aiProxyUrl) {
+      try {
+        const { proxyChatFetch } = await import('./aiProxy');
+        const response = await proxyChatFetch('groq', messages, guard.signal);
+        return await parseSSEStream(response, onChunk, guard.signal, guard.activity);
+      } catch (err) {
+        if (guard.signal.aborted || (err as Error)?.name === 'AbortError') throw err;
+        if (!ENV.groqApiKey) throw err;
+        console.warn('[Groq] proxy falló, usando llamada directa:', err);
+      }
     }
+
+    const response = await fetch(`${GROQ_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ENV.groqApiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        stream: true,
+        temperature: 0.7,
+        max_tokens: 1024,
+        top_p: 0.9,
+      }),
+      signal: guard.signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`Groq API ${response.status}: ${body}`);
+    }
+
+    const text = await parseSSEStream(response, onChunk, guard.signal, guard.activity);
+    if (guard.timedOut && !text) throw new Error('Groq stream timeout (no data)');
+    return text;
+  } catch (err) {
+    if (guard.timedOut && !signal?.aborted) throw new Error('Groq stream timeout');
+    throw err;
+  } finally {
+    guard.dispose();
   }
-
-  const response = await fetch(`${GROQ_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${ENV.groqApiKey}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 1024,
-      top_p: 0.9,
-    }),
-    signal,
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`Groq API ${response.status}: ${body}`);
-  }
-
-  return parseSSEStream(response, onChunk, signal);
 }

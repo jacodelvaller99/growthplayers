@@ -128,19 +128,24 @@ export default function MissionControl() {
   const channelRef = useRef<ReturnType<typeof intel.events> | null>(null);
 
   const loadData = useCallback(async () => {
-    const [kpiData, evtData, tierData, riskData] = await Promise.all([
-      fetchDashboardKPIs(),
-      fetchLiveEvents(10),
-      fetchTierCounts(),
-      fetchAtRiskUsers(),
-    ]);
-    setKpis(kpiData);
-    setEvents(evtData);
-    setTierCounts(tierData);
-    setAtRiskUsers(riskData);
-    setLastSyncAt(new Date());
-    setLoading(false);
-    setRefreshing(false);
+    // allSettled: una query que falle NO debe dejar el dashboard en spinner infinito.
+    // Cada panel se actualiza con lo que llegó; lo que falló conserva su último valor.
+    try {
+      const [kpiRes, evtRes, tierRes, riskRes] = await Promise.allSettled([
+        fetchDashboardKPIs(),
+        fetchLiveEvents(10),
+        fetchTierCounts(),
+        fetchAtRiskUsers(),
+      ]);
+      if (kpiRes.status === 'fulfilled') setKpis(kpiRes.value);
+      if (evtRes.status === 'fulfilled') setEvents(evtRes.value);
+      if (tierRes.status === 'fulfilled') setTierCounts(tierRes.value);
+      if (riskRes.status === 'fulfilled') setAtRiskUsers(riskRes.value);
+      setLastSyncAt(new Date());
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);

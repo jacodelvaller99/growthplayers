@@ -11,6 +11,7 @@
  */
 import { intel, mex } from '@/lib/supabase';
 import { fetchMemoryProfile } from '@/lib/memory';
+import { logSilentError } from '@/lib/observability';
 import {
   assembleMentorPrep,
   buildInterventions,
@@ -387,7 +388,8 @@ export async function fetchExecutionDashboard(): Promise<ExecutionDashboardRow[]
       });
     }
     return out.sort((a, b) => b.attention - a.attention);
-  } catch {
+  } catch (e) {
+    logSilentError('mentorExecution.fetchDashboard', e);
     return [];
   }
 }

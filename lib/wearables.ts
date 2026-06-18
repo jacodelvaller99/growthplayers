@@ -19,7 +19,12 @@ import { ENV } from '@/app/config/env';
 const supa: any = supabase;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-export type WearableProvider = 'oura' | 'whoop';
+export type WearableProvider = 'oura' | 'whoop' | 'apple_health' | 'health_connect';
+
+/** ¿Es este provider OAuth web (Oura/WHOOP) o nativo (HealthKit/Health Connect)? */
+export function isNativeProvider(p: WearableProvider): p is 'apple_health' | 'health_connect' {
+  return p === 'apple_health' || p === 'health_connect';
+}
 
 // Nativo usa el scheme registrado en app.json ("polaris") para que
 // openAuthSessionAsync — que cierra en 'polaris://oauth' (perfil/wearables.tsx)
@@ -32,7 +37,9 @@ const REDIRECT_BASE = Platform.OS !== 'web'
     ? 'exp://localhost:8081'
     : 'https://growthplayers.vercel.app';
 
-export const OAUTH_URLS: Record<WearableProvider, (state: string) => string> = {
+/** Solo los providers OAuth web (apple_health/health_connect leen on-device, no usan OAuth). */
+export type OAuthProvider = 'oura' | 'whoop';
+export const OAUTH_URLS: Record<OAuthProvider, (state: string) => string> = {
   oura: (state) => {
     const params = new URLSearchParams({
       client_id:     process.env.EXPO_PUBLIC_OURA_CLIENT_ID ?? '',
@@ -92,6 +99,12 @@ export interface WearableDaily {
   steps: number | null;
   active_min: number | null;
   stress_score: number | null;
+  // Extended (migración 20260617): exposición opcional de calidad de señal y
+  // métricas de respiración — algunos providers nativos (HealthKit, Health Connect)
+  // sí los reportan.
+  respiratory_rate: number | null;
+  signal_confidence: number | null;
+  data_freshness_hours: number | null;
   synced_at: string;
 }
 

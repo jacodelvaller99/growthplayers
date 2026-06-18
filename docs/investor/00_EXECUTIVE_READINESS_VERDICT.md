@@ -10,9 +10,9 @@
 | Dimensión | Estado | Evidencia clave |
 |---|---|---|
 | Seguridad (datos/PII) | 🟢 Fuerte | Migración anti-escalación aplicada en prod; 4 Edge Functions con auth **desplegadas hoy** (curl sin token → 401); RLS por usuario; CSP/HSTS vivos en prod |
-| Compliance (stores/legal) | 🟢 Base sólida | IA con divulgación + ruteo de crisis (protegido por test); consentimiento en onboarding; legal screens; UGC moderado (reportar/bloquear/EULA/filtro + cola admin); GDPR delete 33 tablas desplegado |
-| Robustez | 🟢 Buena | Timeout/abort+cancel del chat; cola offline con feedback honesto; ErrorBoundary + captura global de crashes; guards en 37 rutas (E2E prod) |
-| Calidad de ingeniería | 🟡 En pie | 53 tests reales + CI (recién creados — profundidad por crecer); tsc/lint en 0 errores; sin E2E automatizado |
+| Compliance (stores/legal) | 🟢 Base sólida | IA con divulgación + ruteo de crisis (protegido por test); consentimiento en onboarding (+ ml_consent opt-in explícito, RGPD); legal screens; UGC moderado (reportar/bloquear/EULA/filtro + cola admin); GDPR delete 48 operaciones (deploy = handoff) |
+| Robustez | 🟢 Buena | Timeout/abort+cancel del chat (+ watchdog idle + failover por proveedor); outbox idempotente (mensajes vía client_id); observabilidad de degradación + healthcheck de schema; ErrorBoundary + captura global; guards en 42 rutas (verificación manual) |
+| Calidad de ingeniería | 🟡 En pie | 204 tests reales + CI; tsc/lint en 0 errores; sin E2E automatizado |
 | Producto/activación | 🟡 Medio | Loop check-in→recomendación ✓; day-zero framing ✓; rediseño de Semana 1 guiada pendiente (prioridad 5 del consejo) |
 | Operación | 🟠 Débil | eas projectId placeholder (nativo bloqueado); cron service-role sin configurar; sin staging; secrets del ai-proxy pendientes |
 | Economía unitaria IA | 🟠 Riesgo | Claves aún en bundle hasta activar proxy; sin budgets por interacción (límite burdo 64KB en proxy) |

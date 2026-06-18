@@ -3,6 +3,30 @@
 Cambios con impacto en la tesis de inversión, en orden cronológico inverso.
 Cada entrada referencia commits/evidencia real. Complementa `EXECUTION_LOG.md` (operacional).
 
+## 2026-06-17 — Launch Hardening (auditoría Apple-grade → fiabilidad de producción)
+
+**Pase de robustez sobre el código.** Auditoría de 8 agentes (7 dimensiones) → veredicto
+`internamente listo, externamente bloqueado`. Se cerraron los 25 issues código-fixables (detalle en
+`docs/investor/20_LAUNCH_HARDENING_PASS.md`). Lo que mueve la tesis:
+
+- **Fin de la pérdida de datos silenciosa:** outbox idempotente (mensajes vía `client_id`), el diario ya
+  no borra el texto si el guardado falla, y los recordatorios de hábitos persisten entre reinicios.
+- **IA que no se cuelga:** watchdog de inactividad (8s) + failover por proveedor + botón Detener;
+  transcripción con retry y caída elegante a notas manuales (la sesión nunca se pierde).
+- **Confianza operativa:** toda degradación deja rastro (`logSilentError`) + healthcheck de schema que
+  detecta migraciones no aplicadas (antes: secciones vacías indistinguibles de "sin datos").
+- **Suscripción coherente:** un único reconciliador (RevenueCat + DB + expiración) — se acabó el
+  split-brain y un tier vencido ya no concede premium.
+- **Recuperación de contraseña web** funcional (antes el usuario web bloqueado no tenía salida) y
+  **paywall web honesto** (sin dead-end).
+- **RGPD:** `ml_consent` pasa a **opt-in explícito** (default false + checkbox opcional separado).
+- **Verdad documental:** corregidos claims inflados (42 rutas, 204 tests, 48 deletes; "E2E prod" →
+  verificación manual; delete-account/ai-proxy marcados como handoff real).
+- **Gate:** `tsc 0 · lint 0 errores · 204 tests · export web OK`.
+
+> Handoffs del owner que siguen abiertos: `eas init`, secrets ai-proxy, registro de URIs OAuth,
+> aplicar 3 migraciones nuevas en el SQL Editor. Ninguno es de código.
+
 ## 2026-06-16 — Apple-grade Final Audit (verdad de producción + cierre GDPR)
 
 **Pase de auditoría con disciplina de verdad.** Auditoría rigurosa de 4 frentes con **verificación manual**

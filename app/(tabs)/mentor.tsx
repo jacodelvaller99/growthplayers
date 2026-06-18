@@ -231,7 +231,9 @@ export default function MentorScreen() {
         const { messages, uid, name, role } = sessionRef.current;
         if (!uid) return;
         const userTurns = messages.filter((m) => m.role === 'user').length;
-        if (userTurns - lastSummarizedRef.current < 4) return;
+        // Umbral 2 (antes 4): sesiones cortas con compromisos reales no se perdían
+        // —ya disparamos en blur, pero el throttle alto las dejaba sin sintetizar.
+        if (userTurns - lastSummarizedRef.current < 2) return;
         lastSummarizedRef.current = userTurns;
         const turns = messages.slice(-12).map((m) => ({ role: m.role, text: m.text }));
         const ctx = makeMinimalContext(name, role);

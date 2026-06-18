@@ -131,6 +131,25 @@ export async function scheduleDailyRoutineReminder(
   }
 }
 
+// ─── Recordatorios agendados por hábito (reconstrucción de estado) ────────────
+// Las notificaciones agendadas PERSISTEN en el SO entre reinicios de la app, pero
+// el estado en memoria de la pantalla no. Esto lee el SO (fuente de verdad) y
+// devuelve un mapa habitId → notificationId para rehidratar los toggles al cargar.
+export async function getScheduledRemindersByHabit(): Promise<Record<string, string>> {
+  if (Platform.OS === 'web') return {};
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const map: Record<string, string> = {};
+    for (const n of scheduled) {
+      const habitId = (n.content?.data as { habitId?: string } | undefined)?.habitId;
+      if (habitId) map[habitId] = n.identifier;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 // ─── Cancelar un recordatorio puntual por id ──────────────────────────────────
 export async function cancelScheduledNotification(id: string): Promise<void> {
   if (Platform.OS === 'web' || !id) return;

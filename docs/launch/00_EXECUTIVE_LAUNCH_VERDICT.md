@@ -12,12 +12,13 @@
 > | 5 UGC sin moderación | ✅ CERRADO | Reportar/bloquear/EULA/filtro + cola admin (`2e403f0`) |
 > | 6 Sin links legales | ✅ CERRADO | `app/legal/*` + links en paywall/onboarding |
 > | 7 Norman sin disclosure/crisis | ✅ CERRADO | REGLA DE HONESTIDAD + bloque SEGURIDAD (`lib/mentor.ts:310-325`), protegido por test |
-> | 8 Borrado de cuenta incompleto | ✅ CERRADO **y desplegado** | 33 tablas + CASCADE; deploy dashboard 2026-06-12 |
+> | 8 Borrado de cuenta incompleto | ✅ CERRADO | 48 operaciones de delete + CASCADE; **deploy = handoff CLI** (`supabase functions deploy delete-account`) |
 > | 9 Chat colgado / writes silenciosos | ✅ CERRADO | Abort+timeout 45s + cancelar; cola offline + toast honesto 'queued' |
 > | 10 ErrorBoundary / projectId / userId | 🟡 PARCIAL | ErrorBoundary ✅ + captura global (`lib/crash.ts`) ✅ · userId ✅ · **eas projectId sigue placeholder (handoff)** |
 >
-> Además (2026-06-12): guards `Stack.Protected` en ~37 rutas privadas (verificado E2E en prod),
-> suite Jest real (53 tests) + CI, **ai-proxy** desplegado (claves IA server-side, opt-in),
+> Además (2026-06-12): guards `Stack.Protected` en 42 rutas privadas (verificado manualmente en prod;
+> NO hay E2E automatizados), suite Jest real (204 tests, 14 suites) + CI, **ai-proxy** en código (claves
+> server-side, opt-in — activación de secrets = handoff),
 > `smart-notifications`/`sync-wearables` redesplegados con auth. Pendientes: `eas init`,
 > secrets del ai-proxy + rotación de claves, registro de redirect URIs Oura/WHOOP, cron
 > service-role config. Detalle: `docs/investor/00_EXECUTIVE_READINESS_VERDICT.md` y `EXECUTION_LOG.md`.

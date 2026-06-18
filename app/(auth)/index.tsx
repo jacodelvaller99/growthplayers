@@ -154,8 +154,13 @@ export default function AuthScreen() {
     setLoading(true);
     setError(null);
     try {
+      // En web, el enlace debe volver a /reset-password para fijar la nueva clave.
+      const redirectTo = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? `${window.location.origin}/reset-password`
+        : undefined;
       const { error: err } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
+        redirectTo ? { redirectTo } : undefined,
       );
       if (err) {
         setError(err.message);

@@ -157,6 +157,22 @@ export default function PaywallScreen() {
         </Text>
       </View>
 
+      {/* Web: la suscripción se gestiona en las tiendas (sin dead-end falso). */}
+      {Platform.OS === 'web' && (
+        <PremiumCard style={styles.webGateCard}>
+          <MaterialIcons name="phone-iphone" size={26} color={palette.goldText} />
+          <Text style={styles.webGateTitle}>SE ACTIVA EN LA APP MÓVIL</Text>
+          <Text style={styles.webGateText}>
+            Tu suscripción Polaris se gestiona desde la app de iOS o Android. Descarga Polaris
+            en tu teléfono e inicia sesión con esta misma cuenta para desbloquear el Protocolo
+            completo. En la web mantienes tu acceso gratuito.
+          </Text>
+        </PremiumCard>
+      )}
+
+      {/* Maquinaria de compra: solo en nativo (RevenueCat no opera en web). */}
+      {Platform.OS !== 'web' && (
+        <>
       {/* Package selector — only shown when RC offerings loaded */}
       {packages.length > 1 && (
         <View style={styles.packagesRow}>
@@ -224,6 +240,8 @@ export default function PaywallScreen() {
           <Text style={styles.restoreText}>Restaurar compras anteriores</Text>
         )}
       </Pressable>
+        </>
+      )}
 
       <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
 
@@ -360,6 +378,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+  },
+  webGateCard: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  webGateTitle: {
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: 1.2,
+    color: palette.ivory,
+  },
+  webGateText: {
+    ...typography.body,
+    fontSize: 13,
+    color: palette.ash,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   priceLabel: {
     ...typography.label,

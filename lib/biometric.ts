@@ -11,6 +11,7 @@
  */
 import { bio } from '@/lib/supabase';
 import { insertSummary } from '@/lib/memory';
+import { logSilentError } from '@/lib/observability';
 import {
   computeBaseline,
   computeInsight,
@@ -84,9 +85,11 @@ export async function fetchDailySeries(userId: string, days = 14): Promise<Daily
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(days);
-    if (error || !data) return [];
+    if (error) { logSilentError('biometric.fetchDailySeries', error); return []; }
+    if (!data) return [];
     return (data as DailyMetrics[]).slice().reverse(); // cronológico asc
-  } catch {
+  } catch (e) {
+    logSilentError('biometric.fetchDailySeries', e);
     return [];
   }
 }
@@ -99,9 +102,11 @@ export async function fetchInsights(userId: string, n = 14): Promise<InsightRow[
       .eq('user_id', userId)
       .order('metric_date', { ascending: false })
       .limit(n);
-    if (error || !data) return [];
+    if (error) { logSilentError('biometric.fetchInsights', error); return []; }
+    if (!data) return [];
     return data as InsightRow[];
-  } catch {
+  } catch (e) {
+    logSilentError('biometric.fetchInsights', e);
     return [];
   }
 }

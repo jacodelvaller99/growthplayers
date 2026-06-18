@@ -23,6 +23,8 @@ export interface TranscribeOptions {
   fileName?: string;
   /** Cancelación. */
   signal?: AbortSignal;
+  /** Nº de intentos (default 3) con backoff exponencial 1s/2s/5s. */
+  retries?: number;
 }
 
 /** Deriva un mime razonable a partir de la extensión del nombre/URI. */
@@ -61,7 +63,31 @@ export async function transcribeAudio(
   options: TranscribeOptions = {},
 ): Promise<string> {
   const fileName = options.fileName ?? defaultFileName(source);
+  const maxAttempts = Math.max(1, options.retries ?? 3);
+  const backoff = [1000, 2000, 5000]; // ms entre intentos
 
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (options.signal?.aborted) throw abortError();
+    try {
+      return await attemptTranscribe(source, fileName, options);
+    } catch (err) {
+      lastErr = err;
+      // No reintentar si el usuario canceló o si es error de cliente (auth/audio inválido).
+      if (isNonRetryable(err) || attempt === maxAttempts - 1) throw err;
+      console.warn(`[Whisper] intento ${attempt + 1}/${maxAttempts} falló, reintentando:`, err);
+      await sleep(backoff[Math.min(attempt, backoff.length - 1)], options.signal);
+    }
+  }
+  throw lastErr;
+}
+
+/** Un único intento de transcripción (proxy o directo). FormData fresco por intento. */
+async function attemptTranscribe(
+  source: AudioSource,
+  fileName: string,
+  options: TranscribeOptions,
+): Promise<string> {
   // ── Camino proxy (clave server-side) ──────────────────────────────────────
   if (ENV.aiProxyUrl) {
     const { proxyTranscribeFetch } = await import('./aiProxy');
@@ -100,6 +126,39 @@ export async function transcribeAudio(
   // response_format=text → cuerpo es texto plano.
   const text = await response.text();
   return text.trim();
+}
+
+/** Error con name 'AbortError' (DOMException no siempre existe en Hermes). */
+function abortError(): Error {
+  const e = new Error('Aborted');
+  e.name = 'AbortError';
+  return e;
+}
+
+/**
+ * ¿Vale la pena reintentar este error? No para: cancelación del usuario, o
+ * errores 4xx de cliente (auth, audio inválido, payload) — salvo 429 (rate limit).
+ */
+function isNonRetryable(err: unknown): boolean {
+  if ((err as Error)?.name === 'AbortError') return true;
+  const msg = (err as Error)?.message ?? '';
+  if (/API key ausente/.test(msg)) return true;
+  const m = msg.match(/(\d{3})/);
+  if (m) {
+    const code = parseInt(m[1], 10);
+    if (code >= 400 && code < 500 && code !== 429) return true;
+  }
+  return false;
+}
+
+/** Sleep cancelable: rechaza con AbortError si la señal se dispara. */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener('abort', () => { clearTimeout(t); reject(abortError()); }, { once: true });
+    }
+  });
 }
 
 function defaultFileName(source: AudioSource): string {

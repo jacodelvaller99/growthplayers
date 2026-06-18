@@ -6,6 +6,7 @@
  */
 import { SUBSCRIPTION_TIERS, type SubscriptionTier } from '@/constants/subscriptions';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { resolveEntitlement } from '@/lib/subscription';
 
 export interface SubscriptionInfo {
   tier: SubscriptionTier;
@@ -36,13 +37,16 @@ export function useSubscription(): SubscriptionInfo {
     return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000;
   })();
 
+  // Acceso de pago efectivo: enforce expiresAt > now (un tier vencido no da premium).
+  const { isPremium } = resolveEntitlement({ dbTier: tier, expiresAt });
+
   return {
     tier,
     tierInfo,
     expiresAt,
-    isPremium:       tier !== 'free',
-    isPolarisUser:   ['polaris', 'premium_plus'].includes(tier),
-    isGrowthPlayers: tier === 'growthplayers',
+    isPremium,
+    isPolarisUser:   isPremium && ['polaris', 'premium_plus'].includes(tier),
+    isGrowthPlayers: isPremium && tier === 'growthplayers',
     isExpiringSoon,
     canAccessMentor: true,
   };

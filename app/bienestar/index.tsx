@@ -241,6 +241,7 @@ export default function BienestarHub() {
   const [journalText, setJournalText] = useState('');
   const [saving, setSaving] = useState(false);
   const [journalSaved, setJournalSaved] = useState(false);
+  const [journalError, setJournalError] = useState(false);
 
   const sessions = state.wellnessSessions ?? [];
 
@@ -274,20 +275,26 @@ export default function BienestarHub() {
   const saveJournal = useCallback(async () => {
     if (!journalText.trim()) return;
     setSaving(true);
+    setJournalError(false);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('journal_entries').insert({
-          user_id:    user.id,
-          content:    journalText.trim(),
-          entry_type: 'reflection',
-        });
-      }
+      if (!user) throw new Error('Sin sesión activa.');
+      // supabase resuelve con { error } en fallos de DB/red (no lanza) → lo verificamos.
+      const { error } = await supabase.from('journal_entries').insert({
+        user_id:    user.id,
+        content:    journalText.trim(),
+        entry_type: 'reflection',
+      });
+      if (error) throw error;
+      // Solo limpiamos el campo tras confirmar el guardado — nunca antes.
       setJournalText('');
       setJournalSaved(true);
       setTimeout(() => setJournalSaved(false), 2000);
-    } catch {
-      // Silent fail — journal is best-effort
+    } catch (e) {
+      // No limpiamos el texto: la reflexión no se pierde. Avisamos para reintentar.
+      console.warn('[Bienestar] diario no se guardó:', e);
+      setJournalError(true);
+      setTimeout(() => setJournalError(false), 4000);
     } finally {
       setSaving(false);
     }
@@ -421,9 +428,14 @@ export default function BienestarHub() {
                     ? <ActivityIndicator size="small" color={palette.ink} />
                     : journalSaved
                       ? <MaterialIcons name="check" size={18} color={palette.ink} />
-                      : <Text style={styles.journalBtnText}>GUARDAR</Text>
+                      : <Text style={styles.journalBtnText}>{journalError ? 'REINTENTAR' : 'GUARDAR'}</Text>
                   }
                 </Pressable>
+                {journalError && (
+                  <Text style={styles.journalErrorText}>
+                    No se pudo guardar. Tu texto sigue aquí — toca REINTENTAR.
+                  </Text>
+                )}
               </PremiumCard>
 
               {/* Frase del día */}
@@ -650,6 +662,7 @@ const styles = StyleSheet.create({
   },
   journalBtnDisabled: { opacity: 0.4 },
   journalBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
+  journalErrorText: { ...typography.caption, color: palette.danger, fontSize: 12 },
 });
 
 // ─── Desktop-only styles ──────────────────────────────────────────────────────

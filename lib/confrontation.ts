@@ -11,6 +11,7 @@
  * sigue. Si los gates de consent no se cumplen, retorna {items: []}.
  */
 import { supabase, intel, bio as bioTbl, mem as memTbl } from '@/lib/supabase';
+import { logSilentError } from '@/lib/observability';
 import { fetchUserActivityBundle } from '@/lib/admin/queries';
 import { fetchBiometricSnapshot } from '@/lib/biometric';
 import { fetchMemoryProfile } from '@/lib/memory';
@@ -206,7 +207,7 @@ export async function fetchConfrontationItems(userId: string): Promise<Confronta
     if (!bundle) return [];
     const { items } = buildConfrontations(bundle, Date.now());
     return items;
-  } catch { return []; }
+  } catch (e) { logSilentError('confrontation.fetchItems', e); return []; }
 }
 
 /** Solo severity high+ para inyección a Norman. */

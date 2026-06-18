@@ -107,6 +107,7 @@ en cada consola de desarrollador. **URIs exactos a registrar:**
 | ai-proxy | ✅ desplegado | secrets + env + rotación | **tú** |
 | delete-account | ✅ código completo | `supabase functions deploy` | **tú** (cascada ya protege) |
 | Wearable OAuth | ✅ rutas existen | registrar URIs + client IDs | **tú** |
+| Wearables nativos (HealthKit + Health Connect) | ✅ código + permisos + tests | `eas init` + aplicar migración `20260618000000_wearables_native_providers.sql` + `eas build --profile preview --platform all` + justificar HealthKit en App Store review (coaching, NO clinical) | **tú** |
 
 **Camino a SHIPPED:** entrega los datos legales → relleno `app/legal/*` → push → **WEB SHIPPED**.
 En paralelo: `eas login`+`init` → **NATIVE READY FOR SUBMISSION** (tras assets de tienda + cuentas dev).

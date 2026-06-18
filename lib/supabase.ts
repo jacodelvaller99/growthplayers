@@ -44,9 +44,11 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON, {
     storage:            SecureStoreAdapter,
     autoRefreshToken:   true,
     persistSession:     true,
-    // false: we use localStorage-based session persistence, not URL hash tokens.
-    // Setting true on web adds unnecessary URL parsing overhead on every init.
-    detectSessionInUrl: false,
+    // En web SÍ detectamos el token en la URL: es como llega el enlace de
+    // recuperación de contraseña (#access_token=…) → dispara PASSWORD_RECOVERY,
+    // que la pantalla /(auth)/reset-password maneja. En nativo el deep-link va por
+    // el scheme, no por hash de URL, así que se deja en false.
+    detectSessionInUrl: Platform.OS === 'web',
   },
   realtime: {
     params: { eventsPerSecond: 2 },   // limit reconnect aggressiveness

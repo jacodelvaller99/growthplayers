@@ -14,13 +14,25 @@
       "bundleIdentifier": "com.polarisgrowthinstitute.lifeflow",
       "buildNumber": "1",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Polaris usa el micrófono solo cuando grabas una sesión de mentoría, para transcribirla y generar tus notas. La grabación es opcional y requiere tu consentimiento."
+        "NSMicrophoneUsageDescription": "Polaris usa el micrófono solo cuando grabas una sesión de mentoría, para transcribirla y generar tus notas. La grabación es opcional y requiere tu consentimiento.",
+        "NSHealthShareUsageDescription": "Polaris lee tus métricas de sueño, recuperación, frecuencia cardíaca y actividad desde Apple Salud (incluyendo Apple Watch y cualquier reloj compatible) para personalizar tu protocolo soberano.",
+        "NSHealthUpdateUsageDescription": "Polaris no escribe datos en Apple Salud — solo lee tus métricas para acompañar tu progreso."
       }
     },
     "android": {
       "package": "com.polarisgrowthinstitute.lifeflow",
       "versionCode": 1,
-      "permissions": ["android.permission.RECORD_AUDIO"],
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_OXYGEN_SATURATION",
+        "android.permission.health.READ_RESPIRATORY_RATE"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#0F0F0F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -63,6 +75,14 @@
         "expo-notifications",
         {
           "color": "#FFC804"
+        }
+      ],
+      [
+        "react-native-health",
+        {
+          "isClinicalDataEnabled": false,
+          "healthSharePermission": "Polaris lee tus métricas de sueño, recuperación, FC y actividad desde Apple Salud para personalizar tu protocolo.",
+          "healthUpdatePermission": "Polaris no escribe en Apple Salud."
         }
       ]
     ],

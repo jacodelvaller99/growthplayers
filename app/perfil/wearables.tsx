@@ -18,6 +18,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -34,13 +36,23 @@ import { supabase } from '@/lib/supabase';
 const supa: any = supabase;
 import {
   OAUTH_URLS,
+  isNativeProvider,
   triggerWearableSync,
   useWearableConnections,
   useWearableDaily,
   recoveryLabel,
   type WearableProvider,
 } from '@/lib/wearables';
+import { requestNativePermissions, syncRange, nativeProviderForPlatform } from '@/lib/wearablesNative';
+import { WearableCompat } from '@/components/wearable-compat';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+
+const PROVIDER_NAME: Record<WearableProvider, string> = {
+  whoop:          'WHOOP',
+  oura:           'Oura Ring',
+  apple_health:   'Apple Salud',
+  health_connect: 'Google Health Connect',
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function generateState(): string {
@@ -64,14 +76,36 @@ function scoreBar(value: number | null, max = 100) {
 }
 
 // ─── Provider metadata ────────────────────────────────────────────────────────
-const PROVIDERS: {
+type ProviderMeta = {
   id: WearableProvider;
   name: string;
   subtitle: string;
   description: string;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   metrics: string[];
-}[] = [
+  /** Si está definido, la tarjeta solo se muestra en esa plataforma. */
+  platform?: 'ios' | 'android';
+};
+
+const ALL_PROVIDERS: ProviderMeta[] = [
+  {
+    id:          'apple_health',
+    name:        'Apple Salud',
+    subtitle:    'Apple Watch + cualquier reloj compatible',
+    description: 'Lee sueño, recuperación, HRV, FC y actividad de tu Apple Watch — y de cualquier reloj que sincronice con la app Salud (Garmin, Polar, Coros, Whoop, Oura, etc.).',
+    icon:        'favorite',
+    metrics:     ['Sueño', 'HRV', 'FC Reposo', 'Actividad'],
+    platform:    'ios',
+  },
+  {
+    id:          'health_connect',
+    name:        'Google Health Connect',
+    subtitle:    'Galaxy · Fitbit · Garmin · Polar · Wear OS',
+    description: 'Lee tus métricas desde Health Connect — el agregador de Android. Cualquier reloj o app de salud que escriba ahí queda disponible para Norman.',
+    icon:        'health-and-safety',
+    metrics:     ['Sueño', 'HRV', 'FC Reposo', 'Pasos'],
+    platform:    'android',
+  },
   {
     id:          'whoop',
     name:        'WHOOP',
@@ -89,6 +123,13 @@ const PROVIDERS: {
     metrics:     ['Readiness', 'HRV', 'Sueño', 'FC Reposo'],
   },
 ];
+
+function visibleProviders(): ProviderMeta[] {
+  return ALL_PROVIDERS.filter((p) => {
+    if (!p.platform) return true;
+    return Platform.OS === p.platform;
+  });
+}
 
 // ─── Metric chip ──────────────────────────────────────────────────────────────
 function MetricChip({ label, value, unit, color }: {
@@ -142,7 +183,7 @@ const barStyles = StyleSheet.create({
 function ConnectedCard({
   provider, conn, onSync, onDisconnect, isSyncing,
 }: {
-  provider: typeof PROVIDERS[0];
+  provider: ProviderMeta;
   conn: ReturnType<ReturnType<typeof useWearableConnections>['getConnection']>;
   onSync: () => void;
   onDisconnect: () => void;
@@ -286,7 +327,7 @@ const connStyles = StyleSheet.create({
 function DisconnectedCard({
   provider, onConnect, isConnecting,
 }: {
-  provider: typeof PROVIDERS[0];
+  provider: ProviderMeta;
   onConnect: () => void;
   isConnecting: boolean;
 }) {
@@ -417,6 +458,48 @@ export default function WearablesScreen() {
 
   async function handleConnect(provider: WearableProvider) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // ── Nativos (HealthKit / Health Connect): permisos del SO + sync local ──
+    if (isNativeProvider(provider)) {
+      if (Platform.OS === 'web') {
+        setBanner({ type: 'error', msg: `${PROVIDER_NAME[provider]} solo está disponible en la app móvil` });
+        return;
+      }
+      setConnecting(provider);
+      try {
+        const perm = await requestNativePermissions();
+        if (!perm.ok) {
+          if (perm.reason === 'permission_denied') {
+            // Sin salida sería un loop: guiamos a Ajustes del SO para habilitar.
+            const settingsLabel = Platform.OS === 'ios' ? 'Ajustes › Salud' : 'Ajustes › Apps › Polaris › Permisos';
+            setBanner({ type: 'error', msg: `Permisos no concedidos. Habilítalos en ${settingsLabel}.` });
+            Alert.alert(
+              'Permisos de salud',
+              `Para conectar ${PROVIDER_NAME[provider]} necesitamos permiso de lectura. Habilítalo en ${settingsLabel}.`,
+              [
+                { text: 'Ahora no', style: 'cancel' },
+                { text: 'Abrir Ajustes', onPress: () => { Linking.openSettings().catch(() => {}); } },
+              ],
+            );
+          } else {
+            setBanner({ type: 'error', msg: perm.message ?? 'Error de conexión' });
+          }
+          return;
+        }
+        const sync = await syncRange(30);
+        if (sync.ok) {
+          setBanner({ type: 'success', msg: `${PROVIDER_NAME[provider]} conectado · ${sync.value.daysWritten} días leídos` });
+          await reload();
+        } else {
+          setBanner({ type: 'error', msg: sync.message ?? 'Error al leer datos' });
+        }
+      } finally {
+        setConnecting(null);
+      }
+      return;
+    }
+
+    // ── OAuth providers (Oura / WHOOP) ─────────────────────────────────────
     const state = generateState();
     const url   = OAUTH_URLS[provider](state);
 
@@ -448,8 +531,7 @@ export default function WearablesScreen() {
           });
           if (error) throw new Error(error.message);
 
-          const name = provider === 'whoop' ? 'WHOOP' : 'Oura Ring';
-          setBanner({ type: 'success', msg: `${name} conectado ✓` });
+          setBanner({ type: 'success', msg: `${PROVIDER_NAME[provider]} conectado ✓` });
           await reload();
         }
       }
@@ -464,12 +546,28 @@ export default function WearablesScreen() {
   async function handleSync(provider: WearableProvider) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSyncing(provider);
+
+    // Nativos: leen del SO directamente, no llaman a la edge function.
+    if (isNativeProvider(provider)) {
+      const sync = await syncRange(7);
+      if (sync.ok) {
+        setBanner({ type: 'success', msg: `Sincronizado · ${sync.value.daysWritten} días ✓` });
+      } else {
+        setBanner({ type: 'error', msg: sync.message ?? 'Error al sincronizar' });
+      }
+      await reload();
+      setSyncing(null);
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setSyncing(null); return; }
 
     const { success, error } = await triggerWearableSync(session.user.id, provider);
     if (success) {
-      setBanner({ type: 'success', msg: 'Sincronización completa ✓' });
+      // Honesto: el sync corre en el servidor; los datos aparecen en unos segundos.
+      // No afirmamos "completa" porque la escritura puede no haber aterrizado aún.
+      setBanner({ type: 'success', msg: 'Sincronización en curso — tus métricas se actualizan en breve' });
     } else {
       setBanner({ type: 'error', msg: error ?? 'Error al sincronizar' });
     }
@@ -488,9 +586,13 @@ export default function WearablesScreen() {
       .eq('id', conn.id);
 
     await reload();
-    setBanner({ type: 'success', msg: `${provider === 'whoop' ? 'WHOOP' : 'Oura Ring'} desconectado` });
+    const tail = isNativeProvider(provider)
+      ? ' — para revocar permisos del sistema, ve a Ajustes del dispositivo'
+      : '';
+    setBanner({ type: 'success', msg: `${PROVIDER_NAME[provider]} desconectado${tail}` });
   }
 
+  const PROVIDERS = visibleProviders();
   const connectedCount = PROVIDERS.filter(p => isConnected(p.id)).length;
 
   const content = (
@@ -571,6 +673,19 @@ export default function WearablesScreen() {
           );
         })
       )}
+
+      {/* Web hint: nativos no disponibles en PWA */}
+      {Platform.OS === 'web' && !nativeProviderForPlatform() && (
+        <PremiumCard style={styles.privacyCard}>
+          <MaterialIcons name="phone-iphone" size={15} color={palette.smoke} />
+          <Text style={styles.privacyText}>
+            Para conectar Apple Watch o cualquier reloj vía Google Health Connect, descarga la app móvil de Polaris en iOS o Android. La PWA web solo admite Oura y WHOOP por OAuth.
+          </Text>
+        </PremiumCard>
+      )}
+
+      {/* Compatibility catalog */}
+      <WearableCompat />
 
       {/* Privacy note */}
       <PremiumCard style={styles.privacyCard}>

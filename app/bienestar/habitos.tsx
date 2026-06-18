@@ -28,6 +28,7 @@ import {
   requestNotificationPermissions,
   scheduleDailyRoutineReminder,
   cancelScheduledNotification,
+  getScheduledRemindersByHabit,
 } from '@/services/notifications';
 
 const DAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -98,6 +99,9 @@ export default function HabitosScreen() {
         };
       });
       setHabits(mapped);
+      // Rehidrata los toggles de recordatorio desde el SO (las notificaciones
+      // persisten entre reinicios; el estado en memoria no). Fuente de verdad real.
+      setReminders(await getScheduledRemindersByHabit());
     } catch { /* la tabla/columnas pueden no existir aún */ }
     setLoading(false);
   };
@@ -189,6 +193,8 @@ export default function HabitosScreen() {
       minute: tmpl.reminderMinute ?? 0,
       // Deep-link: abre la práctica si existe; si no, el check-in.
       route:  tmpl.route ?? '/bienestar/habitos',
+      // habitId viaja en la notificación → permite rehidratar el toggle al recargar.
+      data:   { habitId: habit.id },
     });
     if (id) {
       setReminders((prev) => ({ ...prev, [habit.id]: id }));

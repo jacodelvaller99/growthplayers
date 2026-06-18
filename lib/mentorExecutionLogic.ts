@@ -359,6 +359,8 @@ export interface ClientTaskView {
   status: TaskStatus;
   due_date: string | null;
   done: boolean;
+  /** Propuesta por IA aún no confirmada por el coach (estado, NO score — seguro de mostrar). */
+  pendingReview: boolean;
 }
 
 /** Tareas seguras para el cliente: sin mentor_score, fricción, ni review interno. */
@@ -373,6 +375,9 @@ export function clientSafeTasks(tasks: MentorTask[], nowMs = Date.now()): Client
         status: st,
         due_date: t.due_date ?? null,
         done: st === 'completed',
+        // 'ai_suggested' = Norman propuso la tarea y el coach aún no la revisó.
+        // Es un estado de flujo (no una métrica) → honesto y no sensible.
+        pendingReview: t.mentor_review_status === 'ai_suggested',
       };
     });
 }

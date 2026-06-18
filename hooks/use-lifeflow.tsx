@@ -16,6 +16,8 @@ import { supabase, db } from '@/lib/supabase';
 import { ENV } from '@/app/config/env';
 import { calcProtocolDay } from '@/lib/utils';
 import { enqueueWrite, initOfflineFlush } from '@/lib/offlineQueue';
+import { checkCriticalSchema } from '@/lib/schemaHealth';
+import { resolveEntitlement } from '@/lib/subscription';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -23,6 +25,62 @@ import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, User
 
 // ─── Local cache key ──────────────────────────────────────────────────────────
 const STATE_KEY = 'state';
+
+// ─── Outbox de mensajes (insert no-idempotente → idempotente vía client_id) ───
+// Se auto-ajusta: si la columna client_id aún no existe (migración pendiente),
+// cae al insert simple actual sin romper. Post-migración usa upsert-on-client_id
+// (entrega exactamente-una-vez); offline/fallo encola para replay idempotente.
+let _clientIdColMissing = false;
+
+function isMissingClientIdColumn(err: unknown): boolean {
+  const msg = ((err as Error)?.message ?? '').toLowerCase();
+  // 42703 undefined_column · 42P10 no unique/exclusion constraint matching ON CONFLICT
+  return msg.includes('client_id') || msg.includes('on conflict') ||
+    msg.includes('42703') || msg.includes('42p10');
+}
+
+async function persistMentorMessages(
+  uid: string,
+  userMsg: MentorMessage,
+  mentorMsg: MentorMessage,
+): Promise<void> {
+  const base = [
+    { user_id: uid, role: 'user' as const,      content: userMsg.text,   created_at: userMsg.createdAt },
+    { user_id: uid, role: 'assistant' as const, content: mentorMsg.text, created_at: mentorMsg.createdAt },
+  ];
+  const withCid = [
+    { ...base[0], client_id: userMsg.id },
+    { ...base[1], client_id: mentorMsg.id },
+  ];
+  const msgs = () => (supabase as unknown as { from: (t: string) => any }).from('mentor_messages');
+  const enqueueBoth = async () => {
+    await enqueueWrite({ table: 'mentor_messages', payload: withCid[0], onConflict: 'user_id,client_id' });
+    await enqueueWrite({ table: 'mentor_messages', payload: withCid[1], onConflict: 'user_id,client_id' });
+  };
+
+  if (!_clientIdColMissing) {
+    try {
+      const { error } = await msgs().upsert(withCid, { onConflict: 'user_id,client_id' });
+      if (error) throw error;
+      return; // exactamente-una-vez (columna client_id presente)
+    } catch (e) {
+      if (isMissingClientIdColumn(e)) {
+        _clientIdColMissing = true; // pre-migración → insert simple desde ahora
+      } else {
+        await enqueueBoth(); // sin red u otro fallo → outbox idempotente
+        return;
+      }
+    }
+  }
+  // Camino pre-migración: insert simple (comportamiento actual, sin client_id).
+  try {
+    const { error } = await msgs().insert(base);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[Supabase] addMentorMessages (encolado para reintento):', e);
+    await enqueueBoth();
+  }
+}
 
 // ─── Default values ──────────────────────────────────────────────────────────
 const defaultNorth: NorthStar = {
@@ -331,7 +389,10 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   const [state, setState]                 = useState<LifeFlowState>(getInitialState);
   const [isLoaded, setIsLoaded]           = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isSubscribed, setIsSubscribed]   = useState(false);
+  // rcActive: recibo de RevenueCat. isSubscribed se DERIVA reconciliando el recibo
+  // con el tier de la DB + expiración (un tier vencido no da acceso). Resuelve el
+  // split-brain RC↔DB y exige expiresAt > now.
+  const [rcActive, setRcActive]           = useState(false);
   // uidRef: lectura síncrona dentro de callbacks/async (evita closures stale).
   // userId (estado): lo que se expone por contexto → reactivo, fuerza re-render
   // en los consumidores cuando cambia el usuario (login/logout).
@@ -357,7 +418,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
           try {
             await initRevenueCat();
             const subscribed = await checkSubscription();
-            if (mounted) setIsSubscribed(subscribed);
+            if (mounted) setRcActive(subscribed);
           } catch { /* ignore */ }
         })(),
       ]);
@@ -383,6 +444,10 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       if (uid) {
         applyUid(uid);
         if (mounted) setIsAuthenticated(true);
+
+        // Healthcheck de schema (fire-and-forget): si falta una migración crítica,
+        // deja rastro en vez de degradar en silencio. No bloquea el arranque.
+        void checkCriticalSchema();
 
         // Realtime: reflect tier changes from DB instantly (must be set up after uid is known)
         tierChannel = supabase
@@ -424,7 +489,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
             try {
               await initRevenueCat();
               const subscribed = await checkSubscription();
-              if (mounted) setIsSubscribed(subscribed);
+              if (mounted) setRcActive(subscribed);
             } catch { /* ignore */ }
           })(),
         ]);
@@ -683,14 +748,8 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       const uid = uidRef.current;
       if (!uid) return;
 
-      try {
-        await db.messages().insert([
-          { user_id: uid, role: 'user',      content: userMsg.text,   created_at: userMsg.createdAt },
-          { user_id: uid, role: 'assistant', content: mentorMsg.text, created_at: mentorMsg.createdAt },
-        ]);
-      } catch (e) {
-        console.warn('[Supabase] addMentorMessages:', e);
-      }
+      // Outbox idempotente: nunca lanza; encola si falla la red (no se pierde).
+      await persistMentorMessages(uid, userMsg, mentorMsg);
     },
     [persist, state],
   );
@@ -966,6 +1025,17 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     await removeLocal(STATE_KEY);
     setState(defaultState);
   }, []);
+
+  // isSubscribed reconciliado: recibo RevenueCat + tier de la DB + expiración.
+  // Resuelve el split-brain RC↔DB y exige expiresAt > now (tier vencido ≠ premium).
+  const isSubscribed = useMemo(
+    () => resolveEntitlement({
+      dbTier: state.subscriptionTier,
+      expiresAt: state.subscriptionExpiresAt,
+      rcActive,
+    }).isPremium,
+    [state.subscriptionTier, state.subscriptionExpiresAt, rcActive],
+  );
 
   // ── Provider ─────────────────────────────────────────────────────────────────
   return (

@@ -22,10 +22,10 @@ npx tsc --noEmit        # TypeScript check (no build output)
 # Quality gates
 npm run typecheck       # tsc --noEmit — debe salir 0
 
-# Tests — suite real en __tests__/unit/ (53 tests, 6 suites):
-#   utils (protocolDay/sovereignScore) · mentorship (weekDateRange/semanas)
-#   themeColors (paridad dark/light + cv) · moderation (filtro UGC)
-#   mentor (cadena de fallback + contrato honestidad/crisis) · sse (parseSSEStream)
+# Tests — suite real en __tests__/unit/ (204 tests, 14 suites):
+#   utils · mentorship · themeColors (paridad dark/light + cv) · moderation (filtro UGC)
+#   mentor (fallback + honestidad/crisis) · sse · memory · mentorExecution · biometric
+#   confrontationLogic · wearablesNative · observability (logSilentError) · subscription (resolveEntitlement)
 npm test                              # Jest — all tests
 npm run test:watch                    # Watch mode
 npm run test:coverage                 # Coverage report
@@ -236,10 +236,26 @@ Beyond the audio practices: **habits** (morning/evening routines with check + po
 - **GDPR account deletion** via the `delete-account` edge function — explicitly purges **all** PII tables (core loop, wellness, wearables, Memory OS, Mentor Execution OS, Biometric, mentorship, community/DM/blocks) as defense-in-depth on top of `ON DELETE CASCADE`. When adding a new user-scoped table, add its delete here too.
 - **`components/ErrorBoundary.tsx`** — root render-crash fallback (brand screen + retry), independent of any context/theme.
 - **Offline write queue** — `lib/offlineQueue.ts` enqueues non-critical writes and retries on reconnect.
+- **ml_consent es opt-in explícito (RGPD)** — `profiles.ml_consent` DEFAULT `false` (migración `…_ml_consent_opt_in.sql`); el onboarding tiene un checkbox **opcional separado** que NO bloquea el gate. `analytics.track()` ya es no-op sin consentimiento/userId.
 
-### Wearables — `lib/wearables.ts`, `app/perfil/wearables`
+### Launch hardening — fiabilidad (2026-06-17)
 
-WHOOP + Oura via OAuth (`app/oauth/whoop/callback`, `app/oauth/oura/callback`), synced server-side by the `sync-wearables` edge function into the agnostic `WearableDaily` layer. Apple Watch (HealthKit) + Garmin are on the roadmap (require a native dev build — not Expo Go / web).
+- **AI stream guard** — `createStreamGuard` (en `lib/nvidia.ts`, reusado por groq/openai/anthropic): timeout total 45s + **watchdog de inactividad 8s**; un proveedor que se estanca hace failover (avanza la cadena) en vez de colgar; cancelación de usuario devuelve el parcial. La UI de mentor ya tenía botón Detener + timeout total (WAVE 3).
+- **Whisper resiliente** — `lib/transcription.ts` con retry exponencial (3×, sin reintentar abort/4xx); si falla, `hooks/use-mentorship.tsx` abre el editor de **notas manuales** (`SessionDraft.transcriptionFailed`) — la sesión nunca se pierde.
+- **Outbox idempotente para inserts no-idempotentes** — `persistMentorMessages` (en `use-lifeflow.tsx`) usa `client_id` (migración `…_client_id_outbox.sql`): upsert-on-client_id post-migración (exactamente-una-vez), insert simple pre-migración (sin regresión), encola en fallo de red. Reusa `offlineQueue`.
+- **Observabilidad** — `lib/observability.ts` `logSilentError(context, error)` reemplaza catches ciegos en las capas IO (memory/biometric/confrontation/mentorExecution); punto único para Sentry. `lib/schemaHealth.ts` `checkCriticalSchema()` corre tras login y deja rastro si falta una migración crítica (en vez de degradar en silencio).
+- **Suscripción reconciliada** — `lib/subscription.ts` `resolveEntitlement({ dbTier, expiresAt, rcActive })` (puro, testeado): DB = nivel, RevenueCat = recibo, **enforce `expiresAt > now`**. `isSubscribed` (use-lifeflow) y `useSubscription` lo usan — fin del split-brain RC↔DB.
+- **Recuperación de contraseña web** — `detectSessionInUrl: true` en web (`lib/supabase.ts`) + ruta `app/(auth)/reset-password.tsx` (maneja `PASSWORD_RECOVERY` → `updateUser`). El email de reset pasa `redirectTo` en web.
+- **Paywall web** — descope honesto (`app/paywall.tsx`): panel "se gestiona en iOS/Android" en vez del dead-end; la maquinaria RevenueCat se oculta en web.
+
+### Wearables — `lib/wearables.ts`, `lib/wearablesNative.ts`, `app/perfil/wearables`
+
+Cobertura cross-marca vía dos caminos:
+
+- **OAuth web** (`lib/wearables.ts` + `sync-wearables` edge function): WHOOP + Oura. Funciona en PWA y nativo. Callbacks en `app/oauth/{whoop,oura}/callback`. Migración `polaris://oauth/<provider>/callback` registrada en `app.json`.
+- **Nativo on-device** (`lib/wearablesNative.ts`): **Apple HealthKit** (iOS, `react-native-health`) y **Android Health Connect** (`react-native-health-connect`) — agregadores oficiales del SO. Cubren **Apple Watch, Garmin, Polar, Coros, Suunto, Withings, Fitbit, Samsung Galaxy Watch, Wear OS, WHOOP, Oura** y cualquier otro reloj que escriba a ellos. Solo funciona en builds nativos (no Expo Go ni PWA): requiere `eas init` + `eas build --profile preview --platform all`. Lee on-device → upsert directo a `wearable_daily` con `provider='apple_health'|'health_connect'` (sin tokens server-side; RLS owner cubre). Permisos declarados en `app.json` (`NSHealthShareUsageDescription` + `android.permission.health.READ_*`). Migración `20260618000000_wearables_native_providers.sql` extiende el CHECK constraint de `wearable_{daily,timeseries,connections}.provider` a `('oura','whoop','synthetic','apple_health','health_connect')`.
+
+El motor downstream (`lib/biometric.ts`, Confrontation OS, dashboards admin) es provider-agnóstico — consume `wearable_daily` con campos nullable. `sleep_score`/`recovery_score` no vienen de HealthKit/HC (no exponen scores sintéticos); `biometricLogic.computeInsight` ya deriva el estado clínico de HRV+RHR vs baseline.
 
 ## Key Patterns
 

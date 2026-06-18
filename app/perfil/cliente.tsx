@@ -125,7 +125,12 @@ export default function ClienteMemoriaScreen() {
                     return (
                       <View key={i} style={s.taskRow}>
                         <MaterialIcons name="radio-button-unchecked" size={16} color={palette.smoke} />
-                        <Text style={s.taskText}>{t.title}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.taskText}>{t.title}</Text>
+                          {t.pendingReview && (
+                            <Text style={s.taskPending}>Propuesta de Norman · pendiente de tu coach</Text>
+                          )}
+                        </View>
                         <Text style={[s.taskState, { color: st.color }]}>{st.label}</Text>
                       </View>
                     );
@@ -184,7 +189,8 @@ const s = StyleSheet.create({
   nextCat: { ...typography.caption, color: palette.smoke, fontSize: 11 },
   muted: { ...typography.caption, color: palette.smoke, fontSize: 12, fontStyle: 'italic' },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  taskText: { ...typography.body, color: palette.ash, fontSize: 13, flex: 1 },
+  taskText: { ...typography.body, color: palette.ash, fontSize: 13 },
+  taskPending: { ...typography.caption, color: palette.goldText, fontSize: 10, marginTop: 1, fontStyle: 'italic' },
   taskState: { ...typography.label, fontSize: 10, letterSpacing: 0.5 },
   progress: { ...typography.mono, color: palette.smoke, fontSize: 11, marginTop: 4 },
 });

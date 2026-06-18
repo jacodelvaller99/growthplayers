@@ -508,11 +508,19 @@ function DraftEditor({
   return (
     <View style={styles.draftBox}>
       <View style={styles.draftHead}>
-        <MaterialIcons name="auto-awesome" size={15} color={palette.goldText} />
-        <Text style={styles.draftTitle}>NORMAN REDACTÓ TU SESIÓN</Text>
+        <MaterialIcons
+          name={draft.transcriptionFailed ? 'edit-note' : 'auto-awesome'}
+          size={15}
+          color={palette.goldText}
+        />
+        <Text style={styles.draftTitle}>
+          {draft.transcriptionFailed ? 'ESCRIBE TUS NOTAS' : 'NORMAN REDACTÓ TU SESIÓN'}
+        </Text>
       </View>
       <Text style={styles.draftSub}>
-        Revisa y edita las notas y el plan antes de guardar · SEMANA {draft.week} · {weekRange}
+        {draft.transcriptionFailed
+          ? `No pudimos transcribir el audio (se guardó igual). Escribe las notas a mano · SEMANA ${draft.week} · ${weekRange}`
+          : `Revisa y edita las notas y el plan antes de guardar · SEMANA ${draft.week} · ${weekRange}`}
       </Text>
 
       <Text style={styles.draftLabel}>NOTAS DE SESIÓN</Text>

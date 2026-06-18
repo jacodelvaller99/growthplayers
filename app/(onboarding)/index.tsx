@@ -57,6 +57,8 @@ export default function OnboardingScreen() {
     confrontation: false,
   });
   const allConsented = consents.terms && consents.privacy && consents.health && consents.confrontation;
+  // ml_consent es OPT-IN explícito y OPCIONAL (RGPD): default false, no bloquea el gate.
+  const [mlConsent, setMlConsent] = useState(false);
 
   const toggleConsent = (key: ConsentKey) => {
     setConsents((c) => ({ ...c, [key]: !c[key] }));
@@ -65,8 +67,8 @@ export default function OnboardingScreen() {
   const acceptConsentAndContinue = async () => {
     if (!allConsented) return;
     const now = new Date().toISOString();
-    // Activa el tracking de comportamiento (ml_consent) — el usuario acaba de aceptar.
-    analytics.setConsent(true);
+    // Tracking de comportamiento: SOLO si el usuario activó el opt-in (RGPD opt-in explícito).
+    analytics.setConsent(mlConsent);
     // Persiste el consentimiento en profiles (campos nuevos sin tipar → cliente intel/anyClient).
     if (userId) {
       try {
@@ -78,7 +80,7 @@ export default function OnboardingScreen() {
             confrontation_with_data: { accepted: true, at: now },
           },
           terms_accepted_at: now,
-          ml_consent: true,
+          ml_consent: mlConsent,
         }).eq('id', userId);
       } catch (e) {
         // No bloquear el onboarding si la escritura falla (se re-confirma al completar).
@@ -212,6 +214,23 @@ export default function OnboardingScreen() {
                 </Text>
               </Pressable>
             ))}
+
+            {/* Opt-in OPCIONAL de análisis (RGPD): no bloquea el gate. */}
+            <Pressable
+              onPress={() => setMlConsent((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: mlConsent }}
+              accessibilityLabel="Permitir análisis de mis datos para personalizar (opcional)"
+              style={({ pressed }) => [styles.consentRow, pressed && { opacity: 0.7 }]}>
+              <View style={[styles.checkbox, mlConsent && styles.checkboxChecked]}>
+                {mlConsent && <MaterialIcons name="check" size={16} color={palette.ink} />}
+              </View>
+              <Text style={styles.consentText}>
+                <Text style={{ color: palette.smoke }}>(Opcional) </Text>
+                Permito el análisis de mis datos de uso para personalizar mi experiencia y mejorar
+                las recomendaciones. Puedo desactivarlo cuando quiera.
+              </Text>
+            </Pressable>
           </View>
 
           <PrimaryButton

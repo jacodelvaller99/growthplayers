@@ -9,6 +9,7 @@
  * que intente leerlas recibe filas vacías. Nunca se inyectan al contexto de Norman.
  */
 import { mem, intel } from '@/lib/supabase';
+import { logSilentError } from '@/lib/observability';
 import {
   assembleMentorMemory,
   type AssembledMentorMemory,
@@ -71,9 +72,11 @@ export async function fetchMemoryProfile(userId: string): Promise<MemoryProfile 
       .select(PROFILE_COLS)
       .eq('user_id', userId)
       .maybeSingle();
-    if (error || !data) return null;
+    if (error) { logSilentError('memory.fetchMemoryProfile', error); return null; }
+    if (!data) return null;
     return data as MemoryProfile;
-  } catch {
+  } catch (e) {
+    logSilentError('memory.fetchMemoryProfile', e);
     return null;
   }
 }

@@ -8,7 +8,7 @@
 
 import { ENV } from '@/app/config/env';
 import type { ChatMessage } from './nvidia';
-import { parseSSEStream } from './nvidia';
+import { parseSSEStream, createStreamGuard } from './nvidia';
 
 /**
  * Hace streaming de la respuesta de Claude (claude-sonnet-4-6) vía ai-proxy.
@@ -23,7 +23,17 @@ export async function streamAnthropic(
   if (!ENV.aiProxyUrl) {
     throw new Error('Claude requiere ai-proxy (EXPO_PUBLIC_AI_PROXY_URL no configurada).');
   }
-  const { proxyChatFetch } = await import('./aiProxy');
-  const response = await proxyChatFetch('anthropic', messages, signal);
-  return parseSSEStream(response, onChunk, signal);
+  const guard = createStreamGuard(signal);
+  try {
+    const { proxyChatFetch } = await import('./aiProxy');
+    const response = await proxyChatFetch('anthropic', messages, guard.signal);
+    const text = await parseSSEStream(response, onChunk, guard.signal, guard.activity);
+    if (guard.timedOut && !text) throw new Error('Claude stream timeout (no data)');
+    return text;
+  } catch (err) {
+    if (guard.timedOut && !signal?.aborted) throw new Error('Claude stream timeout');
+    throw err;
+  } finally {
+    guard.dispose();
+  }
 }

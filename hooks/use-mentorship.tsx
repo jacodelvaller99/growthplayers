@@ -63,6 +63,8 @@ export interface SessionDraft {
   transcript: string;
   notes: string;
   actions: string[];
+  /** La transcripción falló tras reintentos → el usuario escribe las notas a mano. */
+  transcriptionFailed?: boolean;
 }
 
 // ─── Cache local (fallback offline) ────────────────────────────────────────────
@@ -488,24 +490,46 @@ export function useMentorship() {
         }
       }
 
-      // 2) Transcribir (Whisper)
+      // 2) Transcribir (Whisper) — con retry interno (3 intentos). Si falla
+      //    definitivamente, NO perdemos la sesión: abrimos el editor de notas
+      //    manuales con el audio ya guardado.
       setRecordingPhase('transcribing');
-      const transcript = await transcribeAudio(localUri, { language: 'es' });
+      let transcript: string;
+      try {
+        transcript = await transcribeAudio(localUri, { language: 'es' });
+      } catch (txErr) {
+        console.warn('[Mentoría] transcripción falló tras reintentos → notas manuales:', txErr);
+        setDraft({
+          sessionId, week, audioUrl,
+          transcript: '',
+          notes: '',
+          actions: [],
+          transcriptionFailed: true,
+        });
+        setRecordingPhase('idle');
+        return;
+      }
 
-      // 3) Norman redacta notas + plan
+      // 3) Norman redacta notas + plan. Si la IA falla, degradamos a la
+      //    transcripción cruda como notas (la sesión nunca se pierde).
       setRecordingPhase('summarizing');
-      const ctx = buildContext(state, protocolDay);
-      let out = '';
-      await streamMentorResponse(
-        ctx,
-        `${SESSION_NOTES_INSTRUCTION}\n\nTRANSCRIPCIÓN:\n${transcript}`,
-        [],
-        (delta) => { out += delta; },
-      );
-
-      const [notesPart, planPart = ''] = out.split('===PLAN===');
-      const draftNotes = notesPart.trim() || transcript.slice(0, 800);
-      const actions = parseAIList(planPart);
+      let draftNotes = transcript.slice(0, 800);
+      let actions: string[] = [];
+      try {
+        const ctx = buildContext(state, protocolDay);
+        let out = '';
+        await streamMentorResponse(
+          ctx,
+          `${SESSION_NOTES_INSTRUCTION}\n\nTRANSCRIPCIÓN:\n${transcript}`,
+          [],
+          (delta) => { out += delta; },
+        );
+        const [notesPart, planPart = ''] = out.split('===PLAN===');
+        draftNotes = notesPart.trim() || transcript.slice(0, 800);
+        actions = parseAIList(planPart);
+      } catch (aiErr) {
+        console.warn('[Mentoría] Norman falló al redactar notas → transcripción cruda:', aiErr);
+      }
 
       setDraft({ sessionId, week, audioUrl, transcript, notes: draftNotes, actions });
       setRecordingPhase('idle');
