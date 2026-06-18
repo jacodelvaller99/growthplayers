@@ -28,6 +28,8 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { createUserProfile } from '@/lib/admin/actions';
 import { fetchUsers } from '@/lib/admin/queries';
+import { fetchNotesByUsers, type NoteSummary } from '@/lib/memory';
+import { NoteBadge } from '@/components/admin-decision';
 import type { AdminUser } from '@/lib/admin/types';
 
 const FILTERS = ['TODOS', 'NUEVOS', 'ADMIN', 'PREMIUM'] as const;
@@ -69,7 +71,7 @@ function MemberBadge({ tier }: { tier?: string }) {
   );
 }
 
-function UserRow({ user, onPress }: { user: AdminUser; onPress: () => void }) {
+function UserRow({ user, notes, onPress }: { user: AdminUser; notes?: NoteSummary; onPress: () => void }) {
   const initials = user.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
   return (
     <Pressable style={s.row} onPress={onPress}>
@@ -78,9 +80,12 @@ function UserRow({ user, onPress }: { user: AdminUser; onPress: () => void }) {
       </View>
       <View style={s.rowMain}>
         <Text style={s.rowName}>{user.name}</Text>
-        <Text style={s.rowMeta}>{user.role ?? 'Usuario'}</Text>
+        <Text style={s.rowMeta} numberOfLines={1}>
+          {notes?.last ? `📝 ${notes.last}` : (user.role ?? 'Usuario')}
+        </Text>
       </View>
       <View style={s.rowBadges}>
+        <NoteBadge count={notes?.count ?? 0} preview={notes?.last} />
         <MemberBadge tier={user.subscription_tier} />
         {user.is_admin && <ChurnBadge label="admin" />}
       </View>
@@ -99,6 +104,7 @@ export default function UsuariosScreen() {
   const [filter, setFilter] = useState<Filter>('TODOS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [notes, setNotes] = useState<Record<string, NoteSummary>>({});
 
   // Crear perfil
   const { userId: adminId } = useLifeFlow();
@@ -112,6 +118,8 @@ export default function UsuariosScreen() {
   const load = useCallback(async () => {
     const data = await fetchUsers();
     setUsers(data);
+    // Notas privadas por usuario — impregnadas en las filas (degradable).
+    fetchNotesByUsers(data.map(u => u.id)).then(setNotes).catch(() => {});
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -253,6 +261,7 @@ export default function UsuariosScreen() {
         renderItem={({ item }) => (
           <UserRow
             user={item}
+            notes={notes[item.id]}
             onPress={() => router.push(`/admin/usuarios/${item.id}` as never)}
           />
         )}

@@ -210,6 +210,31 @@ export async function addAdminNote(
   }
 }
 
+/** Resumen de notas privadas por usuario (conteo + última) — para impregnar
+ *  las notas en el resto de los espacios admin (listas, dashboards). Degradable. */
+export interface NoteSummary { count: number; last: string | null; }
+
+export async function fetchNotesByUsers(userIds: string[]): Promise<Record<string, NoteSummary>> {
+  const out: Record<string, NoteSummary> = {};
+  if (userIds.length === 0) return out;
+  try {
+    const { data, error } = await mem.adminNotes()
+      .select('user_id,note,created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false });
+    if (error || !data) { if (error) logSilentError('memory.fetchNotesByUsers', error); return out; }
+    for (const row of data as Array<{ user_id: string; note: string }>) {
+      const cur = out[row.user_id];
+      if (cur) cur.count += 1;
+      else out[row.user_id] = { count: 1, last: row.note }; // orden desc → la 1ª vista es la más reciente
+    }
+    return out;
+  } catch (e) {
+    logSilentError('memory.fetchNotesByUsers', e);
+    return out;
+  }
+}
+
 // ─── Mensajes recientes (continuidad conversacional) ───────────────────────────────
 export async function fetchRecentMessages(userId: string, limit = 12): Promise<RecentMessage[]> {
   if (!userId) return [];

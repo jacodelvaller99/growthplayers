@@ -23,6 +23,8 @@ import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { fetchAtRiskUsers, fetchDashboardKPIs, fetchLiveEvents, fetchTierCounts } from '@/lib/admin/queries';
+import { fetchNotesByUsers, type NoteSummary } from '@/lib/memory';
+import { NoteBadge } from '@/components/admin-decision';
 import type { AtRiskUser, DashboardKPIs, LiveEvent } from '@/lib/admin/types';
 import { recalculateAllMLAction } from '@/lib/admin/actions';
 import { intel } from '@/lib/supabase';
@@ -120,6 +122,7 @@ export default function MissionControl() {
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
   const [atRiskUsers, setAtRiskUsers] = useState<AtRiskUser[]>([]);
+  const [notes, setNotes] = useState<Record<string, NoteSummary>>({});
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -140,7 +143,11 @@ export default function MissionControl() {
       if (kpiRes.status === 'fulfilled') setKpis(kpiRes.value);
       if (evtRes.status === 'fulfilled') setEvents(evtRes.value);
       if (tierRes.status === 'fulfilled') setTierCounts(tierRes.value);
-      if (riskRes.status === 'fulfilled') setAtRiskUsers(riskRes.value);
+      if (riskRes.status === 'fulfilled') {
+        setAtRiskUsers(riskRes.value);
+        // Notas privadas de los usuarios en riesgo — impregnadas en las filas.
+        fetchNotesByUsers(riskRes.value.map(u => u.user_id)).then(setNotes).catch(() => {});
+      }
       setLastSyncAt(new Date());
     } finally {
       setLoading(false);
@@ -285,11 +292,13 @@ export default function MissionControl() {
               style={({ pressed }) => [s.riskRow, pressed && { opacity: 0.7 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={s.riskName}>{u.name ?? 'Usuario'}</Text>
-                <Text style={s.riskMeta}>
-                  {u.churn_risk_label.toUpperCase()} · {u.days_since_last_act}d sin actividad
-                  {u.anomaly_detected ? ' · ⚠ anomalía' : ''}
+                <Text style={s.riskMeta} numberOfLines={1}>
+                  {notes[u.user_id]?.last
+                    ? `📝 ${notes[u.user_id]?.last}`
+                    : `${u.churn_risk_label.toUpperCase()} · ${u.days_since_last_act}d sin actividad${u.anomaly_detected ? ' · ⚠ anomalía' : ''}`}
                 </Text>
               </View>
+              <NoteBadge count={notes[u.user_id]?.count ?? 0} preview={notes[u.user_id]?.last} />
               <Text style={[s.riskScore, { color: u.churn_risk_label === 'critical' ? palette.danger : palette.warning }]}>
                 {Math.round(u.churn_risk * 100)}%
               </Text>
