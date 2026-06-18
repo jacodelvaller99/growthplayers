@@ -62,3 +62,41 @@ El schema es lo más caro de cambiar y lo que más impacta perf + seguridad de T
 - **RN/Expo performance**: bundle splitting, FlashList en pantallas largas (mensajes admin, lista usuarios), useMemo donde corresponde, Image optimization, suspendidos.
 - **Web LCP/CLS/INP** en `https://growthplayers.vercel.app/admin/usuarios/[id]`.
 - **A11y WCAG 2.2** del dossier admin (touch targets, focus rings, aria-labels, contraste de chips).
+
+---
+
+## ITERACIÓN 2 — Capa: RN/Expo perf + bundle web (medido)
+
+### Auditor + skills usadas
+- `expo-react-native-performance` (oficial Expo)
+- `performance` (addyosmani/web-quality-skills)
+
+### Hallazgos del audit (con verificación)
+| # | Tipo | Ubicación | Hallazgo | Verdad después de leer código |
+|---|---|---|---|---|
+| 1 | bundle | `app/admin/usuarios/[id].tsx:63,81,83` | imports estáticos de `generateAdminBriefing`, `seedSyntheticData`, `clearSyntheticData` (solo usados al click) | ✅ Verdadero. Aplicado dynamic import. |
+| 2 | runtime | `app/(tabs)/mentor.tsx:706-712` | cómputo `state.mentorMessages.filter().slice().map().join()` en cada render del padre durante streaming | ✅ Verdadero. Memoizado con `useMemo`. |
+| 3 | runtime | `app/(tabs)/mentor.tsx:680-695` | `.map()` de prompts crea nuevas funciones `onPress` + estilo `pressed` inline cada render | ✅ Verdadero. Extraído a `quickPrompts` + `handlePromptPress` + `promptPressStyle`. |
+| 4 | runtime | (auditor decía) `ChatBubble` sin React.memo | ❌ **FALSO**. Ya está `memo(function ChatBubble(...))` en `components/polaris.tsx:564`. Auditor no leyó el componente. |
+| 5 | listas | (auditor decía) virtualizar mensajes con FlashList | ⏭️ Cambio estructural grande (requiere FlatList inverted). Deferido a iteración 3. |
+
+### Medición real del bundle web
+```
+ANTES:   entry 4,130,593 + index 724,545 + aiProxy   984 = 4,856,122 bytes
+DESPUÉS: entry 4,131,074 + index 724,545 + aiProxy   984 = 4,856,603 bytes  (Δ +481 bytes)
+```
+
+### Honestidad sobre dynamic imports
+- **NO redujeron el bundle web** porque el bundler Metro de Expo SDK 54 web NO hace
+  code splitting automático en dynamic imports. Todo termina en un solo chunk entry.
+- **SÍ aplican en nativo** (Hermes lazy-loads bien) y dejan el código preparado para
+  cuando se habilite splitting (e.g. `expo-router` lazy routes, Metro plugin).
+- **El runtime SÍ mejora** por las memos en `mentor.tsx` — durante streaming el
+  padre re-renderea ~5x/s y los prompts ya no recrean closures.
+
+### Para iteración 3 (capa: web perf + a11y)
+- Habilitar code splitting REAL: `expo-router` lazy routes O Metro `experimental.serverComponents`.
+- WCAG 2.2 audit del dossier (touch targets ≥44, aria-labels, focus rings, contraste).
+- Web LCP medido con Lighthouse vs `growthplayers.vercel.app/admin`.
+- Skeleton loaders honestos en hot paths.
+

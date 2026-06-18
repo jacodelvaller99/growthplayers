@@ -574,6 +574,36 @@ export default function MentorScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
+  // ── Perf: memoizamos los cómputos derivados del thread y los handlers de
+  // los chips para no regenerar arrays/funciones en cada paint del padre.
+  // (Reduce jank cuando el stream va escribiendo y dispara re-render alto-freq.)
+  const quickPrompts = useMemo(
+    () => [...BASE_PROMPTS, ...(MODULE_PROMPTS[ACTIVE_MODULE.order] ?? [])],
+    [],
+  );
+  const handlePromptPress = useCallback((label: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    submit(label);
+    // submit es un closure mutable (lee state actualizado); intencionalmente
+    // sin deps — no queremos recrear este callback en cada render del thread.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const promptPressStyle = useCallback(
+    ({ pressed }: { pressed: boolean }) => [
+      styles.prompt,
+      pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] },
+    ],
+    [],
+  );
+  const memoryText = useMemo(
+    () => state.mentorMessages
+      .filter((m) => m.role === 'user')
+      .slice(-2)
+      .map((m) => m.text.slice(0, 80))
+      .join(' · '),
+    [state.mentorMessages],
+  );
+
   // ── Auto-send prompt from home screen quick chips ───────────────────────────
   // Placed after `submit` so it's available in closure without TDZ error
   useEffect(() => {
@@ -674,22 +704,13 @@ export default function MentorScreen() {
         {/* ── Quick Prompts ── */}
         <GoldDivider label="CONSULTAS RAPIDAS" />
         <View style={styles.promptGrid}>
-          {[
-            ...BASE_PROMPTS,
-            ...(MODULE_PROMPTS[ACTIVE_MODULE.order] ?? []),
-          ].map((p) => (
+          {quickPrompts.map((p) => (
             <Pressable
               key={p.label}
               accessibilityRole="button"
               accessibilityLabel={p.label}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                submit(p.label);
-              }}
-              style={({ pressed }) => [
-                styles.prompt,
-                pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] },
-              ]}>
+              onPress={() => handlePromptPress(p.label)}
+              style={promptPressStyle}>
               <MaterialIcons name={p.icon} size={16} color={palette.goldText} />
               <Text style={styles.promptText}>{p.label.toUpperCase()}</Text>
             </Pressable>
@@ -704,11 +725,7 @@ export default function MentorScreen() {
               <Text style={styles.memoryLabel}>ÚLTIMA SESIÓN</Text>
             </View>
             <Text style={styles.memoryText} numberOfLines={2}>
-              {state.mentorMessages
-                .filter((m) => m.role === 'user')
-                .slice(-2)
-                .map((m) => m.text.slice(0, 80))
-                .join(' · ')}
+              {memoryText}
             </Text>
           </PremiumCard>
         )}

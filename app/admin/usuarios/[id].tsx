@@ -60,7 +60,8 @@ import {
   RepeatedThemesCard,
 } from '@/components/memory';
 import { addAdminNote } from '@/lib/memory';
-import { generateAdminBriefing } from '@/lib/memorySummarizer';
+// generateAdminBriefing se importa dinámicamente en handleGenerateBriefing —
+// el módulo memorySummarizer arrastra el orquestador IA y solo se usa al click.
 import {
   ClientTaskList,
   ExecutionScoreCard,
@@ -78,11 +79,11 @@ import {
   SeedSyntheticControls,
 } from '@/components/biometric';
 import {
-  clearSyntheticData,
   fetchBiometricSnapshot,
-  seedSyntheticData,
   type BiometricSnapshot,
 } from '@/lib/biometric';
+// seedSyntheticData / clearSyntheticData se cargan dinámicamente — solo
+// activos en QA demos, no en el load inicial del dossier.
 import type { Scenario } from '@/lib/biometricSimulator';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, updateUserProfile } from '@/lib/admin/actions';
@@ -341,6 +342,7 @@ export default function UserDetailScreen() {
     if (!userId) return;
     setSeeding(true);
     try {
+      const { seedSyntheticData } = await import('@/lib/biometric');
       await seedSyntheticData(userId, scenario, 14);
       setBio(await fetchBiometricSnapshot(userId));
     } finally {
@@ -352,6 +354,7 @@ export default function UserDetailScreen() {
     if (!userId) return;
     setSeeding(true);
     try {
+      const { clearSyntheticData } = await import('@/lib/biometric');
       await clearSyntheticData(userId);
       setBio(await fetchBiometricSnapshot(userId));
     } finally {
@@ -380,6 +383,7 @@ export default function UserDetailScreen() {
     if (!userId) return;
     setGenBrief(true);
     try {
+      const { generateAdminBriefing } = await import('@/lib/memorySummarizer');
       await generateAdminBriefing(userId, { userName: user?.name });
       setMemory(await fetchUserMemory(userId));
     } finally {
