@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin — Biometric Intelligence (dashboard cross-client).
  *
  * Quién necesita descanso, quién está en caída fisiológica, quién está sólido.
@@ -119,7 +119,7 @@ export default function AdminBiometriaScreen() {
       showsVerticalScrollIndicator={false}>
 
       <View style={s.topRow}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>BIOMÉTRICOS</Text>

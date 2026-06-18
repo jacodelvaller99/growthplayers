@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin — Dashboard de Memoria (cross-client).
  *
  * Vista operativa: qué clientes tienen más loops abiertos, follow-up estancado, o
@@ -61,7 +61,7 @@ export default function AdminMemoriaScreen() {
       showsVerticalScrollIndicator={false}>
 
       <View style={s.topRow}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>MEMORIA</Text>

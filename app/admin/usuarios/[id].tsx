@@ -196,10 +196,10 @@ function NormanModal({
 }) {
   const [msg, setMsg] = useState('');
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" accessibilityViewIsModal>
       <View style={mo.overlay}>
-        <View style={mo.sheet}>
-          <Text style={mo.title}>ENVIAR MENSAJE COMO NORMAN</Text>
+        <View style={mo.sheet} accessibilityLabel="Enviar mensaje como Norman">
+          <Text style={mo.title} accessibilityRole="header">ENVIAR MENSAJE COMO NORMAN</Text>
           <Text style={mo.sub}>El usuario verá esto en su chat con el Mentor</Text>
           <TextInput
             style={mo.input}
@@ -1055,10 +1055,15 @@ export default function UserDetailScreen() {
       />
 
       {/* ── Modal: Editar identidad ── */}
-      <Modal visible={editOpen} transparent animationType="fade" onRequestClose={() => setEditOpen(false)}>
+      <Modal
+        visible={editOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditOpen(false)}
+        accessibilityViewIsModal>
         <View style={mo.overlay}>
-          <View style={mo.sheet}>
-            <Text style={mo.edTitle}>EDITAR IDENTIDAD</Text>
+          <View style={mo.sheet} accessibilityLabel="Editar identidad del usuario">
+            <Text style={mo.edTitle} accessibilityRole="header">EDITAR IDENTIDAD</Text>
             <Text style={mo.edLabel}>NOMBRE</Text>
             <TextInput
               style={mo.edInput}

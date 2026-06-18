@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin CMI — Inteligencia ML
  *
  * Dashboard completo: engagement, churn, cohorts, affinities,
@@ -144,7 +144,7 @@ export default function InteligenciaScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.gold} />}>
 
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>INTELIGENCIA ML</Text>

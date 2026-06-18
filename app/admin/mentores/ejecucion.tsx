@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin — Mentor Execution OS (dashboard cross-client).
  *
  * Operación del equipo de mentoría: quién necesita intervención, quién está más
@@ -113,7 +113,7 @@ export default function AdminEjecucionScreen() {
       showsVerticalScrollIndicator={false}>
 
       <View style={s.topRow}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>EJECUCIÓN</Text>

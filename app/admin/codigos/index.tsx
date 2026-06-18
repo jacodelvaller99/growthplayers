@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin CMI — Códigos de Acceso
  */
 
@@ -156,7 +156,7 @@ export default function CodigosScreen() {
       keyboardShouldPersistTaps="handled">
 
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>CÓDIGOS DE ACCESO</Text>

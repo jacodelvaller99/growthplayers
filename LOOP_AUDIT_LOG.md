@@ -179,3 +179,31 @@ Cambios mínimos: `constants/theme.ts:47` (fallback nativo) + `constants/themeCo
 - Habilitar code splitting Metro/Expo (bundle 4.8MB).
 - Skeleton loaders honestos en dashboards admin.
 
+---
+
+## ITERACIÓN 5 — A11y batch: back buttons + modales
+
+### Cambios masivos
+- **11 back buttons del admin** (auditoria, cursos, codigos, contenido, memoria,
+  membresias, comunidad, biometria, inteligencia, usuarios, mentores/ejecucion)
+  recibieron `accessibilityRole="button"` + `accessibilityLabel="Volver"` +
+  `hitSlop={8}` aplicado con PowerShell -replace (patrón uniforme).
+- **2 modales del dossier** (`SendAsNorman`, `EditOpen`) marcados como
+  `accessibilityViewIsModal` (RN/iOS trap focus) + label descriptivo en el sheet
+  contenedor + `accessibilityRole="header"` en el título.
+
+### Aclaración técnica
+React Native NO tiene `accessibilityRole="dialog"` nativo (a diferencia de ARIA web).
+El patrón correcto en RN es **`accessibilityViewIsModal` en el Modal padre + label
+en el container** — VoiceOver/TalkBack interpretan eso como modal trap. En web,
+react-native-web lo traduce a `aria-modal="true"` + `role="dialog"` automáticamente.
+
+### Deferido a iteración 6
+- aria-live polite en banners de éxito/error del dossier (refresh, save,
+  recalc) — necesita refactor de los `Alert.alert` a banner inline para
+  poder anunciar al SR sin interrumpir flujo.
+- Habilitar code splitting Metro/Expo (bundle 4.8MB).
+- Skeleton loaders honestos en dashboards admin.
+- iteración 7+: tablet/desktop sidebar (DesktopSidebar) y FlashList en lista
+  de usuarios admin si >100 entries.
+

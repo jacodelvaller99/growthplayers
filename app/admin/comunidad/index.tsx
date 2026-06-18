@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin CMI — Moderación de Comunidad
  *
  * Cola de reportes (community_reports). Lista los reportes por estado y permite
@@ -176,7 +176,7 @@ export default function AdminComunidadScreen() {
     <View style={[sc.root, { paddingTop: insets.top + spacing.lg }]}>
       {/* Header */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>MODERACIÓN</Text>

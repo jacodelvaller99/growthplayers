@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin CMI — Usuarios
  *
  * Lista completa de usuarios con búsqueda y filtros.
@@ -167,7 +167,7 @@ export default function UsuariosScreen() {
     <View style={[sc.root, { paddingTop: insets.top + spacing.lg }]}>
       {/* Header */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>USUARIOS</Text>

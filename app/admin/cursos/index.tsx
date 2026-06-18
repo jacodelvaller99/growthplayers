@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin CMI — Gestión de Cursos
  */
 
@@ -105,7 +105,7 @@ export default function CursosScreen() {
       keyboardShouldPersistTaps="handled">
 
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>CURSOS</Text>
