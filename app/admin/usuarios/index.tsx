@@ -30,8 +30,12 @@ import { createUserProfile } from '@/lib/admin/actions';
 import { fetchUsers } from '@/lib/admin/queries';
 import type { AdminUser } from '@/lib/admin/types';
 
-const FILTERS = ['TODOS', 'ADMIN', 'PREMIUM'] as const;
+const FILTERS = ['TODOS', 'NUEVOS', 'ADMIN', 'PREMIUM'] as const;
 type Filter = typeof FILTERS[number];
+
+/** Sin actividad aún: signup creado pero sin score/streak/check-in. */
+const isNuevo = (u: AdminUser) =>
+  (u.sovereign_score ?? 0) === 0 && (u.streak ?? 0) === 0 && !u.created_at;
 
 function ChurnBadge({ label }: { label?: string }) {
   const colorMap: Record<string, string> = {
@@ -150,10 +154,16 @@ export default function UsuariosScreen() {
       const q = search.toLowerCase();
       list = list.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
     }
+    if (filter === 'NUEVOS') list = list.filter(isNuevo);
     if (filter === 'ADMIN') list = list.filter(u => u.is_admin);
     if (filter === 'PREMIUM') list = list.filter(u => u.subscription_tier && u.subscription_tier !== 'free');
     setFiltered(list);
   }, [users, search, filter]);
+
+  // Roster completo (todos los perfiles reales) para la sección de seguimiento.
+  const totalProfiles = users.length;
+  const sinActividad = users.filter(isNuevo).length;
+  const conActividad = totalProfiles - sinActividad;
 
   if (loading) {
     return (
@@ -180,6 +190,29 @@ export default function UsuariosScreen() {
           <Text style={s.createBtnText}>CREAR</Text>
         </Pressable>
         <Text style={s.badge}>{filtered.length}</Text>
+      </View>
+
+      {/* Perfiles activos — roster completo para seguimiento (visible para todo admin) */}
+      <View style={s.rosterCard}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.rosterEyebrow}>PERFILES ACTIVOS</Text>
+          <Text style={s.rosterHint}>Roster completo · seguimiento a todos</Text>
+        </View>
+        <View style={s.rosterStats}>
+          <View style={s.rosterStat}>
+            <Text style={s.rosterCount}>{totalProfiles}</Text>
+            <Text style={s.rosterStatLbl}>TOTAL</Text>
+          </View>
+          <View style={s.rosterVDivider} />
+          <View style={s.rosterStat}>
+            <Text style={[s.rosterCountSm, { color: palette.success }]}>{conActividad}</Text>
+            <Text style={s.rosterStatLbl}>ACTIVOS</Text>
+          </View>
+          <Pressable style={s.rosterStat} onPress={() => setFilter('NUEVOS')} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Ver ${sinActividad} perfiles nuevos sin actividad`}>
+            <Text style={[s.rosterCountSm, { color: palette.warning }]}>{sinActividad}</Text>
+            <Text style={s.rosterStatLbl}>NUEVOS</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Search */}
@@ -338,6 +371,29 @@ const s = StyleSheet.create({
     borderRadius: radii.pill,
     fontSize: 12,
   },
+  // Roster "Perfiles activos" — sección de seguimiento
+  rosterCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  rosterEyebrow: { ...typography.section, color: palette.goldText, fontSize: 11 },
+  rosterHint: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 2 },
+  rosterStats: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  rosterStat: { alignItems: 'center', minWidth: 44 },
+  rosterCount: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 28, color: palette.goldText },
+  rosterCountSm: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 18, color: palette.ivory },
+  rosterStatLbl: { ...typography.label, color: palette.smoke, fontSize: 8, marginTop: 2 },
+  rosterVDivider: { width: 1, height: 28, backgroundColor: palette.line },
   createBtn: {
     flexDirection: 'row',
     alignItems: 'center',
