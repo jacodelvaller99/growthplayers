@@ -87,6 +87,14 @@ import type { Scenario } from '@/lib/biometricSimulator';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, updateUserProfile } from '@/lib/admin/actions';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
+import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
+import type { CoachIntelligence } from '@/lib/coachIntelligenceLogic';
+import {
+  ChurnDriversCard,
+  CoachNextActionCard,
+  RelationalDepthCard,
+  WeeklyMomentumCard,
+} from '@/components/coach-intelligence';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -271,6 +279,9 @@ export default function UserDetailScreen() {
   // Confrontaciones detectadas (DIJO vs HIZO)
   const [frictions, setFrictions] = useState<ConfrontationItem[]>([]);
 
+  // Coach Intelligence v2 (drivers explicables + momentum + NBA específica)
+  const [coachCI, setCoachCI] = useState<CoachIntelligence | null>(null);
+
   // Section anchors (navegación por chips) — cada sección guarda su Y al onLayout.
   const scrollRef = useRef<ScrollView | null>(null);
   const sectionYs = useRef<Record<string, number>>({});
@@ -311,6 +322,12 @@ export default function UserDetailScreen() {
     setActivity(act);
     setFrictions(frix);
     setLoading(false);
+
+    // Coach Intelligence v2: corre DESPUÉS del paint para no bloquear la primera
+    // pintura del dossier. Reusa las queries del bundle (degradable a vacío).
+    fetchCoachIntelligence(userId)
+      .then(({ ci }) => setCoachCI(ci))
+      .catch(() => setCoachCI(null));
   }, [userId]);
 
   const handleDismissFriction = useCallback(async (itemId: string, reason: string) => {
@@ -417,7 +434,12 @@ export default function UserDetailScreen() {
   const handleRecalcML = async () => {
     if (!adminId || !userId) return;
     setRecalcLoading(true);
+    // Recalcula ambos motores: el heurístico del servidor (edge function) +
+    // Coach Intelligence v2 (cómputo cliente sobre datos frescos).
     await recalculateUserMLAction({ adminId, userId });
+    await fetchCoachIntelligence(userId)
+      .then(({ ci }) => setCoachCI(ci))
+      .catch(() => { /* no-op: la sección degrada a vacío sola */ });
     setRecalcLoading(false);
     Alert.alert('✅ Recalculado', 'El ML de este usuario fue actualizado.');
     load();
@@ -619,6 +641,20 @@ export default function UserDetailScreen() {
         <View onLayout={onSectionLayout('ml')}>
           <GoldDivider label="D. INTELIGENCIA ML" />
         </View>
+
+        {/* Coach Intelligence v2 — lo PRIMERO que ve el coach: por qué este score
+            (drivers con evidencia), trayectoria semanal, salud relacional con
+            Norman, y qué decirle esta semana. Si el bundle no carga aún, esta
+            zona queda vacía sin romper la pantalla. */}
+        {coachCI && (
+          <>
+            <CoachNextActionCard action={coachCI.next_action} />
+            <ChurnDriversCard ci={coachCI} />
+            <WeeklyMomentumCard momentum={coachCI.momentum} />
+            <RelationalDepthCard depth={coachCI.relational} />
+          </>
+        )}
+
         <PremiumCard style={s.card}>
           <SectionHeader
             title=""
