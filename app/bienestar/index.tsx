@@ -137,12 +137,13 @@ const BLOCKS: Block[] = [
 ];
 
 const BLOCKS_EXTENDED = [
-  { id: 'habitos',     icon: 'checklist' as const,      label: 'HÁBITOS',     route: '/bienestar/habitos' },
-  { id: 'ayuno',       icon: 'schedule' as const,       label: 'AYUNO',       route: '/bienestar/ayuno' },
-  { id: 'nutricion',   icon: 'restaurant' as const,     label: 'NUTRICIÓN',   route: '/bienestar/nutricion' },
-  { id: 'cuerpo',      icon: 'fitness-center' as const, label: 'CUERPO',      route: '/bienestar/cuerpo' },
-  { id: 'suplementos', icon: 'medication' as const,     label: 'SUPLEMENTOS', route: '/bienestar/suplementacion' },
-  { id: 'comunidad',   icon: 'groups' as const,         label: 'COMUNIDAD',   route: '/bienestar/comunidad' },
+  { id: 'internista',  icon: 'medical-services' as const, label: 'INTERNISTA',  route: '/bienestar/internista' },
+  { id: 'habitos',     icon: 'checklist' as const,        label: 'HÁBITOS',     route: '/bienestar/habitos' },
+  { id: 'ayuno',       icon: 'schedule' as const,         label: 'AYUNO',       route: '/bienestar/ayuno' },
+  { id: 'nutricion',   icon: 'restaurant' as const,       label: 'NUTRICIÓN',   route: '/bienestar/nutricion' },
+  { id: 'cuerpo',      icon: 'fitness-center' as const,   label: 'CUERPO',      route: '/bienestar/cuerpo' },
+  { id: 'suplementos', icon: 'medication' as const,       label: 'SUPLEMENTOS', route: '/bienestar/suplementacion' },
+  { id: 'comunidad',   icon: 'groups' as const,           label: 'COMUNIDAD',   route: '/bienestar/comunidad' },
 ];
 
 // Herramientas emocionales del curso (Docs 3.2, 3.4 y 4.3)
