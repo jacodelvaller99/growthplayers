@@ -146,3 +146,36 @@ DESPUÉS: entry 4,131,074 + index 724,545 + aiProxy   984 = 4,856,603 bytes  (Δ
 - Habilitar code splitting Metro/Expo (bundle 4.8MB web sigue sin splitting).
 - Skeleton loaders honestos en dashboards admin.
 
+---
+
+## ITERACIÓN 4 — Shift del token `smoke` (de 31 callsites a 1 línea)
+
+### Decisión arquitectónica
+El audit de iteración 3 dejó 31 usos restantes de `palette.smoke` con fontSize 8–11 que
+fallan WCAG AA (3.3:1 sobre graphite). En vez de cambiarlos a `palette.ash` (rompería
+la jerarquía intencional **ivory > ash > smoke > muted**), elevo el valor hex del
+token `smoke` para que cumpla AA manteniendo la diferencia visual con `ash`.
+
+### Cálculo de luminancia (sobre `#111111` graphite)
+| Token | Antes | Después | Ratio antes | Ratio después |
+|---|---|---|---|---|
+| `palette.smoke` (dark) | `#666666` | **`#888888`** | 3.3:1 ❌ | **5.5:1** ✅ AA texto normal |
+| `palette.smoke` (light) | `#6B6B6B` sobre `#F5F3EE` | (sin tocar) | 4.9:1 ✅ | 4.9:1 ✅ |
+
+Cambios mínimos: `constants/theme.ts:47` (fallback nativo) + `constants/themeColors.ts:33`
+(variable CSS dark). Light mode ya pasaba.
+
+### Impacto
+- TODOS los usos de `smoke` en la app — eyebrows, captions, timestamps, meta — pasan
+  ahora WCAG AA en dark mode sin tocar componentes.
+- Jerarquía visual respetada: `#AAA` (ash) → `#888` (smoke) → `#444` (muted) sigue
+  siendo perceptiblemente distinta.
+- Light mode intacto (ya cumplía AA con `#6B6B6B`).
+
+### Deferido a iteración 5
+- Pasadas finales de a11y: modales con `accessibilityRole="dialog"`,
+  toasts/alerts con `aria-live="polite"`, accessibilityLabel en
+  Pressables icon-only fuera del dossier (Mission Control + dashboards cross-client).
+- Habilitar code splitting Metro/Expo (bundle 4.8MB).
+- Skeleton loaders honestos en dashboards admin.
+

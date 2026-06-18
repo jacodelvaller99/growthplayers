@@ -30,7 +30,7 @@ export const THEME_VARS: Record<'dark' | 'light', Record<string, string>> = {
     '--c-text-warm':    '#F0EBE0',
     '--c-text-dim':     'rgba(235,235,235,0.55)',
     '--c-text-2':       '#AAAAAA',
-    '--c-text-3':       '#666666',
+    '--c-text-3':       '#888888',
     '--c-text-faint':   '#444444',
     '--c-border':       'rgba(255,255,255,0.07)',
     '--c-border-soft':  'rgba(255,255,255,0.05)',

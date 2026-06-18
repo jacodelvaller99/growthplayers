@@ -44,7 +44,7 @@ export const palette = {
   ivoryWarm:      cv('--c-text-warm',  '#F0EBE0'),   // warm off-white for special headings
   ivoryDim:       cv('--c-text-dim',   'rgba(235, 235, 235, 0.55)'), // dimmed text
   ash:            cv('--c-text-2',     '#AAAAAA'),   // secondary text
-  smoke:          cv('--c-text-3',     '#666666'),   // tertiary/placeholder text
+  smoke:          cv('--c-text-3',     '#888888'),   // tertiary/placeholder text — 5.5:1 sobre graphite (WCAG AA en texto normal). Antes #666666 fallaba (3.3:1).
   muted:          cv('--c-text-faint', '#444444'),   // disabled, locked states
 
   // ── Borders — themeable ──────────────────────────────────────────────────────
