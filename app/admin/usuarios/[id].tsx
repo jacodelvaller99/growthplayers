@@ -505,7 +505,12 @@ export default function UserDetailScreen() {
 
         {/* ── Back + title ── */}
         <View style={s.header}>
-          <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
+          <Pressable
+            onPress={() => router.back()}
+            style={s.backBtn}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Volver al listado de usuarios">
             <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
           </Pressable>
           <View style={{ flex: 1 }}>
@@ -558,7 +563,11 @@ export default function UserDetailScreen() {
               <MaterialIcons name="edit" size={18} color={palette.goldText} />
             </Pressable>
           </View>
-          <Pressable style={s.normanBtn} onPress={() => setShowNorman(true)}>
+          <Pressable
+            style={s.normanBtn}
+            onPress={() => setShowNorman(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Enviar mensaje a este usuario como Norman">
             <MaterialIcons name="send" size={16} color={palette.goldText} />
             <Text style={s.normanBtnText}>ENVIAR MENSAJE COMO NORMAN</Text>
           </Pressable>

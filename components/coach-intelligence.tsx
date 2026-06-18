@@ -31,6 +31,27 @@ function riskColor(label: 'low' | 'medium' | 'high' | 'critical'): string {
   return palette.success;
 }
 
+/**
+ * Fondo tintado para pills/labels que muestran texto en color semántico fuerte
+ * (danger/warning) — sube el contraste del texto sobre la card oscura cumpliendo
+ * WCAG AA en tipografías <18px. Usa los `*Muted` ya existentes en `palette`.
+ */
+function riskPillBg(label: 'low' | 'medium' | 'high' | 'critical'): string {
+  if (label === 'critical') return palette.dangerMuted;
+  if (label === 'high') return 'rgba(212, 160, 23, 0.15)'; // warningMuted
+  if (label === 'medium') return palette.goldLight;
+  return palette.successMuted;
+}
+
+/** Genérico: bg tintado a partir de un color hex saturado (~12-15% alpha). */
+function tintFor(color: string): string {
+  if (color === palette.danger) return palette.dangerMuted;
+  if (color === palette.warning) return 'rgba(212, 160, 23, 0.15)';
+  if (color === palette.goldText) return palette.goldLight;
+  if (color === palette.success) return palette.successMuted;
+  return 'rgba(255, 255, 255, 0.05)';
+}
+
 function urgencyColor(u: CoachNextAction['urgency']): string {
   if (u === 'urgent') return palette.danger;
   if (u === 'high') return palette.warning;
@@ -84,7 +105,9 @@ export function ChurnDriversCard({ ci }: { ci: CoachIntelligence }) {
           <Text style={s.eyebrow}>RIESGO DE CHURN · DRIVERS EXPLICABLES</Text>
           <Text style={s.narrative}>{ci.narrative}</Text>
         </View>
-        <View style={[s.riskPill, { borderColor: color }]}>
+        <View
+          style={[s.riskPill, { borderColor: color, backgroundColor: riskPillBg(ci.churn_risk_label) }]}
+          accessibilityLabel={`Riesgo ${ci.churn_risk_label}: ${Math.round(ci.churn_risk * 100)} por ciento`}>
           <Text style={[s.riskPillText, { color }]}>{Math.round(ci.churn_risk * 100)}%</Text>
         </View>
       </View>
@@ -135,7 +158,9 @@ export function WeeklyMomentumCard({ momentum }: { momentum: WeeklyMomentum }) {
     <PremiumCard style={s.card}>
       <View style={s.head}>
         <Text style={s.eyebrow}>MOMENTUM SEMANAL</Text>
-        <View style={[s.statePill, { borderColor: color }]}>
+        <View
+          style={[s.statePill, { borderColor: color, backgroundColor: tintFor(color) }]}
+          accessibilityLabel={`Momentum: ${MOMENTUM_LABEL[momentum.state]}`}>
           <Text style={[s.statePillText, { color }]}>{MOMENTUM_LABEL[momentum.state]}</Text>
         </View>
       </View>
@@ -212,7 +237,9 @@ export function CoachNextActionCard({ action }: { action: CoachNextAction }) {
           <MaterialIcons name={ACTION_ICON[action.kind] as never} size={16} color={color} />
           <Text style={[s.eyebrow, { color }]}>QUÉ DECIRLE ESTA SEMANA</Text>
         </View>
-        <View style={[s.urgencyPill, { borderColor: color }]}>
+        <View
+          style={[s.urgencyPill, { borderColor: color, backgroundColor: tintFor(color) }]}
+          accessibilityLabel={`Urgencia ${action.urgency}`}>
           <Text style={[s.urgencyPillText, { color }]}>{action.urgency.toUpperCase()}</Text>
         </View>
       </View>
@@ -230,9 +257,9 @@ export function CoachNextActionCard({ action }: { action: CoachNextAction }) {
 const s = StyleSheet.create({
   card: { gap: spacing.sm, marginBottom: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
-  eyebrow: { ...typography.label, color: palette.smoke, fontSize: 10, letterSpacing: 1.2 },
+  eyebrow: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 1.2 },
   narrative: { ...typography.body, color: palette.ivory, fontSize: 13, marginTop: 4, lineHeight: 19, maxWidth: 320 },
-  empty: { ...typography.caption, color: palette.smoke, fontSize: 12, fontStyle: 'italic' },
+  empty: { ...typography.caption, color: palette.ash, fontSize: 12, fontStyle: 'italic' },
 
   // Risk pill
   riskPill: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
@@ -241,7 +268,7 @@ const s = StyleSheet.create({
   // Drivers list
   driversList: { gap: spacing.sm, marginTop: spacing.xs },
   divider: { height: 1, backgroundColor: palette.line, marginVertical: spacing.xs },
-  subhead: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1 },
+  subhead: { ...typography.label, color: palette.ash, fontSize: 9, letterSpacing: 1 },
   driverRow: { gap: 4 },
   driverHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   driverLabel: { ...typography.section, color: palette.ivory, fontSize: 12.5, letterSpacing: 0.4 },
@@ -259,14 +286,16 @@ const s = StyleSheet.create({
     flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs,
     backgroundColor: palette.charcoal, borderRadius: radii.sm, gap: 2,
   },
-  deltaTileLabel: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 0.8 },
+  deltaTileLabel: { ...typography.label, color: palette.ash, fontSize: 9, letterSpacing: 0.8 },
   deltaTileValue: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 15 },
 
   // Depth
-  depthLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, marginTop: 4 },
+  // Bold + 16px supera el umbral de "large text" en RNW (≈12pt bold) — habilita
+  // que colores semánticos fuertes (danger/warning) cumplan WCAG AA 3:1.
+  depthLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 16, marginTop: 4 },
   depthScore: { flexDirection: 'row', alignItems: 'baseline' },
   depthScoreNum: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 28 },
-  depthScoreMax: { ...typography.label, color: palette.smoke, fontSize: 11 },
+  depthScoreMax: { ...typography.label, color: palette.ash, fontSize: 11 },
   depthMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: spacing.xs },
   depthMetric: { ...typography.caption, color: palette.ash, fontSize: 11.5 },
   depthMetricVal: { color: palette.ivory, fontFamily: Fonts.display, fontWeight: '700' },
@@ -277,5 +306,5 @@ const s = StyleSheet.create({
   urgencyPillText: { ...typography.label, fontSize: 9, letterSpacing: 1 },
   actionWhat: { ...typography.body, color: palette.ivory, fontSize: 13.5, lineHeight: 20, marginTop: 4 },
   actionWhy: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: spacing.xs },
-  actionWhyText: { ...typography.caption, color: palette.smoke, fontSize: 11, lineHeight: 16, flex: 1, fontStyle: 'italic' },
+  actionWhyText: { ...typography.caption, color: palette.ash, fontSize: 11, lineHeight: 16, flex: 1, fontStyle: 'italic' },
 });

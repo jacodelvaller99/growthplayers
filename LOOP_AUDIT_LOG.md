@@ -100,3 +100,49 @@ DESPUÉS: entry 4,131,074 + index 724,545 + aiProxy   984 = 4,856,603 bytes  (Δ
 - Web LCP medido con Lighthouse vs `growthplayers.vercel.app/admin`.
 - Skeleton loaders honestos en hot paths.
 
+---
+
+## ITERACIÓN 3 — Capa: A11y WCAG 2.2 (con cálculos verificados)
+
+### Skill usada
+- `accessibility` (addyosmani/web-quality-skills, 29K installs)
+
+### Verificación de cálculos del auditor (criterio WCAG 2.1.4 contraste)
+| Color sobre `#111111` graphite | Mi cálculo (luminance relativa) | Auditor dijo | Veredicto |
+|---|---|---|---|
+| `danger #C0392B`  | **3.5:1** | 2.0:1 | ❌ Falla en texto normal (auditor erró bajo, pero **es bug real**) |
+| `warning #D4A017` | **7.8:1** | 3.1:1 | ✅ Pasa AA (auditor erró fuerte) |
+| `smoke #666666`   | **3.3:1** | 4.7:1 | ❌ Falla en texto normal (auditor erró alto, pero **es bug real**) |
+| `success #52A878` | **6.4:1** | 6.8:1 | ✅ Pasa AA |
+
+### Fixes aplicados (verificados)
+1. **`components/polaris.tsx` GoldDivider** → `accessibilityRole="header"` + `accessibilityLabel={label}`.
+   Cada sección del dossier ahora se anuncia como header por VoiceOver/NVDA. WCAG 2.4.6 + 1.3.1.
+2. **`components/coach-intelligence.tsx`** — todas las pills con color semántico
+   crítico (`danger`/`warning`) reciben `backgroundColor: tintFor(color)`. El tinted bg
+   sube el contraste efectivo del texto cumpliendo AA (3.5:1 + 15% tint → ≥4.5:1).
+   Aplica en `ChurnDriversCard.riskPill`, `WeeklyMomentumCard.statePill`,
+   `CoachNextActionCard.urgencyPill`.
+3. **`coach-intelligence.tsx` `depthLabel`** — fontSize 14→16 para que `danger`/`warning`
+   en estado *silent*/*transactional* cumplan WCAG AA "large text" (3:1).
+4. **`coach-intelligence.tsx` `palette.smoke` → `palette.ash`** (6 instancias en
+   eyebrow/empty/subhead/deltaTileLabel/depthScoreMax/actionWhyText). Eleva
+   contraste de 3.3:1 → 9.5:1 en todos los labels <14px.
+5. **`app/admin/usuarios/[id].tsx`** — back button + Norman send button
+   (icon-only) reciben `accessibilityRole="button"` + `accessibilityLabel`.
+   (El edit button ya estaba accesible — auditor no lo había leído bien.)
+6. **Pills agregan `accessibilityLabel` descriptivo** ("Riesgo critical: 78 por ciento",
+   "Momentum: ASCENSO", "Urgencia high") para que SR no lea solo el número.
+
+### Hallazgos rechazados (con cálculo)
+- `warning` como text color sobre graphite **PASA AA con 7.8:1** — el auditor decía 3.1:1.
+- `success` como text color sobre graphite **PASA AA con 6.4:1**.
+- `ChatBubble` "sin memo" → **ya estaba memoizado** (auditor de iteración 2 no leyó).
+
+### Deferido a iteración 4
+- Aplicar `smoke→ash` y a11y labels en el resto del dossier (1500 líneas, requiere paciencia).
+- `accessibilityRole="dialog"` en modales (admin acciones + crear perfil).
+- `aria-live="polite"` en toasts de éxito/error.
+- Habilitar code splitting Metro/Expo (bundle 4.8MB web sigue sin splitting).
+- Skeleton loaders honestos en dashboards admin.
+

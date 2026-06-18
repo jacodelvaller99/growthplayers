@@ -91,7 +91,11 @@ export function GoldAccentCard({ children, style, ...props }: ViewProps) {
 
 export function GoldDivider({ label }: { label?: string }) {
   return (
-    <View style={styles.dividerRow}>
+    <View
+      style={styles.dividerRow}
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel={label}>
       <View style={styles.dividerLine} />
       {label ? <Text style={styles.dividerLabel}>{label}</Text> : null}
       {label ? <View style={styles.dividerLine} /> : null}
