@@ -22,10 +22,12 @@ npx tsc --noEmit        # TypeScript check (no build output)
 # Quality gates
 npm run typecheck       # tsc --noEmit — debe salir 0
 
-# Tests — suite real en __tests__/unit/ (53 tests, 6 suites):
+# Tests — suite real en __tests__/unit/ (180+ tests, 11 suites):
 #   utils (protocolDay/sovereignScore) · mentorship (weekDateRange/semanas)
 #   themeColors (paridad dark/light + cv) · moderation (filtro UGC)
-#   mentor (cadena de fallback + contrato honestidad/crisis) · sse (parseSSEStream)
+#   mentor (cadena de fallback + contrato honestidad/crisis) · mentor-claude (proveedor primario)
+#   sse (parseSSEStream) · memory (Memory OS) · mentorExecution (Mentor Execution OS)
+#   biometric (Biometric Intelligence) · confrontationLogic (Confrontation OS — 46 tests)
 npm test                              # Jest — all tests
 npm run test:watch                    # Watch mode
 npm run test:coverage                 # Coverage report
@@ -260,6 +262,8 @@ WHOOP + Oura via OAuth (`app/oauth/whoop/callback`, `app/oauth/oura/callback`), 
 **Admin crea/edita perfiles** (`app/admin/usuarios/`): el admin puede **crear** un usuario real con login (botón "Crear perfil" en `usuarios/index.tsx` → `createUserProfile` en `lib/admin/actions.ts` → edge function `create-user`, que verifica `is_admin` del caller y usa `adminSupabase.auth.admin.createUser`; el tier inicial reusa `activateMembership`) y **editar** nombre/etiqueta-rol (`updateUserProfile` → `user_profiles`, en `usuarios/[id].tsx`). El tier de suscripción se cambia en la sección Membresías. Crear el auth user necesita service-role → vive en edge function (deploy = handoff CLI).
 
 **Historia completa del cliente en admin** (`app/admin/usuarios/[id].tsx`): el dossier muestra todo lo que el cliente HACE, no solo lo que dice. Además de identidad/membresías/check-ins/conversaciones/mentoría/ejecución/memoria/biométricos, las secciones **L. CUERPO & PROTOCOLO** (hábitos + logs + ayuno + cuerpo + nutrición + suplementos + prácticas de wellness) y **N. REFLEXIONES & COMUNIDAD** (journal + posts + engagement + DM metadata) leen vía `fetchUserActivityBundle` (`lib/admin/queries.ts`) en paralelo con el resto. Tarjetas en `components/admin-activity.tsx`. **Privacidad de DMs:** solo metadata (conteo + última actividad), nunca contenido — el coach ve señal de actividad, no surveillance de pares.
+
+**Admin UX — Mission Control + dashboards** (`app/admin/index.tsx`, `app/admin/biometria.tsx`, `app/admin/mentores/ejecucion.tsx`): siguiendo el patrón overview→drilldown con 5–7 KPIs hero y semantic colors (rojo=mal, verde=bien). Mission Control tiene un hero bar de 3 KPIs críticos (riesgo crítico/alto/activos hoy) + sección "Usuarios en Riesgo (Top 5)" (`fetchAtRiskUsers`) con nav a dossier en 1 tap; timestamp real ("hace Xs" desde `lastSyncAt`). Los dashboards cross-client (biometría + ejecución) muestran una `DistributionHero`/`MomentumHero` (barra horizontal segmentada por severidad + % equipo en alerta). El dossier (`usuarios/[id].tsx`) tiene un chip strip horizontal STICKY tras el header con 10 anclas (IDENTIDAD…REFLEXIONES) que hace `scrollToSection`. **Cuidado:** el `Promise.all` de carga de Mission Control no tiene `.catch` → una query que falle deja spinner infinito (issue conocido — ver `docs/launch/KNOWN_ISSUES_REGISTER.md` #6).
 
 ### Confrontation OS — `lib/confrontationLogic.ts`, `lib/confrontation.ts`
 
