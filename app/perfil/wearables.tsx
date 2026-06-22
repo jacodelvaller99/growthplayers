@@ -37,12 +37,14 @@ const supa: any = supabase;
 import {
   OAUTH_URLS,
   isNativeProvider,
+  isAggregatorProvider,
   triggerWearableSync,
   useWearableConnections,
   useWearableDaily,
   recoveryLabel,
   type WearableProvider,
 } from '@/lib/wearables';
+import { connectAggregator } from '@/lib/wearableAggregator';
 import { requestNativePermissions, syncRange, nativeProviderForPlatform } from '@/lib/wearablesNative';
 import { WearableCompat } from '@/components/wearable-compat';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -52,6 +54,7 @@ const PROVIDER_NAME: Record<WearableProvider, string> = {
   oura:           'Oura Ring',
   apple_health:   'Apple Salud',
   health_connect: 'Google Health Connect',
+  aggregator:     'Cualquier reloj',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -88,6 +91,14 @@ type ProviderMeta = {
 };
 
 const ALL_PROVIDERS: ProviderMeta[] = [
+  {
+    id:          'aggregator',
+    name:        'Cualquier reloj',
+    subtitle:    'Garmin · Polar · Coros · Fitbit · Withings · Suunto +500',
+    description: 'Una sola conexión para casi cualquier reloj o app de salud — sin importar la marca. Funciona también desde el navegador. Elige tu dispositivo y autoriza; tus métricas llegan a Norman automáticamente.',
+    icon:        'watch',
+    metrics:     ['Sueño', 'HRV', 'FC Reposo', 'Recuperación'],
+  },
   {
     id:          'apple_health',
     name:        'Apple Salud',
@@ -438,7 +449,9 @@ export default function WearablesScreen() {
   // Handle OAuth callback params (?connected=whoop or ?error=...)
   useEffect(() => {
     if (params.connected) {
-      const name = params.connected === 'whoop' ? 'WHOOP' : 'Oura Ring';
+      const name = params.connected === 'whoop' ? 'WHOOP'
+        : params.connected === 'aggregator' ? 'Tu reloj'
+        : 'Oura Ring';
       setBanner({ type: 'success', msg: `${name} conectado exitosamente ✓` });
       reload();
       // Clean URL params
@@ -458,6 +471,23 @@ export default function WearablesScreen() {
 
   async function handleConnect(provider: WearableProvider) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // ── Agregador universal (Terra): widget hosteado, funciona en web ──────
+    if (isAggregatorProvider(provider)) {
+      setConnecting(provider);
+      try {
+        const res = await connectAggregator();
+        if (!res.ok) {
+          setBanner({ type: 'error', msg: res.error ?? 'No se pudo conectar' });
+        }
+        // En web se redirige la página; en nativo el browser maneja el retorno.
+        // El webhook del agregador vincula la cuenta y empuja los datos.
+        await reload();
+      } finally {
+        setConnecting(null);
+      }
+      return;
+    }
 
     // ── Nativos (HealthKit / Health Connect): permisos del SO + sync local ──
     if (isNativeProvider(provider)) {
@@ -556,6 +586,14 @@ export default function WearablesScreen() {
         setBanner({ type: 'error', msg: sync.message ?? 'Error al sincronizar' });
       }
       await reload();
+      setSyncing(null);
+      return;
+    }
+
+    // Agregador: el dato llega por webhook (push). No hay pull manual — refrescamos.
+    if (isAggregatorProvider(provider)) {
+      await reload();
+      setBanner({ type: 'success', msg: 'Tus datos se actualizan automáticamente cuando tu reloj sincroniza' });
       setSyncing(null);
       return;
     }

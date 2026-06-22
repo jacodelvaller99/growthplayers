@@ -53,11 +53,16 @@ Deno.serve(async (req: Request) => {
       adminSupabase.from('nutrition_profiles').delete().eq('user_id', userId),
       adminSupabase.from('supplement_stacks').delete().eq('user_id', userId),
       adminSupabase.from('body_measurements').delete().eq('user_id', userId),
-      // Wearables / biometría
+      // Wearables / biometría (incluye agregador universal + eventos del webhook)
       adminSupabase.from('wearable_connections').delete().eq('user_id', userId),
       adminSupabase.from('wearable_daily').delete().eq('user_id', userId),
       adminSupabase.from('wearable_timeseries').delete().eq('user_id', userId),
+      adminSupabase.from('wearable_webhook_events').delete().eq('user_id', userId),
       adminSupabase.from('biometric_insights').delete().eq('user_id', userId),
+      // Internista educativo — PHI (exámenes, valores de lab, conversación)
+      adminSupabase.from('medical_exams').delete().eq('user_id', userId),
+      adminSupabase.from('medical_lab_values').delete().eq('user_id', userId),
+      adminSupabase.from('internist_sessions').delete().eq('user_id', userId),
       // Mentoría (sesiones + tareas)
       adminSupabase.from('mentorship_sessions').delete().eq('user_id', userId),
       adminSupabase.from('mentorship_tasks').delete().eq('user_id', userId),
@@ -94,6 +99,21 @@ Deno.serve(async (req: Request) => {
       // profiles table uses id = auth.uid()
       adminSupabase.from('profiles').delete().eq('id', userId),
     ]);
+
+    // ── Step 1.bis: Purga de Storage PHI (exámenes médicos) ──────────────────
+    // Storage NO cascadea desde auth.users — borramos a mano los objetos del
+    // bucket privado medical-exams bajo la carpeta <user_id>/.
+    try {
+      const { data: files } = await adminSupabase.storage
+        .from('medical-exams')
+        .list(userId, { limit: 1000 });
+      if (files && files.length > 0) {
+        const paths = files.map((f: { name: string }) => `${userId}/${f.name}`);
+        await adminSupabase.storage.from('medical-exams').remove(paths);
+      }
+    } catch (e) {
+      console.error('[delete-account] medical-exams storage purge:', e);
+    }
 
     // ── Step 2: Delete auth.users entry ──────────────────────────────────────
     const { error: deleteError } = await adminSupabase.auth.admin.deleteUser(userId);

@@ -19,11 +19,16 @@ import { ENV } from '@/app/config/env';
 const supa: any = supabase;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-export type WearableProvider = 'oura' | 'whoop' | 'apple_health' | 'health_connect';
+export type WearableProvider = 'oura' | 'whoop' | 'apple_health' | 'health_connect' | 'aggregator';
 
 /** ¿Es este provider OAuth web (Oura/WHOOP) o nativo (HealthKit/Health Connect)? */
 export function isNativeProvider(p: WearableProvider): p is 'apple_health' | 'health_connect' {
   return p === 'apple_health' || p === 'health_connect';
+}
+
+/** ¿Es el agregador universal (Terra)? Conecta cualquier reloj por una vía y corre en web. */
+export function isAggregatorProvider(p: WearableProvider): p is 'aggregator' {
+  return p === 'aggregator';
 }
 
 // Nativo usa el scheme registrado en app.json ("polaris") para que
