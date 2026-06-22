@@ -241,10 +241,46 @@ export interface DashboardKPIs {
   total_users: number;
   active_today: number;
   active_7d: number;
+  /** Engagement REAL 0–100 (user_intelligence.engagement_score). 0 si no hay ML. */
   avg_engagement: number;
+  /** Promedio del Sovereign Score 0–1000 (transformación). Antes mal-etiquetado como engagement. */
+  avg_sovereign: number;
   critical_churn: number;
   total_memberships: number;
   active_codes: number;
+}
+
+// ─── Cuadro de Mando Integral (estratégico) ───────────────────────────────────
+
+/** Estrella Polar: retención (proxy de actividad reciente sobre el total de clientes). */
+export interface RetentionStat {
+  cohort: number;          // total de clientes considerados
+  active: number;          // clientes con actividad reciente (≤ windowDays)
+  rate: number | null;     // active/cohort * 100 (null si cohorte vacía)
+  windowDays: number;      // ventana de "activo" (ej. 14)
+  insufficient: boolean;   // true si la base es muy pequeña para concluir
+}
+
+/** Una fila del embudo del Protocolo (un módulo). */
+export interface ModuleFunnelRow {
+  moduleId: string;
+  title: string;
+  order: number;
+  totalLessons: number;
+  started: number;         // clientes con ≥1 lección completada en el módulo
+  completed: number;       // clientes que completaron TODAS las lecciones del módulo
+}
+
+/** Embudo del Protocolo + el punto de mayor fuga. */
+export interface ProtocolFunnel {
+  modules: ModuleFunnelRow[];
+  dropOff: { title: string; from: number; to: number; lostPct: number } | null;
+}
+
+/** Señal de qué prácticas usan más los clientes (qué los retiene). */
+export interface PracticeSignal {
+  practices: Array<{ type: string; label: string; count: number }>;
+  total: number;
 }
 
 export interface LiveEvent {

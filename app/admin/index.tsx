@@ -21,11 +21,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
 import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { fetchAtRiskUsers, fetchDashboardKPIs, fetchLiveEvents, fetchTierCounts } from '@/lib/admin/queries';
+import {
+  fetchAtRiskUsers, fetchDashboardKPIs, fetchLiveEvents, fetchPracticeSignal,
+  fetchProtocolFunnel, fetchRetention90d, fetchTierCounts,
+} from '@/lib/admin/queries';
 import { fetchNotesByUsers, type NoteSummary } from '@/lib/memory';
-import { NoteBadge } from '@/components/admin-decision';
-import type { AtRiskUser, DashboardKPIs, LiveEvent } from '@/lib/admin/types';
+import { NoteBadge, PolarStarCard, PracticeSignalCard, ProtocolFunnelCard } from '@/components/admin-decision';
+import type {
+  AtRiskUser, DashboardKPIs, LiveEvent, PracticeSignal, ProtocolFunnel, RetentionStat,
+} from '@/lib/admin/types';
 import { recalculateAllMLAction } from '@/lib/admin/actions';
 import { intel } from '@/lib/supabase';
 
@@ -101,6 +107,8 @@ interface SectionCard {
 
 const SECTIONS: SectionCard[] = [
   { route: '/admin/usuarios',     label: 'Usuarios',        icon: '👤', desc: 'Gestionar perfiles' },
+  { route: '/admin/ranking',      label: 'Ranking',         icon: '🏆', desc: 'Comparar y ponderar' },
+  { route: '/admin/copilot',      label: 'Copiloto IA',     icon: '🤖', desc: 'Decisiones del equipo' },
   { route: '/admin/membresias',   label: 'Membresías',      icon: '💳', desc: 'Activar accesos' },
   { route: '/admin/cursos',       label: 'Cursos',          icon: '🎓', desc: 'Control de acceso' },
   { route: '/admin/codigos',      label: 'Códigos',         icon: '🔑', desc: 'Crear y gestionar' },
@@ -114,6 +122,7 @@ const SECTIONS: SectionCard[] = [
 
 export default function MissionControl() {
   const sc = useScreen();
+  const { isMobile } = useBreakpoint();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
@@ -123,6 +132,9 @@ export default function MissionControl() {
   const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
   const [atRiskUsers, setAtRiskUsers] = useState<AtRiskUser[]>([]);
   const [notes, setNotes] = useState<Record<string, NoteSummary>>({});
+  const [retention, setRetention] = useState<RetentionStat | null>(null);
+  const [funnel, setFunnel] = useState<ProtocolFunnel | null>(null);
+  const [practice, setPractice] = useState<PracticeSignal | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -134,15 +146,21 @@ export default function MissionControl() {
     // allSettled: una query que falle NO debe dejar el dashboard en spinner infinito.
     // Cada panel se actualiza con lo que llegó; lo que falló conserva su último valor.
     try {
-      const [kpiRes, evtRes, tierRes, riskRes] = await Promise.allSettled([
+      const [kpiRes, evtRes, tierRes, riskRes, retRes, funRes, pracRes] = await Promise.allSettled([
         fetchDashboardKPIs(),
-        fetchLiveEvents(10),
+        fetchLiveEvents(8),
         fetchTierCounts(),
         fetchAtRiskUsers(),
+        fetchRetention90d(),
+        fetchProtocolFunnel(),
+        fetchPracticeSignal(),
       ]);
       if (kpiRes.status === 'fulfilled') setKpis(kpiRes.value);
       if (evtRes.status === 'fulfilled') setEvents(evtRes.value);
       if (tierRes.status === 'fulfilled') setTierCounts(tierRes.value);
+      if (retRes.status === 'fulfilled') setRetention(retRes.value);
+      if (funRes.status === 'fulfilled') setFunnel(funRes.value);
+      if (pracRes.status === 'fulfilled') setPractice(pracRes.value);
       if (riskRes.status === 'fulfilled') {
         setAtRiskUsers(riskRes.value);
         // Notas privadas de los usuarios en riesgo — impregnadas en las filas.
@@ -208,83 +226,45 @@ export default function MissionControl() {
         <StatusPill label="ADMIN" tone="gold" dot />
       </View>
 
-      {/* ── HERO: KPIs críticos arriba (semantic colors: red=urgent, gold=warning, green=ok) ── */}
-      {kpis && (
-        <View style={s.heroRow}>
-          <View style={[s.heroStat, { borderColor: kpis.critical_churn > 0 ? palette.danger : palette.line }]}>
-            <Text style={[s.heroValue, { color: kpis.critical_churn > 0 ? palette.danger : palette.ivory }]}>
-              {kpis.critical_churn}
-            </Text>
-            <Text style={s.heroLabel}>RIESGO CRÍTICO</Text>
-          </View>
-          <View style={[s.heroStat, { borderColor: atRiskUsers.length > 0 ? palette.warning : palette.line }]}>
-            <Text style={[s.heroValue, { color: atRiskUsers.length > 0 ? palette.warning : palette.ivory }]}>
-              {atRiskUsers.length}
-            </Text>
-            <Text style={s.heroLabel}>EN RIESGO ALTO</Text>
-          </View>
-          <View style={[s.heroStat, { borderColor: palette.line }]}>
-            <Text style={[s.heroValue, { color: palette.ivory }]}>{kpis.active_today}</Text>
-            <Text style={s.heroLabel}>ACTIVOS HOY</Text>
-          </View>
-        </View>
+      {/* ── Nav móvil (el admin no tiene sidebar en la app): chips de salto rápido ── */}
+      {isMobile && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.navChips}
+          contentContainerStyle={s.navChipsContent}>
+          {SECTIONS.map((sec) => (
+            <Pressable key={sec.route} style={s.navChip} onPress={() => router.push(sec.route as never)}>
+              <Text style={s.navChipText}>{sec.icon} {sec.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
       )}
 
-      {/* ── KPIs operativos ── */}
-      <GoldDivider label="KPIs OPERATIVOS" />
+      {/* ════ 1. ESTRELLA POLAR — RETENCIÓN (el número que dice si vamos bien) ════ */}
+      {retention && <PolarStarCard stat={retention} />}
+
+      {/* ════ 2. RESUMEN EJECUTIVO — las cifras de un vistazo (glance móvil) ════ */}
       {kpis && (
         <View style={s.kpiGrid}>
-          <KpiCard value={kpis.total_users}    label="USUARIOS TOTALES" />
-          <KpiCard value={kpis.active_7d}      label="ACTIVOS 7D" />
-          <KpiCard value={kpis.avg_engagement} label="AVG ENGAGEMENT" />
+          <KpiCard
+            value={atRiskUsers.length}
+            label="A CONTACTAR HOY"
+            accent={atRiskUsers.length > 0 ? palette.warning : palette.ivory}
+          />
+          <KpiCard value={kpis.active_today} label="ACTIVOS HOY" />
+          <KpiCard value={kpis.avg_engagement} label="ENGAGEMENT /100" />
+          <KpiCard value={`${kpis.avg_sovereign}`} label="SOVEREIGN /1000" />
         </View>
       )}
 
-      {/* ── Membresías por tier ── */}
-      <GoldDivider label="MEMBRESÍAS POR TIER" />
-      <View style={s.kpiGrid}>
-        {(['free', 'premium', 'premium_plus', 'polaris', 'growthplayers'] as const).map((tier) => (
-          <Pressable
-            key={tier}
-            style={[s.tierCountCard, { borderColor: getTierColor(tier) + '55' }]}
-            onPress={() => router.push('/admin/membresias' as never)}>
-            <View style={[s.tierDot, { backgroundColor: getTierColor(tier) }]} />
-            <Text style={[s.tierCountValue, { color: getTierColor(tier) }]}>
-              {tierCounts[tier] ?? 0}
-            </Text>
-            <Text style={s.tierCountLabel}>{getTierLabel(tier).toUpperCase()}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* ── Alerts ── */}
-      <GoldDivider label="ALERTAS ACTIVAS" />
-      <View style={s.alertsSection}>
-        {kpis && kpis.critical_churn > 0 && (
-          <AlertCard
-            icon="🔴"
-            title={`${kpis.critical_churn} usuarios en riesgo CRÍTICO`}
-            body="Requieren intervención inmediata. Ver Inteligencia ML."
-            tone="danger"
-          />
-        )}
-        {kpis && kpis.critical_churn === 0 && (
-          <AlertCard
-            icon="🟢"
-            title="Sin alertas críticas"
-            body="Todos los indicadores dentro del rango normal."
-            tone="success"
-          />
-        )}
-      </View>
-
-      {/* ── Usuarios en Riesgo (Top 5) — accionable: tap navega al dossier ── */}
-      <GoldDivider label={`USUARIOS EN RIESGO (${atRiskUsers.length})`} />
+      {/* ════ 3. A QUIÉN CONTACTAR HOY — la decisión diaria (accionable) ════ */}
+      <GoldDivider label="A QUIÉN CONTACTAR HOY" />
       <PremiumCard style={s.feedCard}>
         {atRiskUsers.length === 0 ? (
-          <Text style={s.emptyText}>Ningún usuario en riesgo alto/crítico</Text>
+          <Text style={s.emptyText}>Nadie urgente — todos estables hoy ✓</Text>
         ) : (
-          atRiskUsers.slice(0, 5).map((u) => (
+          atRiskUsers.slice(0, 6).map((u) => (
             <Pressable
               key={u.user_id}
               onPress={() => router.push(`/admin/usuarios/${u.user_id}` as never)}
@@ -308,6 +288,51 @@ export default function MissionControl() {
         )}
       </PremiumCard>
 
+      {/* ════ 4. PRODUCTO / APRENDIZAJE — qué retiene, dónde se caen (perspectiva destacada) ════ */}
+      <GoldDivider label="🌱 PRODUCTO & APRENDIZAJE" />
+      {funnel && <ProtocolFunnelCard funnel={funnel} />}
+      {practice && <PracticeSignalCard signal={practice} />}
+
+      {/* ════ 5. PERSPECTIVAS SECUNDARIAS (compactas) ════ */}
+      {/* 💰 Financiera — membresías por tier */}
+      <GoldDivider label="💰 MEMBRESÍAS POR TIER" />
+      <View style={s.kpiGrid}>
+        {(['free', 'premium', 'premium_plus', 'polaris', 'growthplayers'] as const).map((tier) => (
+          <Pressable
+            key={tier}
+            style={[s.tierCountCard, { borderColor: getTierColor(tier) + '55' }]}
+            onPress={() => router.push('/admin/membresias' as never)}>
+            <View style={[s.tierDot, { backgroundColor: getTierColor(tier) }]} />
+            <Text style={[s.tierCountValue, { color: getTierColor(tier) }]}>
+              {tierCounts[tier] ?? 0}
+            </Text>
+            <Text style={s.tierCountLabel}>{getTierLabel(tier).toUpperCase()}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Alertas críticas (si las hay) */}
+      {kpis && kpis.critical_churn > 0 && (
+        <View style={s.alertsSection}>
+          <AlertCard
+            icon="🔴"
+            title={`${kpis.critical_churn} usuarios en riesgo CRÍTICO`}
+            body="Requieren intervención inmediata. Ver Inteligencia ML."
+            tone="danger"
+          />
+        </View>
+      )}
+
+      {/* ⚙️ Procesos — actividad en vivo (colapsado) */}
+      <GoldDivider label="⚙️ ACTIVIDAD EN TIEMPO REAL" />
+      <PremiumCard style={s.feedCard}>
+        {events.length === 0 ? (
+          <Text style={s.emptyText}>Sin actividad reciente</Text>
+        ) : (
+          events.map(evt => <EventRow key={evt.id} event={evt} />)
+        )}
+      </PremiumCard>
+
       {/* ── Quick Actions ── */}
       <GoldDivider label="ACCIONES RÁPIDAS" />
       <View style={s.actionsRow}>
@@ -322,29 +347,19 @@ export default function MissionControl() {
         </Pressable>
         <Pressable
           style={s.actionBtn}
-          onPress={() => router.push('/admin/inteligencia' as never)}>
-          <MaterialIcons name="bar-chart" size={18} color={palette.goldText} />
-          <Text style={s.actionBtnText}>VER ML</Text>
+          onPress={() => router.push('/admin/copilot' as never)}>
+          <MaterialIcons name="smart-toy" size={18} color={palette.goldText} />
+          <Text style={s.actionBtnText}>COPILOTO IA</Text>
         </Pressable>
         <Pressable
           style={s.actionBtn}
-          onPress={() => router.push('/admin/auditoria' as never)}>
-          <MaterialIcons name="history" size={18} color={palette.goldText} />
-          <Text style={s.actionBtnText}>AUDITORÍA</Text>
+          onPress={() => router.push('/admin/ranking' as never)}>
+          <MaterialIcons name="leaderboard" size={18} color={palette.goldText} />
+          <Text style={s.actionBtnText}>RANKING</Text>
         </Pressable>
       </View>
 
-      {/* ── Live Feed ── */}
-      <GoldDivider label="ACTIVIDAD EN TIEMPO REAL" />
-      <PremiumCard style={s.feedCard}>
-        {events.length === 0 ? (
-          <Text style={s.emptyText}>Sin actividad reciente</Text>
-        ) : (
-          events.map(evt => <EventRow key={evt.id} event={evt} />)
-        )}
-      </PremiumCard>
-
-      {/* ── Section shortcuts ── */}
+      {/* ── Section shortcuts (también es la nav en la app móvil) ── */}
       <GoldDivider label="MÓDULOS DEL CMI" />
       <View style={s.sectionGrid}>
         {SECTIONS.map(sec => (
@@ -379,37 +394,20 @@ const s = StyleSheet.create({
   headerTitle: { ...typography.title, color: palette.ivory },
   headerSub: { ...typography.mono, color: palette.ash, marginTop: 4 },
 
-  // Hero bar — 3 KPIs críticos arriba (kpi-dashboard-design: 5-7 hero max, semantic color)
-  heroRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  heroStat: {
-    flex: 1,
-    alignItems: 'center',
+  // Nav móvil (chips horizontales) — el admin no tiene sidebar en la app nativa.
+  navChips: { marginBottom: spacing.lg, marginHorizontal: -spacing.xs },
+  navChipsContent: { gap: spacing.xs, paddingHorizontal: spacing.xs },
+  navChip: {
     backgroundColor: palette.graphite,
-    borderRadius: radii.md,
+    borderColor: palette.line,
     borderWidth: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    minHeight: 76,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 36,
     justifyContent: 'center',
   },
-  heroValue: {
-    fontFamily: Fonts.display,
-    fontSize: 30,
-    letterSpacing: 1,
-    lineHeight: 34,
-  },
-  heroLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 9,
-    letterSpacing: 0.8,
-    marginTop: 4,
-    textAlign: 'center',
-  },
+  navChipText: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 0.5 },
 
   // At-risk users — accionable, va al dossier
   riskRow: {

@@ -12,6 +12,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { supabase, intel, mem } from '@/lib/supabase';
+import { POLARIS_MODULES } from '@/data/modules';
 import {
   fetchAdminBriefing,
   fetchAdminNotes,
@@ -34,6 +35,9 @@ import type {
   LiveEvent,
   MentorConversation,
   MlOverview,
+  PracticeSignal,
+  ProtocolFunnel,
+  RetentionStat,
   UserCourseAccess,
   UserMembership,
 } from './types';
@@ -158,33 +162,162 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPIs> {
     .select('user_id', { count: 'exact', head: true })
     .gt('streak', 0);
 
-  // Avg engagement from user_progress.sovereign_score
+  // Promedio del Sovereign Score (0–1000) — métrica de TRANSFORMACIÓN, no engagement.
+  // (Antes esto se mostraba mal-etiquetado como "AVG ENGAGEMENT" → el "675").
   const { data: scoreData } = await supa
     .from('user_progress')
     .select('sovereign_score');
   const scores = ((scoreData ?? []) as Array<{ sovereign_score: number }>);
-  const avg_eng = scores.length > 0
+  const avg_sovereign = scores.length > 0
     ? Math.round(scores.reduce((s, r) => s + (r.sovereign_score ?? 0), 0) / scores.length)
     : 0;
 
-  // Intelligence data (may not exist yet)
+  // Intelligence: churn crítico + engagement REAL 0–100 (la tabla puede no existir aún).
   let critical = 0;
+  let avg_engagement = 0;
   try {
     const intelligenceRes = await intel.intelligence()
-      .select('churn_risk_label');
-    const intel_data = (intelligenceRes.data ?? []) as Array<{ churn_risk_label: string }>;
+      .select('churn_risk_label, engagement_score');
+    const intel_data = (intelligenceRes.data ?? []) as Array<{ churn_risk_label: string; engagement_score: number | null }>;
     critical = intel_data.filter(r => r.churn_risk_label === 'critical').length;
+    const engs = intel_data.map(r => r.engagement_score).filter((v): v is number => v != null);
+    avg_engagement = engs.length > 0 ? Math.round(engs.reduce((a, b) => a + b, 0) / engs.length) : 0;
   } catch (_) { /* table not yet migrated */ }
 
   return {
     total_users:       (totalRes.count ?? 0),
     active_today:      (activeToday ?? 0),
     active_7d:         (active7d ?? 0),
-    avg_engagement:    avg_eng,
+    avg_engagement,
+    avg_sovereign,
     critical_churn:    critical,
     total_memberships: (membRes.count ?? 0),
     active_codes:      (activeCodesRes.count ?? 0),
   };
+}
+
+// ─── Cuadro de Mando Integral — queries estratégicas ──────────────────────────
+
+/**
+ * RETENCIÓN (Estrella Polar). Proxy honesto: % de clientes con actividad reciente
+ * (last_checkin_date dentro de `windowDays`) sobre el total. La curva D90 real
+ * exige más histórico; esto mide retención operativa hoy. Degrada a vacío.
+ */
+export async function fetchRetention90d(windowDays = 14): Promise<RetentionStat> {
+  const empty: RetentionStat = { cohort: 0, active: 0, rate: null, windowDays, insufficient: true };
+  try {
+    const { data } = await supa
+      .from('user_progress')
+      .select('user_id, last_checkin_date, streak');
+    const rows = (data ?? []) as Array<{ last_checkin_date: string | null; streak: number | null }>;
+    const cohort = rows.length;
+    if (cohort === 0) return empty;
+
+    const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+      .toISOString().split('T')[0]!;
+    const active = rows.filter((r) =>
+      (r.last_checkin_date != null && r.last_checkin_date >= cutoff) || (r.streak ?? 0) > 0,
+    ).length;
+
+    return {
+      cohort,
+      active,
+      rate: Math.round((active / cohort) * 100),
+      windowDays,
+      insufficient: cohort < 3, // base muy pequeña → no concluir
+    };
+  } catch (_) {
+    return empty;
+  }
+}
+
+/**
+ * EMBUDO DEL PROTOCOLO (Producto/Aprendizaje). Por cada módulo: cuántos clientes
+ * lo EMPEZARON (≥1 lección) y cuántos lo COMPLETARON (todas). Identifica el punto
+ * de mayor fuga (la mayor caída de "empezaron" entre módulos consecutivos).
+ */
+export async function fetchProtocolFunnel(): Promise<ProtocolFunnel> {
+  const empty: ProtocolFunnel = { modules: [], dropOff: null };
+  try {
+    const { data } = await supa
+      .from('completed_lessons')
+      .select('user_id, module_id, lesson_id');
+    const rows = (data ?? []) as Array<{ user_id: string; module_id: string; lesson_id: string }>;
+
+    // module_id → set de usuarios con ≥1 lección, y user → set de lecciones por módulo
+    const startedByModule: Record<string, Set<string>> = {};
+    const lessonsByUserModule: Record<string, Set<string>> = {}; // key `${user}:${module}`
+    for (const r of rows) {
+      if (!r.module_id || !r.user_id) continue;
+      (startedByModule[r.module_id] ??= new Set()).add(r.user_id);
+      (lessonsByUserModule[`${r.user_id}:${r.module_id}`] ??= new Set()).add(r.lesson_id);
+    }
+
+    const modules = POLARIS_MODULES
+      .map((m) => {
+        const totalLessons = m.lessons.length;
+        const startedUsers = startedByModule[m.id] ?? new Set<string>();
+        const completed = totalLessons === 0 ? 0 : Array.from(startedUsers).filter(
+          (u) => (lessonsByUserModule[`${u}:${m.id}`]?.size ?? 0) >= totalLessons,
+        ).length;
+        return {
+          moduleId: m.id,
+          title: m.title,
+          order: m.order,
+          totalLessons,
+          started: startedUsers.size,
+          completed,
+        };
+      })
+      .sort((a, b) => a.order - b.order);
+
+    // Punto de fuga: mayor caída de "started" entre módulos consecutivos.
+    let dropOff: ProtocolFunnel['dropOff'] = null;
+    for (let i = 1; i < modules.length; i++) {
+      const from = modules[i - 1]!.started;
+      const to = modules[i]!.started;
+      if (from > 0 && from - to > 0) {
+        const lostPct = Math.round(((from - to) / from) * 100);
+        if (!dropOff || lostPct > dropOff.lostPct) {
+          dropOff = { title: modules[i]!.title, from, to, lostPct };
+        }
+      }
+    }
+    return { modules, dropOff };
+  } catch (_) {
+    return empty;
+  }
+}
+
+/**
+ * PRÁCTICAS QUE RETIENEN (Producto/Aprendizaje). Conteo de sesiones de bienestar
+ * por tipo en los últimos 30 días — qué prácticas usan más los clientes. Degrada.
+ */
+export async function fetchPracticeSignal(): Promise<PracticeSignal> {
+  const LABEL: Record<string, string> = {
+    meditation: 'Meditación', breathing: 'Respiración', binaural: 'Binaurales',
+    sleep: 'Sueño', journal: 'Diario', grito: 'Grito', tapping: 'Tapping',
+  };
+  try {
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await supa
+      .from('wellness_sessions')
+      .select('type, completed_at')
+      .gte('completed_at', since);
+    const rows = (data ?? []) as Array<{ type: string | null }>;
+    const counts: Record<string, number> = {};
+    for (const r of rows) {
+      if (!r.type) continue;
+      counts[r.type] = (counts[r.type] ?? 0) + 1;
+    }
+    const practices = Object.entries(counts)
+      .map(([type, count]) => ({ type, label: LABEL[type] ?? type, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    return { practices, total: rows.length };
+  } catch (_) {
+    return { practices: [], total: 0 };
+  }
 }
 
 // ─── Live Events Feed ─────────────────────────────────────────────────────────
