@@ -13,6 +13,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { supabase, intel, mem } from '@/lib/supabase';
 import { POLARIS_MODULES } from '@/data/modules';
+import { TIER_ORDER } from '@/constants/subscriptions';
 import {
   fetchAdminBriefing,
   fetchAdminNotes,
@@ -337,22 +338,54 @@ export async function fetchLiveEvents(limit = 10): Promise<LiveEvent[]> {
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export async function fetchUsers(search?: string): Promise<AdminUser[]> {
-  // user_progress is the real user table with names, scores, etc.
+  // user_progress = tabla real de usuarios (nombre, score, racha). Su columna `tier`
+  // es la ETIQUETA DE ROL editable (default 'Aprendiz'), NO el tier de suscripción.
   const { data } = await supa
     .from('user_progress')
     .select('user_id, name, tier, sovereign_score, streak, last_checkin_date, total_days')
     .order('sovereign_score', { ascending: false });
   if (!data) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = data as any[];
+  const ids = rows.map((p: any) => p.user_id as string);
+
+  // Enriquecimiento: el TIER REAL vive en user_memberships activas (autoritativo, igual
+  // que el dossier — no en user_progress.tier), y is_admin en profiles. Degradable: si
+  // una query falla, la fila cae a defaults (free / no-admin) sin romper la lista.
+  const tierMap: Record<string, string> = {};
+  const adminMap: Record<string, boolean> = {};
+  if (ids.length > 0) {
+    const [membRes, profRes] = await Promise.allSettled([
+      supa.from('user_memberships').select('user_id, product').eq('status', 'active').in('user_id', ids),
+      intel.profiles().select('id, is_admin').in('id', ids),
+    ]);
+    if (membRes.status === 'fulfilled') {
+      for (const m of (membRes.value.data ?? []) as Array<{ user_id: string; product: string }>) {
+        const t = String(m.product).replace('lifeflow_', ''); // normaliza legacy
+        const prev = tierMap[m.user_id];
+        // si tiene varias membresías activas, conservar el tier MÁS ALTO
+        if (!prev || TIER_ORDER.indexOf(t as never) > TIER_ORDER.indexOf(prev as never)) {
+          tierMap[m.user_id] = t;
+        }
+      }
+    }
+    if (profRes.status === 'fulfilled') {
+      for (const p of (profRes.value.data ?? []) as Array<{ id: string; is_admin: boolean }>) {
+        adminMap[p.id] = p.is_admin === true;
+      }
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let users = (data as any[]).map((p: any) => ({
+  let users = rows.map((p: any) => ({
     id: p.user_id as string,
     email: '',
     name: (p.name as string) ?? 'Usuario',
-    role: p.tier as string | undefined,
+    role: p.tier as string | undefined,                  // etiqueta de rol editable (default 'Aprendiz')
+    subscription_tier: tierMap[p.user_id] ?? 'free',     // TIER REAL de la membresía activa
     sovereign_score: p.sovereign_score as number | undefined,
     streak: p.streak as number | undefined,
-    is_admin: false,
+    is_admin: adminMap[p.user_id] ?? false,
     created_at: p.last_checkin_date as string ?? '',
   }));
 

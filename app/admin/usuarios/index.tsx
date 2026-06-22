@@ -57,15 +57,12 @@ function ChurnBadge({ label }: { label?: string }) {
 }
 
 function MemberBadge({ tier }: { tier?: string }) {
-  const colors: Record<string, string> = {
-    premium_plus: palette.gold,
-    premium:      palette.goldMuted,
-    free:         palette.smoke,
-  };
+  // getTierColor/getTierLabel cubren los 5 tiers (free→growthplayers) con su color real.
+  const color = getTierColor(tier);
   return (
-    <View style={[rb.pill, { borderColor: colors[tier ?? 'free'] ?? palette.smoke }]}>
-      <Text style={[rb.pillText, { color: colors[tier ?? 'free'] ?? palette.smoke }]}>
-        {(tier ?? 'FREE').replace(/_/g, ' ').toUpperCase()}
+    <View style={[rb.pill, { borderColor: color }]}>
+      <Text style={[rb.pillText, { color }]}>
+        {getTierLabel(tier).toUpperCase()}
       </Text>
     </View>
   );
