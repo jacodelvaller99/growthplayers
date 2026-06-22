@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { palette, spacing, typography, radii, Fonts } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { intel } from '@/lib/supabase';
+import { logSilentError } from '@/lib/observability';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -125,19 +126,32 @@ export default function AdminLayout() {
   const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
-    const check = async () => {
-      if (!userId) { setIsAdmin(false); return; }
-      // profiles.id = auth.uid() (standard Supabase pattern)
+    let cancelled = false;
+    // profiles.id = auth.uid() (standard Supabase pattern).
+    // Robusto: maybeSingle (no lanza si 0 filas). Ante error NO expulsamos al
+    // admin (era la causa de "a veces entro, a veces no" en un hiccup de red):
+    // reintentamos una vez y, si sigue fallando, quedamos en loading (null →
+    // no renderiza, pero tampoco rebota). El acceso SOLO se concede con
+    // is_admin === true confirmado — sin regresión de seguridad (RLS manda).
+    const check = async (attempt = 0): Promise<void> => {
+      if (!userId) { if (!cancelled) setIsAdmin(false); return; }
       const { data, error } = await intel.profiles()
         .select('is_admin')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        logSilentError('admin._layout.isAdmin', error);
+        if (attempt < 1) setTimeout(() => { if (!cancelled) check(attempt + 1); }, 1200);
+        return; // mantener loading; nunca conceder acceso ante error
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const admin = !error && (data as any)?.is_admin === true;
+      const admin = (data as any)?.is_admin === true;
       setIsAdmin(admin);
       if (!admin) router.replace('/(tabs)/comando' as never);
     };
     check();
+    return () => { cancelled = true; };
   }, [userId, router]);
 
   if (isAdmin === null) return null; // loading — no flash

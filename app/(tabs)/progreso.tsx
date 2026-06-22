@@ -25,10 +25,10 @@ import {
 } from '@/components/polaris';
 import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
-import { intel } from '@/lib/supabase';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { calcSovereignScore } from '@/lib/utils';
 import {
@@ -447,17 +447,10 @@ export default function ProgresoScreen() {
   const { intelligence, topAffinity, engagementTier } = useUserIntelligence(userId);
   const subscription = useSubscription();
 
-  // ── Admin flag (read from profiles.is_admin — never hardcoded) ──────────────
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    if (!userId) return;
-    intel.profiles()
-      .select('is_admin')
-      .eq('id', userId)
-      .single()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(({ data }: { data: any }) => { if (data?.is_admin === true) setIsAdmin(true); });
-  }, [userId]);
+  // ── Admin flag (robusto + cacheado — ver hooks/useIsAdmin) ──────────────────
+  // Antes era un .single() inline sin manejo de error: un hiccup de red dejaba el
+  // botón "Cuadro de Mando" intermitente. useIsAdmin conserva el valor ante error.
+  const isAdmin = useIsAdmin();
 
   // ML Consent toggle
   const [mlConsent, setMlConsent] = useState(state.profile.mlConsent !== false);
