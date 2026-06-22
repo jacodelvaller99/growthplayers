@@ -55,3 +55,8 @@ supabase/.temp/
 .env.local
 .env.*.local
 .design-ref/
+
+# Skill manager (find-skills) — tooling local de dev, no código de producto.
+# Algunos paths exceden el límite de Windows; no se versionan.
+.agents/
+skills-lock.json
