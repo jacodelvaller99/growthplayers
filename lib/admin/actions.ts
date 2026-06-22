@@ -346,6 +346,41 @@ export async function updateUserProfile(params: {
   }
 }
 
+// ─── SET USER ROLE (panel de 4 niveles: superadmin/admin/premium/inicial) ─────
+// Vía la RPC SECURITY DEFINER admin_set_user_role, que verifica los privilegios
+// del LLAMANTE en el servidor (solo SuperAdmin asigna admin/superadmin). El cambio
+// de privilegio no puede hacerse con un UPDATE directo (el trigger anti-escalada
+// lo bloquea desde el cliente) — la RPC corre como rol dueño y el trigger la permite.
+export type AppRole = 'superadmin' | 'admin' | 'premium' | 'inicial';
+
+export const APP_ROLE_LABEL: Record<AppRole, string> = {
+  superadmin: 'SuperAdmin',
+  admin:      'Admin',
+  premium:    'Cliente Premium',
+  inicial:    'Cliente Inicial',
+};
+
+export async function setUserRole(params: {
+  adminId: string;
+  userId: string;
+  role: AppRole;
+}): Promise<{ success: boolean; error?: string }> {
+  const { adminId, userId, role } = params;
+  try {
+    const { error } = await supa.rpc('admin_set_user_role', {
+      target_user: userId,
+      new_role: role,
+    });
+    if (error) return { success: false, error: error.message };
+    await auditLog(adminId, 'set_user_role', 'user', userId, { role });
+    triggerML(userId);
+    return { success: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
+}
+
 // ─── EXTEND MEMBERSHIP ────────────────────────────────────────────────────────
 export async function extendMembership(params: {
   membershipId: string;

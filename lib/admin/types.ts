@@ -12,6 +12,7 @@ export interface AdminUser {
   created_at: string;
   last_sign_in_at?: string;
   is_admin?: boolean;
+  is_superadmin?: boolean;
   subscription_tier?: string;
   sovereign_score?: number;
   streak?: number;

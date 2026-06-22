@@ -86,7 +86,8 @@ import {
 // activos en QA demos, no en el load inicial del dossier.
 import type { Scenario } from '@/lib/biometricSimulator';
 import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
-import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, updateUserProfile } from '@/lib/admin/actions';
+import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, setUserRole, updateUserProfile, APP_ROLE_LABEL, type AppRole } from '@/lib/admin/actions';
+import { intel } from '@/lib/supabase';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
 import type { CoachIntelligence } from '@/lib/coachIntelligenceLogic';
@@ -238,6 +239,8 @@ export default function UserDetailScreen() {
   const { userId: adminId } = useLifeFlow();
 
   const [user, setUser] = useState<AdminUserDetail | null>(null);
+  const [viewerSuper, setViewerSuper] = useState(false); // ¿el admin que mira es SuperAdmin?
+  const [roleBusy, setRoleBusy] = useState(false);
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [conversations, setConversations] = useState<MentorConversation[]>([]);
   const [checkIns, setCheckIns] = useState<Array<{ date: string; energy: number; clarity: number; stress: number; sleep: number }>>([]);
@@ -422,6 +425,36 @@ export default function UserDetailScreen() {
     }
   }, [userId, adminId, eName, eLabel, load]);
 
+  // ¿el admin que mira es SuperAdmin? (gate de UX; el servidor también lo impone)
+  useEffect(() => {
+    if (!adminId) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    intel.profiles().select('is_superadmin').eq('id', adminId).maybeSingle()
+      .then(({ data }: { data: any }) => setViewerSuper(data?.is_superadmin === true))
+      .catch(() => {});
+  }, [adminId]);
+
+  const handleSetRole = useCallback((role: AppRole) => {
+    if (!userId || !adminId || roleBusy) return;
+    Alert.alert(
+      'Cambiar nivel de acceso',
+      `¿Asignar "${APP_ROLE_LABEL[role]}" a este usuario?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            setRoleBusy(true);
+            const res = await setUserRole({ adminId, userId, role });
+            setRoleBusy(false);
+            if (!res.success) { Alert.alert('No se pudo', res.error ?? 'Error'); return; }
+            await load();
+          },
+        },
+      ],
+    );
+  }, [userId, adminId, roleBusy, load]);
+
   const handleDeactivateMembership = async (membership: UserMembership) => {
     if (!adminId) return;
     Alert.alert('Desactivar membresía', `¿Desactivar ${membership.product} de este usuario?`, [
@@ -602,6 +635,53 @@ export default function UserDetailScreen() {
               </View>
             );
           })()}
+
+          {/* NIVEL DE ACCESO — control único de 4 roles (cambio seguro vía RPC) */}
+          {(() => {
+            const currentRole: AppRole = user.is_superadmin ? 'superadmin'
+              : user.is_admin ? 'admin'
+              : (user.memberships ?? []).some(m => m.status === 'active' && !['free', 'lifeflow_free'].includes(String(m.product))) ? 'premium'
+              : 'inicial';
+            const ROLE_DESC: Record<AppRole, string> = {
+              superadmin: 'Control total, incluso sobre admins',
+              admin:      'Acceso completo al panel admin',
+              premium:    'Cliente con acceso completo',
+              inicial:    'Cliente básico (free)',
+            };
+            return (
+              <View style={s.rolePanel}>
+                <Text style={s.rolePanelTitle}>NIVEL DE ACCESO</Text>
+                {(['superadmin', 'admin', 'premium', 'inicial'] as AppRole[]).map((r) => {
+                  const active = currentRole === r;
+                  const locked = (r === 'admin' || r === 'superadmin') && !viewerSuper;
+                  return (
+                    <Pressable
+                      key={r}
+                      disabled={active || locked || roleBusy}
+                      onPress={() => handleSetRole(r)}
+                      style={({ pressed }) => [
+                        s.roleOption,
+                        active && s.roleOptionActive,
+                        (locked || roleBusy) && { opacity: 0.45 },
+                        pressed && { opacity: 0.7 },
+                      ]}>
+                      <MaterialIcons
+                        name={active ? 'radio-button-checked' : 'radio-button-unchecked'}
+                        size={18}
+                        color={active ? palette.goldText : palette.smoke}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.roleOptionLabel, active && { color: palette.goldText }]}>{APP_ROLE_LABEL[r]}</Text>
+                        <Text style={s.roleOptionDesc}>{ROLE_DESC[r]}{locked ? ' · solo SuperAdmin' : ''}</Text>
+                      </View>
+                      {active && <Text style={s.roleCurrentTag}>ACTUAL</Text>}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            );
+          })()}
+
           {(user.memberships ?? []).length === 0 ? (
             <Text style={s.emptyText}>Sin membresías activas</Text>
           ) : (
@@ -1158,6 +1238,15 @@ const s = StyleSheet.create({
   currentTierName: { fontFamily: Fonts.display, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
   changeTierBtn: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radii.xs, borderWidth: 1 },
   changeTierText: { ...typography.label, fontSize: 8, fontWeight: '700' },
+
+  // Panel de NIVEL DE ACCESO (4 roles)
+  rolePanel: { gap: 4, marginBottom: spacing.md },
+  rolePanelTitle: { ...typography.label, color: palette.ash, fontSize: 9, letterSpacing: 1.5, marginBottom: 4 },
+  roleOption: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line },
+  roleOptionActive: { borderColor: palette.lineGold, backgroundColor: palette.goldLight },
+  roleOptionLabel: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 0.3 },
+  roleOptionDesc: { ...typography.caption, color: palette.smoke, fontSize: 10.5, marginTop: 1 },
+  roleCurrentTag: { ...typography.label, color: palette.goldText, fontSize: 8, letterSpacing: 1 },
 
   membershipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   membershipProduct: { fontFamily: Fonts.display, fontSize: 11, color: palette.ivory, letterSpacing: 1 },

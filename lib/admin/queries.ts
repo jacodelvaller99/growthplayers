@@ -398,15 +398,19 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
 }
 
 export async function fetchUserDetail(userId: string): Promise<AdminUserDetail | null> {
-  const [progressRes, membRes, courseRes] = await Promise.all([
+  const [progressRes, membRes, courseRes, profRes] = await Promise.all([
     supa.from('user_progress').select('*').eq('user_id', userId).single(),
     supa.from('user_memberships').select('*').eq('user_id', userId).eq('status', 'active'),
     supa.from('user_course_access').select('*').eq('user_id', userId).eq('is_active', true),
+    // is_admin/is_superadmin viven en profiles, NO en la vista user_progress.
+    intel.profiles().select('is_admin, is_superadmin').eq('id', userId).maybeSingle(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profile = progressRes.data as any;
   if (!profile) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const flags = (profRes.data as any) ?? {};
 
   // Intelligence data (optional, may not exist)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -422,7 +426,8 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail |
     email: '',
     name: profile.name ?? 'Usuario',
     role: profile.tier,
-    is_admin: profile.is_admin ?? false,
+    is_admin: flags.is_admin ?? false,
+    is_superadmin: flags.is_superadmin ?? false,
     created_at: profile.protocol_start_date ?? '',
     sovereign_score: profile.sovereign_score,
     engagement_score: int?.engagement_score,
