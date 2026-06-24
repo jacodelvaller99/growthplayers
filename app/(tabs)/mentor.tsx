@@ -785,7 +785,7 @@ export default function MentorScreen() {
           <View style={styles.threadsSheet}>
             <View style={styles.threadsHeader}>
               <Text style={styles.threadsTitle}>HISTORIAL DE CHATS</Text>
-              <Pressable onPress={() => setShowThreads(false)} style={styles.threadsClose}>
+              <Pressable onPress={() => setShowThreads(false)} style={styles.threadsClose} accessibilityRole="button" accessibilityLabel="Cerrar">
                 <MaterialIcons name="close" size={20} color={palette.ash} />
               </Pressable>
             </View>

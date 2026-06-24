@@ -108,7 +108,7 @@ export default function ClienteMemoriaScreen() {
       showsVerticalScrollIndicator={false}>
 
       <View style={s.topRow}>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>MI MEMORIA</Text>
