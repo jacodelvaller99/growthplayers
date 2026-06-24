@@ -98,6 +98,34 @@ describe('classifyLabValue — bandas y educación', () => {
   });
 });
 
+describe('marcadores avanzados (performance/longevidad/hormonal)', () => {
+  it('apoB 140 mg/dL → high', () => {
+    expect(classifyLabValue('apob', 140)!.band).toBe('high');
+  });
+  it('Lp(a) 60 mg/dL → critical_high (umbral 50)', () => {
+    expect(classifyLabValue('lp(a)', 60)!.band).toBe('critical_high');
+  });
+  it('magnesio 1.0 mg/dL → critical_low (umbral 1.2)', () => {
+    expect(classifyLabValue('magnesio', 1.0)!.band).toBe('critical_low');
+  });
+  it('AST 50 → high; 1200 → critical_high', () => {
+    expect(classifyLabValue('ast', 50)!.band).toBe('high');
+    expect(classifyLabValue('ast', 1200)!.band).toBe('critical_high');
+  });
+  it('homocisteína 25 µmol/L → high', () => {
+    expect(classifyLabValue('homocisteina', 25)!.band).toBe('high');
+  });
+  it('resuelve los nuevos alias sin colisionar con los existentes', () => {
+    expect(findLabMarker('shbg')!.key).toBe('shbg');
+    expect(findLabMarker('hcy')!.key).toBe('homocysteine');
+    expect(findLabMarker('apo b')!.key).toBe('apob');
+    expect(findLabMarker('lp(a)')!.key).toBe('lipoprotein_a');
+    // No rompe los marcadores previos:
+    expect(findLabMarker('TESTOSTERONA')!.key).toBe('testosterone_total');
+    expect(findLabMarker('hemoglob')!.key).toBe('hemoglobin');
+  });
+});
+
 describe('detectRedFlags — señales de derivación', () => {
   it('detecta ideación suicida (urgent)', () => {
     const f = detectRedFlags('últimamente tengo pensamientos suicidas');
