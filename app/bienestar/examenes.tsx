@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { RECOMMENDED_EXAM_PANEL } from '@/data/internistKnowledge';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { supabase } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
@@ -58,6 +59,7 @@ export default function ExamenesScreen() {
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [share, setShare] = useState<boolean | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const loadExams = useCallback(async () => {
     setLoading(true);
@@ -173,6 +175,58 @@ export default function ExamenesScreen() {
         El internista educativo los lee para contextualizar su respuesta.
       </Text>
 
+      {/* ── Orden de Exámenes recomendada ───────────────────────────────────── */}
+      <GoldDivider label="QUÉ EXÁMENES HACERTE" />
+      <PremiumCard style={{ gap: spacing.sm }}>
+        <View style={s.panelHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.panelTitle}>{RECOMMENDED_EXAM_PANEL.title}</Text>
+            <Text style={s.panelPhysician}>
+              {RECOMMENDED_EXAM_PANEL.physician} · {RECOMMENDED_EXAM_PANEL.specialty}
+            </Text>
+          </View>
+          <MaterialIcons name="assignment" size={20} color={palette.goldText} />
+        </View>
+        <Text style={s.panelDisclaimer}>{RECOMMENDED_EXAM_PANEL.disclaimer}</Text>
+
+        <Pressable
+          onPress={() => setPanelOpen((o) => !o)}
+          style={s.panelToggle}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: panelOpen }}
+          accessibilityLabel={panelOpen ? 'Ocultar panel de exámenes' : 'Ver panel de exámenes completo'}>
+          <Text style={s.panelToggleText}>{panelOpen ? 'OCULTAR PANEL' : 'VER PANEL COMPLETO'}</Text>
+          <MaterialIcons name={panelOpen ? 'expand-less' : 'expand-more'} size={18} color={palette.goldText} />
+        </Pressable>
+
+        {panelOpen && (
+          <View style={{ gap: spacing.md, marginTop: spacing.xs }}>
+            {RECOMMENDED_EXAM_PANEL.groups.map((g) => (
+              <View key={g.panel} style={s.panelGroup}>
+                <Text style={s.panelGroupName}>{g.panel}</Text>
+                <Text style={s.panelGroupPurpose}>{g.purpose}</Text>
+                <View style={s.panelItems}>
+                  {g.items.map((it) => (
+                    <View key={it.label} style={s.panelItem}>
+                      <View style={s.panelDot} />
+                      <Text style={s.panelItemLabel}>{it.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+            <Pressable
+              onPress={() => router.push('/bienestar/internista' as never)}
+              style={s.panelAskBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Preguntar al internista qué significan estos exámenes">
+              <MaterialIcons name="health-and-safety" size={16} color={palette.ink} />
+              <Text style={s.panelAskText}>PREGÚNTALE AL INTERNISTA</Text>
+            </Pressable>
+          </View>
+        )}
+      </PremiumCard>
+
       {/* ── Compartir con coach ─────────────────────────────────────────────── */}
       <GoldDivider label="PRIVACIDAD" />
       <PremiumCard style={s.shareCard}>
@@ -280,6 +334,32 @@ const s = StyleSheet.create({
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18 },
   intro: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20, marginBottom: spacing.md },
+
+  // ── Orden de Exámenes recomendada ──────────────────────────────────────────
+  panelHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  panelTitle: { ...typography.section, color: palette.ivory, fontSize: 14, letterSpacing: 0.4 },
+  panelPhysician: { ...typography.caption, color: palette.goldText, fontSize: 11, marginTop: 2 },
+  panelDisclaimer: { ...typography.caption, color: palette.smoke, fontSize: 11, lineHeight: 16, fontStyle: 'italic' },
+  panelToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    paddingVertical: spacing.sm, marginTop: spacing.xs, minHeight: 44,
+    borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold,
+    backgroundColor: palette.goldGlow,
+  },
+  panelToggleText: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 11, letterSpacing: 1 },
+  panelGroup: { gap: 4 },
+  panelGroupName: { ...typography.label, color: palette.ivory, fontSize: 12, letterSpacing: 0.6 },
+  panelGroupPurpose: { ...typography.caption, color: palette.smoke, fontSize: 11, lineHeight: 16 },
+  panelItems: { gap: 4, marginTop: 4 },
+  panelItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  panelDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: palette.goldText },
+  panelItemLabel: { ...typography.body, color: palette.ash, fontSize: 12.5 },
+  panelAskBtn: {
+    flexDirection: 'row', gap: spacing.sm, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: palette.gold, paddingVertical: spacing.sm, borderRadius: radii.sm,
+    minHeight: 44, marginTop: spacing.xs,
+  },
+  panelAskText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 11, letterSpacing: 1 },
 
   shareCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   shareTitle: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },

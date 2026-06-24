@@ -108,7 +108,46 @@ export const LAB_MARKERS: LabMarker[] = [
     citation: 'American Diabetes Association — Standards of Care (2024)',
     evidence: 'established',
   },
+  {
+    key: 'insulin_fasting',
+    name: 'Insulina en ayunas',
+    aliases: ['insulina en ayunas', 'insulina basal', 'insulina sérica en ayunas', 'fasting insulin', 'fasting serum insulin', 'insulin fasting', 'insulin', 'ins', 'fins', 'insulina'],
+    unit: 'µIU/mL',
+    low: 2.6, high: 24.9,
+    criticalLow: null, criticalHigh: null,
+    whatItMeasures: 'Mide la cantidad de insulina circulante en sangre tras un ayuno de 8-12 horas. La insulina es la hormona que el páncreas libera para que las células absorban glucosa; en ayunas refleja cuánta hormona necesita el cuerpo para mantener la glucosa basal, una señal indirecta de la sensibilidad a la insulina.',
+    educationalLow: 'Un valor bajo en ayunas suele observarse en personas muy sensibles a la insulina o con baja masa grasa, y en general no es preocupante por sí mismo. Valores muy bajos junto con glucosa alta podrían reflejar una producción pancreática insuficiente y conviene comentarlos con un profesional. La interpretación siempre depende del valor de glucosa acompañante (a menudo combinados en el índice HOMA-IR).',
+    educationalHigh: 'Una insulina en ayunas elevada con glucosa todavía normal puede ser una señal temprana de resistencia a la insulina: el cuerpo necesita más hormona para mantener la glucosa en rango. Aunque los laboratorios consideran "normal" hasta cerca de 25 µIU/mL, gran parte de la literatura de salud metabólica sugiere que valores por encima de ~10-12 µIU/mL merecen atención educativa al estilo de vida (sueño, actividad, composición corporal). No es un diagnóstico; la resistencia a la insulina se evalúa en conjunto con glucosa, HbA1c e historia clínica.',
+    citation: 'Mayo Clinic Laboratories — Insulin, Serum (test INS); respaldo: MedlinePlus (NIH) — Insulin in Blood',
+    evidence: 'established',
+  },
+  {
+    key: 'uric_acid',
+    name: 'Ácido úrico',
+    aliases: ['ácido úrico', 'acido urico', 'urato', 'uric acid', 'serum uric acid', 'urate', 'ua', 'sua', 'ác. úrico'],
+    unit: 'mg/dL',
+    low: 3.5, high: 8.6,
+    criticalLow: null, criticalHigh: null,
+    whatItMeasures: 'Es el producto final del metabolismo de las purinas, que se eliminan principalmente por el riñón. Su nivel en sangre refleja el equilibrio entre producción (dieta, recambio celular) y excreción renal.',
+    educationalLow: 'Un valor por debajo del rango suele carecer de relevancia clínica y a menudo es benigno. De forma educativa, valores bajos pueden asociarse a ciertos fármacos (probenecid, algunos hipolipemiantes), dietas muy bajas en purinas o, con menor frecuencia, a trastornos metabólicos hereditarios. Conviene interpretarlo con un profesional junto al contexto completo.',
+    educationalHigh: 'Un valor elevado se denomina hiperuricemia. Cuando el urato supera el punto de saturación (en torno a 6.8 mg/dL) puede cristalizar en las articulaciones y asociarse con gota, y también con cálculos renales. La elevación puede deberse a dieta rica en purinas o fructosa, alcohol, deshidratación, ciertos diuréticos o enfermedad renal. El límite superior depende del sexo (≈7.1 mg/dL en mujeres y ≈8.6 mg/dL en hombres según MedlinePlus). Como referencia educativa, las guías de la ACR (2020) usan un objetivo de tratamiento por debajo de 6 mg/dL en personas con gota establecida; es un umbral terapéutico, no un diagnóstico.',
+    citation: 'U.S. National Library of Medicine — MedlinePlus: Uric acid - blood (2024); objetivo terapéutico: ACR Gout Guideline (2020)',
+    evidence: 'established',
+  },
   // ── Perfil lipídico ─────────────────────────────────────────────────────────
+  {
+    key: 'cholesterol_total',
+    name: 'Colesterol total',
+    aliases: ['colesterol total', 'colesterol', 'total cholesterol', 'cholesterol total', 'chol total', 'tc', 'col total', 'colesterol sérico', 'serum cholesterol'],
+    unit: 'mg/dL',
+    low: 125, high: 200,
+    criticalLow: null, criticalHigh: null,
+    whatItMeasures: 'Mide la cantidad total de colesterol que circula en la sangre, sumando el de las lipoproteínas LDL y HDL más una fracción estimada a partir de los triglicéridos. Es un marcador general del panel lipídico que se usa para estimar el riesgo cardiovascular junto con el LDL, el HDL y otros valores.',
+    educationalLow: 'Un colesterol total bajo suele considerarse favorable, pero valores muy bajos pueden acompañar a desnutrición, problemas hepáticos, malabsorción, hipertiroidismo o ciertas condiciones hereditarias. No se interpreta de forma aislada; conviene revisarlo junto con el resto del panel y el contexto clínico de cada persona.',
+    educationalHigh: 'Según las categorías del NCEP/ATP III (vigentes y citadas por la AHA), un colesterol total por debajo de 200 mg/dL se considera deseable, entre 200 y 239 mg/dL limítrofe-alto, y 240 mg/dL o más se clasifica como alto. Un valor elevado puede asociarse a mayor riesgo cardiovascular, pero su significado depende del LDL, el HDL, los triglicéridos y los factores de riesgo individuales (edad, tabaquismo, presión, diabetes). Es información educativa, no un diagnóstico.',
+    citation: 'National Cholesterol Education Program (NCEP) — ATP III Final Report, NIH/NHLBI (2002)',
+    evidence: 'established',
+  },
   {
     key: 'ldl_cholesterol',
     name: 'Colesterol LDL',
@@ -162,6 +201,32 @@ export const LAB_MARKERS: LabMarker[] = [
     citation: 'American Thyroid Association — Guidelines on Hypothyroidism (2014)',
     evidence: 'established',
   },
+  {
+    key: 'free_t4',
+    name: 'T4 libre (tiroxina libre, FT4)',
+    aliases: ['t4 libre', 'tiroxina libre', 'ft4', 'free t4', 'free thyroxine', 'thyroxine free', 't4l', 't4 free', 'ft-4'],
+    unit: 'ng/dL',
+    low: 0.9, high: 1.7,
+    criticalLow: null, criticalHigh: null,
+    whatItMeasures: 'Mide la fracción de tiroxina (T4) que circula libre, no unida a proteínas transportadoras, y por tanto biológicamente disponible para los tejidos. Se interpreta siempre junto a la TSH para evaluar el eje tiroideo.',
+    educationalLow: 'Un valor por debajo del rango (algunos laboratorios orientan con niveles por debajo de ~0.8 ng/dL) puede sugerir, junto con una TSH elevada, hipotiroidismo. No es un diagnóstico por sí solo: el resultado depende del ensayo del laboratorio y debe leerse con la TSH y la clínica. Lo valora tu médico.',
+    educationalHigh: 'Un valor por encima del rango (algunos laboratorios orientan con niveles por encima de ~2.0 ng/dL) puede sugerir, junto con una TSH suprimida, hipertiroidismo o tirotoxicosis. No es concluyente de forma aislada: varía según el ensayo y debe interpretarse con la TSH, otros valores tiroideos y el contexto clínico por tu médico.',
+    citation: 'Cleveland Clinic — Thyroxine (T4) Test, rango de referencia adulto (2024)',
+    evidence: 'established',
+  },
+  {
+    key: 'free_t3',
+    name: 'T3 libre (triyodotironina libre, FT3)',
+    aliases: ['t3 libre', 'triyodotironina libre', 't3l', 'ft3', 'free t3', 'free triiodothyronine', 't3 free', 'triiodothyronine free', 'ft-3'],
+    unit: 'pg/mL',
+    low: 2.3, high: 4.2,
+    criticalLow: null, criticalHigh: null,
+    whatItMeasures: 'Mide la fracción activa y no unida a proteínas de la triyodotironina (T3), la hormona tiroidea más potente a nivel celular. Refleja la disponibilidad real de hormona tiroidea para los tejidos y se interpreta siempre junto a la TSH y la T4 libre.',
+    educationalLow: 'Un valor por debajo del rango puede acompañar a estados de hipofunción tiroidea o aparecer en enfermedades no tiroideas (el llamado "síndrome del enfermo eutiroideo"), donde la conversión de T4 a T3 disminuye sin que la tiroides esté enferma. No es diagnóstico por sí solo; su lectura depende del patrón conjunto con TSH y T4 libre y del contexto clínico.',
+    educationalHigh: 'Un valor por encima del rango puede asociarse a estados de hiperfunción tiroidea y suele evaluarse junto a una TSH baja y T4 libre. Algunos cuadros cursan con T3 elevada de forma predominante. El resultado debe interpretarlo un profesional dentro del panel completo; este dato aislado no confirma ninguna condición.',
+    citation: 'Cleveland Clinic — Triiodothyronine (T3) Test, rango Free T3 (2024); varía según el método de ensayo (Labcorp publica 2.0–4.4 pg/mL)',
+    evidence: 'established',
+  },
   // ── Vitaminas y minerales ───────────────────────────────────────────────────
   {
     key: 'vitamin_d_25oh',
@@ -187,6 +252,19 @@ export const LAB_MARKERS: LabMarker[] = [
     educationalLow: 'Deficiencia puede causar anemia y problemas neurológicos. Niveles <200 pg/mL típicamente requieren evaluación.',
     educationalHigh: 'Valores altos sin suplementación deben evaluarse — pueden tener causas no nutricionales.',
     citation: 'NIH Office of Dietary Supplements — Vitamin B12 (2024)',
+    evidence: 'established',
+  },
+  {
+    key: 'folate_serum',
+    name: 'Ácido fólico (folato sérico)',
+    aliases: ['ácido fólico', 'acido folico', 'folato', 'folato sérico', 'folato serico', 'vitamina b9', 'vitamina b-9', 'folate', 'folic acid', 'serum folate', 'folate serum', 'vitamin b9', 'b9', 'fol'],
+    unit: 'ng/mL',
+    low: 5.8, high: 32.8,
+    criticalLow: 3.1, criticalHigh: null,
+    whatItMeasures: 'Mide la concentración de folato (vitamina B9) circulante en suero. El folato participa en la síntesis de ADN, la división celular y el metabolismo de la homocisteína, junto con la vitamina B12.',
+    educationalLow: 'Un valor bajo suele asociarse a ingesta dietética insuficiente, malabsorción o aumento de demanda (embarazo, alcohol, ciertos fármacos). Las guías describen el folato sérico por debajo de ~3.1 ng/mL (equivalente a <7 nmol/L, umbral de balance negativo de folato según el NIH) como compatible con deficiencia bioquímica; cifras entre ese umbral y el límite inferior de referencia se consideran limítrofes. El folato sérico refleja sobre todo la ingesta reciente y no los depósitos tisulares, por lo que suele interpretarse junto con la homocisteína y la vitamina B12 para distinguir entre déficit de folato y de B12. Es un dato educativo, no un diagnóstico.',
+    educationalHigh: 'Valores altos no suelen tener relevancia clínica por sí solos y con frecuencia reflejan suplementación reciente con ácido fólico o alimentos fortificados; el folato es hidrosoluble y el exceso se elimina por orina, por lo que no se define un umbral de toxicidad sérico. Conviene tener presente que un aporte alto de ácido fólico puede enmascarar los signos hematológicos de un déficit de vitamina B12 no tratado, por lo que ante folato elevado a veces se valora también la B12.',
+    citation: 'NIH Office of Dietary Supplements — Folate Fact Sheet (2022); intervalo de referencia: ARUP Laboratories — Folate, Serum',
     evidence: 'established',
   },
   {
@@ -241,6 +319,19 @@ export const LAB_MARKERS: LabMarker[] = [
     educationalLow: '<1 mg/L = riesgo cardiovascular relativo bajo (categoría AHA/CDC).',
     educationalHigh: '1–3 mg/L = riesgo intermedio; >3 mg/L = riesgo alto. Una infección, lesión o procedimiento reciente puede elevarla transitoriamente — repetir tras 2 semanas si fue inesperada.',
     citation: 'AHA/CDC — Markers of Inflammation and Cardiovascular Disease (2003, vigente)',
+    evidence: 'established',
+  },
+  {
+    key: 'esr',
+    name: 'Eritrosedimentación (VSG/ESR)',
+    aliases: ['eritrosedimentación', 'velocidad de sedimentación globular', 'vsg', 'vsg westergren', 'eritro', 'esr', 'erythrocyte sedimentation rate', 'sed rate', 'sedimentation rate', 'westergren esr'],
+    unit: 'mm/h',
+    low: 0, high: 20,
+    criticalLow: null, criticalHigh: 100,
+    whatItMeasures: 'Mide la velocidad a la que los glóbulos rojos sedimentan en una columna de sangre en una hora (método Westergren). Es un marcador inespecífico de inflamación: sube cuando aumentan proteínas de fase aguda como el fibrinógeno.',
+    educationalLow: 'Una VSG baja no suele tener relevancia clínica y generalmente se considera normal. En casos puntuales valores muy bajos pueden acompañar a ciertas condiciones de la sangre (por ejemplo, alteraciones en la forma de los glóbulos rojos o policitemia), pero por sí sola una VSG baja no indica enfermedad. Cualquier interpretación corresponde al equipo médico.',
+    educationalHigh: 'Una VSG elevada sugiere la presencia de inflamación en algún punto del organismo, pero es inespecífica: no indica dónde ni por qué. Puede subir con infecciones, procesos reumáticos/autoinmunes, anemia, edad avanzada o embarazo. El rango sube con la edad y es mayor en mujeres (referencia Westergren típica: hombres <50 años hasta ~15 mm/h, mujeres <50 hasta ~20 mm/h; por encima de 50, hasta ~20 y ~30 respectivamente). Las guías señalan que valores por encima de 100 mm/h tienen baja tasa de falsos positivos para una causa significativa de fondo (infección grave, enfermedades reumáticas o ciertas neoplasias) y ameritan evaluación médica. Se interpreta siempre junto al cuadro clínico y a otros marcadores como la PCR; no es diagnóstica por sí sola.',
+    citation: 'NIH/NCBI — StatPearls: Erythrocyte Sedimentation Rate (2025)',
     evidence: 'established',
   },
   // ── Hormonal ────────────────────────────────────────────────────────────────
@@ -492,3 +583,108 @@ export function findLabMarker(query: string): LabMarker | null {
   }
   return null;
 }
+
+// ─── Orden de Exámenes recomendada (panel base del protocolo) ─────────────────
+// Panel de laboratorio recomendado como línea base del Protocolo Soberano, basado
+// en la orden de medicina integrativa del Dr. Armando Romero. Es EDUCATIVO /
+// ORIENTATIVO: indica qué exámenes conviene hacerse para tener una foto basal del
+// cuerpo. NO es una orden médica individual ni una prescripción — el examen lo
+// indica y firma tu médico tratante según tu caso. Cada ítem se enlaza, cuando
+// existe, con un marcador de LAB_MARKERS para que el internista pueda explicarlo.
+
+export interface ExamPanelItem {
+  /** Nombre del examen tal como aparece en la orden. */
+  label: string;
+  /** key de LAB_MARKERS si el internista lo interpreta; null para estudios cualitativos. */
+  markerKey: string | null;
+}
+
+export interface ExamPanelGroup {
+  /** Nombre del panel (como en la orden). */
+  panel: string;
+  /** Para qué sirve este panel, en una línea educativa. */
+  purpose: string;
+  items: ExamPanelItem[];
+}
+
+export interface RecommendedExamPanel {
+  title: string;
+  /** Médico que recomienda el panel base (atribución, NO orden individual). */
+  physician: string;
+  specialty: string;
+  /** Aclaración educativa/legal que SIEMPRE acompaña al panel. */
+  disclaimer: string;
+  groups: ExamPanelGroup[];
+}
+
+export const RECOMMENDED_EXAM_PANEL: RecommendedExamPanel = {
+  title: 'Orden de Exámenes recomendada',
+  physician: 'Dr. Armando Romero',
+  specialty: 'Medicina Integrativa y del Estilo de Vida',
+  disclaimer:
+    'Panel base orientativo del protocolo. No es una orden médica individual ni una ' +
+    'prescripción: el examen lo indica y firma tu médico tratante según tu caso.',
+  groups: [
+    {
+      panel: 'Panel metabólico',
+      purpose: 'Cómo maneja tu cuerpo el azúcar y el metabolismo basal.',
+      items: [
+        { label: 'Glucosa en ayunas', markerKey: 'glucose_fasting' },
+        { label: 'Hemoglobina glicosilada (HbA1c)', markerKey: 'hba1c' },
+        { label: 'Insulina en ayunas', markerKey: 'insulin_fasting' },
+        { label: 'Ácido úrico', markerKey: 'uric_acid' },
+      ],
+    },
+    {
+      panel: 'Panel lipídico',
+      purpose: 'Colesterol y grasas circulantes — riesgo cardiovascular.',
+      items: [
+        { label: 'Colesterol total', markerKey: 'cholesterol_total' },
+        { label: 'Colesterol LDL', markerKey: 'ldl_cholesterol' },
+        { label: 'Colesterol HDL', markerKey: 'hdl_cholesterol' },
+        { label: 'Triglicéridos', markerKey: 'triglycerides' },
+      ],
+    },
+    {
+      panel: 'Panel nutricional',
+      purpose: 'Reservas de vitaminas clave para energía, nervios y huesos.',
+      items: [
+        { label: 'Vitamina D', markerKey: 'vitamin_d_25oh' },
+        { label: 'Vitamina B12', markerKey: 'vitamin_b12' },
+        { label: 'Ácido fólico', markerKey: 'folate_serum' },
+      ],
+    },
+    {
+      panel: 'Hemograma completo',
+      purpose: 'Glóbulos rojos, blancos y plaquetas — anemia, infección, inflamación.',
+      items: [
+        { label: 'Hemograma completo', markerKey: 'hemoglobin' },
+      ],
+    },
+    {
+      panel: 'Panel hormonal (tiroides)',
+      purpose: 'Función tiroidea — metabolismo, energía y peso.',
+      items: [
+        { label: 'TSH', markerKey: 'tsh' },
+        { label: 'T4 libre', markerKey: 'free_t4' },
+        { label: 'T3 libre', markerKey: 'free_t3' },
+      ],
+    },
+    {
+      panel: 'Panel inmunológico / inflamación',
+      purpose: 'Marcadores de inflamación sistémica.',
+      items: [
+        { label: 'Proteína C reactiva (PCR)', markerKey: 'hs_crp' },
+        { label: 'Eritrosedimentación (VSG)', markerKey: 'esr' },
+      ],
+    },
+    {
+      panel: 'Otros estudios',
+      purpose: 'Tamizaje general complementario.',
+      items: [
+        { label: 'Examen general de heces', markerKey: null },
+        { label: 'Examen general de orina', markerKey: null },
+      ],
+    },
+  ],
+};
