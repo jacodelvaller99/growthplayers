@@ -242,10 +242,15 @@ export async function streamInternistResponse(
     catch (err) { if (isAbort(err)) throw err; }
   }
 
-  // Degradación honesta — sin proveedor.
+  // Degradación honesta — sin proveedor. Al PACIENTE no le filtramos jerga técnica
+  // (quiet luxury); la causa real va a observabilidad para que el equipo la vea.
+  logSilentError(
+    'internist.noProvider',
+    new Error('Sin proveedor de IA: configura el ai-proxy (secret + EXPO_PUBLIC_AI_PROXY_URL) o una clave de proveedor.'),
+  );
   const msg =
-    'El internista educativo necesita un proveedor de IA activo. Pídele a tu equipo activar el ai-proxy ' +
-    'o configurar una clave de IA. Mientras tanto, te recomiendo llevar tus dudas directamente a tu médico tratante.';
+    'El internista educativo no está disponible en este momento. Vuelve a intentarlo en un rato. ' +
+    'Si tienes una duda que no puede esperar, consúltala directamente con tu médico tratante.';
   onChunk(msg);
   return { text: msg, redFlags };
 }
