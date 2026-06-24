@@ -18,6 +18,7 @@ import {
   PrimaryButton,
   ProgressCard,
   SecondaryButton,
+  SovereignDeltaTag,
   SovereignScore,
   WeeklySparkline,
   screen,
@@ -30,7 +31,7 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
-import { calcSovereignScore } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
 import {
   requestNotificationPermissions,
   scheduleCheckinReminder,
@@ -535,6 +536,15 @@ export default function ProgresoScreen() {
     wellnessBinaural,
   });
 
+  // Sovereign delta — progreso vs línea base propia (acompaña al score absoluto).
+  const sovereignDelta = useMemo(() => calcSovereignDelta(state.checkIns), [state.checkIns]);
+  const baselineDay = useMemo(() => {
+    if (calcSovereignBaseline(state.checkIns).ready) return 7;
+    if (!state.checkIns.length) return 1;
+    const oldest = Math.min(...state.checkIns.map((c) => new Date(c.date).getTime()));
+    return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
+  }, [state.checkIns]);
+
   // Last 7 check-ins for sparklines
   const last7 = state.checkIns.slice(-7);
   const energyValues = last7.length ? last7.map((c) => c.energy) : [0, 0, 0, 0, 0, 0, 0];
@@ -817,6 +827,7 @@ export default function ProgresoScreen() {
           {/* ── ZONA 1: Top row ── */}
           <AppHeader title="PROGRESO" />
           <SovereignScore score={score} />
+          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
           {narrativeBlock.length > 0 && (
             <View style={styles.narrativeCard}>
               <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
@@ -1130,6 +1141,7 @@ export default function ProgresoScreen() {
             <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
           </View>
         )}
+        <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
       </PremiumCard>
 
       {/* ── Share profile CTA ── */}

@@ -21,6 +21,7 @@ import {
   PremiumCard,
   PrimaryButton,
   ProgressCard,
+  SovereignDeltaTag,
   StateMeter,
   StatusPill,
   screen,
@@ -29,7 +30,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
-import { calcSovereignScore, calcSovereignTier } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
@@ -259,6 +260,32 @@ export default function DashboardScreen() {
     return points;
   }, [state.checkIns]);
 
+  // Sovereign delta — cuerpo de hoy vs la línea base propia (no el absoluto).
+  const sovereignDelta = useMemo(() => calcSovereignDelta(state.checkIns), [state.checkIns]);
+  // Día (1–7) dentro de la ventana de construcción de línea base, para el copy
+  // "construyendo tu línea base · día X de 7" cuando aún no está lista.
+  const baselineDay = useMemo(() => {
+    if (calcSovereignBaseline(state.checkIns).ready) return 7;
+    if (!state.checkIns.length) return 1;
+    const oldest = Math.min(...state.checkIns.map((c) => new Date(c.date).getTime()));
+    return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
+  }, [state.checkIns]);
+
+  // ── Mando de hoy — UNA sola decisión no-negociable, anclada arriba ──────────
+  // Prioridad: NBA accionable de la IA → recordatorio diario del Norte →
+  // propósito del Norte → fallback al check-in. Forward, no pasivo.
+  const mandoDeHoy = useMemo(() => {
+    if (nextActionConfig && intelligence.next_action_urgency !== 'low') {
+      return intelligence.next_action_reason?.trim() || nextActionConfig.label;
+    }
+    if (state.northStar.dailyReminder?.trim()) return state.northStar.dailyReminder.trim();
+    if (state.northStar.purpose?.trim()) return state.northStar.purpose.trim();
+    return todayCheckIn
+      ? 'Convierte tu lectura de hoy en una sola acción de alto impacto.'
+      : 'Calibra tu sistema con el check-in y define tu objetivo único del día.';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intelligence.next_action, intelligence.next_action_urgency, intelligence.next_action_reason, state.northStar.dailyReminder, state.northStar.purpose, todayCheckIn]);
+
   // Today's coherence (0–10) — same formula as the check-in screen.
   const coherenceToday = checkIn
     ? Math.round((checkIn.energy + checkIn.clarity + (11 - checkIn.stress) + checkIn.sleep) / 4)
@@ -312,12 +339,16 @@ export default function DashboardScreen() {
     <EditorialPanel
       eyebrow={`DÍA ${protocolDay} · PROTOCOLO SOBERANO`}
       title={`${greeting()},\n${state.profile.name}.`}
-      body={
-        intelligenceGreeting ??
-        (todayCheckIn
-          ? 'Check-in registrado. Ahora convierte tu estado en ejecución medible.'
-          : 'Tu sala de mando espera lectura interna para calibrar el día.')
-      }>
+      body={intelligenceGreeting ?? undefined}>
+      {/* Mando de hoy — una sola decisión, ancla forward del día */}
+      <Pressable
+        onPress={() => router.push('/(tabs)/norte')}
+        accessibilityRole="button"
+        accessibilityLabel="Tu mando de hoy"
+        style={({ pressed }) => [styles.mandoStrip, pressed && { opacity: 0.85 }]}>
+        <Text style={styles.mandoLabel}>TU MANDO DE HOY</Text>
+        <Text style={styles.mandoText}>{mandoDeHoy}</Text>
+      </Pressable>
       <Text style={styles.time}>
         {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
       </Text>
@@ -799,6 +830,9 @@ export default function DashboardScreen() {
       <View style={{ flex: 1 }}>
         <Text style={mob.eyebrow}>SCORE SOBERANO</Text>
         <Text style={mob.scoreDesc}>Capacidad operativa compuesta de los últimos 14 días.</Text>
+        <View style={mob.deltaWrap}>
+          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+        </View>
         {weeklyScoreDelta > 0 && (
           <View style={mob.deltaRow}>
             <MaterialIcons name="trending-up" size={16} color={palette.success} />
@@ -1247,6 +1281,31 @@ const styles = StyleSheet.create({
     ...typography.mono,
     color: palette.ash,
     fontSize: 11,
+  },
+
+  // ── Mando de hoy (hero forward) ─────────────────────────────────────────────
+  mandoStrip: {
+    borderLeftWidth: 3,
+    borderLeftColor: palette.gold,
+    backgroundColor: 'rgba(179,141,60,0.07)',
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: 6,
+  },
+  mandoLabel: {
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: palette.goldText,
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+  },
+  mandoText: {
+    ...typography.body,
+    color: palette.ivory,
+    fontSize: 15,
+    lineHeight: 21,
   },
 
   // ── Shared ────────────────────────────────────────────────────────────────
@@ -1807,6 +1866,9 @@ const mob = StyleSheet.create({
     color: palette.ash,
     fontSize: 12.5,
     lineHeight: 19,
+    marginTop: spacing.sm,
+  },
+  deltaWrap: {
     marginTop: spacing.sm,
   },
   deltaRow: {

@@ -131,14 +131,14 @@ function buildNextActionNotification(name: string, nextAction: string | null): {
   }
   return {
     title: `Tu siguiente paso, ${name}`,
-    body:  'Abre LifeFlow y continúa construyendo tu mejor versión.',
+    body:  'Vuelve al protocolo. El estado se construye en los días normales, no en los heroicos.',
   };
 }
 
 function buildMilestoneNotification(name: string, engagementScore: number): { title: string; body: string } {
   if (engagementScore >= 90) {
     return {
-      title: `¡Eres imparable, ${name}! 🏆`,
+      title: `Tu consistencia habla, ${name}`,
       body:  'Tu nivel de engagement es excepcional. Comparte tu progreso con tu comunidad Polaris.',
     };
   }

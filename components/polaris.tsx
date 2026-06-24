@@ -30,7 +30,7 @@ import { AnimatedNumber } from './AnimatedNumber';
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
 
 import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
-import { calcSovereignTier } from '@/lib/utils';
+import { calcSovereignTier, type SovereignDelta } from '@/lib/utils';
 import { PolarisLogo } from './PolarisLogo';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -209,6 +209,48 @@ export function SovereignScore({ score, max = 1000 }: { score: number; max?: num
       </View>
       <StatusPill label={tier} tone="gold" />
     </PremiumCard>
+  );
+}
+
+// ─── Sovereign Delta tag ──────────────────────────────────────────────────────
+// Muestra el PROGRESO (cuerpo de hoy vs línea base propia), no el absoluto.
+// gaining=success · declining=ámbar (goldText) · stable=neutro (ash).
+// Sin línea base lista → "Construyendo tu línea base · día X de 7".
+
+export function SovereignDeltaTag({
+  delta,
+  baselineDay,
+}: {
+  delta: SovereignDelta;
+  /** Día (1-based) dentro de la ventana de 7 días de construcción de línea base. */
+  baselineDay?: number;
+}) {
+  if (!delta.hasBaseline) {
+    const day = Math.min(Math.max(baselineDay ?? 1, 1), 7);
+    return (
+      <View style={styles.deltaTag}>
+        <MaterialIcons name="hourglass-bottom" size={13} color={palette.smoke} />
+        <Text style={styles.deltaTagBuilding}>
+          Construyendo tu línea base · día {day} de 7
+        </Text>
+      </View>
+    );
+  }
+
+  const tone =
+    delta.state === 'gaining' ? palette.success
+    : delta.state === 'declining' ? palette.goldText
+    : palette.ash;
+  const icon: IconName =
+    delta.state === 'gaining' ? 'trending-up'
+    : delta.state === 'declining' ? 'trending-down'
+    : 'trending-flat';
+
+  return (
+    <View style={styles.deltaTag}>
+      <MaterialIcons name={icon} size={14} color={tone} />
+      <Text style={[styles.deltaTagLabel, { color: tone }]}>{delta.label}</Text>
+    </View>
   );
 }
 
@@ -846,7 +888,13 @@ const styles = StyleSheet.create({
   sovereignCard: {
     gap: spacing.md,
     alignItems: 'flex-start',
-    borderColor: palette.lineHard,
+    borderColor: palette.goldMuted,
+    padding: spacing.xl,
+    shadowColor: palette.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 4,
   },
   sovereignEyebrow: {
     ...typography.label,
@@ -855,10 +903,10 @@ const styles = StyleSheet.create({
   sovereignNumber: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 72,
+    fontSize: 80,
     fontWeight: '800',
     letterSpacing: -2,
-    lineHeight: 76,
+    lineHeight: 84,
   },
   sovereignTrackRow: {
     alignItems: 'center',
@@ -879,6 +927,26 @@ const styles = StyleSheet.create({
   sovereignPct: {
     ...typography.mono,
     color: palette.goldText,
+  },
+
+  // Sovereign delta tag
+  deltaTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  deltaTagLabel: {
+    ...typography.mono,
+    fontSize: 11,
+    letterSpacing: 0.3,
+    flexShrink: 1,
+  },
+  deltaTagBuilding: {
+    ...typography.mono,
+    color: palette.smoke,
+    fontSize: 11,
+    letterSpacing: 0.3,
+    flexShrink: 1,
   },
 
   // Weekly sparkline (Skia)

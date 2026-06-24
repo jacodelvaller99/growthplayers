@@ -20,6 +20,7 @@ import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
 import { useWellnessStore } from '@/store/wellnessStore';
+import { BodyContextCard, PracticeClose } from './body-context';
 
 // ─── Haptic helper (web-safe) ─────────────────────────────────────────────────
 function haptic(type: 'light' | 'medium' | 'success') {
@@ -205,6 +206,11 @@ export default function RespiracionScreen() {
           body="No realices estos ejercicios mientras conduces, en el agua, o de pie. Si estás embarazada, tienes epilepsia, problemas cardíacos o respiratorios, consulta a tu médico antes. Si sientes mareo intenso, detente."
         />
 
+        {/* Contexto biométrico del día (honesto, no en vivo) */}
+        {!running && (
+          <BodyContextCard frame="Respira para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
+        )}
+
         {/* Orb */}
         <View style={styles.orbStage}>
           <View style={styles.ringOuter} />
@@ -259,6 +265,11 @@ export default function RespiracionScreen() {
             {running ? 'DETENER' : 'COMENZAR SESIÓN'}
           </Text>
         </Pressable>
+
+        {/* Cierre: registrar cómo se siente tras una sesión real */}
+        {!running && cycles > 0 && (
+          <PracticeClose message="Sesión cerrada. ¿Cómo aterriza tu cuerpo ahora? Registrarlo es el dato que sí importa." />
+        )}
       </ScrollView>
     </View>
   );

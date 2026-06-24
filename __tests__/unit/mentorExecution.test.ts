@@ -8,6 +8,7 @@ import {
   clientProgress,
   clientSafeTasks,
   computeClientScores,
+  pendingAccountability,
   deriveStatus,
   momentumState,
   scoreAdherence,
@@ -191,5 +192,33 @@ describe('vista cliente — de apoyo', () => {
   it('clientProgress cuenta completadas', () => {
     const p = clientProgress([task({ status: 'completed' }), task({ status: 'in_progress' })]);
     expect(p).toEqual({ done: 1, total: 2, pct: 50 });
+  });
+});
+
+describe('pendingAccountability — loop de 24h', () => {
+  const dayAgo = '2026-06-15T11:00:00Z';   // > 24h antes de NOW
+  const recent = '2026-06-16T06:00:00Z';   // < 24h antes de NOW
+  it('incluye abiertas asignadas hace ≥24h', () => {
+    const view = clientSafeTasks([
+      task({ id: 'a', title: 'Vieja', status: 'not_started', assigned_at: dayAgo }),
+    ], NOW);
+    const pend = pendingAccountability(view, NOW);
+    expect(pend.map((t) => t.id)).toEqual(['a']);
+  });
+  it('excluye completadas, recientes y sin fecha', () => {
+    const view = clientSafeTasks([
+      task({ id: 'done', title: 'Hecha', status: 'completed', assigned_at: dayAgo }),
+      task({ id: 'new', title: 'Reciente', status: 'not_started', assigned_at: recent }),
+      task({ id: 'nodate', title: 'Sin fecha', status: 'not_started' }),
+    ], NOW);
+    expect(pendingAccountability(view, NOW)).toEqual([]);
+  });
+  it('ordena de la más antigua a la más reciente', () => {
+    const older = '2026-06-14T11:00:00Z';
+    const view = clientSafeTasks([
+      task({ id: 'b', title: 'B', status: 'not_started', assigned_at: dayAgo }),
+      task({ id: 'a', title: 'A', status: 'not_started', assigned_at: older }),
+    ], NOW);
+    expect(pendingAccountability(view, NOW).map((t) => t.id)).toEqual(['a', 'b']);
   });
 });

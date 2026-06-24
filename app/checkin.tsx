@@ -1,8 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -44,12 +44,212 @@ function checkInTitle(streak: number): string {
   return CHECK_IN_TITLES[idx];
 }
 
+// ── Micro-ritual: box-breathing inline (4·4·4·4) ────────────────────────────
+// Que el check-in REGULE, no solo recolecte. Reusa el patrón del orbe de
+// app/bienestar/respiracion.tsx en versión compacta (sin librerías nuevas).
+const BOX_PHASES = [
+  { label: 'INHALA', duration: 4, scale: 1.25 },
+  { label: 'SOSTÉN', duration: 4, scale: 1.25 },
+  { label: 'EXHALA', duration: 4, scale: 0.78 },
+  { label: 'SOSTÉN', duration: 4, scale: 0.78 },
+] as const;
+const RITUAL_CYCLES = 6; // ~96s — entra en la ventana de 2–3 min con el pre/post
+
+const ORB = 132;
+
+type RitualPhase = 'intro' | 'breathing' | 'post';
+
+function MicroRitual({
+  preTension,
+  onLog,
+}: {
+  preTension: number;
+  onLog: (durationSeconds: number, cycles: number) => void;
+}) {
+  const [phase, setPhase] = useState<RitualPhase>('intro');
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const [phaseLeft, setPhaseLeft] = useState<number>(BOX_PHASES[0].duration);
+  const [cycles, setCycles] = useState(0);
+  const [postTension, setPostTension] = useState<number | null>(null);
+
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef(0);
+
+  const animatePhase = useCallback(
+    (idx: number) => {
+      const p = BOX_PHASES[idx];
+      Animated.timing(scaleAnim, {
+        toValue: p.scale,
+        duration: p.duration * 1000,
+        useNativeDriver: true,
+      }).start();
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    },
+    [scaleAnim],
+  );
+
+  // Phase countdown (1s tick)
+  useEffect(() => {
+    if (phase !== 'breathing') return;
+    tickRef.current = setInterval(() => {
+      setPhaseLeft((left) => {
+        if (left > 1) return left - 1;
+        const nextIdx = (phaseIdx + 1) % BOX_PHASES.length;
+        if (nextIdx === 0) setCycles((c) => c + 1);
+        setPhaseIdx(nextIdx);
+        animatePhase(nextIdx);
+        return BOX_PHASES[nextIdx].duration;
+      });
+    }, 1000);
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, phaseIdx]);
+
+  // Auto-cierre tras completar los ciclos previstos → pasa al pre/post
+  useEffect(() => {
+    if (phase === 'breathing' && cycles >= RITUAL_CYCLES) {
+      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+      if (tickRef.current) clearInterval(tickRef.current);
+      scaleAnim.stopAnimation();
+      Animated.timing(scaleAnim, { toValue: 0.9, duration: 400, useNativeDriver: true }).start();
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      onLog(elapsed, cycles);
+      setPhase('post');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cycles, phase]);
+
+  const startBreathing = () => {
+    setPhase('breathing');
+    setPhaseIdx(0);
+    setPhaseLeft(BOX_PHASES[0].duration);
+    setCycles(0);
+    startTimeRef.current = Date.now();
+    animatePhase(0);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  };
+
+  const endEarly = () => {
+    const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+    if (tickRef.current) clearInterval(tickRef.current);
+    scaleAnim.stopAnimation();
+    Animated.timing(scaleAnim, { toValue: 0.9, duration: 300, useNativeDriver: true }).start();
+    if (cycles > 0) onLog(elapsed, cycles);
+    setPhase('post');
+  };
+
+  const currentPhase = BOX_PHASES[phaseIdx];
+
+  // ── Intro ──
+  if (phase === 'intro') {
+    return (
+      <PremiumCard style={styles.ritualCard}>
+        <Text style={styles.ritualTag}>MICRO-RITUAL · 2 MIN</Text>
+        <Text style={styles.ritualTitle}>Antes de salir, regula el sistema</Text>
+        <Text style={styles.ritualBody}>
+          Seis ciclos de respiración en caja — inhala 4, sostén 4, exhala 4, sostén 4. No es relleno:
+          baja tu carga real antes de ejecutar.
+        </Text>
+        <PrimaryButton label="EMPEZAR RESPIRACIÓN" icon="air" onPress={startBreathing} />
+      </PremiumCard>
+    );
+  }
+
+  // ── Breathing (orbe activo) ──
+  if (phase === 'breathing') {
+    return (
+      <PremiumCard style={styles.ritualCard}>
+        <Text style={styles.ritualTag}>RESPIRACIÓN EN CAJA · CICLO {Math.min(cycles + 1, RITUAL_CYCLES)}/{RITUAL_CYCLES}</Text>
+        <View style={styles.orbStage}>
+          <View style={styles.orbRing} />
+          <Animated.View style={[styles.orb, { transform: [{ scale: scaleAnim }] }]}>
+            <Text style={styles.orbPhase}>{currentPhase.label}</Text>
+            <Text style={styles.orbCount}>{phaseLeft}</Text>
+          </Animated.View>
+        </View>
+        <Pressable
+          onPress={endEarly}
+          accessibilityRole="button"
+          accessibilityLabel="Terminar respiración"
+          style={({ pressed }) => [styles.ritualEndBtn, pressed && { opacity: 0.7 }]}>
+          <Text style={styles.ritualEndText}>TERMINAR</Text>
+        </Pressable>
+      </PremiumCard>
+    );
+  }
+
+  // ── Post: captura mini-estado + delta ──
+  const delta = postTension == null ? null : preTension - postTension;
+  const deltaCopy =
+    delta == null
+      ? null
+      : delta >= 2
+        ? `Bajaste ${delta} de tensión. Eso es regulación real, no placebo.`
+        : delta === 1
+          ? 'Un punto menos de tensión. Pequeño, pero el cuerpo respondió.'
+          : delta === 0
+            ? 'Igual que antes. A veces el sistema solo necesita registrar; vuelve más tarde.'
+            : 'Subió un poco — la mente sigue activa. Sin juicio: el dato queda registrado.';
+
+  return (
+    <PremiumCard style={styles.ritualCard}>
+      <Text style={styles.ritualTag}>¿CÓMO ESTÁS AHORA?</Text>
+      <Text style={styles.ritualBody}>
+        Tu tensión antes era {preTension}/10. Marca dónde está ahora — un toque.
+      </Text>
+      <View style={styles.postScale}>
+        {[1, 2, 3].map((v) => {
+          const labels = ['CALMA', 'MEDIA', 'ALTA'];
+          const active = postTension === v;
+          return (
+            <Pressable
+              key={v}
+              onPress={() => {
+                setPostTension(v);
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Tensión ahora: ${labels[v - 1]}`}
+              style={[styles.postChip, active && styles.postChipActive]}>
+              <Text style={[styles.postChipNum, active && styles.postChipNumActive]}>{v}</Text>
+              <Text style={[styles.postChipLabel, active && styles.postChipLabelActive]}>
+                {labels[v - 1]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {deltaCopy ? (
+        <View style={styles.deltaRow}>
+          <MaterialIcons
+            name={delta != null && delta > 0 ? 'trending-down' : delta === 0 ? 'remove' : 'trending-up'}
+            size={18}
+            color={delta != null && delta > 0 ? palette.goldText : palette.ash}
+          />
+          <Text style={styles.deltaText}>{deltaCopy}</Text>
+        </View>
+      ) : null}
+    </PremiumCard>
+  );
+}
+
 export default function CheckInScreen() {
   const sc = useScreen();
   const { isDesktop } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { todayCheckIn, saveCheckIn, state } = useLifeFlow();
+  const { todayCheckIn, saveCheckIn, saveWellnessSession, state } = useLifeFlow();
   const { showToast } = useToast();
 
   // Streak data for protection warning
@@ -168,6 +368,25 @@ export default function CheckInScreen() {
 
   const goToCommando = () => router.replace('/(tabs)/comando');
   const followRecommendation = () => router.replace(recommendation.route as never);
+
+  // ── Micro-ritual: estado pre (tensión declarada, banda 1–3) + logging ──────
+  // El check-in mide estrés 1–10; lo llevamos a la misma escala 1–3 del post
+  // para que el delta sea comparable de un toque.
+  const preTensionBand = stress >= 7 ? 3 : stress >= 4 ? 2 : 1;
+  const logBreathing = (durationSeconds: number, cycles: number) => {
+    if (cycles <= 0 || durationSeconds <= 5) return;
+    void saveWellnessSession({
+      type: 'breathing',
+      sessionName: 'Respiración en caja · Check-in',
+      durationSeconds,
+      completedAt: new Date().toISOString(),
+      metadata: { techniqueId: 'box', cycles, source: 'checkin' },
+    });
+  };
+
+  const ritualBlock = (
+    <MicroRitual preTension={preTensionBand} onLog={logBreathing} />
+  );
 
   const recommendationCard = (
     <PremiumCard style={styles.recoCard}>
@@ -339,10 +558,14 @@ export default function CheckInScreen() {
             <View style={styles.desktopRight}>
               {coherenceCard}
 
-              <GoldDivider label={saved ? 'TU PRÓXIMO MOVIMIENTO' : 'LECTURA INTERNA'} />
+              <GoldDivider label={saved ? 'REGULA AHORA' : 'LECTURA INTERNA'} />
 
               {saved ? (
-                recommendationCard
+                <>
+                  {ritualBlock}
+                  <GoldDivider label="O SIGUE TU MOVIMIENTO" />
+                  {recommendationCard}
+                </>
               ) : (
                 <>
                   {systemNeedCard}
@@ -422,9 +645,13 @@ export default function CheckInScreen() {
       {capacityCardMobile}
 
       {/* ── System Need ── */}
-      <GoldDivider label={saved ? 'TU PRÓXIMO MOVIMIENTO' : 'LECTURA INTERNA'} />
+      <GoldDivider label={saved ? 'REGULA AHORA' : 'LECTURA INTERNA'} />
       {saved ? (
-        recommendationCard
+        <>
+          {ritualBlock}
+          <GoldDivider label="O SIGUE TU MOVIMIENTO" />
+          {recommendationCard}
+        </>
       ) : (
         <>
           {systemNeedCard}
@@ -668,6 +895,139 @@ const styles = StyleSheet.create({
     color: palette.ash,
     fontSize: 14,
     lineHeight: 21,
+  },
+
+  // Micro-ritual (box-breathing inline)
+  ritualCard: {
+    alignItems: 'center',
+    borderColor: palette.lineGold,
+    borderWidth: 1,
+    gap: spacing.md,
+  },
+  ritualTag: {
+    ...typography.label,
+    color: palette.goldText,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    textAlign: 'center',
+  },
+  ritualTitle: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 17,
+    fontWeight: '700',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  ritualBody: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  orbStage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: ORB * 1.45,
+    width: ORB * 1.45,
+    marginVertical: spacing.xs,
+  },
+  orbRing: {
+    position: 'absolute',
+    width: ORB * 1.4,
+    height: ORB * 1.4,
+    borderRadius: (ORB * 1.4) / 2,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    opacity: 0.35,
+  },
+  orb: {
+    width: ORB,
+    height: ORB,
+    borderRadius: ORB / 2,
+    borderWidth: 1.5,
+    borderColor: palette.lineGold,
+    backgroundColor: palette.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orbPhase: {
+    fontFamily: Fonts.display,
+    color: palette.goldText,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  orbCount: {
+    fontFamily: Fonts.display,
+    color: palette.ivory,
+    fontSize: 34,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  ritualEndBtn: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  ritualEndText: {
+    color: palette.ash,
+    fontFamily: Fonts.display,
+    fontSize: 12,
+    letterSpacing: 1.5,
+  },
+  postScale: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  postChip: {
+    alignItems: 'center',
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
+    gap: 2,
+    justifyContent: 'center',
+    minHeight: 64,
+    paddingVertical: spacing.sm,
+  },
+  postChipActive: {
+    backgroundColor: palette.gold,
+  },
+  postChipNum: {
+    color: palette.goldText,
+    fontFamily: Fonts.display,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  postChipNumActive: {
+    color: palette.ink,
+  },
+  postChipLabel: {
+    color: palette.ash,
+    fontFamily: Fonts.display,
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  postChipLabelActive: {
+    color: palette.ink,
+  },
+  deltaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  deltaText: {
+    ...typography.body,
+    color: palette.ivory,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
   },
 
   // Desktop layout

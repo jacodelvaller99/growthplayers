@@ -177,7 +177,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
     id: 'task-m1-6',
     lessonId: 'm1-6',
     title: 'Integra tu Nueva Identidad',
-    description: 'La integración no es mental — es conductual. La repetición construye la nueva red neuronal.',
+    description: 'La integración no es mental — es conductual. La repetición sostenida es lo que asienta un hábito nuevo.',
     type: 'action',
     fields: [
       {
@@ -600,7 +600,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
     id: 'task-m4-2',
     lessonId: 'm4-2',
     title: 'La Neurociencia a tu Favor',
-    description: 'Tu cerebro en Flow produce ondas alpha/theta. Aprende a crear las condiciones para activarlas.',
+    description: 'El estado de Flow se asocia a un patrón distinto de actividad cerebral. Aprende a crear las condiciones que suelen favorecerlo.',
     type: 'reflection',
     fields: [
       {
@@ -624,7 +624,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
     id: 'task-m4-3',
     lessonId: 'm4-3',
     title: 'Practica la Coherencia Cardíaca',
-    description: '9 puntos. 3 minutos. Tu sistema nervioso en modo recuperación.',
+    description: '9 puntos. 3 minutos. Una práctica para acompañar la regulación de tu sistema nervioso.',
     type: 'exercise',
     fields: [
       {

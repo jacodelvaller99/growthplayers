@@ -8,6 +8,8 @@ import {
   detectCommitmentsDrift,
   adaptFalseComplianceIntervention,
   adaptHighAttentionIntervention,
+  isInHoneymoon,
+  isInCompromisedEmotionalState,
   topForMentor,
   type ConfrontationBundle,
   type ConfrontationConsents,
@@ -468,6 +470,63 @@ describe('adaptHighAttentionIntervention', () => {
 });
 
 // ─── Integración + sort + dedup + dismissals ────────────────────────────────
+// ─── Presence Protocol — honeymoon + estado emocional comprometido ───────────
+describe('Presence Protocol — isInHoneymoon / isInCompromisedEmotionalState', () => {
+  // Bundle que normalmente dispara silent_withdrawal_5d (engagement).
+  const withdrawalBundle = (over: Partial<ConfrontationBundle> = {}) =>
+    makeBundle({
+      onboardingCompletedAt: isoDaysAgo(30),
+      lastMentorMsgAt: isoDaysAgo(10),
+      lastAppOpenAt: isoDaysAgo(9),
+      recentCheckIns: [{ date: dateDaysAgo(9), energy: 7, clarity: 7, stress: 4, sleep: 7 }],
+      ...over,
+    });
+
+  it('honeymoon (< 7 días desde onboarding) bloquea toda confrontación', () => {
+    const r = buildConfrontations(withdrawalBundle({ onboardingCompletedAt: isoDaysAgo(3) }), NOW);
+    expect(r.items).toEqual([]);
+    expect(r.skipped[0].reason).toBe('honeymoon_period');
+  });
+
+  it('energía promedio <= 3 bloquea con reason low_energy_or_high_stress', () => {
+    const r = buildConfrontations(withdrawalBundle({
+      recentCheckIns: [
+        { date: dateDaysAgo(0), energy: 3, clarity: 5, stress: 4, sleep: 6 },
+        { date: dateDaysAgo(1), energy: 2, clarity: 5, stress: 4, sleep: 6 },
+        { date: dateDaysAgo(2), energy: 3, clarity: 5, stress: 4, sleep: 6 },
+      ],
+    }), NOW);
+    expect(r.items).toEqual([]);
+    expect(r.skipped[0].reason).toBe('low_energy_or_high_stress');
+  });
+
+  it('estrés del check-in más reciente >= 8 bloquea', () => {
+    const r = buildConfrontations(withdrawalBundle({
+      recentCheckIns: [
+        { date: dateDaysAgo(0), energy: 7, clarity: 6, stress: 9, sleep: 6 },
+        { date: dateDaysAgo(1), energy: 7, clarity: 6, stress: 4, sleep: 6 },
+        { date: dateDaysAgo(2), energy: 7, clarity: 6, stress: 4, sleep: 6 },
+      ],
+    }), NOW);
+    expect(r.items).toEqual([]);
+    expect(r.skipped[0].reason).toBe('low_energy_or_high_stress');
+  });
+
+  it('usuario sano (energía alta, estrés bajo, > 7 días) NO bloquea — confronta', () => {
+    const r = buildConfrontations(withdrawalBundle(), NOW);
+    expect(r.items.find((i) => i.id === 'silent_withdrawal_5d')).toBeDefined();
+  });
+
+  it('isInHoneymoon: límite exacto en 7 días no es honeymoon', () => {
+    expect(isInHoneymoon(makeBundle({ onboardingCompletedAt: isoDaysAgo(7) }), NOW)).toBe(false);
+    expect(isInHoneymoon(makeBundle({ onboardingCompletedAt: isoDaysAgo(6) }), NOW)).toBe(true);
+  });
+
+  it('isInCompromisedEmotionalState: sin check-ins → false', () => {
+    expect(isInCompromisedEmotionalState(makeBundle({ recentCheckIns: [] }))).toBe(false);
+  });
+});
+
 describe('buildConfrontations — integración', () => {
   it('ordena por severity (high > medium) con tiebreak por dimensión state>commitments>behavior>engagement', () => {
     // Escenario: commitments_drift (high, dim=commitments) + sleep_mismatch (medium, dim=state).

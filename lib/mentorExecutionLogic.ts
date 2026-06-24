@@ -354,10 +354,14 @@ const PRIORITY_RANK: Record<TaskPriority, number> = { low: 0, medium: 1, high: 2
 
 // ─── Vista cliente (de apoyo; sin lenguaje duro de scoring) ──────────────────────
 export interface ClientTaskView {
+  /** id de la fila (para completar reusando updateTask); null si la tarea aún no se persistió. */
+  id: string | null;
   title: string;
   category: string | null;
   status: TaskStatus;
   due_date: string | null;
+  /** Cuándo se asignó la tarea (assigned_at ?? created_at) — base del loop de 24h. */
+  assigned_at: string | null;
   done: boolean;
   /** Propuesta por IA aún no confirmada por el coach (estado, NO score — seguro de mostrar). */
   pendingReview: boolean;
@@ -370,16 +374,39 @@ export function clientSafeTasks(tasks: MentorTask[], nowMs = Date.now()): Client
     .map((t) => {
       const st = deriveStatus(t, nowMs);
       return {
+        id: t.id ?? null,
         title: t.title,
         category: t.category ?? null,
         status: st,
         due_date: t.due_date ?? null,
+        assigned_at: t.assigned_at ?? t.created_at ?? null,
         done: st === 'completed',
         // 'ai_suggested' = Norman propuso la tarea y el coach aún no la revisó.
         // Es un estado de flujo (no una métrica) → honesto y no sensible.
         pendingReview: t.mentor_review_status === 'ai_suggested',
       };
     });
+}
+
+/**
+ * Compromisos del cliente declarados hace ≥24h que siguen ABIERTOS — base del
+ * prompt de accountability in-app. Puro (recibe `nowMs`), sin IO. Ordena del más
+ * antiguo al más reciente para confrontar primero lo que más lleva pendiente.
+ */
+export function pendingAccountability(
+  tasks: ClientTaskView[],
+  nowMs = Date.now(),
+  minAgeMs = 86_400_000,
+): ClientTaskView[] {
+  return tasks
+    .filter((t) => {
+      if (t.done) return false;
+      if (!t.assigned_at) return false;
+      const ts = Date.parse(t.assigned_at);
+      if (Number.isNaN(ts)) return false;
+      return nowMs - ts >= minAgeMs;
+    })
+    .sort((a, b) => Date.parse(a.assigned_at ?? '') - Date.parse(b.assigned_at ?? ''));
 }
 
 /** Progreso de apoyo para el cliente (sin exponer atención/fricción). */

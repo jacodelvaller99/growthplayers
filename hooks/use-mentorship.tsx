@@ -23,6 +23,7 @@ import { transcribeAudio } from '@/lib/transcription';
 import { insertSummary } from '@/lib/memory';
 import { makeMinimalContext, updateProfileFromSummary } from '@/lib/memorySummarizer';
 import { createTasksFromActionPlan } from '@/lib/mentorExecution';
+import { requestNotificationPermissions, scheduleAccountabilityFollowup } from '@/services/notifications';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { currentWeekNumber } from '@/data/mentorship';
@@ -630,6 +631,22 @@ export function useMentorship() {
       void updateProfileFromSummary(userId, makeMinimalContext(), parsed);
       // Automatización: el plan de acción se materializa como tareas operativas.
       void createTasksFromActionPlan(userId, parsed.commitments, d.week);
+
+      // ── Loop de accountability 24h: tras comprometerse, mañana Polaris pregunta ─
+      // si lo ejecutó. Native-only (web = no-op); fire-and-forget, no bloquea el flujo.
+      if (parsed.commitments.length > 0 && Platform.OS !== 'web') {
+        void (async () => {
+          try {
+            const granted = await requestNotificationPermissions();
+            if (!granted) return;
+            await scheduleAccountabilityFollowup({
+              title: 'ACCOUNTABILITY',
+              body:  'Ayer te comprometiste. ¿Lo ejecutaste hoy?',
+              route: '/perfil/cliente',
+            });
+          } catch { /* no crítico — el prompt in-app cubre la entrega */ }
+        })();
+      }
     }
 
     setDraft(null);

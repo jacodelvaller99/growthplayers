@@ -10,12 +10,15 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { TESTIMONIALS } from '@/data/testimonials';
+import { captureWebLead, isValidEmail } from '@/lib/webLeads';
 import {
   checkSubscription,
   getOfferings,
@@ -37,6 +40,22 @@ export default function PaywallScreen() {
   const [selected, setSelected]     = useState<PurchasesPackage | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring]   = useState(false);
+
+  // Web lead capture — el visitante web no puede comprar aquí (RevenueCat es
+  // nativo); en vez de un dead-end capturamos su email para avisarle.
+  const [leadEmail, setLeadEmail]   = useState('');
+  const [leadStatus, setLeadStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+
+  async function handleLeadSubmit() {
+    const email = leadEmail.trim();
+    if (!isValidEmail(email)) {
+      setLeadStatus('error');
+      return;
+    }
+    setLeadStatus('sending');
+    const ok = await captureWebLead(email, 'paywall_web');
+    setLeadStatus(ok ? 'done' : 'error');
+  }
 
   // Load RevenueCat offerings on mount
   useEffect(() => {
@@ -143,11 +162,45 @@ export default function PaywallScreen() {
         ))}
       </View>
 
-      <PremiumCard style={styles.socialProof}>
-        <Text style={styles.socialProofText}>
-          “El método que usé para pasar de 60 a 20 horas de trabajo semanales sin perder ingresos.” — Operador activo
-        </Text>
-      </PremiumCard>
+      {/* Prueba de transformación — case studies (antes → después + contexto). */}
+      <View style={styles.proofSection}>
+        <Text style={styles.proofEyebrow}>PRUEBA DE TRANSFORMACIÓN</Text>
+        {TESTIMONIALS.slice(0, 3).map((t) => {
+          // Nunca mostramos el name placeholder ("[Pendiente]") al usuario: hasta
+          // que el dueño confirme identidad+consentimiento (verified), atribuimos
+          // por rol — honesto, no inventado.
+          const attribution = t.verified
+            ? `${t.name}${t.role ? ` · ${t.role}` : ''}`
+            : (t.role ?? 'Operador Polaris');
+          return (
+          <PremiumCard key={t.id} style={styles.socialProof}>
+            {t.metric && (
+              <View style={styles.metricRow}>
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricLabel}>ANTES</Text>
+                  <Text style={styles.metricBefore}>{t.metric.before}</Text>
+                </View>
+                <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricLabel}>DESPUÉS</Text>
+                  <Text style={styles.metricAfter}>{t.metric.after}</Text>
+                </View>
+                {t.metric.context && (
+                  <Text style={styles.metricContext}>{t.metric.context}</Text>
+                )}
+              </View>
+            )}
+            <Text style={styles.socialProofText}>“{t.quote}”</Text>
+            <Text style={styles.socialProofAttr}>— {attribution}</Text>
+          </PremiumCard>
+          );
+        })}
+      </View>
+
+      {/* Guarantee emocional honesta — sin prometer un resultado garantizado. */}
+      <Text style={styles.emotionalGuarantee}>
+        No prometemos el resultado por ti. Prometemos no dejarte solo en el proceso.
+      </Text>
 
       {/* Cancel anytime — store-compliant (no false refund promise) */}
       <View style={styles.guaranteeRow}>
@@ -167,6 +220,57 @@ export default function PaywallScreen() {
             en tu teléfono e inicia sesión con esta misma cuenta para desbloquear el Protocolo
             completo. En la web mantienes tu acceso gratuito.
           </Text>
+
+          {/* Captura de lead — no perder al visitante web. Complementa (no reemplaza)
+              la guía de descargar en iOS/Android. */}
+          <View style={styles.leadDivider} />
+          {leadStatus === 'done' ? (
+            <View style={styles.leadDoneRow}>
+              <MaterialIcons name="check-circle" size={18} color={palette.success} />
+              <Text style={styles.leadDoneText}>Listo. Te avisamos.</Text>
+            </View>
+          ) : (
+            <View style={styles.leadForm}>
+              <TextInput
+                style={styles.leadInput}
+                value={leadEmail}
+                onChangeText={(t) => {
+                  setLeadEmail(t);
+                  if (leadStatus === 'error') setLeadStatus('idle');
+                }}
+                placeholder="tu@email.com"
+                placeholderTextColor={palette.smoke}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={leadStatus !== 'sending'}
+                onSubmitEditing={handleLeadSubmit}
+              />
+              <Pressable
+                style={[
+                  styles.leadBtn,
+                  (leadStatus === 'sending' || leadEmail.trim().length === 0) && { opacity: 0.5 },
+                ]}
+                onPress={handleLeadSubmit}
+                disabled={leadStatus === 'sending' || leadEmail.trim().length === 0}>
+                {leadStatus === 'sending' ? (
+                  <ActivityIndicator size="small" color={palette.ink} />
+                ) : (
+                  <Text style={styles.leadBtnText}>AVÍSAME</Text>
+                )}
+              </Pressable>
+            </View>
+          )}
+          {leadStatus === 'error' && (
+            <Text style={styles.leadError}>
+              Revisa el email e inténtalo de nuevo.
+            </Text>
+          )}
+          {leadStatus !== 'done' && (
+            <Text style={styles.leadConsent}>
+              Te escribiremos solo sobre tu acceso. Sin spam.
+            </Text>
+          )}
         </PremiumCard>
       )}
 
@@ -312,8 +416,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  proofSection: {
+    gap: spacing.md,
+  },
+  proofEyebrow: {
+    ...typography.label,
+    color: palette.goldText,
+  },
   socialProof: {
-    gap: 4,
+    gap: spacing.sm,
   },
   socialProofText: {
     ...typography.body,
@@ -321,6 +432,52 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 13,
     lineHeight: 20,
+  },
+  socialProofAttr: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  metricRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  metricCol: {
+    gap: 2,
+  },
+  metricLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 8,
+    letterSpacing: 1.5,
+  },
+  metricBefore: {
+    fontFamily: Fonts.display,
+    color: palette.ash,
+    fontSize: 16,
+  },
+  metricAfter: {
+    fontFamily: Fonts.display,
+    color: palette.ivory,
+    fontSize: 16,
+  },
+  metricContext: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 11,
+    flex: 1,
+  },
+  emotionalGuarantee: {
+    ...typography.body,
+    color: palette.ivory,
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 20,
+    paddingHorizontal: spacing.sm,
+    textAlign: 'center',
   },
 
   packagesRow: {
@@ -398,6 +555,68 @@ const styles = StyleSheet.create({
     color: palette.ash,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  leadDivider: {
+    alignSelf: 'stretch',
+    borderBottomColor: palette.line,
+    borderBottomWidth: 1,
+    marginVertical: spacing.xs,
+  },
+  leadForm: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  leadInput: {
+    ...typography.body,
+    backgroundColor: palette.black,
+    borderColor: palette.line,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    color: palette.ivory,
+    flex: 1,
+    fontSize: 14,
+    height: 44,
+    paddingHorizontal: spacing.md,
+  },
+  leadBtn: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    height: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  leadBtnText: {
+    ...typography.label,
+    color: palette.ink,
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  leadConsent: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 10,
+    lineHeight: 14,
+    textAlign: 'center',
+  },
+  leadError: {
+    ...typography.caption,
+    color: palette.danger,
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  leadDoneRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+  },
+  leadDoneText: {
+    ...typography.body,
+    color: palette.success,
+    fontSize: 14,
   },
   priceLabel: {
     ...typography.label,

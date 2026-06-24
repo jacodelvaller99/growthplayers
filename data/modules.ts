@@ -86,7 +86,7 @@ export const POLARIS_MODULES: PolarisModule[] = [
     id: 'modulo-4',
     order: 4,
     title: 'Pontífice: Estado de Flow',
-    subtitle: 'Opera desde tu máximo potencial',
+    subtitle: 'El rendimiento nace del estado',
     arquetipo: 'Pontífice',
     semana: 4,
     status: 'locked',

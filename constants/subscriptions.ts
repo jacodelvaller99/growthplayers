@@ -49,6 +49,7 @@ export const SUBSCRIPTION_TIERS = {
     features: [
       'Todo lo de Premium',
       'Curso Polaris completo (9 módulos)',
+      'Acompañamiento 1:1 (Magister)',
       'Acceso anticipado a nuevas features',
       'Soporte prioritario',
     ],

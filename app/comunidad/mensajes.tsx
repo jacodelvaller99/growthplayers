@@ -121,6 +121,20 @@ export default function MensajesScreen() {
         <View style={{ width: 38 }} />
       </View>
 
+      {/* Señal de pertenencia: derivada de datos reales (tu red de hermanos en
+          la comunidad). Si no hay conversaciones aún, se omite — no inventamos
+          números: el estado vacío ya da el encuadre honesto. */}
+      {!loading && convos.length > 0 && (
+        <View style={styles.belong}>
+          <MaterialIcons name="groups" size={16} color={palette.goldText} />
+          <Text style={styles.belongText}>
+            {convos.length === 1
+              ? '1 hermano en tu red. No caminas el protocolo solo.'
+              : `${convos.length} hermanos en tu red. No caminas el protocolo solo.`}
+          </Text>
+        </View>
+      )}
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={palette.goldText} />
@@ -172,6 +186,9 @@ const styles = StyleSheet.create({
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:     { padding: 8, minWidth: 38, alignItems: 'center' },
   title:       { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+
+  belong:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, borderRadius: 10 },
+  belongText:  { flex: 1, fontFamily: Fonts.sans, fontSize: 12.5, color: palette.ivory, lineHeight: 17 },
 
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap:   { flexGrow: 1, justifyContent: 'center' },

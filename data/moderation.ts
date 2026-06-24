@@ -12,18 +12,18 @@ export const COMMUNITY_EULA_VERSION = 1;
 export const COMMUNITY_EULA_STORAGE_KEY = 'community_eula_accepted_v1';
 
 export const COMMUNITY_EULA = {
-  title: 'NORMAS DE LA COMUNIDAD',
+  title: 'CÓDIGO DE LA HERMANDAD',
   intro:
-    'La comunidad Polaris es un espacio de alto estándar para el crecimiento de la tribu. Para entrar debes aceptar nuestra política de tolerancia cero.',
+    'Entras a una tribu de operadores que se exigen y se cuidan. Aquí cada uno protege el proceso del otro. El código no es burocracia: es lo que mantiene este espacio digno de quienes lo habitan. La regla madre es una sola: tolerancia cero al abuso entre hermanos.',
   rules: [
-    'Cero tolerancia a contenido objetable, abuso, acoso, discursos de odio o amenazas.',
-    'No se permite contenido sexual explícito, violento, ilegal ni spam.',
-    'Respeta a cada miembro. El abuso resulta en suspensión inmediata.',
-    'Puedes reportar cualquier publicación y bloquear a cualquier usuario.',
-    'Los reportes se revisan y las cuentas que incumplan serán removidas.',
+    'Cuidamos al de al lado: cero acoso, odio, amenazas ni contenido objetable. No se tolera, sin matices.',
+    'Mantenemos el espacio limpio: nada de contenido sexual explícito, violento, ilegal ni spam.',
+    'Hablamos de frente y con respeto. Quien abusa de un hermano queda fuera de inmediato.',
+    'Te damos las herramientas para protegerte: reporta cualquier publicación, bloquea a cualquier usuario.',
+    'Honramos lo que reportas: cada reporte se revisa y quien rompe el código es removido.',
   ],
   agreement:
-    'Acepto las normas y entiendo que el contenido objetable o el abuso a otros miembros no será tolerado.',
+    'Acepto el código de la hermandad. Entiendo que cuidar a la tribu es mi parte del trato y que el abuso a otro miembro no tiene cabida aquí.',
 } as const;
 
 /** Razones de reporte ofrecidas al usuario. */

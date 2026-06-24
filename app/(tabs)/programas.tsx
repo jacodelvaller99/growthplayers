@@ -1,9 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -35,6 +34,15 @@ function isModuleUnlocked(
   return prev.lessons.every((l) => completedLessons.includes(l.id));
 }
 
+// "Por qué importa" — el peso del módulo en el camino, no su contenido literal.
+// Mantiene al usuario dentro del producto en vez de mandarlo a Skool.
+function moduleStakes(module: typeof POLARIS_MODULES[number]): string {
+  if (module.arquetipo) {
+    return `Al cerrarlo integras el arquetipo del ${module.arquetipo}. No es teoría: es una capa de identidad que el resto del protocolo da por hecha.`;
+  }
+  return 'Cada módulo abre el siguiente. Cuando llegue tu turno aquí, ya habrás construido la base que lo sostiene.';
+}
+
 export default function ProgramasScreen() {
   const sc = useScreen();
   const { isDesktop } = useBreakpoint();
@@ -42,6 +50,8 @@ export default function ProgramasScreen() {
   const insets = useSafeAreaInsets();
   const { state } = useLifeFlow();
   const [toast, setToast] = useState<string | null>(null);
+  // Teaser in-app: módulo seleccionado para "Ver qué incluye" (no saca a Skool).
+  const [teaser, setTeaser] = useState<typeof POLARIS_MODULES[number] | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -115,7 +125,16 @@ export default function ProgramasScreen() {
             {/* Base — archetype, name, meta, progress */}
             <View style={styles.moduleBase}>
               {module.arquetipo ? (
-                <Text style={styles.moduleArq} numberOfLines={1}>EL {module.arquetipo.toUpperCase()}</Text>
+                isAllDone ? (
+                  <View style={styles.arqConquered}>
+                    <MaterialIcons name="military-tech" size={10} color={palette.goldText} />
+                    <Text style={styles.arqConqueredText} numberOfLines={1}>
+                      EL {module.arquetipo.toUpperCase()} · CONQUISTADO
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.moduleArq} numberOfLines={1}>EL {module.arquetipo.toUpperCase()}</Text>
+                )
               ) : null}
               <Text style={styles.moduleTitle} numberOfLines={2}>{module.title}</Text>
               <Text style={styles.moduleSubtitle} numberOfLines={1}>{module.subtitle} · {lessonsLabel}</Text>
@@ -131,18 +150,87 @@ export default function ProgramasScreen() {
           </PremiumCard>
         </Pressable>
 
-        {/* Explorar en Skool — for coming_soon or locked modules with a URL */}
-        {(isComingSoon || isLocked) && module.skoolUrl && (
+        {/* Ver qué incluye — teaser IN-APP (no saca al usuario a Skool) */}
+        {(isComingSoon || isLocked) && (
           <Pressable
-            style={({ pressed }) => [styles.skoolLink, pressed && { opacity: 0.7 }]}
-            onPress={() => Linking.openURL(module.skoolUrl!)}>
-            <MaterialIcons name="open-in-new" size={12} color={palette.goldText} />
-            <Text style={styles.skoolLinkText}>Explorar en Skool →</Text>
+            style={({ pressed }) => [styles.teaserLink, pressed && { opacity: 0.7 }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setTeaser(module);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Ver qué incluye el módulo ${module.order}`}>
+            <MaterialIcons name="visibility" size={12} color={palette.goldText} />
+            <Text style={styles.teaserLinkText}>Ver qué incluye →</Text>
           </Pressable>
         )}
       </View>
     );
   };
+
+  // ── Teaser IN-APP — "qué viene + por qué importa" (sin sacar a Skool) ──────
+  const teaserModal = (
+    <Modal
+      visible={!!teaser}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setTeaser(null)}>
+      <Pressable style={styles.teaserOverlay} onPress={() => setTeaser(null)}>
+        <Pressable style={styles.teaserCard} onPress={(e) => e.stopPropagation()}>
+          {teaser && (
+            <>
+              <View style={styles.teaserHeadRow}>
+                <Text style={styles.teaserEyebrow}>
+                  {teaser.status === 'coming_soon' ? 'PRÓXIMAMENTE' : 'AÚN BLOQUEADO'} · MÓDULO {String(teaser.order).padStart(2, '0')}
+                </Text>
+                <Pressable
+                  onPress={() => setTeaser(null)}
+                  hitSlop={8}
+                  accessibilityLabel="Cerrar">
+                  <MaterialIcons name="close" size={20} color={palette.smoke} />
+                </Pressable>
+              </View>
+
+              {teaser.arquetipo ? (
+                <Text style={styles.teaserArq}>EL {teaser.arquetipo.toUpperCase()}</Text>
+              ) : null}
+              <Text style={styles.teaserTitle}>{teaser.title}</Text>
+              <Text style={styles.teaserSub}>{teaser.subtitle}</Text>
+
+              {/* Por qué importa */}
+              <View style={styles.teaserStakesBox}>
+                <Text style={styles.teaserStakesLabel}>POR QUÉ IMPORTA</Text>
+                <Text style={styles.teaserStakesText}>{moduleStakes(teaser)}</Text>
+              </View>
+
+              {/* Qué viene — lecciones del módulo */}
+              {teaser.lessons.length > 0 ? (
+                <View style={styles.teaserLessons}>
+                  <Text style={styles.teaserStakesLabel}>QUÉ VIENE</Text>
+                  {teaser.lessons.map((l, i) => (
+                    <View key={l.id} style={styles.teaserLessonRow}>
+                      <Text style={styles.teaserLessonNum}>{String(i + 1).padStart(2, '0')}</Text>
+                      <Text style={styles.teaserLessonTitle} numberOfLines={2}>{l.title}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.teaserStakesText}>
+                  Las lecciones de este módulo se revelan cuando llegues aquí. Mantén el ritmo.
+                </Text>
+              )}
+
+              <Pressable
+                style={({ pressed }) => [styles.teaserDismiss, pressed && { opacity: 0.85 }]}
+                onPress={() => setTeaser(null)}>
+                <Text style={styles.teaserDismissText}>SEGUIR EN MI MÓDULO ACTUAL</Text>
+              </Pressable>
+            </>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────────────
   if (isDesktop) {
@@ -206,6 +294,8 @@ export default function ProgramasScreen() {
             <Text style={styles.toastText}>{toast}</Text>
           </View>
         )}
+
+        {teaserModal}
       </View>
     );
   }
@@ -252,6 +342,8 @@ export default function ProgramasScreen() {
           <Text style={styles.toastText}>{toast}</Text>
         </View>
       )}
+
+      {teaserModal}
     </View>
   );
 }
@@ -456,8 +548,8 @@ const styles = StyleSheet.create({
     width: 1,
   },
 
-  // Skool link
-  skoolLink: {
+  // Teaser link (reemplaza el antiguo link externo a Skool)
+  teaserLink: {
     alignItems: 'center',
     alignSelf: 'flex-end',
     flexDirection: 'row',
@@ -466,11 +558,143 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  skoolLinkText: {
+  teaserLinkText: {
     ...typography.mono,
     color: palette.goldText,
     fontSize: 11,
     letterSpacing: 0.5,
+  },
+
+  // Arquetipo conquistado (sello persistente en el card del módulo)
+  arqConquered: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(179,141,60,0.10)',
+    borderColor: palette.gold + '55',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  arqConqueredText: {
+    color: palette.goldText,
+    fontFamily: Fonts.mono,
+    fontSize: 7.5,
+    letterSpacing: 1.2,
+  },
+
+  // Teaser modal
+  teaserOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.88)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  teaserCard: {
+    backgroundColor: palette.graphite,
+    borderColor: palette.lineSoft,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+    maxWidth: 420,
+    padding: spacing.xl,
+    width: '100%',
+  },
+  teaserHeadRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  teaserEyebrow: {
+    color: palette.goldText,
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.6,
+  },
+  teaserArq: {
+    color: palette.ash,
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    marginTop: spacing.xs,
+  },
+  teaserTitle: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    lineHeight: 25,
+    textTransform: 'uppercase',
+  },
+  teaserSub: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+  },
+  teaserStakesBox: {
+    borderColor: palette.lineSoft,
+    borderLeftColor: palette.gold,
+    borderLeftWidth: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  teaserStakesLabel: {
+    color: palette.goldText,
+    fontFamily: Fonts.mono,
+    fontSize: 8,
+    letterSpacing: 2,
+  },
+  teaserStakesText: {
+    color: palette.ivory,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  teaserLessons: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  teaserLessonRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  teaserLessonNum: {
+    color: palette.smoke,
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    width: 20,
+  },
+  teaserLessonTitle: {
+    color: palette.ash,
+    flex: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  teaserDismiss: {
+    alignItems: 'center',
+    borderColor: palette.gold + '66',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+  },
+  teaserDismissText: {
+    color: palette.goldText,
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
 
   // Toast

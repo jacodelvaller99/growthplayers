@@ -56,6 +56,31 @@ function fmtDate(iso: string): string {
   }
 }
 
+// ── Espejo: temas que Norman trabajó, derivados del texto real de la nota ──────
+// No inventa contenido — solo etiqueta lo que YA está escrito. Si nada matchea,
+// no se muestran tags. Cada tema tiene su palabra-señal (ES) por dominio Polaris.
+const THEME_TAGS: { label: string; cues: string[] }[] = [
+  { label: 'ENFOQUE',       cues: ['enfoque', 'foco', 'prioridad', 'distrac', 'claridad'] },
+  { label: 'DISCIPLINA',    cues: ['disciplina', 'hábito', 'habito', 'rutina', 'consisten', 'compromiso'] },
+  { label: 'ENERGÍA',       cues: ['energía', 'energia', 'sueño', 'sueno', 'descanso', 'fatiga', 'recuper'] },
+  { label: 'DECISIÓN',      cues: ['decisión', 'decision', 'decidir', 'elección', 'eleccion', 'rumbo'] },
+  { label: 'EJECUCIÓN',     cues: ['ejecu', 'avanc', 'acción', 'accion', 'entreg', 'resultado'] },
+  { label: 'MIEDO',         cues: ['miedo', 'duda', 'inseg', 'ansiedad', 'bloqueo', 'resist'] },
+  { label: 'RELACIONES',    cues: ['relación', 'relacion', 'pareja', 'familia', 'equipo', 'conflicto'] },
+  { label: 'PROPÓSITO',     cues: ['propósito', 'proposito', 'sentido', 'norte', 'visión', 'vision', 'legado'] },
+];
+
+/** Devuelve los temas presentes en el texto de la nota (máx 3). Pura. */
+function deriveThemes(text: string): string[] {
+  const hay = text.toLowerCase();
+  const hits: string[] = [];
+  for (const t of THEME_TAGS) {
+    if (t.cues.some((c) => hay.includes(c))) hits.push(t.label);
+    if (hits.length >= 3) break;
+  }
+  return hits;
+}
+
 /** Etiqueta del rango de fechas de una semana, a partir del inicio del protocolo. */
 function weekRangeLabel(week: number, protocolStartDate: string): string {
   return formatWeekRange(weekDateRange(week, protocolStartDate));
@@ -346,6 +371,13 @@ export default function MentoriaScreen() {
       {m.notes.length > 0 && (
         <>
           <GoldDivider />
+          <View style={styles.mirrorIntro}>
+            <Text style={styles.mirrorIntroTitle}>EL ESPEJO DE TU PROCESO</Text>
+            <Text style={styles.mirrorIntroText}>
+              Cada sesión queda registrada. Léelas en orden y verás el arco: dónde
+              empezaste, qué se movió, hacia dónde vas.
+            </Text>
+          </View>
           <View style={styles.noteList}>
             {m.notes.map((n) => (
               <NoteCard
@@ -460,22 +492,34 @@ function WeekRow({
 }
 
 function NoteCard({ n, weekRange, onRemove }: { n: SessionNote; weekRange: string; onRemove: () => void }) {
+  // Espejo: la síntesis es lo que Norman REGISTRÓ; los temas se derivan del texto
+  // real, sin inventar. Si la nota nació de una grabación, el encuadre es "lo que
+  // Norman vio en tu sesión"; si es manual, es tu propio registro.
+  const themes = useMemo(() => deriveThemes(n.notes ?? ''), [n.notes]);
+  const fromVoice = !!n.transcript || !!n.audioUrl;
   return (
     <View style={styles.noteCard}>
       <View style={styles.noteCardHead}>
-        {n.transcript ? (
-          <View style={styles.noteCardTag}>
-            <MaterialIcons name="mic" size={11} color={palette.goldText} />
-            <Text style={styles.noteCardTagText}>GRABADA</Text>
-          </View>
-        ) : (
-          <View style={{ flex: 1 }} />
-        )}
+        <View style={styles.noteCardTag}>
+          <MaterialIcons name={fromVoice ? 'auto-awesome' : 'edit-note'} size={11} color={palette.goldText} />
+          <Text style={styles.noteCardTagText}>
+            {fromVoice ? 'LO QUE NORMAN VIO' : 'TU REGISTRO'}
+          </Text>
+        </View>
         <Pressable onPress={onRemove} hitSlop={8} accessibilityLabel="Eliminar nota">
           <MaterialIcons name="close" size={14} color={palette.smoke} />
         </Pressable>
       </View>
       <Text style={styles.noteCardText}>{n.notes}</Text>
+      {themes.length > 0 && (
+        <View style={styles.themeRow}>
+          {themes.map((t) => (
+            <View key={t} style={styles.themeTag}>
+              <Text style={styles.themeTagText}>{t}</Text>
+            </View>
+          ))}
+        </View>
+      )}
       {n.audioUrl && (
         <View style={styles.audioRow}>
           <MaterialIcons name="play-circle-outline" size={15} color={palette.goldText} />
@@ -682,12 +726,18 @@ const styles = StyleSheet.create({
   saveNoteText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, color: palette.ink, letterSpacing: 1.5 },
 
   // Note list
+  mirrorIntro: { gap: 4 },
+  mirrorIntroTitle: { fontFamily: Fonts.mono, fontSize: 10, color: palette.goldText, letterSpacing: 2 },
+  mirrorIntroText: { ...typography.body, fontSize: 12.5, color: palette.smoke, lineHeight: 18 },
   noteList: { gap: 10 },
   noteCard: { borderRadius: 10, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.graphiteLight, padding: 12, gap: 6 },
   noteCardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   noteCardTag: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
   noteCardTagText: { ...typography.mono, fontSize: 9, color: palette.goldText, letterSpacing: 1 },
   noteCardText: { ...typography.body, fontSize: 13, color: palette.ivory, lineHeight: 19 },
+  themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  themeTag: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: palette.lineGoldSubtle, backgroundColor: palette.goldGlow },
+  themeTagText: { fontFamily: Fonts.mono, fontSize: 9, color: palette.goldText, letterSpacing: 1 },
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   audioText: { ...typography.mono, fontSize: 10, color: palette.goldText, letterSpacing: 0.5 },
   noteCardFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: palette.line },

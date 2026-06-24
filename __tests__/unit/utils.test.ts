@@ -5,6 +5,9 @@ import {
   calcProtocolDay,
   calcSovereignScore,
   calcSovereignTier,
+  calcSovereignBaseline,
+  calcSovereignDelta,
+  type SovereignCheckIn,
 } from '@/lib/utils';
 
 const DAY_MS = 86_400_000;
@@ -93,5 +96,122 @@ describe('calcSovereignTier', () => {
     [0, 'INICIANDO'],
   ] as const)('score %i → %s', (score, tier) => {
     expect(calcSovereignTier(score)).toBe(tier);
+  });
+});
+
+// ─── Sovereign delta-driven (línea base + progreso) ───────────────────────────
+
+const D = 86_400_000;
+/** Fecha ISO a `n` días del epoch + 'YYYY-...' estable (mediodía UTC para evitar bordes). */
+const dayIso = (n: number) => new Date(n * D + 12 * 3_600_000).toISOString();
+/** Helper para construir un check-in. */
+const ci = (
+  day: number,
+  energy: number,
+  clarity: number,
+  stress: number,
+  sleep: number,
+): SovereignCheckIn => ({ date: dayIso(day), energy, clarity, stress, sleep });
+
+describe('calcSovereignBaseline', () => {
+  it('<3 check-ins → ready:false', () => {
+    const base = calcSovereignBaseline([ci(0, 5, 5, 5, 5), ci(1, 6, 6, 4, 6)]);
+    expect(base.ready).toBe(false);
+  });
+
+  it('array vacío → ready:false (sin crash)', () => {
+    expect(calcSovereignBaseline([]).ready).toBe(false);
+  });
+
+  it('<3 check-ins DENTRO de los primeros 7 días → ready:false aunque haya más después', () => {
+    // 2 en la ventana [0,7) + 2 fuera (día 8,9). La ventana solo cuenta los primeros 7 días.
+    const base = calcSovereignBaseline([
+      ci(0, 5, 5, 5, 5),
+      ci(2, 5, 5, 5, 5),
+      ci(8, 9, 9, 1, 9),
+      ci(9, 9, 9, 1, 9),
+    ]);
+    expect(base.ready).toBe(false);
+  });
+
+  it('baseline correcto promediando los primeros 7 días calendario', () => {
+    // 3 check-ins en [0,7): energy 4/6/8 → 6; clarity 6; stress 4/4/4 → coherence 6; sleep 5/6/7 → 6.
+    // El check-in del día 10 queda FUERA de la ventana → no afecta.
+    const base = calcSovereignBaseline([
+      ci(0, 4, 5, 4, 5),
+      ci(3, 6, 6, 4, 6),
+      ci(6, 8, 7, 4, 7),
+      ci(10, 1, 1, 9, 1),
+    ]);
+    expect(base.ready).toBe(true);
+    expect(base.energy).toBeCloseTo(6);
+    expect(base.clarity).toBeCloseTo(6);
+    expect(base.coherence).toBeCloseTo(6); // 10 - 4
+    expect(base.sleep).toBeCloseTo(6);
+  });
+});
+
+describe('calcSovereignDelta', () => {
+  it('sin línea base lista (días 1-7, <3 check-ins) → hasBaseline:false + label de construcción', () => {
+    const delta = calcSovereignDelta([ci(0, 5, 5, 5, 5), ci(1, 6, 6, 4, 6)]);
+    expect(delta.hasBaseline).toBe(false);
+    expect(delta.state).toBe('stable');
+    expect(delta.deltaPct).toBe(0);
+    expect(delta.label.toLowerCase()).toContain('línea base');
+  });
+
+  it('array vacío → hasBaseline:false (sin crash)', () => {
+    expect(calcSovereignDelta([]).hasBaseline).toBe(false);
+  });
+
+  it('delta positivo cuando el cliente mejora vs su línea base', () => {
+    const checkIns = [
+      // Baseline: primeros 7 días, compuesto bajo.
+      ci(0, 4, 4, 6, 4),
+      ci(2, 4, 4, 6, 4),
+      ci(5, 4, 4, 6, 4),
+      // Últimos 7 días (día 20-26): mejor en todo.
+      ci(20, 8, 8, 2, 8),
+      ci(23, 8, 8, 2, 8),
+      ci(26, 8, 8, 2, 8),
+    ];
+    const delta = calcSovereignDelta(checkIns);
+    expect(delta.hasBaseline).toBe(true);
+    expect(delta.state).toBe('gaining');
+    expect(delta.deltaPct).toBeGreaterThan(0);
+    expect(delta.subDeltas.energy).toBeCloseTo(4); // 8 - 4
+    expect(delta.subDeltas.coherence).toBeCloseTo(4); // (10-2) - (10-6)
+    expect(delta.label.toLowerCase()).toContain('ascenso');
+  });
+
+  it('delta declinante cuando el cliente empeora vs su línea base', () => {
+    const checkIns = [
+      ci(0, 8, 8, 2, 8),
+      ci(2, 8, 8, 2, 8),
+      ci(5, 8, 8, 2, 8),
+      ci(20, 4, 4, 6, 4),
+      ci(23, 4, 4, 6, 4),
+      ci(26, 4, 4, 6, 4),
+    ];
+    const delta = calcSovereignDelta(checkIns);
+    expect(delta.hasBaseline).toBe(true);
+    expect(delta.state).toBe('declining');
+    expect(delta.deltaPct).toBeLessThan(0);
+    expect(delta.label.toLowerCase()).toContain('descenso');
+  });
+
+  it('estable cuando el cambio es pequeño (<5%)', () => {
+    const checkIns = [
+      ci(0, 6, 6, 4, 6),
+      ci(2, 6, 6, 4, 6),
+      ci(5, 6, 6, 4, 6),
+      ci(20, 6, 6, 4, 6),
+      ci(23, 6, 6, 4, 6),
+      ci(26, 6, 6, 4, 6),
+    ];
+    const delta = calcSovereignDelta(checkIns);
+    expect(delta.hasBaseline).toBe(true);
+    expect(delta.state).toBe('stable');
+    expect(delta.deltaPct).toBeCloseTo(0);
   });
 });

@@ -23,7 +23,27 @@ import { analytics } from '@/lib/analytics';
 import { intel } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
+
+// Intro de valor (≈20s, skippable) — entre el consent gate y la identidad.
+// COPY AFINABLE POR EL DUEÑO: 3 viñetas sobrias, voz Polaris, sin claims/métricas.
+const VALUE_BULLETS: { icon: 'military-tech' | 'psychology' | 'insights'; title: string; body: string }[] = [
+  {
+    icon: 'military-tech',
+    title: 'Un protocolo. 4 cuerpos. 90 días.',
+    body: 'Físico, mental, emocional y energético en un solo sistema.',
+  },
+  {
+    icon: 'psychology',
+    title: 'Norman te acompaña con tus datos, no con frases.',
+    body: 'Tu mentor lee tu biometría y tu historia antes de hablar.',
+  },
+  {
+    icon: 'insights',
+    title: 'Persigues el estado; el resultado es consecuencia.',
+    body: 'El sistema interno se entrena; el rendimiento llega solo.',
+  },
+];
 
 // Consent gate — Términos, Privacidad y Descargo de Salud (compliance de lanzamiento)
 type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation';
@@ -87,16 +107,20 @@ export default function OnboardingScreen() {
         console.warn('[Onboarding] persist consents:', e);
       }
     }
-    setStep(1);
+    setStep(1); // → intro de valor (skippable)
   };
 
-  const goToStep3 = () => {
-    // Pre-populate purpose with pain point if user hasn't set it yet
+  // El obstáculo (painPoint) sigue pre-poblando north.purpose si el usuario no lo definió.
+  // Ahora el obstáculo va DESPUÉS del Norte (paso 3) → al avanzar al código de acceso.
+  const goFromObstacleToCode = () => {
     if (painPoint.trim() && !north.purpose.trim()) {
       setNorth((n) => ({ ...n, purpose: painPoint.trim() }));
     }
-    setStep(3);
+    setStep(5);
   };
+
+  // Chips de ejemplo para arrancar el obstáculo sin enfrentar un textarea en blanco.
+  const obstacleChip = (text: string) => () => setPainPoint(text);
 
   const handleApplyCode = async () => {
     if (!accessCode.trim()) return;
@@ -145,7 +169,7 @@ export default function OnboardingScreen() {
       keyboardShouldPersistTaps="handled">
       {/* ── Step Progress ── */}
       <View style={styles.stepRow}>
-        {[0, 1, 2, 3, 4].map((i) => (
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <View key={i} style={[styles.stepSeg, i <= step && styles.stepSegActive]} />
         ))}
         <Text style={styles.stepCounter}>{step + 1}/{TOTAL_STEPS}</Text>
@@ -189,8 +213,8 @@ export default function OnboardingScreen() {
           {/* ── Consentimiento legal (gate de compliance) ── */}
           <View style={styles.consentBlock}>
             <Text style={styles.consentIntro}>
-              Esto es bienestar y alto rendimiento, no atención médica. Consulta cualquier práctica
-              con tu médico. Para continuar, lee y acepta:
+              Esto es alto rendimiento y bienestar, no atención médica. Consulta cualquier práctica
+              con tu médico antes de aplicarla. Para entrar al sistema, lee y acepta:
             </Text>
             {CONSENT_ITEMS.map(({ key, label, route }) => (
               <Pressable
@@ -242,8 +266,37 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      {/* ─────────────────────────────────────────── STEP 1 — IDENTIDAD ── */}
+      {/* ───────────────────────────────────── STEP 1 — INTRO DE VALOR ── */}
+      {/* ≈20s, skippable. Activa antes de pedir datos. NO bloqueante. */}
       {step === 1 && (
+        <View style={styles.introWrap}>
+          <Text style={styles.eyebrow}>ANTES DE EMPEZAR</Text>
+          <View style={styles.goldAccent} />
+          <Text style={styles.introTitle}>QUÉ ES{'\n'}POLARIS.</Text>
+
+          <View style={styles.introList}>
+            {VALUE_BULLETS.map(({ icon, title, body }) => (
+              <View key={title} style={styles.introRow}>
+                <View style={styles.introIcon}>
+                  <MaterialIcons name={icon} size={18} color={palette.goldText} />
+                </View>
+                <View style={styles.introCopy}>
+                  <Text style={styles.introBulletTitle}>{title}</Text>
+                  <Text style={styles.introBulletBody}>{body}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <PrimaryButton label="EMPEZAR" icon="arrow-forward" onPress={() => setStep(2)} />
+          <Pressable onPress={() => setStep(2)} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+            <Text style={styles.skipText}>Saltar →</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* ─────────────────────────────────────────── STEP 2 — IDENTIDAD ── */}
+      {step === 2 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="PASO 1 · IDENTIDAD" />
           <Text style={styles.stepTitle}>OPERADOR{'\n'}SOBERANO.</Text>
@@ -274,101 +327,20 @@ export default function OnboardingScreen() {
             />
           </View>
           <View style={styles.actions}>
-            <SecondaryButton label="ATRAS" onPress={() => setStep(0)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(2)} />
-          </View>
-        </PremiumCard>
-      )}
-
-      {/* ──────────────────────────────────────────── STEP 2 — OBSTÁCULO ── */}
-      {step === 2 && (
-        <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 2 · TU SITUACIÓN" />
-          <Text style={styles.stepTitle}>DEFINE EL{'\n'}OBSTÁCULO.</Text>
-          <Text style={styles.stepBody}>
-            Una sola respuesta. Se especifico — la vaguedad protege el ego pero bloquea el cambio.
-          </Text>
-          <GoldDivider />
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>¿QUÉ CAMBIA TODO EN 90 DÍAS?</Text>
-            <PremiumInput
-              value={painPoint}
-              onChangeText={setPainPoint}
-              placeholder={"Ej: Mi empresa genera $50K/mes pero yo trabajo 80 horas. No delego porque siento que nadie lo hace como yo..."}
-              multiline
-              style={styles.textArea}
-              accessibilityLabel="Tu mayor obstaculo"
-            />
-          </View>
-          <Text style={styles.hintText}>
-            Esta respuesta guía a tu mentor desde el primer mensaje. Sé más específico de lo que crees necesario.
-          </Text>
-          <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(1)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={goToStep3} />
+            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(3)} />
           </View>
-          <Pressable onPress={goToStep3} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
-            <Text style={styles.skipText}>Completar después →</Text>
-          </Pressable>
         </PremiumCard>
       )}
 
-      {/* ──────────────────────────────── STEP 3 — CÓDIGO DE ACCESO ── */}
+      {/* ──────────────────────────────────────────── STEP 3 — MI NORTE ── */}
       {step === 3 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 3 · MEMBRESÍA" />
-          <Text style={styles.stepTitle}>ACTIVA TU{'\n'}MEMBRESÍA.</Text>
-          <Text style={styles.stepBody}>
-            Tu coach te entregó un código al inscribirte. Ingrésalo aquí para desbloquear el acceso
-            completo al Protocolo Soberano. Si aún no lo tienes, continúa y actívalo después.
-          </Text>
-          <GoldDivider />
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO</Text>
-            <View style={styles.codeRow}>
-              <PremiumInput
-                value={accessCode}
-                onChangeText={v => { setAccessCode(v); setCodeStatus('idle'); setCodeMessage(''); }}
-                placeholder="Ej: POLARIS-2026-A1"
-                autoCapitalize="characters"
-                accessibilityLabel="Código de acceso"
-                returnKeyType="done"
-                style={{ flex: 1 }}
-              />
-              <Pressable
-                style={[styles.applyBtn, (!accessCode.trim() || codeStatus === 'checking') && { opacity: 0.5 }]}
-                onPress={handleApplyCode}
-                disabled={!accessCode.trim() || codeStatus === 'checking'}>
-                {codeStatus === 'checking' ? (
-                  <ActivityIndicator color={palette.ink} size="small" />
-                ) : (
-                  <Text style={styles.applyBtnText}>APLICAR</Text>
-                )}
-              </Pressable>
-            </View>
-            {codeMessage ? (
-              <Text style={[styles.codeMsg, { color: codeStatus === 'ok' ? palette.success : palette.danger }]}>
-                {codeMessage}
-              </Text>
-            ) : null}
-          </View>
-          <View style={styles.actions}>
-            <SecondaryButton label="ATRAS" onPress={() => setStep(2)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(4)} />
-          </View>
-          <Pressable onPress={() => setStep(4)} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
-            <Text style={styles.skipText}>Continuar sin código →</Text>
-          </Pressable>
-        </PremiumCard>
-      )}
-
-      {/* ──────────────────────────────────────────── STEP 4 — MI NORTE ── */}
-      {step === 4 && (
-        <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 4 · MI NORTE" tone="gold" dot />
+          <StatusPill label="PASO 2 · MI NORTE" tone="gold" dot />
           <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
-            Estas declaraciones guían cada decisión del protocolo. El mentor las usa en cada sesión. Puedes editarlas después.
+            Antes de la táctica, la dirección. Estas declaraciones orientan cada decisión del
+            protocolo y el mentor las usa en cada sesión. Persigue el estado, no el resultado. Puedes editarlas después.
           </Text>
           <GoldDivider />
           <View style={styles.fieldGroup}>
@@ -405,9 +377,112 @@ export default function OnboardingScreen() {
             />
           </View>
           <View style={styles.actions}>
+            <SecondaryButton label="ATRAS" onPress={() => setStep(2)} />
+            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(4)} />
+          </View>
+        </PremiumCard>
+      )}
+
+      {/* ──────────────────────────────────────────── STEP 4 — OBSTÁCULO ── */}
+      {step === 4 && (
+        <PremiumCard style={styles.formCard}>
+          <StatusPill label="PASO 3 · TU SITUACIÓN" />
+          <Text style={styles.stepTitle}>NOMBRA EL{'\n'}OBSTÁCULO.</Text>
+          <Text style={styles.stepBody}>
+            Opcional, pero útil: una línea sobre lo que se interpone te da a tu mentor contexto desde
+            el primer mensaje. Puedes dejarlo para después.
+          </Text>
+          <GoldDivider />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>¿QUÉ SE INTERPONE HOY?</Text>
+            <View style={styles.chipRow}>
+              {[
+                'Trabajo demasiado y no delego',
+                'Mi energía no aguanta el día',
+                'Avanzo sin dirección clara',
+                'Empiezo y no sostengo',
+              ].map((chip) => (
+                <Pressable
+                  key={chip}
+                  onPress={obstacleChip(chip)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Usar ejemplo: ${chip}`}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    painPoint === chip && styles.chipActive,
+                    pressed && { opacity: 0.7 },
+                  ]}>
+                  <Text style={[styles.chipText, painPoint === chip && styles.chipTextActive]}>
+                    {chip}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <PremiumInput
+              value={painPoint}
+              onChangeText={setPainPoint}
+              placeholder={"Toca un ejemplo o escribe el tuyo. Cuanto más concreto, mejor te lee el mentor."}
+              multiline
+              style={styles.textArea}
+              accessibilityLabel="Tu mayor obstaculo"
+            />
+          </View>
+          <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(3)} />
+            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={goFromObstacleToCode} />
+          </View>
+          <Pressable onPress={goFromObstacleToCode} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+            <Text style={styles.skipText}>Continuar sin definirlo →</Text>
+          </Pressable>
+        </PremiumCard>
+      )}
+
+      {/* ──────────────────────────────── STEP 5 — CÓDIGO DE ACCESO ── */}
+      {step === 5 && (
+        <PremiumCard style={styles.formCard}>
+          <StatusPill label="PASO 4 · MEMBRESÍA" />
+          <Text style={styles.stepTitle}>ACTIVA TU{'\n'}MEMBRESÍA.</Text>
+          <Text style={styles.stepBody}>
+            Tu coach te entregó un código al inscribirte. Ingrésalo aquí para desbloquear el acceso
+            completo al Protocolo Soberano. Si aún no lo tienes, inicia y actívalo después.
+          </Text>
+          <GoldDivider />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO</Text>
+            <View style={styles.codeRow}>
+              <PremiumInput
+                value={accessCode}
+                onChangeText={v => { setAccessCode(v); setCodeStatus('idle'); setCodeMessage(''); }}
+                placeholder="Ej: POLARIS-2026-A1"
+                autoCapitalize="characters"
+                accessibilityLabel="Código de acceso"
+                returnKeyType="done"
+                style={{ flex: 1 }}
+              />
+              <Pressable
+                style={[styles.applyBtn, (!accessCode.trim() || codeStatus === 'checking') && { opacity: 0.5 }]}
+                onPress={handleApplyCode}
+                disabled={!accessCode.trim() || codeStatus === 'checking'}>
+                {codeStatus === 'checking' ? (
+                  <ActivityIndicator color={palette.ink} size="small" />
+                ) : (
+                  <Text style={styles.applyBtnText}>APLICAR</Text>
+                )}
+              </Pressable>
+            </View>
+            {codeMessage ? (
+              <Text style={[styles.codeMsg, { color: codeStatus === 'ok' ? palette.success : palette.danger }]}>
+                {codeMessage}
+              </Text>
+            ) : null}
+          </View>
+          <View style={styles.actions}>
+            <SecondaryButton label="ATRAS" onPress={() => setStep(4)} />
             <PrimaryButton label="INICIAR EL PROTOCOLO" icon="military-tech" onPress={finish} />
           </View>
+          <Pressable onPress={finish} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+            <Text style={styles.skipText}>Iniciar sin código →</Text>
+          </Pressable>
         </PremiumCard>
       )}
     </ScrollView>
@@ -483,6 +558,54 @@ const styles = StyleSheet.create({
   dividerLine: {
     backgroundColor: palette.line,
     height: 1,
+  },
+
+  // ── Intro de valor (≈20s, skippable)
+  introWrap: {
+    gap: spacing.xl,
+  },
+  introTitle: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 40,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    lineHeight: 44,
+    textTransform: 'uppercase',
+  },
+  introList: {
+    gap: spacing.lg,
+  },
+  introRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  introIcon: {
+    alignItems: 'center',
+    backgroundColor: palette.goldLight,
+    borderRadius: radii.md,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  introCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  introBulletTitle: {
+    ...typography.body,
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  introBulletBody: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
+    lineHeight: 19,
   },
 
   // ── Consent gate
@@ -585,12 +708,35 @@ const styles = StyleSheet.create({
     color: palette.smoke,
     fontSize: 12,
   },
-  hintText: {
+  // ── Obstacle example chips (lighter entry than a blank textarea)
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    alignItems: 'center',
+    backgroundColor: palette.goldLight,
+    borderColor: palette.line,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  chipActive: {
+    backgroundColor: palette.gold,
+    borderColor: palette.gold,
+  },
+  chipText: {
     ...typography.caption,
-    color: palette.smoke,
-    fontSize: 11,
-    lineHeight: 16,
-    fontStyle: 'italic',
+    color: palette.ash,
+    fontSize: 12,
+  },
+  chipTextActive: {
+    color: palette.ink,
+    fontWeight: '700',
   },
   textArea: {
     minHeight: 88,

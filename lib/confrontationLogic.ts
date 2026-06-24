@@ -198,6 +198,29 @@ function isOnboardingTooNew(b: ConfrontationBundle, nowMs: number, minDays: numb
   return daysSince(b.onboardingCompletedAt, nowMs) < minDays;
 }
 
+// ─── Presence Protocol — suspender confrontación cuando el operador es vulnerable ─
+/**
+ * Honeymoon: los primeros días tras onboarding son para construir vínculo, no
+ * confrontar. true si lleva < honeymoonDays desde onboardingCompletedAt.
+ */
+export function isInHoneymoon(b: ConfrontationBundle, nowMs: number, honeymoonDays = 7): boolean {
+  return daysSince(b.onboardingCompletedAt, nowMs) < honeymoonDays;
+}
+
+/**
+ * Estado emocional comprometido: toma los 3 check-ins más recientes; vulnerable
+ * si la energía promedio <= 3 O el estrés del más reciente >= 8. Sin check-ins → false.
+ */
+export function isInCompromisedEmotionalState(b: ConfrontationBundle): boolean {
+  if (b.recentCheckIns.length === 0) return false;
+  const last3 = [...b.recentCheckIns]
+    .sort((a, c) => new Date(c.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 3);
+  const latest = last3[0];
+  const avgEnergy = last3.reduce((s, c) => s + c.energy, 0) / last3.length;
+  return avgEnergy <= 3 || latest.stress >= 8;
+}
+
 function num(v: unknown): number | null {
   return typeof v === 'number' && !Number.isNaN(v) ? v : null;
 }
@@ -622,6 +645,10 @@ function isDismissed(itemId: string, dismissals: ConfrontationDismissal[], nowMs
 export function buildConfrontations(b: ConfrontationBundle, nowMs: number): BuildResult {
   const reason = globalGuards(b);
   if (reason) return { items: [], skipped: [{ id: 'all', reason }] };
+
+  // Presence Protocol: si el operador es vulnerable, contener antes que confrontar.
+  if (isInHoneymoon(b, nowMs)) return { items: [], skipped: [{ id: 'all', reason: 'honeymoon_period' }] };
+  if (isInCompromisedEmotionalState(b)) return { items: [], skipped: [{ id: 'all', reason: 'low_energy_or_high_stress' }] };
 
   const raw: ConfrontationItem[] = [];
   const skipped: { id: string; reason: string }[] = [];

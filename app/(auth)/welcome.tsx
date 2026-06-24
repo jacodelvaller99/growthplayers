@@ -12,7 +12,7 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -32,6 +32,10 @@ export default function WelcomeScreen() {
   const insets  = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
 
+  // Mientras corre la intro, una capa transparente captura el tap para saltarla.
+  // Al terminar (o al primer tap) se retira y los CTAs quedan libres.
+  const [introPlaying, setIntroPlaying] = useState(true);
+
   // ── Shared animation values ──────────────────────────────────────────────
   const markO   = useSharedValue(0);
   const markS   = useSharedValue(0.78);
@@ -45,21 +49,45 @@ export default function WelcomeScreen() {
   const ctaO    = useSharedValue(0);
   const ctaY    = useSharedValue(22);
 
-  useEffect(() => {
+  const runIntro = () => {
     const ease = Easing.out(Easing.cubic);
     const quad = Easing.out(Easing.quad);
 
-    markO.value  = withDelay(150,  withTiming(1,  { duration: 700, easing: ease }));
-    markS.value  = withDelay(150,  withTiming(1,  { duration: 700, easing: ease }));
-    eyeO.value   = withDelay(650,  withTiming(1,  { duration: 420 }));
-    eyeY.value   = withDelay(650,  withTiming(0,  { duration: 420, easing: quad }));
-    ruleW.value  = withDelay(950,  withTiming(40, { duration: 350, easing: quad }));
-    titleO.value = withDelay(1100, withTiming(1,  { duration: 560, easing: ease }));
-    titleY.value = withDelay(1100, withTiming(0,  { duration: 560, easing: ease }));
-    bodyO.value  = withDelay(1550, withTiming(1,  { duration: 600 }));
-    statsO.value = withDelay(1850, withTiming(1,  { duration: 500 }));
-    ctaO.value   = withDelay(2200, withTiming(1,  { duration: 520 }));
-    ctaY.value   = withDelay(2200, withTiming(0,  { duration: 520, easing: quad }));
+    // Stagger reducido ~50% para una entrada más ágil (sin tocar duraciones/branding).
+    markO.value  = withDelay(75,   withTiming(1,  { duration: 700, easing: ease }));
+    markS.value  = withDelay(75,   withTiming(1,  { duration: 700, easing: ease }));
+    eyeO.value   = withDelay(325,  withTiming(1,  { duration: 420 }));
+    eyeY.value   = withDelay(325,  withTiming(0,  { duration: 420, easing: quad }));
+    ruleW.value  = withDelay(475,  withTiming(40, { duration: 350, easing: quad }));
+    titleO.value = withDelay(550,  withTiming(1,  { duration: 560, easing: ease }));
+    titleY.value = withDelay(550,  withTiming(0,  { duration: 560, easing: ease }));
+    bodyO.value  = withDelay(775,  withTiming(1,  { duration: 600 }));
+    statsO.value = withDelay(925,  withTiming(1,  { duration: 500 }));
+    ctaO.value   = withDelay(1100, withTiming(1,  { duration: 520 }));
+    ctaY.value   = withDelay(1100, withTiming(0,  { duration: 520, easing: quad }));
+  };
+
+  // Saltar intro: lleva todo a su estado final al instante (un tap revela los CTAs ya).
+  const skipIntro = () => {
+    setIntroPlaying(false);
+    markO.value = withTiming(1, { duration: 0 });
+    markS.value = withTiming(1, { duration: 0 });
+    eyeO.value  = withTiming(1, { duration: 0 });
+    eyeY.value  = withTiming(0, { duration: 0 });
+    ruleW.value = withTiming(40, { duration: 0 });
+    titleO.value = withTiming(1, { duration: 0 });
+    titleY.value = withTiming(0, { duration: 0 });
+    bodyO.value = withTiming(1, { duration: 0 });
+    statsO.value = withTiming(1, { duration: 0 });
+    ctaO.value  = withTiming(1, { duration: 0 });
+    ctaY.value  = withTiming(0, { duration: 0 });
+  };
+
+  useEffect(() => {
+    runIntro();
+    // La intro termina ~1620ms (último delay 1100 + duración 520) → libera la capa.
+    const t = setTimeout(() => setIntroPlaying(false), 1650);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -94,18 +122,19 @@ export default function WelcomeScreen() {
   const statsTriad = (
     <Animated.View style={[styles.statsRow, statsStyle]}>
       <View style={styles.stat}>
-        <Text style={styles.statNum}>90</Text>
-        <Text style={styles.statLabel}>DÍAS</Text>
+        <Text style={styles.statNum}>4</Text>
+        <Text style={styles.statLabel}>CUERPOS</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.stat}>
-        <Text style={styles.statNum}>360°</Text>
-        <Text style={styles.statLabel}>BIENESTAR</Text>
+        <Text style={styles.statNum}>3</Text>
+        <Text style={styles.statLabel}>MEDICINA · PSICOLOGÍA</Text>
+        <Text style={styles.statLabel}>RENDIMIENTO</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.stat}>
         <Text style={styles.statNum}>1</Text>
-        <Text style={styles.statLabel}>PROTOCOLO</Text>
+        <Text style={styles.statLabel}>PROTOCOLO SOBERANO</Text>
       </View>
     </Animated.View>
   );
@@ -134,8 +163,8 @@ export default function WelcomeScreen() {
             POLARIS GROWTH INSTITUTE
           </Animated.Text>
           <Animated.Text style={[styles.desktopTagline, titleStyle]}>
-            OPERA DESDE TU{'\n'}
-            <Text style={styles.desktopTaglineGold}>MÁXIMO POTENCIAL</Text>
+            PERSIGUE EL ESTADO,{'\n'}
+            <Text style={styles.desktopTaglineGold}>NO EL RESULTADO.</Text>
           </Animated.Text>
           <Text style={styles.desktopVersion}>PROTOCOLO v4.2 · SOBERANÍA OPERATIVA</Text>
         </View>
@@ -157,6 +186,16 @@ export default function WelcomeScreen() {
             {ctas}
           </View>
         </View>
+
+        {/* Capa saltar-intro: solo activa mientras corre la animación; un tap la revela toda. */}
+        {introPlaying && (
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={skipIntro}
+            accessibilityRole="button"
+            accessibilityLabel="Saltar introducción"
+          />
+        )}
       </View>
     );
   }
@@ -198,6 +237,16 @@ export default function WelcomeScreen() {
 
       {/* ── CTAs ── */}
       {ctas}
+
+      {/* Capa saltar-intro: solo activa mientras corre la animación; un tap la revela toda. */}
+      {introPlaying && (
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={skipIntro}
+          accessibilityRole="button"
+          accessibilityLabel="Saltar introducción"
+        />
+      )}
     </View>
   );
 }
@@ -248,11 +297,13 @@ const styles = StyleSheet.create({
 
   // ── Stats ───────────────────────────────────────────────────────────────
   statsRow: {
-    alignItems:     'center',
-    flexDirection:  'row',
-    gap:            spacing.xl,
+    alignItems:      'center',
+    flexDirection:   'row',
+    justifyContent:  'center',
+    gap:             spacing.md,
   },
   stat: {
+    flex:       1,
     alignItems: 'center',
     gap:        4,
   },
@@ -268,6 +319,7 @@ const styles = StyleSheet.create({
     color:        palette.smoke,
     fontSize:     11,
     letterSpacing: 1.5,
+    textAlign:    'center',
   },
   statDivider: {
     width:           1,

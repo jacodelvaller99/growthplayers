@@ -20,11 +20,11 @@ const FASTING_STAGES = [
   { h: [0,  4],  name: 'Digestión activa',   info: 'El cuerpo procesa los nutrientes. Insulina elevada.',           color: palette.smoke },
   { h: [4,  8],  name: 'Post-absorción',      info: 'Glucosa se normaliza. El cuerpo empieza a usar glucógeno.',     color: palette.smoke },
   { h: [8,  12], name: 'Estado de ayuno',     info: 'Glucógeno casi agotado. Transición hacia grasas.',             color: '#EDBA01' },
-  { h: [12, 16], name: 'Cetosis temprana',    info: 'Producción de cetonas. Claridad mental aumenta notablemente.', color: '#E8A000' },
-  { h: [16, 20], name: 'Autofagia activa',    info: 'Reciclaje celular profundo. Premio Nobel Medicina 2016.',      color: '#D4AF37' },
-  { h: [20, 24], name: 'Regeneración máx.',   info: 'HGH aumenta hasta 5×. Reducción de inflamación sistémica.',   color: '#C8A020' },
-  { h: [24, 48], name: 'Autofagia profunda',  info: 'Renovación celular sostenida. Glucógeno totalmente agotado.',  color: '#C8A020' },
-  { h: [48, 72], name: 'Reinicio inmune',     info: 'Regeneración de células madre y del sistema inmune (>48h).',   color: '#B8901C' },
+  { h: [12, 16], name: 'Cetosis temprana',    info: 'Producción de cetonas. Muchos reportan más claridad mental.',  color: '#E8A000' },
+  { h: [16, 20], name: 'Autofagia activa',    info: 'El reciclaje celular (autofagia) se intensifica. Mecanismo del Nobel 2016; evidencia en humanos aún en estudio.', color: '#D4AF37' },
+  { h: [20, 24], name: 'Cetosis profunda',    info: 'Estudios pequeños reportan más hormona de crecimiento y menos inflamación.', color: '#C8A020' },
+  { h: [24, 48], name: 'Autofagia sostenida', info: 'Glucógeno agotado; el cuerpo recurre a la grasa. Autofagia sostenida (evidencia mayormente preclínica).', color: '#C8A020' },
+  { h: [48, 72], name: 'Cambio metabólico',   info: 'Modelos preclínicos sugieren recambio inmune; en humanos no está confirmado. Solo con supervisión.', color: '#B8901C' },
 ];
 
 const PROTOCOLS = [
@@ -33,7 +33,7 @@ const PROTOCOLS = [
   { label: '20:4',  targetHours: 20, description: 'Avanzado. Para quienes dominan el 18:6.' },
   { label: '24h',   targetHours: 24, description: 'Un día completo. Solo para practicantes experimentados.' },
   { label: '48h',   targetHours: 48, description: 'Ayuno prolongado. Autofagia profunda. Requiere experiencia.' },
-  { label: '72h',   targetHours: 72, description: 'Reinicio inmune. Solo con supervisión y mucha preparación.' },
+  { label: '72h',   targetHours: 72, description: 'Ayuno extendido. Solo con supervisión médica y mucha preparación.' },
 ];
 
 // ── Guía educativa: preparar, hidratar y romper el ayuno (refeeding) ──────────

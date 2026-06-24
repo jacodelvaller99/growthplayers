@@ -35,7 +35,7 @@ interface StackItem {
 
 const SUPPLEMENTS: Record<Tab, Supplement[]> = {
   energia: [
-    { name: 'Ashwagandha', dose: '300–600 mg',  timing: 'Mañana con comida',   evidence: 'Reduce cortisol 27%. Mejora resistencia al estrés (KSM-66).', color: '#E8A000' },
+    { name: 'Ashwagandha', dose: '300–600 mg',  timing: 'Mañana con comida',   evidence: 'En ensayos KSM-66 reduce cortisol (~27%) y mejora la resistencia al estrés.', color: '#E8A000' },
     { name: 'Vitamina D3', dose: '5000 UI',      timing: 'Mañana con grasa',    evidence: 'Deficiencia correlaciona con fatiga crónica. Óptimo: 60-80 ng/mL.', color: '#EDBA01' },
     { name: 'B-Complex',   dose: '1 cápsula',    timing: 'Desayuno',            evidence: 'B12 y B6 esenciales en producción de ATP y síntesis de dopamina.', color: '#D4AF37' },
     { name: 'CoQ10',       dose: '100–200 mg',   timing: 'Almuerzo con grasa',  evidence: 'Cofactor en cadena mitocondrial. Especialmente útil >35 años.', color: '#C8A020' },
@@ -45,13 +45,13 @@ const SUPPLEMENTS: Record<Tab, Supplement[]> = {
     { name: 'Magnesio Glicinato', dose: '300–400 mg', timing: '30–60 min antes dormir', evidence: 'Activa receptores GABA. Reduce tiempo de conciliación en 17 min.', color: '#8B9DFF' },
     { name: 'L-Teanina',    dose: '200 mg',      timing: '30 min antes dormir', evidence: 'Aumenta ondas alfa cerebrales. Sinérgico con magnesio para sueño profundo.', color: '#7B8DFF' },
     { name: 'Melatonina',   dose: '0.5–1 mg',    timing: '20 min antes dormir', evidence: 'Dosis bajas (0.5 mg) más efectivas que altas. No genera dependencia.', color: '#6B7DFF' },
-    { name: 'Ashwagandha',  dose: '300 mg',      timing: 'Noche',               evidence: 'Reduce cortisol nocturno. Mejora calidad de sueño en 72% de usuarios.', color: '#5B6DFF' },
+    { name: 'Ashwagandha',  dose: '300 mg',      timing: 'Noche',               evidence: 'Adaptógeno. Estudios reportan menor cortisol y mejor calidad de sueño.', color: '#5B6DFF' },
     { name: 'Glicina',      dose: '3 g',         timing: 'Antes de dormir',     evidence: 'Baja temperatura corporal central. Aumenta sueño REM según estudios.', color: '#4B5DFF' },
   ],
   cognitivo: [
-    { name: "Lion's Mane",  dose: '500–1000 mg', timing: 'Mañana',              evidence: 'Estimula NGF (Factor Nervioso). Regeneración neuronal demostrada.', color: '#4CAF50' },
+    { name: "Lion's Mane",  dose: '500–1000 mg', timing: 'Mañana',              evidence: 'Estudios preliminares sugieren que estimula el NGF (factor de crecimiento nervioso).', color: '#4CAF50' },
     { name: 'Omega-3 DHA',  dose: '1–2 g DHA',   timing: 'Con comida grasa',   evidence: 'DHA constituye 25% del córtex prefrontal. Esencial en neurogénesis.', color: '#45A045' },
-    { name: 'Rhodiola',     dose: '200–400 mg',  timing: 'Mañana en ayunas',    evidence: 'Reduce fatiga mental en 20%. No genera tolerancia en ciclos de 3 meses.', color: '#3A9035' },
+    { name: 'Rhodiola',     dose: '200–400 mg',  timing: 'Mañana en ayunas',    evidence: 'Adaptógeno. Estudios reportan menor fatiga mental bajo estrés.', color: '#3A9035' },
     { name: 'Alpha-GPC',    dose: '300–600 mg',  timing: 'Mañana o pre-entreno',evidence: 'Precursor de acetilcolina. Mejora memoria de trabajo y velocidad cognitiva.', color: '#2F8030' },
     { name: 'Bacopa',       dose: '300 mg',      timing: 'Con comida',          evidence: 'Mejora memoria a largo plazo con 8–12 semanas de uso continuo.', color: '#247025' },
   ],

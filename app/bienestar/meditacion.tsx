@@ -21,6 +21,7 @@ import { createMeditationAudio } from '@/lib/binaural';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
+import { BodyContextCard, PracticeClose } from './body-context';
 
 function haptic(type: 'light' | 'medium' | 'success') {
   if (Platform.OS === 'web') return;
@@ -281,6 +282,11 @@ function MeditationPlayer({
         </PremiumCard>
       )}
 
+      {/* Cierre: registrar cómo se siente tras la sesión */}
+      {done && (
+        <PracticeClose message="Sesión cerrada. ¿Cómo aterriza tu mente ahora? Registrarlo es el dato que sí importa." />
+      )}
+
       {/* Controls */}
       <View style={player.controls}>
         {!running && !paused && !done && (
@@ -385,6 +391,9 @@ export default function MeditacionScreen() {
       <SafetyWarning
         body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria."
       />
+
+      {/* Contexto biométrico del día (honesto, no en vivo) */}
+      <BodyContextCard frame="Medita para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
 
       <GoldDivider label="SESIONES" />
 

@@ -30,6 +30,7 @@ import {
   GoldDivider,
   PremiumCard,
   ProgressCard,
+  SovereignDeltaTag,
   SovereignScore,
   screen,
   useScreen,
@@ -37,7 +38,7 @@ import {
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { calcSovereignScore } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
 
 // ─── Score tier helpers ───────────────────────────────────────────────────────
 
@@ -116,6 +117,15 @@ export default function PerfilSoberanoScreen() {
   });
 
   const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
+
+  // Sovereign delta — progreso vs línea base, como subtítulo del score absoluto.
+  const sovereignDelta = useMemo(() => calcSovereignDelta(state.checkIns), [state.checkIns]);
+  const baselineDay = useMemo(() => {
+    if (calcSovereignBaseline(state.checkIns).ready) return 7;
+    if (!state.checkIns.length) return 1;
+    const oldest = Math.min(...state.checkIns.map((c) => new Date(c.date).getTime()));
+    return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
+  }, [state.checkIns]);
 
   const earnedArchetypes = useMemo(() => {
     const completed = state.completedLessons ?? [];
@@ -280,6 +290,9 @@ export default function PerfilSoberanoScreen() {
                 ? `El sistema está registrando cada acción, ${firstName}.`
                 : `Cada check-in mueve el número, ${firstName}. El sistema responde.`}
         </Text>
+        <View style={styles.scoreDeltaRow}>
+          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+        </View>
       </View>
 
       {/* ── Protocol Progress ── */}
@@ -604,6 +617,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     textAlign: 'center',
+  },
+  scoreDeltaRow: {
+    alignItems: 'center',
+    marginTop: 2,
   },
 
   // Stats triad

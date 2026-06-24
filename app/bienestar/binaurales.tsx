@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import {
   AMBIENCE_OPTIONS,
@@ -626,6 +627,11 @@ export default function BinauralesScreen() {
           Los beats binaurales requieren audífonos estéreo. El cerebro percibe la diferencia entre el tono izquierdo y el derecho.
         </Text>
       </PremiumCard>
+
+      <SafetyWarning
+        title="SOBRE LOS BINAURALES"
+        body="Los efectos de los ritmos binaurales en foco, calma o energía están investigados pero no son concluyentes; la respuesta es individual. Es un complemento de bienestar, no un tratamiento médico ni un sustituto de atención profesional. No los uses mientras conduces u operas maquinaria, y consulta a tu médico si tienes epilepsia o fotosensibilidad."
+      />
 
       {/* Mode toggle */}
       <View style={styles.modeToggleRow}>

@@ -13,13 +13,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CommitmentsCard, ConversationTimeline, ProfileSynopsisCard } from '@/components/memory';
 import { BiometricInsightCard, ReflectionComposer } from '@/components/biometric';
-import { PremiumCard, useScreen } from '@/components/polaris';
-import { palette, spacing, typography } from '@/constants/theme';
+import { GoldAccentCard, PremiumCard, useScreen } from '@/components/polaris';
+import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { fetchLatestSummaries, fetchMemoryProfile, type MemoryProfile, type MemorySummaryRow } from '@/lib/memory';
 import { clientSafeProfile } from '@/lib/memoryLogic';
-import { fetchTasks, type MentorTask } from '@/lib/mentorExecution';
-import { clientProgress, clientSafeTasks } from '@/lib/mentorExecutionLogic';
+import { fetchTasks, updateTask, type MentorTask } from '@/lib/mentorExecution';
+import { clientProgress, clientSafeTasks, pendingAccountability, type ClientTaskView } from '@/lib/mentorExecutionLogic';
 import { fetchLatestInsight, saveReflection, type InsightRow, type ReflectionInput } from '@/lib/biometric';
 
 // Estado de tarea en tono de apoyo (sin "vencida/evitada" duro hacia el cliente).
@@ -71,11 +71,35 @@ export default function ClienteMemoriaScreen() {
     }
   }, [userId, insight]);
 
+  const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+  const [skipIds, setSkipIds] = useState<Set<string>>(new Set());
+
   const wins = profile?.recent_wins ?? [];
   const safeTasks = clientSafeTasks(tasks);
   const activeTasks = safeTasks.filter((t) => !t.done);
   const nextTask = activeTasks[0] ?? null;
   const progress = clientProgress(tasks);
+
+  // Loop de accountability in-app: compromisos abiertos asignados hace ≥24h.
+  // No depende de la entrega del push — es la parte robusta. Excluye lo ya
+  // resuelto/saltado en esta sesión para no re-confrontar lo mismo.
+  const pending = pendingAccountability(safeTasks).filter(
+    (t) => t.id && !doneIds.has(t.id) && !skipIds.has(t.id),
+  );
+  const accountabilityTask = pending[0] ?? null;
+
+  const markAccountabilityDone = useCallback(async (t: ClientTaskView) => {
+    if (!t.id) return;
+    // Reusa el MISMO path de completar tareas (status → completed). No inventa scoring.
+    setDoneIds((prev) => new Set(prev).add(t.id!));
+    const ok = await updateTask(t.id, { status: 'completed', completed_at: new Date().toISOString() });
+    if (ok) { await load(); } // refresca progreso/tareas desde la fuente
+  }, [load]);
+
+  const skipAccountability = useCallback((t: ClientTaskView) => {
+    if (!t.id) return;
+    setSkipIds((prev) => new Set(prev).add(t.id!)); // la deja abierta; cierra el prompt
+  }, []);
 
   return (
     <ScrollView
@@ -96,6 +120,14 @@ export default function ClienteMemoriaScreen() {
         <ActivityIndicator color={palette.gold} style={{ marginTop: spacing.xxxl }} />
       ) : (
         <>
+          {accountabilityTask && (
+            <AccountabilityPrompt
+              task={accountabilityTask}
+              onDone={markAccountabilityDone}
+              onSkip={skipAccountability}
+            />
+          )}
+
           <ProfileSynopsisCard profile={profile} variant="client" />
 
           <BiometricInsightCard insight={insight} variant="client" />
@@ -176,6 +208,44 @@ export default function ClienteMemoriaScreen() {
   );
 }
 
+// ─── Prompt de accountability in-app (loop de 24h) ────────────────────────────
+// "Ayer te comprometiste a: <X>. ¿Lo aplicaste?" con dos acciones. Voz sobria.
+// "SÍ, HECHO" reusa el path de completar tareas (updateTask → status completed).
+function AccountabilityPrompt({
+  task,
+  onDone,
+  onSkip,
+}: {
+  task: ClientTaskView;
+  onDone: (t: ClientTaskView) => void;
+  onSkip: (t: ClientTaskView) => void;
+}) {
+  return (
+    <GoldAccentCard style={s.acctCard}>
+      <Text style={s.label}>AYER TE COMPROMETISTE A</Text>
+      <Text style={s.acctTask}>{task.title}</Text>
+      <Text style={s.acctAsk}>¿Lo aplicaste?</Text>
+      <View style={s.acctRow}>
+        <Pressable
+          onPress={() => onDone(task)}
+          style={[s.acctBtn, s.acctBtnPrimary]}
+          accessibilityRole="button"
+          accessibilityLabel="Sí, lo hice — marcar como completado">
+          <MaterialIcons name="check" size={16} color={palette.ink} />
+          <Text style={s.acctBtnPrimaryText}>SÍ, HECHO</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => onSkip(task)}
+          style={[s.acctBtn, s.acctBtnGhost]}
+          accessibilityRole="button"
+          accessibilityLabel="Aún no lo he hecho">
+          <Text style={s.acctBtnGhostText}>AÚN NO</Text>
+        </Pressable>
+      </View>
+    </GoldAccentCard>
+  );
+}
+
 const s = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
@@ -193,4 +263,18 @@ const s = StyleSheet.create({
   taskPending: { ...typography.caption, color: palette.goldText, fontSize: 10, marginTop: 1, fontStyle: 'italic' },
   taskState: { ...typography.label, fontSize: 10, letterSpacing: 0.5 },
   progress: { ...typography.mono, color: palette.smoke, fontSize: 11, marginTop: 4 },
+
+  // Prompt de accountability (24h)
+  acctCard: { gap: spacing.sm, marginBottom: spacing.md },
+  acctTask: { ...typography.body, color: palette.ivory, fontSize: 16, lineHeight: 22 },
+  acctAsk: { ...typography.body, color: palette.ash, fontSize: 13 },
+  acctRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  acctBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 44, borderRadius: radii.sm, paddingHorizontal: spacing.md,
+  },
+  acctBtnPrimary: { flex: 1, backgroundColor: palette.gold },
+  acctBtnPrimaryText: { ...typography.label, color: palette.ink, fontSize: 12, letterSpacing: 1 },
+  acctBtnGhost: { borderWidth: 1, borderColor: palette.lineGold },
+  acctBtnGhostText: { ...typography.label, color: palette.goldText, fontSize: 12, letterSpacing: 1 },
 });

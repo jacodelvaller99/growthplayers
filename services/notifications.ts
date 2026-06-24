@@ -131,6 +131,49 @@ export async function scheduleDailyRoutineReminder(
   }
 }
 
+// ─── Followup de accountability (24h) ─────────────────────────────────────────
+// Agenda UNA notificación local (no se repite) a `delaySeconds` (default 24h) con
+// deep-link a `route`. Para el loop de accountability: tras comprometerse a un plan,
+// al día siguiente Polaris pregunta si lo ejecutó. Reusa el mismo shape de
+// content.data que scheduleDailyRoutineReminder → lo consume el listener de _layout.
+//
+// Ej.: tras confirmar el plan de acción →
+//   scheduleAccountabilityFollowup({ title:'ACCOUNTABILITY', body:'Ayer te comprometiste. ¿Lo ejecutaste hoy?', route:'/perfil/cliente' })
+export interface AccountabilityFollowup {
+  title:         string;
+  body:          string;
+  route:         string;          // deep-link interno (ej. '/perfil/cliente')
+  delaySeconds?: number;          // default 86400 (24h)
+  /** datos extra opcionales que viajan en la notificación */
+  data?:         Record<string, unknown>;
+}
+
+export async function scheduleAccountabilityFollowup(
+  followup: AccountabilityFollowup,
+): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+  try {
+    const seconds = Math.max(1, Math.round(followup.delaySeconds ?? 86_400));
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: followup.title,
+        body:  followup.body,
+        sound: true,
+        // `route` lo consume addNotificationResponseReceivedListener (WS-7).
+        data:  { route: followup.route, ...(followup.data ?? {}) },
+      },
+      trigger: {
+        type:    Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds,
+      },
+    });
+    return id;
+  } catch (err) {
+    console.warn('[Notifications] scheduleAccountabilityFollowup error:', err);
+    return null;
+  }
+}
+
 // ─── Recordatorios agendados por hábito (reconstrucción de estado) ────────────
 // Las notificaciones agendadas PERSISTEN en el SO entre reinicios de la app, pero
 // el estado en memoria de la pantalla no. Esto lee el SO (fuente de verdad) y

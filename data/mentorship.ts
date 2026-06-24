@@ -51,7 +51,7 @@ const WEEK_META: Record<string, { focus: string; tasks: string[] }> = {
     ],
   },
   'modulo-4': {
-    focus: 'Opera desde tu máximo potencial: instala el estado de Flow.',
+    focus: 'Instala el estado de Flow: el rendimiento nace del estado, no de la prisa.',
     tasks: [
       'Mira las lecciones de Pontífice · Estado de Flow',
       'Ejecuta un bloque profundo de 90 min sin mensajería',
