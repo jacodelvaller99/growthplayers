@@ -91,7 +91,7 @@ export default function BibliotecaScreen() {
           returnKeyType="search"
         />
         {query.length > 0 && (
-          <Pressable onPress={() => setQuery('')}>
+          <Pressable onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel="Limpiar búsqueda">
             <MaterialIcons name="close" size={18} color={palette.smoke} />
           </Pressable>
         )}
