@@ -2,7 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -292,7 +294,9 @@ export default function AyunoScreen() {
 
       {/* Romper ayuno (refeeding) — captura breaking_food */}
       <Modal visible={showBreakModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalBox}>
             <MaterialIcons name="restaurant" size={32} color={palette.goldText} style={{ marginBottom: 12 }} />
             <Text style={styles.modalTitle}>ROMPER EL AYUNO</Text>
@@ -322,7 +326,7 @@ export default function AyunoScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

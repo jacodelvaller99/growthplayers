@@ -2,7 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -242,7 +244,10 @@ export default function NutricionScreen() {
 
   if (saved) {
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
+      <KeyboardAvoidingView
+        style={[styles.root, { paddingTop: insets.top }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={insets.top}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
@@ -267,12 +272,15 @@ export default function NutricionScreen() {
             <Text style={styles.doneBtnText}>VOLVER AL HUB</Text>
           </Pressable>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView
+      style={[styles.root, { paddingTop: insets.top }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={step > 1 ? () => setStep(step - 1) : () => router.back()} style={styles.backBtn}>
@@ -419,7 +427,7 @@ export default function NutricionScreen() {
           </Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

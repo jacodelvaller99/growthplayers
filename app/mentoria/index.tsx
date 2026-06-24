@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -395,12 +396,16 @@ export default function MentoriaScreen() {
 
   // ── Layout ─────────────────────────────────────────────────────────────────
   return (
-    <View style={sc.root}>
+    <KeyboardAvoidingView
+      style={sc.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}>
       <ScrollView
         contentContainerStyle={[
           isDesktop ? styles.contentDesktop : { ...sc.content, paddingBottom: insets.bottom + 24 },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <AppHeader title="MENTORÍA" />
         {hero}
@@ -423,7 +428,7 @@ export default function MentoriaScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

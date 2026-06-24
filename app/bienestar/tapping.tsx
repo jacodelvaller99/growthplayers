@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -233,45 +234,50 @@ export default function TappingScreen() {
   // ── Setup ──────────────────────────────────────────────────────────────────
   if (screen === 'setup') {
     return (
-      <ScrollView
+      <KeyboardAvoidingView
         style={sc.root}
-        contentContainerStyle={contentStyle}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
-        {renderHeader(() => router.back())}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={insets.top}>
+        <ScrollView
+          style={sc.root}
+          contentContainerStyle={contentStyle}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          {renderHeader(() => router.back())}
 
-        <Text style={styles.intro}>
-          Nombra lo que cargas y mídelo. Vamos a bajar su intensidad punto por punto.
-        </Text>
+          <Text style={styles.intro}>
+            Nombra lo que cargas y mídelo. Vamos a bajar su intensidad punto por punto.
+          </Text>
 
-        <SafetyWarning
-          body="El tapping es una herramienta de autorregulación, no un tratamiento médico ni psicológico. Si tienes una condición de salud mental, consúltala con un profesional."
-        />
+          <SafetyWarning
+            body="El tapping es una herramienta de autorregulación, no un tratamiento médico ni psicológico. Si tienes una condición de salud mental, consúltala con un profesional."
+          />
 
-        <Text style={styles.fieldLabel}>¿QUÉ EMOCIÓN VAS A LIBERAR?</Text>
-        <TextInput
-          style={styles.emotionInput}
-          value={emotion}
-          onChangeText={setEmotion}
-          placeholder="Ej. ansiedad por la reunión de mañana"
-          placeholderTextColor={palette.smoke}
-          returnKeyType="done"
-          maxLength={80}
-        />
+          <Text style={styles.fieldLabel}>¿QUÉ EMOCIÓN VAS A LIBERAR?</Text>
+          <TextInput
+            style={styles.emotionInput}
+            value={emotion}
+            onChangeText={setEmotion}
+            placeholder="Ej. ansiedad por la reunión de mañana"
+            placeholderTextColor={palette.smoke}
+            returnKeyType="done"
+            maxLength={80}
+          />
 
-        <Text style={styles.fieldLabel}>INTENSIDAD ACTUAL · {intensityBefore}/10</Text>
-        <IntensitySelector value={intensityBefore} onChange={setIntensityBefore} />
+          <Text style={styles.fieldLabel}>INTENSIDAD ACTUAL · {intensityBefore}/10</Text>
+          <IntensitySelector value={intensityBefore} onChange={setIntensityBefore} />
 
-        <Pressable
-          style={[styles.primaryBtn, !emotion.trim() && styles.primaryBtnDisabled]}
-          onPress={() => { haptic('light'); setPointIdx(0); setScreen('tapping'); }}
-          disabled={!emotion.trim()}
-          accessibilityRole="button"
-          accessibilityLabel="Iniciar secuencia">
-          <MaterialIcons name="touch-app" size={20} color={palette.ink} />
-          <Text style={styles.primaryBtnText}>INICIAR SECUENCIA</Text>
-        </Pressable>
-      </ScrollView>
+          <Pressable
+            style={[styles.primaryBtn, !emotion.trim() && styles.primaryBtnDisabled]}
+            onPress={() => { haptic('light'); setPointIdx(0); setScreen('tapping'); }}
+            disabled={!emotion.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="Iniciar secuencia">
+            <MaterialIcons name="touch-app" size={20} color={palette.ink} />
+            <Text style={styles.primaryBtnText}>INICIAR SECUENCIA</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
