@@ -324,3 +324,28 @@ describe('aggregatorToDaily + normalizeAggregatorPayloadFor — switch por vendo
     expect(rows[0]!.user_id).toBe('user-1');
   });
 });
+
+describe('Open Wearables — CUALQUIER reloj: día completo desde webhooks separados', () => {
+  // Un Garmin (o cualquier marca) conectado vía el agregador manda sueño, HRV y
+  // pasos como webhooks SEPARADOS del mismo día. El merge (lo que hace la RPC
+  // merge_wearable_daily en DB, simulado aquí con mergeDailies) los combina en una
+  // sola fila de wearable_daily que consume el motor downstream (biometric/dashboards).
+  it('combina sleep + hrv + steps de un Garmin en una sola fila correcta', () => {
+    const events = [
+      { type: 'sleep.created', data: { provider: 'garmin', start_time: '2026-06-21T23:00:00Z', sleep_total_duration_minutes: 430, sleep_efficiency_score: 91, sleep_deep_minutes: 85, sleep_rem_minutes: 95, sleep_light_minutes: 230, sleep_awake_minutes: 20, is_nap: false } },
+      { type: 'heart_rate_variability.created', data: { provider: 'garmin', start_time: '2026-06-21T03:00:00Z', samples: [{ value: 55 }, { value: 65 }] } },
+      { type: 'steps.created', data: { provider: 'garmin', start_time: '2026-06-21T00:00:00Z', samples: [{ value: 5000 }, { value: 4200 }] } },
+    ];
+    const dailies = mergeDailies(events.flatMap(openWearablesToDaily));
+    expect(dailies.length).toBe(1);
+    const row = toWearableDailyRow(dailies[0]!, 'user-1');
+    expect(row.provider).toBe('aggregator');
+    expect(row.source_device).toBe('GARMIN');
+    expect(row.date).toBe('2026-06-21');
+    expect(row.sleep_duration_min).toBe(430);
+    expect(row.deep_min).toBe(85);
+    expect(row.hrv_ms).toBe(60);   // (55+65)/2
+    expect(row.steps).toBe(9200);  // 5000+4200
+    expect(row.user_id).toBe('user-1');
+  });
+});
