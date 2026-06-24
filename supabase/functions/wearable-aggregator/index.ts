@@ -30,6 +30,13 @@ const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const APP_URL              = Deno.env.get('EXPO_PUBLIC_APP_URL') ?? 'https://growthplayers.vercel.app';
 
+// Vendor del agregador. Default 'terra'. Para self-host OSS: 'open_wearables'.
+const AGGREGATOR_VENDOR    = (Deno.env.get('AGGREGATOR_VENDOR') ?? 'terra').toLowerCase();
+// Open Wearables (OSS self-host) — instancia propia del dueño.
+const OW_BASE_URL          = (Deno.env.get('OPEN_WEARABLES_BASE_URL') ?? '').replace(/\/+$/, '');
+const OW_API_KEY           = Deno.env.get('OPEN_WEARABLES_API_KEY') ?? '';
+const OW_WEBHOOK_SECRET    = Deno.env.get('OPEN_WEARABLES_WEBHOOK_SECRET') ?? '';
+
 // ─── Firma del webhook (Terra: HMAC-SHA256 de `${t}.${body}`) ─────────────────
 async function verifyTerraSignature(rawBody: string, header: string | null): Promise<boolean> {
   if (!TERRA_SIGNING_SECRET) {
@@ -64,6 +71,52 @@ async function verifyTerraSignature(rawBody: string, header: string | null): Pro
   let diff = 0;
   for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ v1.charCodeAt(i);
   return diff === 0;
+}
+
+// ─── Firma del webhook de Open Wearables (Svix) ───────────────────────────────
+// Svix firma HMAC-SHA256 base64 sobre `${svix-id}.${svix-timestamp}.${body}`. El
+// secret viene como `whsec_<base64>`; se decodifica la parte base64 como clave.
+// Headers: svix-id, svix-timestamp (epoch s, tolerancia 5 min), svix-signature
+// ("v1,<base64> v1,<base64> …"). Fail-closed sin secret.
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+// Comparación en tiempo constante (evita timing-oracle sobre un MAC).
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+async function verifyOpenWearablesSignature(
+  rawBody: string, id: string | null, ts: string | null, sigHeader: string | null,
+): Promise<boolean> {
+  if (!OW_WEBHOOK_SECRET) {
+    console.error('[wearable-aggregator] OPEN_WEARABLES_WEBHOOK_SECRET no configurado — rechazando.');
+    return false;
+  }
+  if (!id || !ts || !sigHeader) return false;
+  const tsNum = Number(ts);
+  // anti-replay 5 min; rechaza también un timestamp no numérico (fail-closed).
+  if (!Number.isFinite(tsNum) || Math.abs(Date.now() / 1000 - tsNum) > 300) return false;
+
+  const secretB64 = OW_WEBHOOK_SECRET.replace(/^whsec_/, '');
+  const key = await crypto.subtle.importKey(
+    'raw', base64ToBytes(secretB64), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${id}.${ts}.${rawBody}`));
+  const expected = bytesToBase64(new Uint8Array(sigBuf));
+  // svix-signature: lista separada por espacios de "v1,<base64>".
+  const provided = sigHeader.split(' ').map((p) => p.split(',')[1]).filter(Boolean);
+  return provided.some((p) => timingSafeEqual(p, expected));
 }
 
 async function sha256Hex(s: string): Promise<string> {
@@ -172,6 +225,53 @@ function normalizeTerra(payload: any, userId: string): DailyRow[] {
   return Object.values(byDate);
 }
 
+// ─── Normalizador inline de Open Wearables (refleja openWearablesToDaily) ──────
+// Envelope { type:'resource.action', data:{...} }. Un evento por webhook → 0..1 fila.
+function normalizeOpenWearables(payload: any, userId: string): DailyRow[] {
+  const type = String(payload?.type ?? '').toLowerCase();
+  const d = payload?.data ?? {};
+  const device = d?.provider ? String(d.provider).toUpperCase() : null;
+  const date = isoToDate(d?.calendar_date ?? d?.date ?? d?.start_time ?? d?.end_time);
+  if (!date) return [];
+  const samples: any[] = Array.isArray(d?.samples) ? d.samples : [];
+  const avg = (xs: any[]): number | null => {
+    const v = xs.map((s) => num(s?.value ?? s)).filter((x: any): x is number => x !== null);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  };
+  const sum = (xs: any[]): number | null => {
+    const v = xs.map((s) => num(s?.value ?? s)).filter((x: any): x is number => x !== null);
+    return v.length ? v.reduce((a, b) => a + b, 0) : null;
+  };
+
+  const row = emptyRow(userId, device, date);
+  if (type === 'sleep.created') {
+    if (d?.is_nap === true) return [];
+    row.sleep_duration_min = round(num(d?.sleep_total_duration_minutes));
+    row.sleep_efficiency   = round(num(d?.sleep_efficiency_score));
+    row.deep_min  = round(num(d?.sleep_deep_minutes));
+    row.rem_min   = round(num(d?.sleep_rem_minutes));
+    row.light_min = round(num(d?.sleep_light_minutes));
+    row.awake_min = round(num(d?.sleep_awake_minutes));
+  } else if (type === 'activity.created' || type === 'workout.created') {
+    row.steps           = round(num(d?.steps_count));
+    row.calories_active = round(num(d?.energy_burned));
+    row.active_min      = secToMin(d?.moving_time_seconds);
+  } else if (type === 'heart_rate_variability.created') {
+    row.hrv_ms = round(avg(samples));
+  } else if (type === 'spo2.created') {
+    row.spo2_avg = round(avg(samples));
+  } else if (type === 'respiratory_rate.created') {
+    row.respiratory_rate = avg(samples);
+  } else if (type === 'steps.created') {
+    row.steps = round(sum(samples));
+  } else if (type === 'calories.created') {
+    row.calories_active = round(sum(samples));
+  } else {
+    return [];
+  }
+  return [row];
+}
+
 // ─── Resuelve nuestro user_id desde el aggregator_user_id ─────────────────────
 async function resolveUserId(aggregatorUserId: string | null): Promise<string | null> {
   if (!aggregatorUserId) return null;
@@ -192,6 +292,18 @@ async function triggerIntelligence(userId: string): Promise<void> {
       body: JSON.stringify({ user_id: userId }),
     });
   } catch (e) { console.error('[wearable-aggregator] intelligence trigger:', e); }
+}
+
+// ─── Upsert por-columna race-free (RPC merge_wearable_daily) ───────────────────
+// El agregador manda cada métrica en su propio webhook; un upsert que reemplaza la
+// fila borraría los campos de eventos anteriores del mismo día, y un read-modify-
+// write en JS tendría una race con eventos concurrentes. El merge atómico en DB
+// (migración 20260625000000: INSERT … ON CONFLICT DO UPDATE con COALESCE bajo
+// row-lock) conserva los non-null sin race. Lo usan ambos vendors.
+async function mergeDailyRows(rows: DailyRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await adminSupabase.rpc('merge_wearable_daily', { p_rows: rows });
+  if (error) throw new Error(error.message ?? 'merge_wearable_daily failed');
 }
 
 // ─── CONNECT: genera widget session de Terra ──────────────────────────────────
@@ -224,14 +336,138 @@ async function generateWidgetSession(userId: string): Promise<{ url: string } | 
   }
 }
 
+// ─── CONNECT: URL de autorización de Open Wearables (OAuth por proveedor) ──────
+// Open Wearables no tiene widget multi-proveedor hosteado (roadmap); el connect es
+// OAuth por marca: GET /api/v1/oauth/{provider}/authorize?user_id=<nuestro userId>.
+// El user_id que pasamos vuelve en los webhooks (data.user_id) → correlación directa.
+async function generateOpenWearablesAuthUrl(
+  userId: string, provider: string | null,
+): Promise<{ url: string } | { error: string }> {
+  if (!OW_BASE_URL || !OW_API_KEY) {
+    return { error: 'Agregador self-host sin configurar (faltan OPEN_WEARABLES_BASE_URL / OPEN_WEARABLES_API_KEY).' };
+  }
+  if (!provider) {
+    return { error: 'Elige una marca para conectar (provider requerido en modo self-host).' };
+  }
+  try {
+    const res = await fetch(
+      `${OW_BASE_URL}/api/v1/oauth/${encodeURIComponent(provider)}/authorize?user_id=${encodeURIComponent(userId)}`,
+      { method: 'GET', headers: { 'X-Open-Wearables-API-Key': OW_API_KEY, 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('[wearable-aggregator] OW authorize failed:', res.status, txt);
+      return { error: 'No se pudo iniciar la conexión con el agregador self-host.' };
+    }
+    const data = await res.json();
+    const url = data?.authorization_url ?? data?.url ?? data?.redirect_url;
+    if (!url) return { error: 'El agregador self-host no devolvió URL de autorización.' };
+    return { url: String(url) };
+  } catch (e) {
+    console.error('[wearable-aggregator] OW authorize error:', e);
+    return { error: 'Error de red al conectar el agregador self-host.' };
+  }
+}
+
+// ─── WEBHOOK Open Wearables: verifica firma Svix, normaliza, upsert mergeado ───
+async function handleOpenWearablesWebhook(req: Request): Promise<Response> {
+  // Guard: un webhook Svix solo tiene sentido si el deploy está en modo Open Wearables.
+  // Fallar fuerte ante una mala configuración en vez de procesar en silencio.
+  if (AGGREGATOR_VENDOR !== 'open_wearables') {
+    console.error('[wearable-aggregator] webhook Svix recibido pero AGGREGATOR_VENDOR != open_wearables.');
+    return json({ error: 'vendor mismatch' }, 400);
+  }
+  const svixId  = req.headers.get('svix-id');
+  const svixTs  = req.headers.get('svix-timestamp');
+  const svixSig = req.headers.get('svix-signature');
+  const rawBody = await req.text();
+
+  const valid = await verifyOpenWearablesSignature(rawBody, svixId, svixTs, svixSig);
+  if (!valid) {
+    console.error('[wearable-aggregator] firma Svix inválida — rechazado.');
+    return json({ error: 'Invalid signature' }, 401);
+  }
+
+  let payload: any;
+  try { payload = JSON.parse(rawBody); } catch { return json({ error: 'Bad JSON' }, 400); }
+
+  const type = String(payload?.type ?? '').toLowerCase();
+  const d = payload?.data ?? {};
+  const owUserId = d?.user_id ?? null; // = nuestro user_id (lo pasamos en authorize)
+  const device = d?.provider ? String(d.provider).toUpperCase() : null;
+  const eventId = svixId ?? await sha256Hex(rawBody);
+
+  // Conexión: vincula / desvincula.
+  if (type === 'connection.created') {
+    if (owUserId) {
+      await adminSupabase.from('wearable_connections').upsert({
+        user_id: owUserId, provider: 'aggregator', aggregator_user_id: owUserId,
+        source_device: device, is_active: true, connected_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,provider' });
+    }
+    await adminSupabase.from('wearable_webhook_events').upsert(
+      { event_id: eventId, event_type: type, aggregator_user_id: owUserId, user_id: owUserId, payload, processed: true },
+      { onConflict: 'event_id', ignoreDuplicates: true },
+    );
+    return json({ ok: true, linked: !!owUserId });
+  }
+  if (type === 'connection.revoked') {
+    if (owUserId) {
+      await adminSupabase.from('wearable_connections').update({ is_active: false })
+        .eq('user_id', owUserId).eq('provider', 'aggregator');
+    }
+    return json({ ok: true });
+  }
+
+  // Validación de identidad: resolvemos NUESTRO user vía la conexión activa creada
+  // en connection.created (a partir del id que pasamos en authorize). NO confiamos
+  // en data.user_id crudo para escribir biométricos — evita cruce entre usuarios.
+  const userId = await resolveUserId(owUserId);
+
+  // Dedup por svix-id.
+  const { data: inserted } = await adminSupabase.from('wearable_webhook_events').upsert(
+    { event_id: eventId, event_type: type, aggregator_user_id: owUserId, user_id: userId, payload, processed: false },
+    { onConflict: 'event_id', ignoreDuplicates: true },
+  ).select('id');
+  if (!inserted || (Array.isArray(inserted) && inserted.length === 0)) {
+    return json({ ok: true, deduped: true });
+  }
+  if (!userId) {
+    await adminSupabase.from('wearable_webhook_events')
+      .update({ process_error: 'user_not_resolved' }).eq('event_id', eventId);
+    return json({ ok: true, skipped: 'user_not_resolved' });
+  }
+
+  try {
+    const rows = normalizeOpenWearables(payload, userId);
+    if (rows.length > 0) {
+      await mergeDailyRows(rows);
+      await adminSupabase.from('wearable_connections')
+        .update({ last_synced_at: new Date().toISOString() })
+        .eq('user_id', userId).eq('provider', 'aggregator');
+      await triggerIntelligence(userId);
+    }
+    await adminSupabase.from('wearable_webhook_events')
+      .update({ processed: true }).eq('event_id', eventId);
+    return json({ ok: true, rows: rows.length });
+  } catch (e) {
+    console.error('[wearable-aggregator] OW process error:', e);
+    await adminSupabase.from('wearable_webhook_events')
+      .update({ process_error: String((e as Error)?.message ?? e) }).eq('event_id', eventId);
+    return json({ error: 'process_failed' }, 500);
+  }
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() });
 
-  // ── Modo CONNECT (app autenticada pide la widget URL) ───────────────────────
-  // Lo distinguimos por header de auth JWT + ausencia de firma Terra.
   const terraSig = req.headers.get('terra-signature');
-  if (!terraSig) {
+  const svixSig  = req.headers.get('svix-signature'); // Open Wearables (Svix)
+
+  // ── Modo CONNECT (app autenticada pide la URL de conexión) ──────────────────
+  // Sin firma de webhook (ni Terra ni Svix) → es la app pidiendo conectar.
+  if (!terraSig && !svixSig) {
     const authHeader = req.headers.get('Authorization') ?? '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     if (!token) return json({ error: 'Unauthorized' }, 401);
@@ -240,17 +476,22 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     if (body.action === 'connect') {
-      const result = await generateWidgetSession(user.id);
+      const result = AGGREGATOR_VENDOR === 'open_wearables'
+        ? await generateOpenWearablesAuthUrl(user.id, body.provider ?? null)
+        : await generateWidgetSession(user.id);
       return 'error' in result ? json(result, 502) : json({ ok: true, url: result.url });
     }
     return json({ error: 'Missing action' }, 400);
   }
 
-  // ── Modo WEBHOOK (Terra empuja datos) ───────────────────────────────────────
+  // ── Modo WEBHOOK Open Wearables (Svix) ──────────────────────────────────────
+  if (svixSig) return await handleOpenWearablesWebhook(req);
+
+  // ── Modo WEBHOOK Terra ──────────────────────────────────────────────────────
   const rawBody = await req.text();
   const valid = await verifyTerraSignature(rawBody, terraSig);
   if (!valid) {
-    console.error('[wearable-aggregator] firma inválida — rechazado.');
+    console.error('[wearable-aggregator] firma Terra inválida — rechazado.');
     return json({ error: 'Invalid signature' }, 401);
   }
 
@@ -316,7 +557,7 @@ Deno.serve(async (req: Request) => {
   try {
     const rows = normalizeTerra(payload, userId);
     if (rows.length > 0) {
-      await adminSupabase.from('wearable_daily').upsert(rows, { onConflict: 'user_id,provider,date' });
+      await mergeDailyRows(rows);
       await adminSupabase.from('wearable_connections')
         .update({ last_synced_at: new Date().toISOString() })
         .eq('aggregator_user_id', aggregatorUserId);

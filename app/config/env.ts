@@ -33,4 +33,15 @@ export const ENV = {
    * verifica este flag antes de hacer cualquier query.
    */
   confrontationOsEnabled: ((process.env.EXPO_PUBLIC_CONFRONTATION_OS_ENABLED ?? '').toLowerCase() === 'true') as boolean,
+
+  /**
+   * Vendor del agregador universal de wearables: 'terra' (default, comercial,
+   * widget multi-marca hosteado) o 'open_wearables' (OSS self-host). En modo
+   * open_wearables la conexión es OAuth POR MARCA, así que la UI ofrece un
+   * selector de proveedor. Las claves del vendor (API key / signing secret) son
+   * secrets server-side de la edge function `wearable-aggregator` — NUNCA aquí.
+   */
+  aggregatorVendor: ((process.env.EXPO_PUBLIC_AGGREGATOR_VENDOR ?? 'terra').toLowerCase()) as
+    | 'terra'
+    | 'open_wearables',
 } as const;

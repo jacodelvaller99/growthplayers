@@ -12,6 +12,11 @@ import {
   toWearableDailyRow,
   mergeDailies,
   normalizeAggregatorPayload,
+  normalizeAggregatorPayloadFor,
+  aggregatorToDaily,
+  openWearablesToDaily,
+  openWearablesEventType,
+  openWearablesSourceDevice,
   isoToDate,
   type AggregatorDaily,
 } from '../../lib/wearableAggregatorLogic';
@@ -209,5 +214,113 @@ describe('normalizeAggregatorPayload — pipeline completo', () => {
 
   it('payload vacío → []', () => {
     expect(normalizeAggregatorPayload({}, 'user-1')).toEqual([]);
+  });
+});
+
+// ── Open Wearables (OSS self-host) ────────────────────────────────────────────
+// Fixtures con la forma documentada del webhook de Open Wearables
+// (openwearables.io/docs): envelope { type:'resource.action', data:{...} }.
+const OW_SLEEP = {
+  type: 'sleep.created',
+  data: {
+    provider: 'oura',
+    start_time: '2026-06-21T23:30:00Z',
+    sleep_total_duration_minutes: 420,
+    sleep_efficiency_score: 90,
+    sleep_deep_minutes: 80,
+    sleep_rem_minutes: 90,
+    sleep_light_minutes: 250,
+    sleep_awake_minutes: 20,
+    is_nap: false,
+  },
+};
+
+const OW_HRV = {
+  type: 'heart_rate_variability.created',
+  data: { provider: 'oura', start_time: '2026-06-21T03:00:00Z', series_type: 'heart_rate_variability', samples: [{ value: 60 }, { value: 70 }, { value: 80 }] },
+};
+
+const OW_STEPS = {
+  type: 'steps.created',
+  data: { provider: 'garmin', start_time: '2026-06-21T00:00:00Z', series_type: 'steps', samples: [{ value: 4000 }, { value: 4450 }] },
+};
+
+const OW_ACTIVITY = {
+  type: 'activity.created',
+  data: { provider: 'whoop', start_time: '2026-06-21T00:00:00Z', steps_count: 8450, energy_burned: 540, moving_time_seconds: 3600 },
+};
+
+describe('openWearablesEventType + openWearablesSourceDevice', () => {
+  it('lee el tipo de evento y el reloj real', () => {
+    expect(openWearablesEventType(OW_SLEEP)).toBe('sleep.created');
+    expect(openWearablesSourceDevice(OW_SLEEP)).toBe('OURA');
+    expect(openWearablesSourceDevice(OW_STEPS)).toBe('GARMIN');
+    expect(openWearablesSourceDevice({})).toBeNull();
+  });
+});
+
+describe('openWearablesToDaily — sesión', () => {
+  it('mapea sleep.created con fecha y stages', () => {
+    const [d] = openWearablesToDaily(OW_SLEEP);
+    expect(d!.date).toBe('2026-06-21');
+    expect(d!.sourceDevice).toBe('OURA');
+    expect(d!.sleepDurationMin).toBe(420);
+    expect(d!.sleepEfficiency).toBe(90);
+    expect(d!.deepMin).toBe(80);
+    expect(d!.remMin).toBe(90);
+    expect(d!.lightMin).toBe(250);
+    expect(d!.awakeMin).toBe(20);
+  });
+
+  it('descarta siestas (is_nap) para no pisar la noche', () => {
+    expect(openWearablesToDaily({ ...OW_SLEEP, data: { ...OW_SLEEP.data, is_nap: true } })).toEqual([]);
+  });
+
+  it('mapea activity.created (pasos, calorías, minutos activos)', () => {
+    const [d] = openWearablesToDaily(OW_ACTIVITY);
+    expect(d!.steps).toBe(8450);
+    expect(d!.caloriesActive).toBe(540);
+    expect(d!.activeMin).toBe(60);
+  });
+});
+
+describe('openWearablesToDaily — timeseries', () => {
+  it('promedia HRV de las muestras', () => {
+    const [d] = openWearablesToDaily(OW_HRV);
+    expect(d!.hrvMs).toBe(70); // (60+70+80)/3
+  });
+  it('suma los pasos del día', () => {
+    const [d] = openWearablesToDaily(OW_STEPS);
+    expect(d!.steps).toBe(8450); // 4000+4450
+  });
+});
+
+describe('openWearablesToDaily — robustez', () => {
+  it('evento sin fecha → []', () => {
+    expect(openWearablesToDaily({ type: 'sleep.created', data: {} })).toEqual([]);
+  });
+  it('tipo desconocido → []', () => {
+    expect(openWearablesToDaily({ type: 'nutrition.created', data: { start_time: '2026-06-21T00:00:00Z' } })).toEqual([]);
+  });
+  it('payload vacío → []', () => {
+    expect(openWearablesToDaily({})).toEqual([]);
+  });
+});
+
+describe('aggregatorToDaily + normalizeAggregatorPayloadFor — switch por vendor', () => {
+  it('open_wearables usa el adapter de Open Wearables', () => {
+    expect(aggregatorToDaily('open_wearables', OW_SLEEP).length).toBe(1);
+    expect(aggregatorToDaily('open_wearables', SLEEP_PAYLOAD)).toEqual([]); // forma Terra no aplica
+  });
+  it('terra usa el adapter de Terra', () => {
+    expect(aggregatorToDaily('terra', SLEEP_PAYLOAD).length).toBe(1);
+  });
+  it('pipeline OW → fila lista para upsert (provider=aggregator)', () => {
+    const rows = normalizeAggregatorPayloadFor('open_wearables', OW_SLEEP, 'user-1');
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.provider).toBe('aggregator');
+    expect(rows[0]!.source_device).toBe('OURA');
+    expect(rows[0]!.sleep_duration_min).toBe(420);
+    expect(rows[0]!.user_id).toBe('user-1');
   });
 });

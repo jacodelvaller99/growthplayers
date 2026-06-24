@@ -236,12 +236,107 @@ export function terraToDaily(raw: any): AggregatorDaily[] {
   return out;
 }
 
+// ─── Capa 2-bis: adapter de Open Wearables (OSS self-host) ────────────────────
+// https://openwearables.io/docs — modelo unificado "first iteration".
+// Webhook envelope: { type: "resource.action", data: {...} }.
+//   · Sesión:    'sleep.created', 'activity.created', 'workout.created' → campos
+//                directos (sleep_total_duration_minutes, steps_count, …).
+//   · Timeseries:'heart_rate_variability.created', 'spo2.created',
+//                'respiratory_rate.created', 'steps.created', 'calories.created'
+//                → { provider, series_type, start_time, samples:[{value}] }.
+//   · Conexión:  'connection.created'/'connection.revoked' → los maneja la edge
+//                function (vinculación), no este adapter de datos.
+// DOC-BASED: el modelo es "first iteration" del proyecto; validar contra un
+// payload REAL (paso del runbook). Defensivo: optional chaining + null-safe.
+// A diferencia de Terra (un payload con data[] de varios tipos), Open Wearables
+// manda CADA evento en su propio webhook → el upsert downstream debe MERGEAR
+// (coalesce non-null), no reemplazar (lo hace la edge function).
+
+export type AggregatorVendor = 'terra' | 'open_wearables';
+
+export function openWearablesEventType(raw: any): string {
+  return String(raw?.type ?? '').toLowerCase();
+}
+
+export function openWearablesSourceDevice(raw: any): string | null {
+  const p = raw?.data?.provider ?? raw?.provider;
+  return p ? String(p).toUpperCase() : null;
+}
+
+/** Promedio de las muestras de un timeseries (tolera [{value}] o [number]). */
+function owAvg(samples: any[]): number | null {
+  const vals = samples.map((s) => n(s?.value ?? s)).filter((v): v is number => v !== null);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}
+/** Suma de las muestras de un timeseries (steps/calorías diarias). */
+function owSum(samples: any[]): number | null {
+  const vals = samples.map((s) => n(s?.value ?? s)).filter((v): v is number => v !== null);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
+}
+const owDate = (d: any): string | null =>
+  isoToDate(d?.calendar_date ?? d?.date ?? d?.start_time ?? d?.end_time);
+
+/** Adapter: un payload de webhook de Open Wearables → AggregatorDaily[]. */
+export function openWearablesToDaily(raw: any): AggregatorDaily[] {
+  const type = openWearablesEventType(raw);
+  const device = openWearablesSourceDevice(raw);
+  const d = raw?.data ?? {};
+  const date = owDate(d);
+  if (!date) return [];
+  const base: AggregatorDaily = { date, sourceDevice: device };
+
+  // ── Eventos de sesión ──
+  if (type === 'sleep.created') {
+    if (d?.is_nap === true) return []; // la siesta no pisa la noche principal
+    return [{
+      ...base,
+      sleepDurationMin: n(d?.sleep_total_duration_minutes),
+      sleepEfficiency: n(d?.sleep_efficiency_score),
+      deepMin: n(d?.sleep_deep_minutes),
+      remMin: n(d?.sleep_rem_minutes),
+      lightMin: n(d?.sleep_light_minutes),
+      awakeMin: n(d?.sleep_awake_minutes),
+    }];
+  }
+  if (type === 'activity.created' || type === 'workout.created') {
+    return [{
+      ...base,
+      steps: n(d?.steps_count),
+      caloriesActive: n(d?.energy_burned),
+      activeMin: secToMin(d?.moving_time_seconds),
+    }];
+  }
+
+  // ── Eventos de timeseries (samples[]) ──
+  const samples: any[] = Array.isArray(d?.samples) ? d.samples : [];
+  if (type === 'heart_rate_variability.created') return [{ ...base, hrvMs: owAvg(samples) }];
+  if (type === 'spo2.created')                   return [{ ...base, spo2Avg: owAvg(samples) }];
+  if (type === 'respiratory_rate.created')       return [{ ...base, respiratoryRate: owAvg(samples) }];
+  if (type === 'steps.created')                  return [{ ...base, steps: owSum(samples) }];
+  if (type === 'calories.created')               return [{ ...base, caloriesActive: owSum(samples) }];
+
+  return [];
+}
+
 /**
  * Pipeline completo: payload Terra → filas de wearable_daily (mergeadas por día).
  * El webhook llama a esto y hace upsert del resultado.
  */
 export function normalizeAggregatorPayload(raw: any, userId: string): WearableDailyRow[] {
   const dailies = mergeDailies(terraToDaily(raw));
+  return dailies.map((d) => toWearableDailyRow(d, userId));
+}
+
+/** Adapter por vendor → AggregatorDaily[] (único punto de cambio de proveedor). */
+export function aggregatorToDaily(vendor: AggregatorVendor, raw: any): AggregatorDaily[] {
+  return vendor === 'open_wearables' ? openWearablesToDaily(raw) : terraToDaily(raw);
+}
+
+/** Pipeline por vendor: payload → filas de wearable_daily (mergeadas por día). */
+export function normalizeAggregatorPayloadFor(
+  vendor: AggregatorVendor, raw: any, userId: string,
+): WearableDailyRow[] {
+  const dailies = mergeDailies(aggregatorToDaily(vendor, raw));
   return dailies.map((d) => toWearableDailyRow(d, userId));
 }
 

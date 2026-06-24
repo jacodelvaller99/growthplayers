@@ -25,16 +25,19 @@ export interface ConnectAggregatorResult {
 }
 
 /**
- * Pide al backend una widget session del agregador. La edge function valida el
+ * Pide al backend la URL de conexión del agregador. La edge function valida el
  * JWT del usuario y llama al agregador con las claves server-side.
+ *
+ * `provider` solo aplica en modo self-host (Open Wearables), donde el connect es
+ * OAuth por marca (ej. 'garmin', 'oura'). Con Terra se ignora (widget multi-marca).
  */
-export async function requestAggregatorWidgetUrl(): Promise<ConnectAggregatorResult> {
+export async function requestAggregatorWidgetUrl(provider?: string): Promise<ConnectAggregatorResult> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { ok: false, error: 'Necesitas iniciar sesión.' };
 
     const { data, error } = await supabase.functions.invoke('wearable-aggregator', {
-      body: { action: 'connect' },
+      body: { action: 'connect', provider },
     });
     if (error) {
       logSilentError('aggregator.widget', error);
@@ -54,8 +57,8 @@ export async function requestAggregatorWidgetUrl(): Promise<ConnectAggregatorRes
  * navegador in-app (mismo patrón que el OAuth de Oura/WHOOP). Devuelve la URL
  * para que el caller decida (la UI ya maneja loading/errores).
  */
-export async function connectAggregator(): Promise<ConnectAggregatorResult> {
-  const result = await requestAggregatorWidgetUrl();
+export async function connectAggregator(provider?: string): Promise<ConnectAggregatorResult> {
+  const result = await requestAggregatorWidgetUrl(provider);
   if (!result.ok || !result.url) return result;
 
   if (Platform.OS === 'web') {

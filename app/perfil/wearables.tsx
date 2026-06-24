@@ -20,6 +20,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -48,6 +49,7 @@ import { connectAggregator } from '@/lib/wearableAggregator';
 import { requestNativePermissions, syncRange, nativeProviderForPlatform } from '@/lib/wearablesNative';
 import { WearableCompat } from '@/components/wearable-compat';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { ENV } from '@/app/config/env';
 
 const PROVIDER_NAME: Record<WearableProvider, string> = {
   whoop:          'WHOOP',
@@ -56,6 +58,19 @@ const PROVIDER_NAME: Record<WearableProvider, string> = {
   health_connect: 'Google Health Connect',
   aggregator:     'Cualquier reloj',
 };
+
+// Marcas cloud que cubre Open Wearables vía OAuth (modo self-host). El connect es
+// POR proveedor (aún no hay widget multi-marca hosteado), así que la UI ofrece elegir.
+const OW_PROVIDERS: { id: string; label: string }[] = [
+  { id: 'garmin',     label: 'Garmin' },
+  { id: 'oura',       label: 'Oura' },
+  { id: 'whoop',      label: 'WHOOP' },
+  { id: 'polar',      label: 'Polar' },
+  { id: 'suunto',     label: 'Suunto' },
+  { id: 'fitbit',     label: 'Fitbit' },
+  { id: 'strava',     label: 'Strava' },
+  { id: 'ultrahuman', label: 'Ultrahuman' },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function generateState(): string {
@@ -445,6 +460,7 @@ export default function WearablesScreen() {
   const [connecting, setConnecting] = useState<WearableProvider | null>(null);
   const [syncing,    setSyncing]    = useState<WearableProvider | null>(null);
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [owPickerOpen, setOwPickerOpen] = useState(false);
 
   // Handle OAuth callback params (?connected=whoop or ?error=...)
   useEffect(() => {
@@ -472,8 +488,14 @@ export default function WearablesScreen() {
   async function handleConnect(provider: WearableProvider) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // ── Agregador universal (Terra): widget hosteado, funciona en web ──────
+    // ── Agregador universal ────────────────────────────────────────────────
     if (isAggregatorProvider(provider)) {
+      // Self-host (Open Wearables): el connect es OAuth por marca → abre selector.
+      if (ENV.aggregatorVendor === 'open_wearables') {
+        setOwPickerOpen(true);
+        return;
+      }
+      // Terra: widget multi-marca hosteado, funciona en web.
       setConnecting(provider);
       try {
         const res = await connectAggregator();
@@ -568,6 +590,20 @@ export default function WearablesScreen() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error de conexión';
       setBanner({ type: 'error', msg });
+    } finally {
+      setConnecting(null);
+    }
+  }
+
+  // Conecta una marca específica vía Open Wearables (modo self-host, OAuth por marca).
+  async function connectOwBrand(brand: string) {
+    setOwPickerOpen(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setConnecting('aggregator');
+    try {
+      const res = await connectAggregator(brand);
+      if (!res.ok) setBanner({ type: 'error', msg: res.error ?? 'No se pudo conectar' });
+      await reload();
     } finally {
       setConnecting(null);
     }
@@ -736,26 +772,61 @@ export default function WearablesScreen() {
     </>
   );
 
+  // Selector de marca (solo modo self-host / Open Wearables).
+  const owPicker = (
+    <Modal visible={owPickerOpen} transparent animationType="fade" onRequestClose={() => setOwPickerOpen(false)}>
+      <Pressable style={styles.owBackdrop} onPress={() => setOwPickerOpen(false)} accessibilityLabel="Cerrar selector">
+        <Pressable style={styles.owSheet} onPress={() => {}}>
+          <Text style={styles.owSheetTitle}>ELIGE TU RELOJ</Text>
+          <Text style={styles.owSheetSub}>
+            Conexión vía tu agregador self-host (Open Wearables). Cada marca abre su propio inicio de sesión.
+          </Text>
+          <View style={styles.owGrid}>
+            {OW_PROVIDERS.map((b) => (
+              <Pressable
+                key={b.id}
+                style={styles.owChip}
+                onPress={() => connectOwBrand(b.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Conectar ${b.label}`}>
+                <Text style={styles.owChipText}>{b.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable style={styles.owCancel} onPress={() => setOwPickerOpen(false)}>
+            <Text style={styles.owCancelText}>Cancelar</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
   // ── Desktop ──────────────────────────────────────────────────────────────────
   if (isDesktop) {
     return (
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={styles.contentDesktop}
-        showsVerticalScrollIndicator={false}>
-        {content}
-      </ScrollView>
+      <>
+        <ScrollView
+          style={sc.root}
+          contentContainerStyle={styles.contentDesktop}
+          showsVerticalScrollIndicator={false}>
+          {content}
+        </ScrollView>
+        {owPicker}
+      </>
     );
   }
 
   // ── Mobile ───────────────────────────────────────────────────────────────────
   return (
-    <ScrollView
-      style={sc.root}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
-      showsVerticalScrollIndicator={false}>
-      {content}
-    </ScrollView>
+    <>
+      <ScrollView
+        style={sc.root}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
+        showsVerticalScrollIndicator={false}>
+        {content}
+      </ScrollView>
+      {owPicker}
+    </>
   );
 }
 
@@ -818,4 +889,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md,
   },
   privacyText: { ...typography.caption, color: palette.smoke, flex: 1, lineHeight: 18 },
+
+  // Selector de marca (Open Wearables self-host)
+  owBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end', alignItems: 'center',
+  },
+  owSheet: {
+    width: '100%', maxWidth: 520,
+    backgroundColor: palette.black, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg,
+    borderWidth: 1, borderColor: palette.line,
+    padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.sm,
+  },
+  owSheetTitle: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 14, letterSpacing: 1.4 },
+  owSheetSub: { ...typography.caption, color: palette.smoke, fontSize: 12, lineHeight: 17, marginBottom: spacing.xs },
+  owGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  owChip: {
+    paddingHorizontal: spacing.md, paddingVertical: 12, minHeight: 44,
+    borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold,
+    backgroundColor: palette.goldGlow, justifyContent: 'center',
+  },
+  owChipText: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 12, letterSpacing: 0.5 },
+  owCancel: { alignItems: 'center', paddingVertical: spacing.sm, marginTop: spacing.xs, minHeight: 44, justifyContent: 'center' },
+  owCancelText: { ...typography.caption, color: palette.smoke, fontSize: 13 },
 });
