@@ -10,6 +10,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Slot, useRouter, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -20,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, spacing, typography, radii, Fonts } from '@/constants/theme';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { intel } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
@@ -118,12 +120,96 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
   );
 }
 
+// ─── Barra inferior fija (móvil) ──────────────────────────────────────────────
+// El admin en móvil no tenía navegación persistente. 4 destinos clave + "Más"
+// (abre una hoja con todas las secciones). Bottom nav ≤5 ítems con label+icono.
+const BOTTOM_TABS: NavItem[] = [
+  { route: '/admin',            label: 'Inicio',     icon: 'dashboard' },
+  { route: '/admin/usuarios',   label: 'Usuarios',   icon: 'people' },
+  { route: '/admin/membresias', label: 'Membresías', icon: 'credit-card' },
+  { route: '/admin/ranking',    label: 'Ranking',    icon: 'leaderboard' },
+];
+
+function AdminBottomNav() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const isActive = (route: string) =>
+    route === '/admin' ? pathname === '/admin' : pathname.startsWith(route);
+  const onMainTab = BOTTOM_TABS.some((t) => isActive(t.route));
+
+  return (
+    <>
+      <View style={[s.bottomNav, { paddingBottom: Math.max(insets.bottom, spacing.xs) }]}>
+        {BOTTOM_TABS.map((t) => {
+          const active = isActive(t.route);
+          return (
+            <Pressable
+              key={t.route}
+              style={s.bottomTab}
+              onPress={() => router.push(t.route as never)}
+              accessibilityRole="button"
+              accessibilityLabel={t.label}>
+              <MaterialIcons name={t.icon} size={22} color={active ? palette.goldText : palette.smoke} />
+              <Text style={[s.bottomTabLabel, active && s.bottomTabLabelActive]} numberOfLines={1}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          style={s.bottomTab}
+          onPress={() => setMoreOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Más secciones">
+          <MaterialIcons name="apps" size={22} color={!onMainTab ? palette.goldText : palette.smoke} />
+          <Text style={[s.bottomTabLabel, !onMainTab && s.bottomTabLabelActive]}>Más</Text>
+        </Pressable>
+      </View>
+
+      <Modal visible={moreOpen} transparent animationType="slide" onRequestClose={() => setMoreOpen(false)}>
+        <Pressable style={s.sheetBackdrop} onPress={() => setMoreOpen(false)}>
+          {/* onPress vacío absorbe el tap dentro de la hoja (no cierra) */}
+          <Pressable style={[s.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}}>
+            <View style={s.sheetHandle} />
+            <Text style={s.sheetTitle}>SECCIONES DEL ADMIN</Text>
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              {NAV_ITEMS.map((item) => {
+                const active = isActive(item.route);
+                return (
+                  <Pressable
+                    key={item.route}
+                    style={[s.sheetRow, active && s.sheetRowActive]}
+                    onPress={() => { setMoreOpen(false); router.push(item.route as never); }}>
+                    <MaterialIcons name={item.icon} size={20} color={active ? palette.goldText : palette.ash} />
+                    <Text style={[s.sheetRowLabel, active && s.bottomTabLabelActive]}>{item.label}</Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable
+                style={s.sheetRow}
+                onPress={() => { setMoreOpen(false); router.replace('/(tabs)/comando' as never); }}>
+                <MaterialIcons name="arrow-back" size={20} color={palette.smoke} />
+                <Text style={[s.sheetRowLabel, { color: palette.smoke }]}>Volver a la App</Text>
+              </Pressable>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
 export default function AdminLayout() {
   const router = useRouter();
   const { userId } = useLifeFlow();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { isDesktop } = useBreakpoint();
   const isWeb = Platform.OS === 'web';
+  // Sidebar solo en web ancho; móvil (nativo o web angosto) usa barra inferior.
+  // En web lee el ancho real (sincrónico) para evitar el flash del default 375 del hook.
+  const showSidebar = isWeb && (typeof window !== 'undefined' ? window.innerWidth >= 1200 : isDesktop);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,7 +243,7 @@ export default function AdminLayout() {
   if (isAdmin === null) return null; // loading — no flash
   if (isAdmin === false) return null; // redirecting
 
-  if (isWeb) {
+  if (showSidebar) {
     return (
       <View style={s.webRoot}>
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
@@ -168,8 +254,15 @@ export default function AdminLayout() {
     );
   }
 
-  // Mobile: just render screens without sidebar (nav links are in-screen)
-  return <Slot />;
+  // Móvil (nativo o web angosto): contenido + barra inferior persistente.
+  return (
+    <View style={s.mobileRoot}>
+      <View style={s.mobileContent}>
+        <Slot />
+      </View>
+      <AdminBottomNav />
+    </View>
+  );
 }
 
 const SIDEBAR_W = 220;
@@ -194,6 +287,52 @@ const s = StyleSheet.create({
     flex: 1,
     overflow: 'hidden' as const,
   },
+
+  // ── Móvil: contenido + barra inferior ──
+  mobileRoot: { flex: 1, backgroundColor: palette.black },
+  mobileContent: { flex: 1, overflow: 'hidden' as const },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: palette.graphite,
+    borderTopWidth: 1,
+    borderTopColor: palette.line,
+    paddingTop: spacing.xs,
+  },
+  bottomTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    minHeight: 48,
+    paddingVertical: 4,
+  },
+  bottomTabLabel: { fontFamily: Fonts.sans, fontSize: 9.5, color: palette.smoke, letterSpacing: 0.2 },
+  bottomTabLabelActive: { color: palette.goldText },
+
+  // ── Hoja "Más" ──
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: palette.graphite,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    borderTopWidth: 1,
+    borderColor: palette.line,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: palette.line, marginBottom: spacing.md },
+  sheetTitle: { ...typography.section, color: palette.ivory, fontSize: 11, marginBottom: spacing.sm },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    minHeight: 48,
+  },
+  sheetRowActive: { backgroundColor: palette.goldLight },
+  sheetRowLabel: { fontFamily: Fonts.sans, fontSize: 14, color: palette.ash },
   sidebarLogo: {
     flexDirection: 'row',
     alignItems: 'center',

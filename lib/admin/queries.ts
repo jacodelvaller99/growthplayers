@@ -354,10 +354,11 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
   // una query falla, la fila cae a defaults (free / no-admin) sin romper la lista.
   const tierMap: Record<string, string> = {};
   const adminMap: Record<string, boolean> = {};
+  const superMap: Record<string, boolean> = {};
   if (ids.length > 0) {
     const [membRes, profRes] = await Promise.allSettled([
       supa.from('user_memberships').select('user_id, product').eq('status', 'active').in('user_id', ids),
-      intel.profiles().select('id, is_admin').in('id', ids),
+      intel.profiles().select('id, is_admin, is_superadmin').in('id', ids),
     ]);
     if (membRes.status === 'fulfilled') {
       for (const m of (membRes.value.data ?? []) as Array<{ user_id: string; product: string }>) {
@@ -370,8 +371,9 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
       }
     }
     if (profRes.status === 'fulfilled') {
-      for (const p of (profRes.value.data ?? []) as Array<{ id: string; is_admin: boolean }>) {
+      for (const p of (profRes.value.data ?? []) as Array<{ id: string; is_admin: boolean; is_superadmin: boolean }>) {
         adminMap[p.id] = p.is_admin === true;
+        superMap[p.id] = p.is_superadmin === true;
       }
     }
   }
@@ -386,6 +388,7 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
     sovereign_score: p.sovereign_score as number | undefined,
     streak: p.streak as number | undefined,
     is_admin: adminMap[p.user_id] ?? false,
+    is_superadmin: superMap[p.user_id] ?? false,
     created_at: p.last_checkin_date as string ?? '',
   }));
 

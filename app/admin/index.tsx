@@ -21,7 +21,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
 import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import {
   fetchAtRiskUsers, fetchDashboardKPIs, fetchLiveEvents, fetchPracticeSignal,
@@ -122,7 +121,6 @@ const SECTIONS: SectionCard[] = [
 
 export default function MissionControl() {
   const sc = useScreen();
-  const { isMobile } = useBreakpoint();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
@@ -226,20 +224,7 @@ export default function MissionControl() {
         <StatusPill label="ADMIN" tone="gold" dot />
       </View>
 
-      {/* ── Nav móvil (el admin no tiene sidebar en la app): chips de salto rápido ── */}
-      {isMobile && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.navChips}
-          contentContainerStyle={s.navChipsContent}>
-          {SECTIONS.map((sec) => (
-            <Pressable key={sec.route} style={s.navChip} onPress={() => router.push(sec.route as never)}>
-              <Text style={s.navChipText}>{sec.icon} {sec.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
+      {/* La navegación móvil ahora es la barra inferior persistente del _layout. */}
 
       {/* ════ 1. ESTRELLA POLAR — RETENCIÓN (el número que dice si vamos bien) ════ */}
       {retention && <PolarStarCard stat={retention} />}
@@ -393,21 +378,6 @@ const s = StyleSheet.create({
   headerEyebrow: { ...typography.label, color: palette.smoke, marginBottom: 2 },
   headerTitle: { ...typography.title, color: palette.ivory },
   headerSub: { ...typography.mono, color: palette.ash, marginTop: 4 },
-
-  // Nav móvil (chips horizontales) — el admin no tiene sidebar en la app nativa.
-  navChips: { marginBottom: spacing.lg, marginHorizontal: -spacing.xs },
-  navChipsContent: { gap: spacing.xs, paddingHorizontal: spacing.xs },
-  navChip: {
-    backgroundColor: palette.graphite,
-    borderColor: palette.line,
-    borderWidth: 1,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 36,
-    justifyContent: 'center',
-  },
-  navChipText: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 0.5 },
 
   // At-risk users — accionable, va al dossier
   riskRow: {

@@ -39,23 +39,6 @@ type Filter = typeof FILTERS[number];
 const isNuevo = (u: AdminUser) =>
   (u.sovereign_score ?? 0) === 0 && (u.streak ?? 0) === 0 && !u.created_at;
 
-function ChurnBadge({ label }: { label?: string }) {
-  const colorMap: Record<string, string> = {
-    low:      palette.success,
-    medium:   palette.warning,
-    high:     palette.warning,
-    critical: palette.danger,
-  };
-  if (!label) return null;
-  return (
-    <View style={[rb.pill, { borderColor: colorMap[label] ?? palette.line }]}>
-      <Text style={[rb.pillText, { color: colorMap[label] ?? palette.ash }]}>
-        {label.toUpperCase()}
-      </Text>
-    </View>
-  );
-}
-
 function MemberBadge({ tier }: { tier?: string }) {
   // getTierColor/getTierLabel cubren los 5 tiers (free→growthplayers) con su color real.
   const color = getTierColor(tier);
@@ -63,6 +46,18 @@ function MemberBadge({ tier }: { tier?: string }) {
     <View style={[rb.pill, { borderColor: color }]}>
       <Text style={[rb.pillText, { color }]}>
         {getTierLabel(tier).toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
+/** Badge del rol de acceso (SuperAdmin / Admin). Para clientes se usa MemberBadge (tier). */
+function RoleBadge({ kind }: { kind: 'superadmin' | 'admin' }) {
+  const isSuper = kind === 'superadmin';
+  return (
+    <View style={[rb.pill, isSuper && { backgroundColor: palette.gold, borderColor: palette.gold }, !isSuper && { borderColor: palette.goldText }]}>
+      <Text style={[rb.pillText, { color: isSuper ? palette.ink : palette.goldText }]}>
+        {isSuper ? 'SUPERADMIN' : 'ADMIN'}
       </Text>
     </View>
   );
@@ -83,8 +78,10 @@ function UserRow({ user, notes, onPress }: { user: AdminUser; notes?: NoteSummar
       </View>
       <View style={s.rowBadges}>
         <NoteBadge count={notes?.count ?? 0} preview={notes?.last} />
-        <MemberBadge tier={user.subscription_tier} />
-        {user.is_admin && <ChurnBadge label="admin" />}
+        {/* Nivel de acceso: SuperAdmin/Admin (staff) → badge de rol; cliente → tier real */}
+        {user.is_superadmin ? <RoleBadge kind="superadmin" />
+          : user.is_admin ? <RoleBadge kind="admin" />
+          : <MemberBadge tier={user.subscription_tier} />}
       </View>
       <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
     </Pressable>
@@ -141,6 +138,22 @@ export default function UsuariosScreen() {
     });
     setCreating(false);
     if (res.success) {
+      // Tiempo real: prepende el nuevo perfil al INSTANTE (no espera el refetch).
+      // El trigger handle_new_user ya creó su fila; load() luego reconcilia.
+      if (res.userId) {
+        const nuevo: AdminUser = {
+          id: res.userId,
+          email: cEmail.trim(),
+          name: cName.trim(),
+          subscription_tier: cTier === 'free' ? 'free' : cTier,
+          sovereign_score: 0,
+          streak: 0,
+          is_admin: false,
+          is_superadmin: false,
+          created_at: '',
+        };
+        setUsers(prev => (prev.some(u => u.id === nuevo.id) ? prev : [nuevo, ...prev]));
+      }
       const ingreso = res.needsConfirm
         ? `Le enviamos un email de confirmación a ${cEmail.trim()}. Debe confirmarlo y luego entrar con la contraseña: ${cPassword}`
         : `Email: ${cEmail.trim()}\nContraseña temporal: ${cPassword}\n\nCompártela con el cliente para su primer ingreso.`;
