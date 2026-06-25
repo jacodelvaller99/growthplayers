@@ -70,12 +70,14 @@ if [ "$reach" != "200" ]; then
   fail "prod no responde 200 (HTTP $reach)"
 else
   found=0
-  # Expo serves the bundle como /_expo/static/js/web/entry-<hash>.js — y a veces
-  # el src no viene literalmente con comillas dobles; agarramos cualquier ruta
-  # que termine en .js (los primeros 6) y le grepeamos la tagline.
+  # Expo serves the bundle como /_expo/static/js/web/entry-<hash>.js. NO usar
+  # 'curl | grep -q' aquí: bajo pipefail, grep -q cierra el pipe al primer match
+  # y curl falla con SIGPIPE (exit 23) → el if cae al else aunque haya match.
+  # Descargamos a archivo y grepeamos después.
   for u in $(grep -oE '/_expo/static/js/web/[A-Za-z0-9._/-]+\.js|src="[^"]+\.js"' /tmp/lr_prod.html | sed 's/^src="//;s/"$//' | head -6); do
     [ "${u:0:1}" = "/" ] && u="$PROD_URL$u"
-    if curl -s -m 60 "$u" 2>/dev/null | grep -q "PERSIGUE EL ESTADO"; then found=1; break; fi
+    curl -s -m 60 -o /tmp/lr_chunk.js "$u" 2>/dev/null || continue
+    if grep -q "PERSIGUE EL ESTADO" /tmp/lr_chunk.js; then found=1; break; fi
   done
   if [ "$found" = "1" ]; then pass "prod tiene la nueva tagline — launch-hardening-p0 mergeado + desplegado";
   else fail "prod sin las mejoras (o bundle no extraíble) → merge launch-hardening-p0 → main"; fi
