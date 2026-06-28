@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Polaris · Manual del Operador</title>
+<meta name="description" content="Manual del operador — Polaris Growth Institute. Protocolo Soberano, 4 cuerpos, Norman, biometría, mentoría 1:1.">
+<style>
+  :root{
+    --ink:#0A0A0A; --black:#000; --carbon:#111213; --graphite:#16181B;
+    --line:#1F2226; --line-soft:#15171A;
+    --gold:#D4AF37; --gold-text:#FFC804; --gold-glow:rgba(212,175,55,.18); --gold-muted:rgba(212,175,55,.28);
+    --ivory:#F4EEE0; --ash:#A8A29A; --smoke:#6B6862; --success:#3FA46A; --danger:#C24A4A;
+    --rad-sm:8px; --rad-md:12px; --rad-lg:18px; --rad-pill:999px;
+    --sp-xs:4px; --sp-sm:8px; --sp-md:16px; --sp-lg:24px; --sp-xl:40px; --sp-xxl:64px;
+    --max:920px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--black);color:var(--ivory);font-family:"Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-feature-settings:"ss01","cv11";line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  ::selection{background:var(--gold);color:var(--ink)}
+  a{color:var(--gold-text);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s ease}
+  a:hover{border-bottom-color:var(--gold-text)}
+  hr{border:0;border-top:1px solid var(--line);margin:var(--sp-xl) 0}
+
+  /* Layout */
+  .shell{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+  aside.nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:var(--sp-lg) var(--sp-md) var(--sp-lg) var(--sp-lg);border-right:1px solid var(--line);background:linear-gradient(180deg,#000 0%,#0a0a0a 100%)}
+  main{padding:var(--sp-xxl) var(--sp-xl);max-width:calc(var(--max) + var(--sp-xxl));margin:0 auto}
+  @media (max-width:980px){.shell{grid-template-columns:1fr}aside.nav{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:var(--sp-xl) var(--sp-md)}}
+
+  /* Brand mark */
+  .brand{display:flex;align-items:center;gap:var(--sp-sm);margin-bottom:var(--sp-lg)}
+  .star{width:28px;height:28px;flex:none}
+  .brand-text{font-size:11px;letter-spacing:.18em;color:var(--gold-text);text-transform:uppercase;font-weight:600}
+  .brand-sub{font-size:10px;letter-spacing:.16em;color:var(--smoke);text-transform:uppercase;margin-top:2px}
+
+  /* Sidebar nav */
+  nav.toc{font-size:13px}
+  nav.toc h4{font-size:10px;letter-spacing:.18em;color:var(--smoke);text-transform:uppercase;margin:var(--sp-lg) 0 var(--sp-sm);font-weight:600}
+  nav.toc a{display:block;padding:6px 10px;color:var(--ash);border-radius:6px;border:0;margin-bottom:2px;line-height:1.35}
+  nav.toc a:hover{color:var(--ivory);background:rgba(255,255,255,.03)}
+  nav.toc a.active{color:var(--ink);background:var(--gold);font-weight:600}
+
+  /* Headings */
+  .eyebrow{font-size:11px;letter-spacing:.22em;color:var(--gold-text);text-transform:uppercase;font-weight:700;margin-bottom:var(--sp-md)}
+  h1{font-size:clamp(34px,5vw,52px);line-height:1.05;letter-spacing:-0.02em;font-weight:800;margin:0 0 var(--sp-md);text-transform:uppercase}
+  h1 .accent{color:var(--gold-text)}
+  h2{font-size:28px;line-height:1.15;letter-spacing:-0.01em;font-weight:800;margin:var(--sp-xxl) 0 var(--sp-md);text-transform:uppercase;border-top:1px solid var(--line);padding-top:var(--sp-xl)}
+  h2:first-of-type{border-top:0;padding-top:0;margin-top:var(--sp-xl)}
+  h3{font-size:18px;letter-spacing:.02em;font-weight:700;margin:var(--sp-xl) 0 var(--sp-sm);color:var(--ivory)}
+  h4{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-text);margin:var(--sp-lg) 0 var(--sp-sm)}
+  p{margin:0 0 var(--sp-md);color:var(--ivory);max-width:72ch}
+  p.lead{font-size:17px;color:var(--ash)}
+  small,.caption{font-size:12px;color:var(--smoke)}
+
+  /* Lists */
+  ul,ol{padding-left:1.1em;margin:0 0 var(--sp-md);max-width:72ch}
+  li{margin-bottom:6px}
+  li::marker{color:var(--gold-text)}
+
+  /* Components */
+  .hero{padding:var(--sp-xxl) 0 var(--sp-xl);border-bottom:1px solid var(--line);margin-bottom:var(--sp-xl)}
+  .gold-rule{width:48px;height:2px;background:var(--gold);margin:var(--sp-md) 0 var(--sp-lg)}
+  .pill{display:inline-block;padding:4px 10px;border:1px solid var(--gold-muted);color:var(--gold-text);border-radius:var(--rad-pill);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin-right:6px}
+  .pill.danger{border-color:var(--danger);color:var(--danger)}
+  .pill.success{border-color:var(--success);color:var(--success)}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.012),rgba(255,255,255,.005));border:1px solid var(--line);border-radius:var(--rad-md);padding:var(--sp-lg);margin:var(--sp-md) 0}
+  .card.gold{border-color:var(--gold-muted);box-shadow:inset 0 0 0 1px rgba(212,175,55,.06)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-md);margin:var(--sp-md) 0}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-md);margin:var(--sp-md) 0}
+  @media (max-width:720px){.grid-2,.grid-3{grid-template-columns:1fr}}
+  .callout{border-left:3px solid var(--gold);padding:var(--sp-md) var(--sp-lg);background:rgba(212,175,55,.04);border-radius:0 var(--rad-md) var(--rad-md) 0;margin:var(--sp-md) 0}
+  .callout.warn{border-left-color:var(--danger);background:rgba(194,74,74,.06)}
+  .callout h4{margin:0 0 6px;color:var(--gold-text)}
+  .callout.warn h4{color:var(--danger)}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:var(--sp-sm) var(--sp-md);font-size:14px;margin:var(--sp-md) 0}
+  .kv dt{color:var(--smoke);letter-spacing:.06em;font-size:11px;text-transform:uppercase;padding-top:2px}
+  .kv dd{margin:0;color:var(--ivory)}
+  .steps{counter-reset:step;list-style:none;padding:0}
+  .steps li{counter-increment:step;display:grid;grid-template-columns:34px 1fr;gap:var(--sp-md);align-items:start;padding:var(--sp-md) 0;border-top:1px solid var(--line-soft)}
+  .steps li::before{content:counter(step,decimal-leading-zero);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--gold-text);letter-spacing:.1em;padding-top:2px}
+  .steps li:first-child{border-top:0;padding-top:0}
+  .steps h4{margin:0 0 4px}
+  .tag{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:var(--gold-text);background:rgba(212,175,55,.08);padding:1px 6px;border-radius:4px;border:1px solid var(--gold-muted)}
+  code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;color:var(--gold-text);background:rgba(212,175,55,.08);padding:1px 6px;border-radius:4px;border:1px solid var(--gold-muted)}
+  .qstrip{display:flex;flex-wrap:wrap;gap:8px;margin:var(--sp-md) 0}
+  .qstrip .pill{margin:0}
+  .footer{margin-top:var(--sp-xxl);padding:var(--sp-xl) 0;border-top:1px solid var(--line);color:var(--smoke);font-size:12px;letter-spacing:.04em}
+  .meta-strip{display:flex;flex-wrap:wrap;gap:var(--sp-lg);font-size:11px;letter-spacing:.14em;color:var(--smoke);text-transform:uppercase;margin-bottom:var(--sp-lg)}
+  .star-bullet::before{content:"★";color:var(--gold);margin-right:.5em}
+  table{width:100%;border-collapse:collapse;margin:var(--sp-md) 0;font-size:14px}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--smoke);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+
+  /* Smooth scroll + section anchor offset */
+  html{scroll-behavior:smooth}
+  section{scroll-margin-top:24px}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="polaris-star" viewBox="0 0 64 64">
+    <g fill="var(--gold)">
+      <polygon points="32,2 36,28 62,32 36,36 32,62 28,36 2,32 28,28"/>
+      <polygon points="32,12 34,30 52,32 34,34 32,52 30,34 12,32 30,30" opacity=".55"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="shell">
+
+  <aside class="nav">
+    <div class="brand">
+      <svg class="star" aria-hidden="true"><use href="#polaris-star"/></svg>
+      <div>
+        <div class="brand-text">Polaris</div>
+        <div class="brand-sub">Manual del Operador</div>
+      </div>
+    </div>
+
+    <nav class="toc" aria-label="Tabla de contenidos">
+      <h4>Comenzar</h4>
+      <a href="#bienvenida">Bienvenida</a>
+      <a href="#primeros-pasos">Primeros pasos</a>
+      <a href="#protocolo">El Protocolo Soberano</a>
+
+      <h4>Loop diario</h4>
+      <a href="#comando">Comando central</a>
+      <a href="#checkin">Check-in diario</a>
+      <a href="#norte">Mi Norte</a>
+
+      <h4>Mentor IA</h4>
+      <a href="#norman">Norman</a>
+      <a href="#memoria">Memoria del cliente</a>
+      <a href="#confrontacion">Confrontación con dato</a>
+
+      <h4>Programa</h4>
+      <a href="#programas">Módulos y arquetipos</a>
+      <a href="#mentoria">Mentoría 1:1</a>
+
+      <h4>Bienestar</h4>
+      <a href="#habitos">Hábitos</a>
+      <a href="#ayuno">Ayuno</a>
+      <a href="#nutricion">Nutrición</a>
+      <a href="#cuerpo">Cuerpo</a>
+      <a href="#suplementos">Suplementación</a>
+      <a href="#internista">Internista educativo</a>
+      <a href="#biometria">Biometría</a>
+      <a href="#practicas">Prácticas</a>
+      <a href="#comunidad">Comunidad</a>
+
+      <h4>Perfil</h4>
+      <a href="#perfil">Perfil y datos</a>
+      <a href="#wearables">Wearables</a>
+      <a href="#suscripcion">Suscripción</a>
+
+      <h4>Apéndice</h4>
+      <a href="#privacidad">Privacidad y seguridad</a>
+      <a href="#problemas">Resolución de problemas</a>
+      <a href="#soporte">Soporte</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <!-- ───────── HERO ───────── -->
+    <header class="hero">
+      <div class="eyebrow">Manual · v1.0</div>
+      <h1>Opera tu vida<br><span class="accent">como un sistema interno.</span></h1>
+      <div class="gold-rule"></div>
+      <p class="lead">Polaris no es una app de hábitos. Es un protocolo de 90 días para reprogramar tu mente, regular tus emociones, elevar tu energía vital y construir un estado interno imperturbable — sin perder tu salud, tu familia ni tu propósito.</p>
+      <div class="meta-strip">
+        <span>Persigue el estado, no el resultado</span><span>·</span>
+        <span>4 cuerpos · medicina + psicología + rendimiento</span><span>·</span>
+        <span>1 protocolo soberano</span>
+      </div>
+      <p><span class="pill">iOS</span><span class="pill">Android</span><span class="pill">Web · growthplayers.vercel.app</span></p>
+    </header>
+
+    <!-- ───────── BIENVENIDA ───────── -->
+    <section id="bienvenida">
+      <h2>Bienvenida</h2>
+
+      <p>Polaris está construido sobre un principio simple: <strong>la distancia entre donde estás y donde quieres estar no es de estrategia — es de sistema interno</strong>. Este manual te muestra cómo operar ese sistema.</p>
+
+      <h3>Para quién es</h3>
+      <ul>
+        <li>Empresarios y operadores de alto rendimiento que ya tienen resultados externos y sienten un costo interno acumulado.</li>
+        <li>Hombres que quieren método, no improvisación; profundidad, no moda.</li>
+        <li>Personas que valoran la ciencia, la sabiduría ancestral y la espiritualidad práctica — sin clichés ni promesas mágicas.</li>
+      </ul>
+
+      <h3>Lo que Polaris NO es</h3>
+      <div class="callout warn">
+        <h4>Tres descargos importantes</h4>
+        <ol>
+          <li><strong>No es atención médica.</strong> Norman, el internista educativo y los disclaimers de prácticas son educación, no diagnóstico ni tratamiento.</li>
+          <li><strong>No es terapia psicológica.</strong> Las prácticas (tapping, grito, diario) no sustituyen acompañamiento profesional en crisis.</li>
+          <li><strong>No promete resultados.</strong> Promete acompañarte con honestidad en el proceso. Lo que cambies depende de ti.</li>
+        </ol>
+      </div>
+
+      <h3>Los 4 cuerpos</h3>
+      <div class="grid-2">
+        <div class="card"><h4>Físico</h4>Energía, sueño, HRV, respiración, nutrición, movimiento, regulación del sistema nervioso.</div>
+        <div class="card"><h4>Mental</h4>Narrativas internas, foco, atención, creencias, reprogramación, claridad.</div>
+        <div class="card"><h4>Emocional</h4>Identificación, tránsito, liberación, regulación, integración — no represión.</div>
+        <div class="card"><h4>Energético / Espiritual</h4>Presencia, propósito, coherencia, acción alineada, relación con el campo.</div>
+      </div>
+    </section>
+
+    <!-- ───────── PRIMEROS PASOS ───────── -->
+    <section id="primeros-pasos">
+      <h2>Primeros pasos</h2>
+
+      <h3>1. Bienvenida y acceso</h3>
+      <p>Al abrir la app verás la pantalla de bienvenida con la marca y el lema. Dos puertas: <strong>Entrar al sistema</strong> (crear cuenta) o <strong>Ya tengo cuenta</strong> (iniciar sesión).</p>
+
+      <h3>2. El consentimiento</h3>
+      <p>Antes de cualquier dato, Polaris pide tu consentimiento explícito en cuatro documentos legales — esto cumple el RGPD y es la base del trato:</p>
+      <div class="kv">
+        <dt>Términos</dt><dd>Reglas de uso de la plataforma.</dd>
+        <dt>Privacidad</dt><dd>Qué datos guardamos, con quién los compartimos, cómo los proteges.</dd>
+        <dt>Aviso de salud</dt><dd>Polaris no sustituye atención médica.</dd>
+        <dt>Confrontación con dato</dt><dd>Permiso para que Norman pueda confrontarte con tu propia conducta registrada (ver <a href="#confrontacion">Confrontación</a>).</dd>
+      </div>
+      <p class="caption">Hay también un <em>opt-in opcional</em> separado para datos analíticos (<code>ml_consent</code>). No es obligatorio; puedes operar sin él.</p>
+
+      <h3>3. Intro de valor (≈20 s)</h3>
+      <p>Una pantalla breve y saltable que enmarca el método antes de pedirte datos. Es opcional — puedes saltar.</p>
+
+      <h3>4. Identidad</h3>
+      <p>Tu nombre y rol. Es lo único que necesitamos para empezar a hablarte por tu nombre.</p>
+
+      <h3>5. Mi Norte</h3>
+      <p>Tu propósito declarado para los próximos 90 días. Una frase. Vuelves a esta pantalla siempre que quieras refrescarlo.</p>
+
+      <h3>6. El obstáculo (opcional)</h3>
+      <p>"¿Qué cambia todo en 90 días?" — campo opcional, con chips de ejemplo. Si no lo respondes ahora, lo puedes nombrar más tarde en Norman.</p>
+
+      <h3>7. Membresía / código de acceso</h3>
+      <p><strong>Opcional.</strong> Si tu coach te entregó un código, ingrésalo. Si no, "Iniciar sin código →". Te quedas en plan gratuito y puedes elevar tier cuando quieras.</p>
+    </section>
+
+    <!-- ───────── PROTOCOLO ───────── -->
+    <section id="protocolo">
+      <h2>El Protocolo Soberano</h2>
+      <p>Tu camino base son <strong>9 semanas / 9 módulos</strong>. Cada módulo tiene lecciones, una tarea diaria, un arquetipo y un foco. Avanzas a tu ritmo — el sistema sugiere, no impone.</p>
+      <div class="grid-2">
+        <div class="card"><h4>Estructura semanal</h4>
+          <ul>
+            <li>Lecciones del módulo activo.</li>
+            <li>Foco semanal (Norman lo lee).</li>
+            <li>Tarea diaria del módulo.</li>
+            <li>Check-in en cualquier momento.</li>
+          </ul>
+        </div>
+        <div class="card"><h4>Arquetipos</h4>
+          <ul>
+            <li>Cada módulo culmina con un arquetipo (Guerrero, Pontífice, …).</li>
+            <li>Al completar todas las lecciones del módulo, el arquetipo queda <span class="tag">CONQUISTADO</span> visible en tu perfil.</li>
+            <li>Algunos arquetipos desbloquean prácticas avanzadas.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── COMANDO ───────── -->
+    <section id="comando">
+      <h2>Comando central</h2>
+      <p class="lead">Tu sala de mando diaria. Una sola decisión, anclada al Norte.</p>
+
+      <h4>Lo que ves al entrar</h4>
+      <ol class="steps">
+        <li><h4>Tu mando de hoy</h4>Una decisión no-negociable derivada de la siguiente mejor acción (NBA), tu Norte o tu propósito. No una lista — una sola cosa.</li>
+        <li><h4>Score Soberano (delta-driven)</h4>Los primeros 7 días: "Construyendo tu línea base · día N de 7". Día 8+: tu cambio porcentual vs tu propia semana 1, con etiqueta clara ("ascenso · +1.4 de energía vs tu línea base").</li>
+        <li><h4>Norte anclado</h4>Tu propósito visible — no un breadcrumb. Tap para revisar/editar.</li>
+        <li><h4>Check-in del día</h4>Acceso directo si aún no lo has hecho.</li>
+        <li><h4>Norman</h4>Botón para una sesión rápida con tu mentor IA.</li>
+      </ol>
+
+      <div class="callout">
+        <h4>Cómo leer el Score</h4>
+        <p style="margin:0">El Score absoluto sigue calculándose para uso administrativo. Tú ves un <strong>delta</strong>: el sistema premia <em>cambio</em>, no frecuencia. Por eso los primeros días son "construir línea base" — no un castigo, una calibración.</p>
+      </div>
+    </section>
+
+    <!-- ───────── CHECK-IN ───────── -->
+    <section id="checkin">
+      <h2>Check-in diario</h2>
+      <p class="lead">Dos minutos de honestidad cada día. El check-in no es burocracia — es la lectura del sistema.</p>
+
+      <h3>Cómo funciona</h3>
+      <ol class="steps">
+        <li><h4>Cuatro lecturas (0–10)</h4>Energía · Claridad · Estrés · Sueño.</li>
+        <li><h4>Cálculo del Score</h4>Tu lectura entra en la fórmula soberana junto con tu racha, lecciones, tareas y prácticas.</li>
+        <li><h4>Micro-ritual de regulación</h4>Después de guardar, Polaris te ofrece un micro-ritual inline de respiración en caja (4·4·4·4, ~96 s). El check-in no solo lee — <em>regula</em>.</li>
+        <li><h4>Delta pre/post</h4>Al terminar el ritual, una pregunta de 1-tap: "¿Cómo estás ahora?" → "Bajaste 2 de tensión" / "Igual" / sin juicio.</li>
+        <li><h4>Routing secundario</h4>Bajo "O sigue tu movimiento" tienes el routing original (respiración, protocolo) si prefieres saltar el ritual.</li>
+      </ol>
+
+      <div class="callout">
+        <h4>Cuándo hacerlo</h4>
+        <p style="margin:0">El recordatorio diario es a las 7:00 AM con un mensaje rotativo. Puedes hacerlo cuando quieras — pero cada día que pasa sin check-in es información que Norman no puede usar.</p>
+      </div>
+    </section>
+
+    <!-- ───────── NORTE ───────── -->
+    <section id="norte">
+      <h2>Mi Norte</h2>
+      <p>Tu propósito declarado en una frase. Sirve para tres cosas concretas:</p>
+      <ul>
+        <li><strong>Anclar Comando</strong> — el "mando de hoy" puede derivarse de tu Norte.</li>
+        <li><strong>Acotar Norman</strong> — el mentor IA conoce tu Norte y lo cita.</li>
+        <li><strong>Auditar coherencia</strong> — si tus check-ins se alejan de tu Norte, el sistema detecta fricción.</li>
+      </ul>
+      <p class="caption">Edítalo cuando lo necesites. Reescribirlo no es debilidad: es soberanía.</p>
+    </section>
+
+    <!-- ───────── NORMAN ───────── -->
+    <section id="norman">
+      <h2>Norman · Mentor IA</h2>
+      <p class="lead">Tu mentor de bolsillo. Sabio pero práctico. Espiritual pero aterrizado. Directo pero compasivo.</p>
+
+      <h3>Cómo te habla</h3>
+      <p>Norman conoce tu Norte, tus check-ins recientes, tus lecciones completadas, tus métricas biométricas (si tienes wearable) y tus compromisos previos. No improvisa: <em>opera con datos</em>.</p>
+
+      <h3>Modos explícitos</h3>
+      <p>Sobre el campo de texto verás chips con cuatro modos. El que elijas cambia <em>cómo</em> te acompaña:</p>
+      <div class="grid-2">
+        <div class="card"><h4>Diagnóstico</h4>Te ayuda a leer qué te pasa, no a resolverlo todavía.</div>
+        <div class="card"><h4>Decisión</h4>Te lleva a elegir entre opciones con criterio claro.</div>
+        <div class="card"><h4>Accountability</h4>Te confronta con tus compromisos previos.</div>
+        <div class="card"><h4>Reflexión</h4>Espacio abierto sin confrontación — solo espejo.</div>
+      </div>
+      <p class="caption">Si no eliges modo, Norman se adapta a tu estado.</p>
+
+      <h3>Disclosure</h3>
+      <div class="callout warn">
+        <h4>Norman ES una IA</h4>
+        <p style="margin:0">Lo dice explícitamente. Frente a crisis (autolesión, salud mental urgente, dolor torácico, embarazo con consulta médica seria) <strong>deja de educar y te deriva</strong> a recursos humanos profesionales. Esa lógica es <em>determinística</em>, no depende del modelo.</p>
+      </div>
+
+      <h3>Detener</h3>
+      <p>Mientras Norman escribe, puedes detener la respuesta con un tap. Si el sistema detecta inactividad (~8s sin avance), hace failover automático a otro proveedor sin que tengas que hacer nada.</p>
+    </section>
+
+    <!-- ───────── MEMORIA ───────── -->
+    <section id="memoria">
+      <h2>Memoria del cliente</h2>
+      <p>Norman recuerda — pero con orden y privacidad. Tres capas:</p>
+      <ol>
+        <li><strong>Tu perfil sintético</strong> — quién eres, tu Norte, tus compromisos abiertos. Lo ves tú; Norman lo cita.</li>
+        <li><strong>Resúmenes de tus conversaciones</strong> — generados automáticamente. Capturan lo dicho y lo decidido, no transcripciones literales.</li>
+        <li><strong>Notas del coach humano</strong> — privadas del coach, <em>nunca</em> entran al contexto de Norman ni se te muestran. Diseño explícito de privacidad.</li>
+      </ol>
+      <p class="caption">Norman confronta solo con compromisos que tú declaraste explícitamente. Inferir o presumir no está en el contrato.</p>
+    </section>
+
+    <!-- ───────── CONFRONTACIÓN ───────── -->
+    <section id="confrontacion">
+      <h2>Confrontación con dato</h2>
+      <p>Si lo autorizaste en el consent gate (4º checkbox), Norman puede confrontarte cuando hay una brecha clara entre lo que <em>dijiste</em> y lo que <em>hiciste</em>.</p>
+      <div class="grid-2">
+        <div class="card"><h4>Cuándo SÍ</h4>
+          <ul>
+            <li>Te comprometiste a X explícitamente.</li>
+            <li>Los datos muestran que no ocurrió.</li>
+            <li>No estás en estado vulnerable.</li>
+          </ul>
+        </div>
+        <div class="card gold"><h4>Cuándo NO (protocolo de presencia)</h4>
+          <ul>
+            <li>Primeros 7 días desde tu onboarding (<em>honeymoon</em>).</li>
+            <li>Energía ≤ 3 / Estrés ≥ 8 (estado emocional comprometido).</li>
+            <li>Pausa declarada (crisis, duelo).</li>
+            <li>Seguridad siempre manda — confrontación se subordina.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout warn">
+        <h4>DMs y posts NUNCA se usan como evidencia</h4>
+        <p style="margin:0">Tu comunicación con otros operadores es metadata para el coach (señal de actividad), no contenido. Norman no la lee, no la cita, no la usa.</p>
+      </div>
+    </section>
+
+    <!-- ───────── PROGRAMAS ───────── -->
+    <section id="programas">
+      <h2>Programas · módulos y arquetipos</h2>
+      <p>Tu currículum del Protocolo Soberano. 9 módulos. Cada módulo tiene lecciones (videos Vimeo con chrome Polaris) reproducidas <em>dentro</em> de la app — sin sacarte a un sitio externo.</p>
+
+      <h4>Estructura por módulo</h4>
+      <ul>
+        <li><strong>Título y arquetipo</strong> (el "Guerrero", el "Pontífice", …).</li>
+        <li><strong>Subtítulo</strong> — voz Polaris sobria. <em>No</em> promesa de resultado.</li>
+        <li><strong>Lecciones</strong> con duración estimada.</li>
+        <li><strong>Foco semanal</strong> — qué practicas esta semana.</li>
+        <li><strong>Tareas diarias</strong> — pequeñas, registrables.</li>
+      </ul>
+
+      <h4>Módulos "próximamente"</h4>
+      <p>Los módulos aún sin material muestran un <strong>teaser in-app</strong> (qué viene, por qué importa, lecciones planeadas) — no un link externo. Cuando esté listo, lo desbloqueas desde la app.</p>
+
+      <h4>Arquetipo conquistado</h4>
+      <p>Al completar todas las lecciones de un módulo con arquetipo, el card se marca <span class="tag">EL [ARQUETIPO] · CONQUISTADO</span> permanente. Es señal visible de progreso identitario.</p>
+    </section>
+
+    <!-- ───────── MENTORÍA ───────── -->
+    <section id="mentoria">
+      <h2>Mentoría 1:1</h2>
+      <p class="lead">Tu camino acompañado: 90 días con sesiones semanales, plan de acción real, y un espejo narrativo.</p>
+
+      <h3>El journey semanal</h3>
+      <ul>
+        <li>Las semanas tienen rangos de fecha reales — no plantillas.</li>
+        <li>Cada semana tiene un foco y un plan.</li>
+        <li>Puedes grabar la sesión con tu coach (o subir audio de Plaud).</li>
+      </ul>
+
+      <h3>Grabación → notas IA</h3>
+      <ol class="steps">
+        <li><h4>Grabas la sesión</h4>Audio dentro de la app móvil. (En web, mostramos aviso honesto: "grabación disponible en la app móvil".)</li>
+        <li><h4>Whisper transcribe</h4>El audio se manda a Whisper con reintentos (3 intentos exponenciales). Si falla, abrimos editor de notas manuales — la sesión nunca se pierde.</li>
+        <li><h4>Norman genera notas</h4>Síntesis de lo discutido + un plan de acción de 3–5 ítems.</li>
+        <li><h4>Tú confirmas el draft</h4>Editas, agregas, quitas. Cuando confirmas, las acciones se crean como <span class="tag">mentor_tasks</span> con seguimiento.</li>
+        <li><h4>Loop de 24h</h4>Si autorizaste push, programamos un recordatorio 24h después: "Ayer te comprometiste a X. ¿Lo aplicaste?" — con un prompt in-app que reusa tus tareas.</li>
+      </ol>
+
+      <h3>Espejo del proceso</h3>
+      <p>En la pantalla de mentoría verás "EL ESPEJO DE TU PROCESO — dónde empezaste, qué se movió, hacia dónde vas". Tus notas se tagean automáticamente por tema (8 dominios Polaris) para ver patrones.</p>
+    </section>
+
+    <!-- ───────── HÁBITOS ───────── -->
+    <section id="habitos">
+      <h2>Hábitos</h2>
+      <p>Dos rutinas — matutina y nocturna — con check, puntos, secuencia y guía educativa.</p>
+      <h4>Cada hábito muestra</h4>
+      <ul>
+        <li><strong>Qué hacer</strong> — paso concreto.</li>
+        <li><strong>Importancia</strong> — por qué.</li>
+        <li><strong>Ciencia</strong> — el mecanismo, sin claims inflados.</li>
+        <li><strong>Recordatorio</strong> — push con deep-link a la pantalla del hábito (en builds nativos).</li>
+      </ul>
+      <p class="caption">El primer vaso de agua, por ejemplo, no "elimina toxinas" (eso lo hacen tus riñones). Hidrata tras el ayuno nocturno y apoya energía. Polaris dice lo que la ciencia respalda — nada más.</p>
+    </section>
+
+    <!-- ───────── AYUNO ───────── -->
+    <section id="ayuno">
+      <h2>Ayuno intermitente</h2>
+      <p>Timer activo con etapas honestas (cetosis, autofagia, cambio metabólico) y guía de preparación, hidratación y <em>break-fast</em>.</p>
+
+      <h4>Protocolos disponibles</h4>
+      <ul>
+        <li><strong>16:8</strong> — el más popular.</li>
+        <li><strong>18:6</strong> — intermedio.</li>
+        <li><strong>20:4</strong> — avanzado.</li>
+        <li><strong>24h</strong> — solo experimentados.</li>
+        <li><strong>48h</strong> — autofagia sostenida (evidencia mayormente preclínica en humanos).</li>
+        <li><strong>72h</strong> — ayuno extendido. <strong>Solo con supervisión médica.</strong></li>
+      </ul>
+
+      <div class="callout warn">
+        <h4>Aviso médico no omitible</h4>
+        <p style="margin:0">Antes de iniciar te interpones un modal honesto: no apto en embarazo, diabetes con medicación, TCA, ciertos medicamentos. Solo adultos sanos. No es consejo médico — consulta a tu médico.</p>
+      </div>
+
+      <h4>Cómo romper el ayuno</h4>
+      <p>El modal de "break-fast" sugiere alimentos (caldo de huesos, proteína ligera, fruta baja en azúcar, aguacate, kéfir) y reglas de re-introducción gradual. Lo que comes para romper el ayuno se registra como dato.</p>
+    </section>
+
+    <!-- ───────── NUTRICIÓN ───────── -->
+    <section id="nutricion">
+      <h2>Nutrición</h2>
+      <p>Polaris no te prescribe dieta. Te ayuda a <em>operar</em> la que diseñaste con tu nutriólogo.</p>
+      <ul>
+        <li><strong>Preferencias</strong> — wizard breve para que Norman tenga contexto.</li>
+        <li><strong>Subir tu plan</strong> — el documento de tu profesional se sube y queda accesible.</li>
+        <li><strong>Notas</strong> — campo libre para acuerdos contigo mismo.</li>
+      </ul>
+    </section>
+
+    <!-- ───────── CUERPO ───────── -->
+    <section id="cuerpo">
+      <h2>Cuerpo · medidas</h2>
+      <p>Registro de peso y medidas con barra IMC referencial. Sparkline de tendencia. <strong>No es diagnóstico</strong> — es lectura.</p>
+      <p class="caption">No comparamos contra "objetivos" inventados ni te decimos qué pesar. Tu cuerpo, tu lectura.</p>
+    </section>
+
+    <!-- ───────── SUPLEMENTOS ───────── -->
+    <section id="suplementos">
+      <h2>Suplementación</h2>
+      <p>Stack estructurado en tres ejes — energía, sueño, cognitivo — con dosis, timing y evidencia honesta.</p>
+      <div class="grid-3">
+        <div class="card"><h4>Energía</h4>Coenzima Q10, Ashwagandha (KSM-66 reduce cortisol en ensayos clínicos), creatina, magnesio.</div>
+        <div class="card"><h4>Sueño</h4>L-Teanina (ondas alfa), Melatonina dosis baja, Ashwagandha nocturna, Glicina.</div>
+        <div class="card"><h4>Cognitivo</h4>Lion's Mane (NGF en estudios preliminares), Omega-3 DHA, Rhodiola, Alpha-GPC, Bacopa.</div>
+      </div>
+      <div class="callout warn">
+        <h4>Disclaimer permanente</h4>
+        <p style="margin:0"><strong>Solo información educativa.</strong> Consulta a tu médico antes de suplementarte. Polaris no vende suplementos ni recibe comisión por marcas.</p>
+      </div>
+    </section>
+
+    <!-- ───────── INTERNISTA ───────── -->
+    <section id="internista">
+      <h2>Internista educativo</h2>
+      <p class="lead">Una IA distinta de Norman. <strong>Educa</strong> sobre marcadores de laboratorio y medicina de estilo de vida. <strong>No diagnostica, no prescribe.</strong></p>
+
+      <h3>Qué puede hacer</h3>
+      <ul>
+        <li>Interpretar marcadores comunes (glucosa, HbA1c, LDL/HDL/TG, TSH, vit D, B12, ferritina, creatinina, ALT, hs-CRP, …) citando guías reales (USPSTF, NIH, Mayo Clinic, ACLM, Cochrane, Endocrine Society, ADA, ATA, AHA/ACC, KDIGO).</li>
+        <li>Explicar pilares de lifestyle medicine con grado de evidencia.</li>
+        <li>Sugerir el <strong>panel recomendado</strong> de exámenes (Dr. Armando Romero).</li>
+        <li>Subir tus exámenes (PDF) a un bucket privado con RLS — solo tú los ves; el coach los ve solo si lo autorizas explícitamente.</li>
+      </ul>
+
+      <h3>Qué NUNCA hace</h3>
+      <div class="callout warn">
+        <h4>Líneas rojas codificadas</h4>
+        <ul style="margin:0">
+          <li>No diagnostica ni te dice "tienes X".</li>
+          <li>No prescribe ni te dice qué tomar.</li>
+          <li>Ante red-flags (ideación suicida, dolor torácico irradiado, embarazo + medicación, TCA, ictus, crisis hipertensiva por cifra) <strong>deja de educar y deriva sin llamar al modelo</strong>. La seguridad es lógica pura, no opinión de IA.</li>
+          <li>La conversación con el internista es <strong>admin-blind por diseño</strong>: el coach humano nunca la ve.</li>
+        </ul>
+      </div>
+
+      <h3>Tus exámenes</h3>
+      <p>En "Tus exámenes médicos" subes los PDF de tu laboratorio. Guardamos archivo + metadatos (fecha, lab, marcadores) en almacenamiento privado RLS. Cada acceso requiere URL firmada de 5 min. Puedes borrarlos. Decides si compartirlos con tu coach.</p>
+    </section>
+
+    <!-- ───────── BIOMETRÍA ───────── -->
+    <section id="biometria">
+      <h2>Biometría</h2>
+      <p>Tu cuerpo hoy — interpretado, no solo medido. Cuando hay wearable conectado, lees:</p>
+      <div class="grid-2">
+        <div class="card"><h4>Estado del sueño</h4>Score de sueño + horas, comparado con tu base.</div>
+        <div class="card"><h4>Recuperación</h4>HRV + frecuencia cardíaca en reposo vs baseline.</div>
+        <div class="card"><h4>Coherencia</h4>Estabilidad de tus señales (estable → muy inestable).</div>
+        <div class="card"><h4>Riesgo de fatiga</h4>Tendencia 7 días.</div>
+      </div>
+
+      <h3>Reflexión subjetiva</h3>
+      <p>Te invitamos a registrar cómo te sientes <em>tras</em> ver el dato. Si tu energía subjetiva es baja pero tu recovery objetivo está bien, Polaris detecta la <strong>mismatch</strong> y se lo cuenta a Norman como contexto — sin alarmar.</p>
+
+      <h3>Coach safe vs Client safe</h3>
+      <p>El coach ve estado técnico + drivers + resumen técnico. Tú ves un resumen <em>cuidador</em> sin jerga ni alarmismo. Mismo dato, dos lenguajes.</p>
+    </section>
+
+    <!-- ───────── PRÁCTICAS ───────── -->
+    <section id="practicas">
+      <h2>Prácticas</h2>
+      <p>El cuerpo no se piensa: se practica. Catálogo de prácticas reales, con guardrails honestos.</p>
+
+      <h3>Respiración</h3>
+      <ul>
+        <li><strong>Box breathing</strong> (4·4·4·4) — calma.</li>
+        <li><strong>4-7-8</strong> — exhalación larga, sensación de calma.</li>
+        <li><strong>Respiración fisiológica</strong> — doble inhalación + exhalación larga.</li>
+        <li><strong>Wim Hof</strong> — activación. Con precaución.</li>
+        <li><strong>Tummo</strong> — práctica tradicional de activación.</li>
+        <li><strong>Nadi Shodhana</strong> — respiración alterna tradicional.</li>
+      </ul>
+      <p class="caption">Antes y después: si tienes wearable, ves contexto del día (HRV / recovery). NO es medición en vivo — es lectura del día, copy honesto.</p>
+
+      <h3>Meditación · sueño · binaurales</h3>
+      <p>Catálogo con duraciones, descripciones honestas ("banda asociada al sueño profundo", no "mejor sueño garantizado") y safety warning permanente para binaurales (epilepsia, fotosensibilidad, no usar conduciendo).</p>
+
+      <h3>Diario · biblioteca</h3>
+      <p>Diario reflexivo + biblioteca filtrable por tema. La memoria del cliente puede absorber resúmenes del diario para que Norman tenga contexto sin leer todo.</p>
+
+      <h3>Tapping (EFT)</h3>
+      <p>Técnica de liberación emocional con timer y puntos guiados. Aviso honesto sobre evidencia.</p>
+
+      <h3>Grito · Consciencia (Hawkins)</h3>
+      <ul>
+        <li><strong>Grito</strong> — práctica catártica controlada con encuadre serio (no donde haya gente, no con problemas vocales).</li>
+        <li><strong>Consciencia (Hawkins)</strong> — calibración semanal de niveles de consciencia. Marco filosófico, no diagnóstico.</li>
+      </ul>
+    </section>
+
+    <!-- ───────── COMUNIDAD ───────── -->
+    <section id="comunidad">
+      <h2>Comunidad</h2>
+      <p>Una tribu de operadores — no un feed más. La comunidad puede estar activada o desactivada según el momento del producto.</p>
+
+      <h3>Código de la Hermandad</h3>
+      <p>Antes de participar aceptas el código:</p>
+      <ul>
+        <li>Cuidamos al de al lado: <strong>tolerancia cero</strong> a acoso, odio, amenazas, contenido objetable.</li>
+        <li>Nada sexual explícito, violento, ilegal ni spam.</li>
+        <li>El que abuse de un hermano queda fuera de inmediato.</li>
+        <li>Reportar y bloquear están disponibles para protegerte.</li>
+        <li>Los reportes se revisan; los infractores se remueven.</li>
+      </ul>
+
+      <h3>Mensajes directos</h3>
+      <p>Inbox 1-a-1 con otros operadores. Bloqueo simétrico — si bloqueas, no os veis. <strong>El coach NUNCA ve contenido de DMs</strong>; solo metadata (conteo + última actividad) para detectar inactividad. No surveillance.</p>
+    </section>
+
+    <!-- ───────── PERFIL ───────── -->
+    <section id="perfil">
+      <h2>Perfil y datos</h2>
+      <p>Tu tarjeta del operador. Score absoluto + delta de progreso, racha, lecciones, tareas, arquetipos conquistados.</p>
+      <ul>
+        <li>Editar nombre y rol.</li>
+        <li>Ver tu Norte declarado.</li>
+        <li>Acceder a tu memoria sintética (lo que Norman recuerda de ti, en lenguaje claro).</li>
+        <li>Acceder a "Tus exámenes médicos" (sección privada).</li>
+        <li>Eliminar cuenta — pasa por <span class="tag">delete-account</span> que purga PII en todas las tablas.</li>
+      </ul>
+    </section>
+
+    <!-- ───────── WEARABLES ───────── -->
+    <section id="wearables">
+      <h2>Wearables</h2>
+      <p class="lead">Cualquier reloj — sin lock-in. Polaris soporta cuatro caminos.</p>
+
+      <div class="grid-2">
+        <div class="card gold"><h4>Agregador universal (recomendado)</h4>
+          <p style="margin:0">Una sola conexión que cubre Garmin, Polar, Coros, Suunto, Fitbit, Withings, Samsung, Apple, Google Fit, WHOOP, Oura, +500 más. Funciona en web y nativo.</p>
+        </div>
+        <div class="card"><h4>WHOOP / Oura</h4>
+          <p style="margin:0">Conexión OAuth directa con tu cuenta — para los nativos del wearable.</p>
+        </div>
+        <div class="card"><h4>Apple HealthKit</h4>
+          <p style="margin:0">iOS nativo. Lee de tu Apple Watch (o cualquier reloj que escriba a Salud).</p>
+        </div>
+        <div class="card"><h4>Android Health Connect</h4>
+          <p style="margin:0">Lee de Garmin, Polar, Suunto, Samsung, Wear OS, Fitbit, lo que tengas conectado al sistema.</p>
+        </div>
+      </div>
+
+      <h4>Qué datos leemos</h4>
+      <p>Sueño (duración + score), HRV, frecuencia cardíaca en reposo, recovery score, frecuencia respiratoria, strain del día. Si tu wearable no provee uno, lo marcamos como ausente — no inventamos.</p>
+
+      <h4>Tu control</h4>
+      <ul>
+        <li>Conectar / desconectar cuando quieras.</li>
+        <li>Sin permiso, no se sincroniza nada.</li>
+        <li>Al borrar cuenta, los datos se purgan.</li>
+      </ul>
+    </section>
+
+    <!-- ───────── SUSCRIPCIÓN ───────── -->
+    <section id="suscripcion">
+      <h2>Suscripción</h2>
+      <p>Cinco tiers, cada uno desbloquea un nivel de profundidad.</p>
+      <table>
+        <thead><tr><th>Tier</th><th>Qué incluye</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Free</strong></td><td>Acceso al check-in, módulo 1, Norman con mensajes limitados.</td></tr>
+          <tr><td><strong>Premium</strong></td><td>Norman sin límites, todos los módulos, biometría avanzada, intelligence engine.</td></tr>
+          <tr><td><strong>Premium Plus</strong></td><td>Todo lo de Premium + <strong>Acompañamiento 1:1 (Magister)</strong>.</td></tr>
+          <tr><td><strong>Polaris</strong></td><td>Programa flagship.</td></tr>
+          <tr><td><strong>Growth Players</strong></td><td>Tier institucional.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Cómo comprar</h4>
+      <ul>
+        <li><strong>iOS / Android</strong> — vía App Store / Google Play (RevenueCat gestiona la suscripción).</li>
+        <li><strong>Web</strong> — la compra se hace en la app móvil. En el paywall web te ofrecemos dejar tu email para avisarte (sin spam).</li>
+      </ul>
+
+      <p class="caption">No prometemos el resultado por ti. Prometemos no dejarte solo en el proceso.</p>
+    </section>
+
+    <!-- ───────── PRIVACIDAD ───────── -->
+    <section id="privacidad">
+      <h2>Privacidad y seguridad</h2>
+
+      <h3>Quién ve qué</h3>
+      <div class="kv">
+        <dt>Tú</dt><dd>Tus check-ins, conversaciones con Norman, exámenes, mediciones, tu memoria sintética. Tu DM con otros. <em>No</em> ves las notas privadas del coach sobre ti.</dd>
+        <dt>Tu coach humano</dt><dd>Tu dossier completo: check-ins, conversaciones con Norman, mentoría, ejecución de tareas, biométricos, exámenes (si lo autorizaste). <em>No</em> ve la conversación con el internista. Ve metadata de DMs, no contenido.</dd>
+        <dt>Norman</dt><dd>Tu Norte, check-ins recientes, lecciones, biométricos del día, compromisos abiertos, tus resúmenes. <em>No</em> ve DMs ni notas privadas del coach.</dd>
+        <dt>Otros operadores</dt><dd>Nada salvo lo que publiques en comunidad o intercambies por DM con ellos.</dd>
+      </div>
+
+      <h3>Infraestructura</h3>
+      <ul>
+        <li><strong>Row-Level Security</strong> en cada tabla — cada usuario solo accede a sus propias filas.</li>
+        <li><strong>Cifrado en tránsito</strong> (HTTPS/TLS).</li>
+        <li><strong>SecureStore</strong> para la sesión en móvil.</li>
+        <li><strong>Bucket privado</strong> para PHI (exámenes médicos), URLs firmadas de 5 min.</li>
+        <li>Claves de IA en <strong>servidor</strong> (ai-proxy) — no en tu teléfono.</li>
+      </ul>
+
+      <h3>Subprocesadores</h3>
+      <p>Compartimos datos con: Supabase (backend), Vercel (hosting web), Anthropic / NVIDIA / Groq / OpenAI (modelos de IA), Oura / WHOOP / Terra (wearables), RevenueCat (pagos), Apple / Google (tiendas), Expo (push). Detalles en <em>/legal/privacidad</em>.</p>
+
+      <h3>Tu derecho de borrado</h3>
+      <p>Desde el perfil puedes solicitar borrado de cuenta. La función <span class="tag">delete-account</span> purga PII de TODAS las tablas (core loop, wellness, wearables, memoria, ejecución, biometría, mentoría, comunidad/DM). Es definitivo.</p>
+    </section>
+
+    <!-- ───────── PROBLEMAS ───────── -->
+    <section id="problemas">
+      <h2>Resolución de problemas</h2>
+
+      <h3>Norman no responde</h3>
+      <ul>
+        <li>Verifica conexión a internet.</li>
+        <li>Si ves un mensaje pidiendo conexión, la app está sin proveedor IA activo — escríbenos.</li>
+        <li>Si Norman responde en 5–15 s, es normal: está pensando con tus datos.</li>
+      </ul>
+
+      <h3>Mi check-in no se guardó</h3>
+      <p>La app encola los inserts y reintenta cuando vuelve la red. Si pasaron 24 h, vuelve a hacerlo — duplicados no causan daño, el sistema los reconcilia por <code>client_id</code>.</p>
+
+      <h3>Mi wearable no aparece</h3>
+      <ul>
+        <li>Verifica que aceptaste los permisos del SO (Apple Salud / Health Connect).</li>
+        <li>El push lee del SO al abrir; si lo abriste tras una sincronización, jala los datos.</li>
+        <li>Cambia de tipo de conexión: prueba el agregador universal si tu reloj no es Apple ni Oura ni WHOOP.</li>
+      </ul>
+
+      <h3>Mis exámenes no se suben</h3>
+      <p>Tamaño máximo del PDF: ~10 MB. Si supera, divide el archivo. Si el upload falla, prueba en wifi.</p>
+
+      <h3>El paywall en web dice que descargue la app</h3>
+      <p>Es intencional: RevenueCat (gestor de suscripciones) opera nativamente. Descarga la app y usa la misma cuenta — la suscripción aplica en todos los dispositivos.</p>
+
+      <h3>Quiero que Norman <em>deje</em> de confrontarme</h3>
+      <p>En la configuración del consent (<em>/legal</em>) puedes revocar el opt-in de "confrontación con dato". Norman volverá a modo presencia.</p>
+    </section>
+
+    <!-- ───────── SOPORTE ───────── -->
+    <section id="soporte">
+      <h2>Soporte</h2>
+      <p>Polaris Growth Institute · <a href="https://growthplayers.vercel.app">growthplayers.vercel.app</a></p>
+      <p>Para reportar un bug o pedir ayuda, escríbenos al canal interno o por DM al coach.</p>
+
+      <div class="callout">
+        <h4>Una sola promesa</h4>
+        <p style="margin:0">Polaris no te promete el resultado. Te promete no dejarte solo en el proceso. <strong>Persigue el estado. El resultado es consecuencia.</strong></p>
+      </div>
+
+      <div class="footer">
+        © Polaris Growth Institute · Manual del Operador v1.0 · Última revisión: 2026-06-28
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // Resaltado de sección activa en la TOC al hacer scroll.
+  (function(){
+    const links = Array.from(document.querySelectorAll('nav.toc a'));
+    const map = new Map();
+    links.forEach(a => { const h = a.getAttribute('href'); if(h && h.startsWith('#')){ const t = document.getElementById(h.slice(1)); if(t) map.set(t, a); } });
+    const obs = new IntersectionObserver((entries)=>{
+      entries.forEach(e => {
+        const a = map.get(e.target);
+        if(!a) return;
+        if(e.isIntersecting && e.intersectionRatio > 0){
+          links.forEach(x => x.classList.remove('active'));
+          a.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-30% 0px -55% 0px', threshold: [0,.25,.5,1] });
+    map.forEach((_, target) => obs.observe(target));
+  })();
+</script>
+
+</body>
+</html>
