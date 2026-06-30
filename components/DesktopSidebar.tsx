@@ -16,19 +16,28 @@ interface NavItem {
   match: string;
 }
 
-// ─── Nav grouping (espejo del diseño desktop de Claude Design) ─────────────────
-// OPERACIÓN = núcleo del día a día · ACCESO RÁPIDO = prácticas puntuales
-const NAV_OPERACION: NavItem[] = [
-  { label: 'INICIO',    icon: 'radar',               route: '/(tabs)/comando',   match: 'comando'   },
-  { label: 'MENTORÍA',  icon: 'route',               route: '/mentoria',         match: 'mentoria'  },
-  { label: 'PROGRAMA',  icon: 'view-module',         route: '/(tabs)/programas', match: 'programas' },
-  { label: 'MENTOR',    icon: 'chat-bubble-outline', route: '/(tabs)/mentor',    match: 'mentor'    },
-  { label: 'PROGRESO',  icon: 'insights',            route: '/(tabs)/progreso',  match: 'progreso'  },
-  { label: 'BIENESTAR', icon: 'spa',                 route: '/bienestar',        match: 'bienestar' },
-];
-const NAV_RAPIDO: NavItem[] = [
-  { label: 'CHECK-IN',  icon: 'monitor-heart',       route: '/checkin',          match: 'checkin'   },
-  { label: 'MI NORTE',  icon: 'explore',             route: '/(tabs)/norte',     match: 'norte'     },
+// ─── Navegación por DOMINIOS (4: Comando · Protocolo · Norman · Recuperación) ───
+// Simplificación de la arquitectura: pocos dominios claros en vez de dos listas
+// largas (prioridad del consejo asesor + feedback "menos cosas"). Las MISMAS rutas
+// — solo se reagrupan bajo encabezados de dominio.
+interface NavGroup { title: string; items: NavItem[] }
+const NAV_DOMAINS: NavGroup[] = [
+  { title: 'COMANDO', items: [
+    { label: 'INICIO',   icon: 'radar',         route: '/(tabs)/comando', match: 'comando' },
+    { label: 'CHECK-IN', icon: 'monitor-heart', route: '/checkin',        match: 'checkin' },
+    { label: 'MI NORTE', icon: 'explore',       route: '/(tabs)/norte',   match: 'norte'   },
+  ] },
+  { title: 'PROTOCOLO', items: [
+    { label: 'PROGRAMA', icon: 'view-module', route: '/(tabs)/programas', match: 'programas' },
+    { label: 'MENTORÍA', icon: 'route',       route: '/mentoria',         match: 'mentoria'  },
+    { label: 'PROGRESO', icon: 'insights',    route: '/(tabs)/progreso',  match: 'progreso'  },
+  ] },
+  { title: 'NORMAN', items: [
+    { label: 'MENTOR', icon: 'chat-bubble-outline', route: '/(tabs)/mentor', match: 'mentor' },
+  ] },
+  { title: 'RECUPERACIÓN', items: [
+    { label: 'BIENESTAR', icon: 'spa', route: '/bienestar', match: 'bienestar' },
+  ] },
 ];
 
 // subscription_tier → etiqueta mostrada en la tarjeta de usuario
@@ -87,11 +96,12 @@ export function DesktopSidebar() {
 
       {/* ── Navegación agrupada ── */}
       <View style={styles.navScroll}>
-        <Text style={styles.navGroupLabel}>OPERACIÓN</Text>
-        <View style={styles.navList}>{NAV_OPERACION.map(renderItem)}</View>
-
-        <Text style={styles.navGroupLabel}>ACCESO RÁPIDO</Text>
-        <View style={styles.navList}>{NAV_RAPIDO.map(renderItem)}</View>
+        {NAV_DOMAINS.map((group) => (
+          <View key={group.title}>
+            <Text style={styles.navGroupLabel}>{group.title}</Text>
+            <View style={styles.navList}>{group.items.map(renderItem)}</View>
+          </View>
+        ))}
 
         {/* ── Streak card (gradiente oro) — datos reales ── */}
         <View style={styles.streakCard}>
