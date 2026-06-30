@@ -85,6 +85,7 @@ Deno.serve(async (req: Request) => {
       adminSupabase.from('user_blocks').delete().eq('blocked_id', userId),
       adminSupabase.from('direct_messages').delete().eq('sender_id', userId),
       adminSupabase.from('direct_messages').delete().eq('recipient_id', userId),
+      adminSupabase.from('direct_message_reactions').delete().eq('user_id', userId),
       // Inteligencia / analytics / notificaciones
       adminSupabase.from('user_intelligence').delete().eq('user_id', userId),
       adminSupabase.from('user_events').delete().eq('user_id', userId),

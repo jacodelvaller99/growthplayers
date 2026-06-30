@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/Avatar';
 import { db2, supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
@@ -42,14 +43,15 @@ const COMMUNITY_ENABLED: boolean = true;
 const anyDb = supabase as any;
 
 interface Post {
-  id:          string;
-  user_id:     string;
-  content:     string;
-  likes_count: number;
-  is_pinned:   boolean;
-  created_at:  string;
-  author_name: string;
-  liked:       boolean;
+  id:            string;
+  user_id:       string;
+  content:       string;
+  likes_count:   number;
+  is_pinned:     boolean;
+  created_at:    string;
+  author_name:   string;
+  author_avatar: string | null;
+  liked:         boolean;
 }
 
 function timeAgo(iso: string): string {
@@ -162,15 +164,18 @@ export default function ComunidadScreen() {
       // Resolver nombres de autor
       const userIds: string[] = [...new Set<string>(visible.map((p: any) => p.user_id as string).filter((id: string): id is string => !!id))];
       const nameMap: Record<string, string> = {};
+      const avatarMap: Record<string, string | null> = {};
       if (userIds.length > 0) {
         try {
           const { data: profiles } = await supabase
             .from('user_profiles')
-            .select('user_id, full_name')
+            .select('user_id, name, avatar_url')
             .in('user_id', userIds);
           if (profiles) {
             profiles.forEach((p: any) => {
-              if (p.user_id && p.full_name) nameMap[p.user_id] = p.full_name;
+              if (!p.user_id) return;
+              if (p.name) nameMap[p.user_id] = p.name;
+              avatarMap[p.user_id] = p.avatar_url ?? null;
             });
           }
         } catch { /* silencioso */ }
@@ -189,14 +194,15 @@ export default function ComunidadScreen() {
       }
 
       const mapped: Post[] = visible.map((p: any) => ({
-        id:          p.id,
-        user_id:     p.user_id,
-        content:     p.content,
-        likes_count: p.likes_count ?? 0,
-        is_pinned:   p.is_pinned ?? false,
-        created_at:  p.created_at,
-        author_name: nameMap[p.user_id] ?? 'Miembro',
-        liked:       userLikes.has(p.id),
+        id:            p.id,
+        user_id:       p.user_id,
+        content:       p.content,
+        likes_count:   p.likes_count ?? 0,
+        is_pinned:     p.is_pinned ?? false,
+        created_at:    p.created_at,
+        author_name:   nameMap[p.user_id] ?? 'Miembro',
+        author_avatar: avatarMap[p.user_id] ?? null,
+        liked:         userLikes.has(p.id),
       }));
 
       setPosts(mapped);
@@ -456,13 +462,9 @@ export default function ComunidadScreen() {
                 </View>
               )}
               <View style={styles.postHeader}>
-                <View style={styles.avatarCircle}>
-                  <Text style={styles.avatarInitial}>
-                    {post.author_name.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
+                <Avatar id={post.user_id} name={post.author_name} uri={post.author_avatar} size={36} />
                 <View style={styles.postMeta}>
-                  <Text style={styles.postAuthor}>{post.author_name}</Text>
+                  <Text style={styles.postAuthor} numberOfLines={1}>{post.author_name}</Text>
                   <Text style={styles.postTime}>{timeAgo(post.created_at)}</Text>
                 </View>
                 {/* Menú de moderación / DM por post (no en tus propios posts) */}
@@ -615,21 +617,19 @@ const styles = StyleSheet.create({
   emptyTitle:      { fontFamily: Fonts.display, fontSize: 16, color: palette.ash, letterSpacing: 1 },
   emptySubtext:    { ...typography.caption, color: palette.smoke },
 
-  postCard:        { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, marginBottom: 10, borderWidth: 1, borderColor: 'transparent' },
+  postCard:        { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, marginBottom: spacing.sm, borderWidth: 1, borderColor: palette.line },
   postCardPinned:  { borderColor: palette.lineGold, borderWidth: 1 },
 
-  pinnedBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
+  pinnedBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
   pinnedText:      { fontFamily: Fonts.display, fontSize: 10, color: palette.goldText, letterSpacing: 1 },
 
-  postHeader:      { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  avatarCircle:    { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.goldLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.lineGold },
-  avatarInitial:   { fontFamily: Fonts.display, fontSize: 16, color: palette.goldText },
-  postMeta:        { flex: 1 },
-  postAuthor:      { fontFamily: Fonts.sans, fontSize: 13, color: palette.ivory, fontWeight: '600' },
-  postTime:        { fontSize: 11, color: palette.smoke },
-  moreBtn:         { padding: 6, minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
+  postHeader:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  postMeta:        { flex: 1, gap: 2 },
+  postAuthor:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600', letterSpacing: 0.2 },
+  postTime:        { ...typography.mono, fontSize: 10, color: palette.smoke },
+  moreBtn:         { padding: 6, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 
-  postContent:     { fontFamily: Fonts.sans, fontSize: 14, color: palette.ash, lineHeight: 22, marginBottom: 12 },
+  postContent:     { fontFamily: Fonts.sans, fontSize: 14.5, color: palette.ivory, lineHeight: 23, marginBottom: spacing.md },
 
   postActions:     { flexDirection: 'row', gap: spacing.lg, alignItems: 'center' },
   likeBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 32 },

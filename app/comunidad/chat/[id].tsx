@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/Avatar';
+import { useChatTyping, usePresence } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
@@ -26,7 +28,35 @@ interface DM {
   sender_id:  string;
   body:       string;
   created_at: string;
+  read_at?:   string | null;
 }
+
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+// Reacciones acotadas, en el tono de la hermandad (alto rendimiento / apoyo).
+const REACTION_EMOJIS = ['🔥', '💪', '🙏', '👏', '❤️'] as const;
+
+interface Reaction { uid: string; emoji: string }
+
+function clock(iso: string): string {
+  const d = new Date(iso);
+  const m = d.getMinutes();
+  return `${d.getHours()}:${m < 10 ? `0${m}` : m}`;
+}
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((startOf(now) - startOf(d)) / 86400000);
+  if (diff === 0) return 'Hoy';
+  if (diff === 1) return 'Ayer';
+  return `${d.getDate()} ${MESES[d.getMonth()]}`;
+}
+
+type Row =
+  | { kind: 'divider'; id: string; label: string }
+  | { kind: 'msg'; id: string; m: DM; mine: boolean; showReceipt: boolean };
 
 export default function ChatThreadScreen() {
   const router = useRouter();
@@ -42,7 +72,16 @@ export default function ChatThreadScreen() {
   const [sending, setSending]   = useState(false);
   // 'none' | 'i-blocked' | 'they-blocked'
   const [blockState, setBlockState] = useState<'none' | 'i-blocked' | 'they-blocked'>('none');
-  const listRef = useRef<FlatList<DM>>(null);
+  const listRef = useRef<FlatList<Row>>(null);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Reacciones por mensaje (degrada a vacío si la tabla no existe aún).
+  const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
+  const [reactingId, setReactingId] = useState<string | null>(null);
+
+  // Liveness — en línea + escribiendo (Realtime, sin tablas nuevas).
+  const onlineSet = usePresence(userId ?? undefined);
+  const peerOnline = !!peerId && onlineSet.has(peerId);
+  const { peerTyping, setTyping } = useChatTyping(userId ?? undefined, peerId);
 
   // ── Estado de bloqueo (en cualquier dirección) ───────────────────────────────
   const checkBlocks = useCallback(async () => {
@@ -78,7 +117,7 @@ export default function ChatThreadScreen() {
     try {
       const { data, error } = await anyDb
         .from('direct_messages')
-        .select('id, sender_id, recipient_id, body, created_at')
+        .select('id, sender_id, recipient_id, body, read_at, created_at')
         .or(
           `and(sender_id.eq.${userId},recipient_id.eq.${peerId}),and(sender_id.eq.${peerId},recipient_id.eq.${userId})`,
         )
@@ -86,7 +125,7 @@ export default function ChatThreadScreen() {
         .limit(300);
       if (!error && data) {
         setMessages((data as any[]).map((m) => ({
-          id: m.id, sender_id: m.sender_id, body: m.body, created_at: m.created_at,
+          id: m.id, sender_id: m.sender_id, body: m.body, created_at: m.created_at, read_at: m.read_at,
         })));
       }
     } catch { /* silencioso */ }
@@ -96,7 +135,51 @@ export default function ChatThreadScreen() {
 
   useEffect(() => { checkBlocks(); load(); }, [checkBlocks, load]);
 
-  // ── Realtime: mensajes entrantes de este peer ────────────────────────────────
+  // ── Reacciones (tabla direct_message_reactions; degrada si no existe) ─────────
+  const realIdsKey = useMemo(
+    () => messages.map((m) => m.id).filter((id) => !id.startsWith('tmp-')).join(','),
+    [messages],
+  );
+  const loadReactions = useCallback(async () => {
+    const ids = realIdsKey ? realIdsKey.split(',') : [];
+    if (ids.length === 0) { setReactions({}); return; }
+    try {
+      const { data, error } = await anyDb
+        .from('direct_message_reactions')
+        .select('message_id, user_id, emoji')
+        .in('message_id', ids);
+      if (error || !data) return;
+      const map: Record<string, Reaction[]> = {};
+      (data as any[]).forEach((r) => { (map[r.message_id] ??= []).push({ uid: r.user_id, emoji: r.emoji }); });
+      setReactions(map);
+    } catch { /* tabla ausente → sin reacciones */ }
+  }, [realIdsKey]);
+
+  useEffect(() => { loadReactions(); }, [loadReactions]);
+
+  // Limpia el timer de "escribiendo" al desmontar (evita setState tras unmount).
+  useEffect(() => () => { if (typingTimer.current) clearTimeout(typingTimer.current); }, []);
+
+  const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!userId || messageId.startsWith('tmp-')) return;
+    setReactingId(null);
+    const existing = (reactions[messageId] ?? []).find((r) => r.uid === userId);
+    const removing = existing?.emoji === emoji;
+    setReactions((prev) => {
+      const others = (prev[messageId] ?? []).filter((r) => r.uid !== userId);
+      return { ...prev, [messageId]: removing ? others : [...others, { uid: userId, emoji }] };
+    });
+    try {
+      if (removing) {
+        await anyDb.from('direct_message_reactions').delete().eq('message_id', messageId).eq('user_id', userId);
+      } else {
+        await anyDb.from('direct_message_reactions')
+          .upsert({ message_id: messageId, user_id: userId, emoji }, { onConflict: 'message_id,user_id' });
+      }
+    } catch { loadReactions(); /* revertir desde el servidor */ }
+  }, [userId, reactions, loadReactions]);
+
+  // ── Realtime: entrantes del peer + "visto" de mis mensajes ───────────────────
   useEffect(() => {
     if (!userId || !peerId) return;
     const channel = anyDb
@@ -109,8 +192,19 @@ export default function ChatThreadScreen() {
           if (m && m.recipient_id === userId) {
             setMessages((prev) => prev.some((x) => x.id === m.id)
               ? prev
-              : [...prev, { id: m.id, sender_id: m.sender_id, body: m.body, created_at: m.created_at }]);
+              : [...prev, { id: m.id, sender_id: m.sender_id, body: m.body, created_at: m.created_at, read_at: m.read_at }]);
             markRead();
+          }
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'direct_messages', filter: `sender_id=eq.${userId}` },
+        (payload: any) => {
+          const m = payload.new;
+          // El peer marcó como leído uno de MIS mensajes → reflejar "Visto" en vivo.
+          if (m && m.recipient_id === peerId && m.read_at) {
+            setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, read_at: m.read_at } : x)));
           }
         },
       )
@@ -126,23 +220,46 @@ export default function ChatThreadScreen() {
     }
   }, [messages.length]);
 
+  // ── Filas: separadores de fecha + recibo en mi último mensaje ────────────────
+  const rows = useMemo<Row[]>(() => {
+    const out: Row[] = [];
+    let lastMineIdx = -1;
+    messages.forEach((m, i) => { if (m.sender_id === userId) lastMineIdx = i; });
+    let lastDay = '';
+    messages.forEach((m, i) => {
+      const day = dayLabel(m.created_at);
+      if (day !== lastDay) { out.push({ kind: 'divider', id: `div-${m.id}`, label: day }); lastDay = day; }
+      out.push({ kind: 'msg', id: m.id, m, mine: m.sender_id === userId, showReceipt: i === lastMineIdx });
+    });
+    return out;
+  }, [messages, userId]);
+
+  const onChangeDraft = useCallback((t: string) => {
+    setDraft(t);
+    setTyping(true);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => setTyping(false), 2000);
+  }, [setTyping]);
+
   const send = async () => {
     const body = draft.trim();
     if (!userId || !peerId || !body || sending) return;
     if (blockState !== 'none') return;
     setSending(true);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    setTyping(false);
     // Optimista
-    const optimistic: DM = { id: `tmp-${Date.now()}`, sender_id: userId, body, created_at: new Date().toISOString() };
+    const optimistic: DM = { id: `tmp-${Date.now()}`, sender_id: userId, body, created_at: new Date().toISOString(), read_at: null };
     setMessages((prev) => [...prev, optimistic]);
     setDraft('');
     try {
       const { data, error } = await anyDb
         .from('direct_messages')
         .insert({ sender_id: userId, recipient_id: peerId, body })
-        .select('id, sender_id, body, created_at')
+        .select('id, sender_id, body, read_at, created_at')
         .single();
       if (!error && data) {
-        setMessages((prev) => prev.map((m) => (m.id === optimistic.id ? { id: data.id, sender_id: data.sender_id, body: data.body, created_at: data.created_at } : m)));
+        setMessages((prev) => prev.map((m) => (m.id === optimistic.id ? { id: data.id, sender_id: data.sender_id, body: data.body, created_at: data.created_at, read_at: data.read_at } : m)));
       }
     } catch {
       // Revertir el optimista en error
@@ -151,6 +268,8 @@ export default function ChatThreadScreen() {
     }
     setSending(false);
   };
+
+  const subtitle = peerTyping ? 'escribiendo…' : peerOnline ? 'en línea' : null;
 
   return (
     <KeyboardAvoidingView
@@ -163,10 +282,15 @@ export default function ChatThreadScreen() {
             <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
           </Pressable>
           <View style={styles.headerCenter}>
-            <View style={styles.headerAvatar}>
-              <Text style={styles.headerAvatarText}>{peerName.charAt(0).toUpperCase()}</Text>
+            <Avatar id={peerId ?? ''} name={peerName} online={peerOnline} size={34} />
+            <View style={styles.headerNameWrap}>
+              <Text style={styles.headerName} numberOfLines={1}>{peerName}</Text>
+              {subtitle && (
+                <Text style={[styles.headerSub, peerTyping && styles.headerSubTyping]} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              )}
             </View>
-            <Text style={styles.headerName} numberOfLines={1}>{peerName}</Text>
           </View>
           <View style={{ width: 38 }} />
         </View>
@@ -178,9 +302,9 @@ export default function ChatThreadScreen() {
         ) : (
           <FlatList
             ref={listRef}
-            data={messages}
-            keyExtractor={(m) => m.id}
-            contentContainerStyle={messages.length === 0 ? styles.emptyWrap : { padding: spacing.md, gap: spacing.sm }}
+            data={rows}
+            keyExtractor={(r) => r.id}
+            contentContainerStyle={rows.length === 0 ? styles.emptyWrap : { padding: spacing.md, gap: spacing.xs }}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.empty}>
@@ -189,11 +313,62 @@ export default function ChatThreadScreen() {
               </View>
             }
             renderItem={({ item }) => {
-              const mine = item.sender_id === userId;
+              if (item.kind === 'divider') {
+                return (
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>{item.label}</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+                );
+              }
+              const { m, mine, showReceipt } = item;
+              const reacts = reactions[m.id] ?? [];
+              const isReacting = reactingId === m.id;
               return (
                 <View style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
-                  <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                    <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{item.body}</Text>
+                  <View style={[styles.bubbleCol, mine ? styles.alignEnd : styles.alignStart]}>
+                    {isReacting && (
+                      <View style={styles.reactionBar}>
+                        {REACTION_EMOJIS.map((e) => (
+                          <Pressable
+                            key={e}
+                            onPress={() => toggleReaction(m.id, e)}
+                            hitSlop={6}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Reaccionar ${e}`}
+                            style={styles.reactionPick}>
+                            <Text style={styles.reactionPickText}>{e}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                    <Pressable
+                      onLongPress={() => { if (!m.id.startsWith('tmp-')) setReactingId(isReacting ? null : m.id); }}
+                      delayLongPress={250}
+                      style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{m.body}</Text>
+                    </Pressable>
+                    {reacts.length > 0 && (
+                      <View style={[styles.reactionChips, mine ? styles.alignEnd : styles.alignStart]}>
+                        {reacts.map((r) => (
+                          <Pressable
+                            key={r.uid}
+                            onPress={() => { if (r.uid === userId) toggleReaction(m.id, r.emoji); }}
+                            style={[styles.reactionChip, r.uid === userId && styles.reactionChipMine]}>
+                            <Text style={styles.reactionChipText}>{r.emoji}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                    <View style={styles.metaRow}>
+                      <Text style={styles.metaTime}>{clock(m.created_at)}</Text>
+                      {showReceipt && mine && (
+                        <Text style={styles.metaReceipt}>
+                          {m.read_at ? '· Visto' : '· Enviado'}
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 </View>
               );
@@ -217,7 +392,7 @@ export default function ChatThreadScreen() {
             <TextInput
               style={styles.input}
               value={draft}
-              onChangeText={setDraft}
+              onChangeText={onChangeDraft}
               placeholder={`Mensaje a ${peerName}...`}
               placeholderTextColor={palette.smoke}
               multiline
@@ -226,8 +401,10 @@ export default function ChatThreadScreen() {
             <Pressable
               onPress={send}
               disabled={sending || !draft.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="Enviar mensaje"
               style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}>
-              <MaterialIcons name="send" size={20} color={!draft.trim() || sending ? palette.ash : palette.black} />
+              <MaterialIcons name="send" size={20} color={!draft.trim() || sending ? palette.ash : palette.ink} />
             </Pressable>
           </View>
         )}
@@ -241,23 +418,42 @@ const styles = StyleSheet.create({
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   backBtn:     { padding: 8, minWidth: 38, alignItems: 'center' },
   headerCenter:{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  headerAvatar:{ width: 30, height: 30, borderRadius: 15, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, alignItems: 'center', justifyContent: 'center' },
-  headerAvatarText: { fontFamily: Fonts.display, fontSize: 13, color: palette.goldText },
-  headerName:  { fontFamily: Fonts.display, fontSize: 14, color: palette.ivory, letterSpacing: 1, maxWidth: 200 },
+  headerNameWrap: { alignItems: 'flex-start', maxWidth: 200 },
+  headerName:  { fontFamily: Fonts.display, fontSize: 14, color: palette.ivory, letterSpacing: 1 },
+  headerSub:   { fontFamily: Fonts.sans, fontSize: 11, color: palette.smoke, marginTop: 1 },
+  headerSubTyping: { color: palette.goldText },
 
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap:   { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
   empty:       { alignItems: 'center', gap: 12, paddingHorizontal: spacing.xl },
   emptyText:   { ...typography.caption, color: palette.smoke, textAlign: 'center', maxWidth: 280, lineHeight: 18 },
 
+  divider:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  dividerLine: { flex: 1, height: 1, backgroundColor: palette.lineSoft },
+  dividerText: { ...typography.mono, color: palette.smoke, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
+
   bubbleRow:     { flexDirection: 'row' },
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubbleRowTheirs:{ justifyContent: 'flex-start' },
-  bubble:        { maxWidth: '80%', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radii.md },
+  bubbleCol:     { maxWidth: '80%' },
+  alignEnd:      { alignItems: 'flex-end' },
+  alignStart:    { alignItems: 'flex-start' },
+  bubble:        { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radii.md },
   bubbleMine:    { backgroundColor: palette.gold, borderBottomRightRadius: radii.xs },
   bubbleTheirs:  { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line, borderBottomLeftRadius: radii.xs },
   bubbleText:    { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ivory },
   bubbleTextMine:{ color: palette.ink },
+  metaRow:       { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3, paddingHorizontal: 2 },
+  metaTime:      { ...typography.mono, color: palette.smoke, fontSize: 9.5 },
+  metaReceipt:   { ...typography.mono, color: palette.goldText, fontSize: 9.5 },
+
+  reactionBar:   { flexDirection: 'row', gap: spacing.xs, backgroundColor: palette.graphiteLight, borderWidth: 1, borderColor: palette.line, borderRadius: 999, paddingHorizontal: spacing.sm, paddingVertical: 5, marginBottom: 5 },
+  reactionPick:  { paddingHorizontal: 3, minWidth: 28, alignItems: 'center' },
+  reactionPickText: { fontSize: 19 },
+  reactionChips: { flexDirection: 'row', gap: 4, marginTop: 4, flexWrap: 'wrap' },
+  reactionChip:  { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
+  reactionChipMine: { borderColor: palette.lineGold, backgroundColor: palette.goldLight },
+  reactionChipText: { fontSize: 12 },
 
   composer:    { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: palette.lineSoft, backgroundColor: palette.black },
   input:       { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, maxHeight: 110, minHeight: 40, backgroundColor: palette.graphite, borderRadius: radii.md, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 10 },

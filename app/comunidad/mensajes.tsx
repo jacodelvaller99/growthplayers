@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/Avatar';
+import { usePresence } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts } from '@/constants/theme';
@@ -22,6 +24,7 @@ const anyDb = supabase as any;
 interface Conversation {
   peerId:      string;
   peerName:    string;
+  peerAvatar:  string | null;
   lastBody:    string;
   lastAt:      string;
   unread:      boolean;
@@ -39,6 +42,7 @@ export default function MensajesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
+  const onlineSet = usePresence(userId ?? undefined);
 
   const [convos, setConvos]       = useState<Conversation[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -75,11 +79,12 @@ export default function MensajesScreen() {
         if (!byPeer.has(peerId)) {
           byPeer.set(peerId, {
             peerId,
-            peerName: 'Miembro',
-            lastBody: m.body ?? '',
-            lastAt:   m.created_at,
+            peerName:   'Miembro',
+            peerAvatar: null,
+            lastBody:   m.body ?? '',
+            lastAt:     m.created_at,
             // No leído: soy el destinatario del último mensaje y aún no lo abrí.
-            unread:   m.recipient_id === userId && !m.read_at,
+            unread:     m.recipient_id === userId && !m.read_at,
           });
         }
       }
@@ -90,11 +95,13 @@ export default function MensajesScreen() {
         try {
           const { data: profiles } = await supabase
             .from('user_profiles')
-            .select('user_id, full_name')
+            .select('user_id, name, avatar_url')
             .in('user_id', peerIds);
           (profiles ?? []).forEach((p: any) => {
             const c = byPeer.get(p.user_id);
-            if (c && p.full_name) c.peerName = p.full_name;
+            if (!c) return;
+            if (p.name) c.peerName = p.name;
+            c.peerAvatar = p.avatar_url ?? null;
           });
         } catch { /* nombres por defecto */ }
       }
@@ -110,6 +117,30 @@ export default function MensajesScreen() {
 
   // Recargar al volver del hilo (para reflejar nuevos mensajes / leídos).
   useFocusEffect(useCallback(() => { setLoading(true); load(); }, [load]));
+
+  // Realtime: mensaje entrante (soy el destinatario) → recargar la bandeja, con
+  // un pequeño debounce para no recargar en ráfaga si llegan varios seguidos.
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  useEffect(() => {
+    if (!userId) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = anyDb
+      .channel(`dm-inbox:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `recipient_id=eq.${userId}` },
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => loadRef.current(), 400);
+        },
+      )
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      anyDb.removeChannel(channel);
+    };
+  }, [userId]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -159,12 +190,18 @@ export default function MensajesScreen() {
           renderItem={({ item }) => (
             <Pressable
               style={styles.row}
+              accessibilityRole="button"
+              accessibilityLabel={`Conversación con ${item.peerName}`}
               onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: item.peerId, name: item.peerName } } as never)}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.peerName.charAt(0).toUpperCase()}</Text>
-              </View>
+              <Avatar
+                id={item.peerId}
+                name={item.peerName}
+                uri={item.peerAvatar}
+                online={onlineSet.has(item.peerId)}
+                size={44}
+              />
               <View style={styles.rowMain}>
-                <Text style={styles.rowName} numberOfLines={1}>{item.peerName}</Text>
+                <Text style={[styles.rowName, item.unread && styles.rowNameUnread]} numberOfLines={1}>{item.peerName}</Text>
                 <Text style={[styles.rowPreview, item.unread && styles.rowPreviewUnread]} numberOfLines={1}>
                   {item.lastBody}
                 </Text>
@@ -197,11 +234,10 @@ const styles = StyleSheet.create({
   emptySub:    { ...typography.caption, color: palette.smoke, textAlign: 'center', maxWidth: 300, lineHeight: 18 },
 
   row:         { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 64 },
-  avatar:      { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  avatarText:  { fontFamily: Fonts.display, fontSize: 18, color: palette.goldText },
   rowMain:     { flex: 1, gap: 3 },
-  rowName:     { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600' },
-  rowPreview:  { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },
+  rowName:     { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory, fontWeight: '600', letterSpacing: 0.2 },
+  rowNameUnread: { fontWeight: '700' },
+  rowPreview:  { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, lineHeight: 18 },
   rowPreviewUnread: { color: palette.ivory },
   rowMeta:     { alignItems: 'flex-end', gap: 6 },
   rowTime:     { ...typography.mono, color: palette.smoke, fontSize: 10 },
