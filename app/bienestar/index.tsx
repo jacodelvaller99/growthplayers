@@ -304,6 +304,20 @@ export default function BienestarHub() {
 
   const phrase = useMemo(() => getTodayPhrase(), []);
 
+  // Hub más liviano: "HOY" enfocado arriba + el resto detrás de "Ver todo".
+  const [showAll, setShowAll] = useState(false);
+  // "HOY" — sugerencia simple por momento del día (no es claim clínico, solo un punto de partida).
+  const todayPicks = useMemo<Block[]>(() => {
+    const hour = new Date().getHours();
+    const byType = (t: Block['type']) => BLOCKS.find((b) => b.type === t);
+    const order: Block['type'][] =
+      hour < 11 ? ['breathing', 'binaural']
+      : hour >= 20 ? ['sleep', 'meditation']
+      : ['meditation', 'breathing'];
+    return order.map(byType).filter((b): b is Block => Boolean(b));
+  }, []);
+  const extraCount = BLOCKS_EXTENDED.length + BLOCKS_EMOCIONAL.length;
+
   // ── Desktop layout ──────────────────────────────────────────────────────────
   if (isDesktop) {
     return (
@@ -332,6 +346,22 @@ export default function BienestarHub() {
               {/* Wearable card */}
               <WearableCard router={router} />
 
+              {/* HOY — enfocado */}
+              <GoldDivider label="HOY" />
+              <Text style={desktopStyles.todayHint}>Para tu momento del día. Empieza por aquí.</Text>
+              <View style={desktopStyles.blocksGrid}>
+                {todayPicks.map((block) => (
+                  <Pressable
+                    key={`hoy-${block.route}`}
+                    onPress={() => router.push(block.route as never)}
+                    style={({ pressed }) => [desktopStyles.gridCard, desktopStyles.gridCardHoy, pressed && { opacity: 0.75 }]}>
+                    <MaterialIcons name={block.icon} size={28} color={palette.goldText} />
+                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
               {/* PRÁCTICA grid */}
               <GoldDivider label="PRÁCTICA" />
               <View style={desktopStyles.blocksGrid}>
@@ -347,35 +377,50 @@ export default function BienestarHub() {
                 ))}
               </View>
 
-              {/* SISTEMA INTEGRAL grid */}
-              <GoldDivider label="SISTEMA INTEGRAL" />
-              <View style={desktopStyles.blocksGrid}>
-                {BLOCKS_EXTENDED.map((block) => (
-                  <Pressable
-                    key={block.route}
-                    onPress={() => router.push(block.route as never)}
-                    style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
-                    <MaterialIcons name={block.icon} size={28} color={palette.ash} />
-                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
-                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
-                  </Pressable>
-                ))}
-              </View>
+              {/* Resto detrás de "Ver todo" */}
+              {!showAll ? (
+                <Pressable onPress={() => setShowAll(true)} style={desktopStyles.seeAllBtn} accessibilityRole="button">
+                  <Text style={desktopStyles.seeAllText}>VER TODO · {extraCount} MÁS</Text>
+                  <MaterialIcons name="expand-more" size={18} color={palette.goldText} />
+                </Pressable>
+              ) : (
+                <>
+                  {/* SISTEMA INTEGRAL grid */}
+                  <GoldDivider label="SISTEMA INTEGRAL" />
+                  <View style={desktopStyles.blocksGrid}>
+                    {BLOCKS_EXTENDED.map((block) => (
+                      <Pressable
+                        key={block.route}
+                        onPress={() => router.push(block.route as never)}
+                        style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
+                        <MaterialIcons name={block.icon} size={28} color={palette.ash} />
+                        <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                        <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
 
-              {/* LIBERACIÓN EMOCIONAL grid */}
-              <GoldDivider label="LIBERACIÓN EMOCIONAL" />
-              <View style={desktopStyles.blocksGrid}>
-                {BLOCKS_EMOCIONAL.map((block) => (
-                  <Pressable
-                    key={block.route}
-                    onPress={() => router.push(block.route as never)}
-                    style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
-                    <MaterialIcons name={block.icon} size={28} color={palette.ash} />
-                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
-                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
+                  {/* LIBERACIÓN EMOCIONAL grid */}
+                  <GoldDivider label="LIBERACIÓN EMOCIONAL" />
+                  <View style={desktopStyles.blocksGrid}>
+                    {BLOCKS_EMOCIONAL.map((block) => (
+                      <Pressable
+                        key={block.route}
+                        onPress={() => router.push(block.route as never)}
+                        style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
+                        <MaterialIcons name={block.icon} size={28} color={palette.ash} />
+                        <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                        <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  <Pressable onPress={() => setShowAll(false)} style={desktopStyles.seeAllBtn} accessibilityRole="button">
+                    <Text style={desktopStyles.seeAllText}>VER MENOS</Text>
+                    <MaterialIcons name="expand-less" size={18} color={palette.goldText} />
                   </Pressable>
-                ))}
-              </View>
+                </>
+              )}
 
             </View>
             {/* ──────────────── RIGHT COLUMN ──────────────── */}
@@ -489,6 +534,15 @@ export default function BienestarHub() {
         </View>
       </PremiumCard>
 
+      {/* ── HOY — enfocado (1-2 prácticas para tu momento) ── */}
+      <GoldDivider label="HOY" />
+      <Text style={styles.todayHint}>Para tu momento del día. Empieza por aquí.</Text>
+      <View style={styles.grid}>
+        {todayPicks.map((b) => (
+          <HubTile key={`hoy-${b.route}`} icon={b.icon} label={b.label} sub={b.sub} gold onPress={() => router.push(b.route as never)} />
+        ))}
+      </View>
+
       {/* ── PRÁCTICA grid ── */}
       <GoldDivider label="PRÁCTICA" />
       <View style={styles.grid}>
@@ -497,21 +551,36 @@ export default function BienestarHub() {
         ))}
       </View>
 
-      {/* ── SISTEMA INTEGRAL grid ── */}
-      <GoldDivider label="SISTEMA INTEGRAL" />
-      <View style={styles.grid}>
-        {BLOCKS_EXTENDED.map((b) => (
-          <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />
-        ))}
-      </View>
+      {/* ── Resto detrás de "Ver todo" — menos abrumador (su "me mareo") ── */}
+      {!showAll ? (
+        <Pressable onPress={() => setShowAll(true)} style={styles.seeAllBtn} accessibilityRole="button" accessibilityLabel="Ver todas las herramientas">
+          <Text style={styles.seeAllText}>VER TODO · {extraCount} MÁS</Text>
+          <MaterialIcons name="expand-more" size={18} color={palette.goldText} />
+        </Pressable>
+      ) : (
+        <>
+          {/* ── SISTEMA INTEGRAL grid ── */}
+          <GoldDivider label="SISTEMA INTEGRAL" />
+          <View style={styles.grid}>
+            {BLOCKS_EXTENDED.map((b) => (
+              <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />
+            ))}
+          </View>
 
-      {/* ── LIBERACIÓN EMOCIONAL grid (gold-accented tiles) ── */}
-      <GoldDivider label="LIBERACIÓN EMOCIONAL" />
-      <View style={styles.grid}>
-        {BLOCKS_EMOCIONAL.map((b) => (
-          <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} gold onPress={() => router.push(b.route as never)} />
-        ))}
-      </View>
+          {/* ── LIBERACIÓN EMOCIONAL grid (gold-accented tiles) ── */}
+          <GoldDivider label="LIBERACIÓN EMOCIONAL" />
+          <View style={styles.grid}>
+            {BLOCKS_EMOCIONAL.map((b) => (
+              <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} gold onPress={() => router.push(b.route as never)} />
+            ))}
+          </View>
+
+          <Pressable onPress={() => setShowAll(false)} style={styles.seeAllBtn} accessibilityRole="button" accessibilityLabel="Ver menos">
+            <Text style={styles.seeAllText}>VER MENOS</Text>
+            <MaterialIcons name="expand-less" size={18} color={palette.goldText} />
+          </Pressable>
+        </>
+      )}
 
       {/* ── Wearable card (real biometrics — shown if connected, else connect prompt) ── */}
       <WearableCard router={router} />
@@ -599,6 +668,23 @@ const styles = StyleSheet.create({
   statLabel: { ...typography.label, color: palette.smoke, marginTop: 2 },
   statDivider: { width: 1, height: 40, backgroundColor: palette.line },
   chipsLabel: { ...typography.label, color: palette.ash },
+
+  // "HOY" hint + "Ver todo" toggle (hub más liviano)
+  todayHint: { ...typography.caption, color: palette.smoke, fontSize: 12, marginTop: -spacing.sm, marginBottom: spacing.md },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    borderRadius: 999,
+    marginBottom: spacing.xl,
+  },
+  seeAllText: { ...typography.label, color: palette.goldText, letterSpacing: 1.5 },
 
   // Tile grid (3 columns of square cards)
   grid: {
@@ -708,6 +794,21 @@ const desktopStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  todayHint: { ...typography.caption, color: palette.smoke, fontSize: 12, marginTop: -4, marginBottom: spacing.sm },
+  gridCardHoy: { borderWidth: 1, borderColor: palette.lineGold, backgroundColor: palette.goldGlow },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    borderRadius: 999,
+    marginBottom: spacing.lg,
+  },
+  seeAllText: { ...typography.label, color: palette.goldText, letterSpacing: 1.5 },
   gridCard: {
     width: '31%',
     aspectRatio: 1.35,
