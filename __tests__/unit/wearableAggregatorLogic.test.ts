@@ -152,6 +152,123 @@ describe('terraToDaily — robustez', () => {
     expect(d!.date).toBe('2026-06-21');
     expect(d!.hrvMs ?? null).toBeNull();
   });
+
+  // ── Robustez extra (B1): entradas degeneradas no deben romper ────────────────
+  // DOC-BASED: payloads parciales y formas alternas observadas en la doc de Terra.
+  // El dueño debe validar contra un payload REAL antes de prod (ver runbook).
+  it('null/undefined/no-objeto como raw → [] sin lanzar', () => {
+    expect(terraToDaily(null)).toEqual([]);
+    expect(terraToDaily(undefined)).toEqual([]);
+    expect(terraToDaily('basura')).toEqual([]);
+    expect(terraToDaily(42)).toEqual([]);
+  });
+  it('data con elementos null/no-objeto se saltan, no rompen', () => {
+    const rows = terraToDaily({
+      type: 'sleep',
+      data: [null, 'x', 7, { metadata: { start_time: '2026-06-21T00:00:00Z' }, heart_rate_data: { summary: { avg_hrv_rmssd: 60 } } }],
+    });
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.hrvMs).toBe(60);
+  });
+  it('eficiencia que ya viene en porcentaje (0–100) no se re-escala', () => {
+    const [d] = terraToDaily({
+      type: 'sleep',
+      data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, sleep_durations_data: { sleep_efficiency: 88 } }],
+    });
+    expect(d!.sleepEfficiency).toBe(88);
+  });
+});
+
+describe('terraToDaily — formas alternas de payload (B1)', () => {
+  // HRV puede llegar como hrv_rmssd; FC reposo como resting_hr o hr_resting.
+  it('sleep: HRV alterno (hrv_rmssd) y FC reposo alterno (resting_hr)', () => {
+    const [d] = terraToDaily({
+      type: 'sleep',
+      user: { provider: 'POLAR' },
+      data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, heart_rate_data: { summary: { hrv_rmssd: 71, resting_hr: 49 } } }],
+    });
+    expect(d!.hrvMs).toBe(71);
+    expect(d!.restingHr).toBe(49);
+  });
+  it('daily: FC reposo como hr_resting y pasos en distance_data.summary.steps', () => {
+    const [d] = terraToDaily({
+      type: 'daily',
+      data: [{
+        metadata: { start_time: '2026-06-21T00:00:00Z' },
+        heart_rate_data: { summary: { hr_resting: 55, avg_hrv_rmssd: 64 } },
+        distance_data: { summary: { steps: 9100 } },
+      }],
+    });
+    expect(d!.restingHr).toBe(55);
+    expect(d!.steps).toBe(9100);
+  });
+  it('sleep: recoveryScore cae a scores.readiness si no hay readiness_data', () => {
+    const [d] = terraToDaily({
+      type: 'sleep',
+      data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, scores: { readiness: 80 } }],
+    });
+    expect(d!.recoveryScore).toBe(80);
+  });
+  it('activity: strain en scores.strain como fallback', () => {
+    const [d] = terraToDaily({
+      type: 'activity',
+      data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, scores: { strain: 14.2 } }],
+    });
+    expect(d!.strainScore).toBe(14.2);
+  });
+  it('body: HRV y FC reposo desde heart_rate_data.summary', () => {
+    const [d] = terraToDaily({
+      type: 'body',
+      data: [{ metadata: { date: '2026-06-21' }, heart_rate_data: { summary: { avg_hrv_rmssd: 58, resting_hr_bpm: 51 } } }],
+    });
+    expect(d!.hrvMs).toBe(58);
+    expect(d!.restingHr).toBe(51);
+  });
+});
+
+describe('Terra — día completo desde payloads parciales separados (B1)', () => {
+  // Terra manda sueño/daily/actividad como webhooks SEPARADOS del mismo día.
+  // El merge (RPC en DB) los combina; aquí simulado con mergeDailies.
+  it('solo-sueño: el resto queda null pero la fila es válida', () => {
+    const rows = normalizeAggregatorPayload(
+      { type: 'sleep', user: { provider: 'COROS' }, data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, sleep_durations_data: { asleep: { duration_asleep_state_seconds: 25200 } } }] },
+      'user-1',
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.sleep_duration_min).toBe(420);
+    expect(rows[0]!.steps).toBeNull();
+    expect(rows[0]!.source_device).toBe('COROS');
+  });
+  it('solo-actividad: pasos/calorías presentes, sueño null', () => {
+    const rows = normalizeAggregatorPayload(
+      { type: 'activity', data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, distance_data: { steps: 7200 }, calories_data: { net_activity_calories: 480 } }] },
+      'user-1',
+    );
+    expect(rows[0]!.steps).toBe(7200);
+    expect(rows[0]!.calories_active).toBe(480);
+    expect(rows[0]!.sleep_duration_min).toBeNull();
+  });
+  it('merge de sueño + daily del mismo día (Garmin) → una fila completa', () => {
+    const sleep = terraToDaily({
+      type: 'sleep',
+      user: { provider: 'GARMIN' },
+      data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, sleep_durations_data: { asleep: { duration_asleep_state_seconds: 26400 }, sleep_efficiency: 0.92 }, heart_rate_data: { summary: { avg_hrv_rmssd: 70 } } }],
+    });
+    const daily = terraToDaily({
+      type: 'daily',
+      user: { provider: 'GARMIN' },
+      data: [{ metadata: { start_time: '2026-06-21T00:00:00Z' }, distance_data: { steps: 8000 }, scores: { recovery: 73 } }],
+    });
+    const merged = mergeDailies([...sleep, ...daily]);
+    expect(merged.length).toBe(1);
+    const row = toWearableDailyRow(merged[0]!, 'user-1');
+    expect(row.sleep_duration_min).toBe(440);
+    expect(row.sleep_efficiency).toBe(92);
+    expect(row.hrv_ms).toBe(70);
+    expect(row.steps).toBe(8000);
+    expect(row.recovery_score).toBe(73);
+    expect(row.source_device).toBe('GARMIN');
+  });
 });
 
 describe('mergeDailies — sueño + daily del mismo día no se pisan', () => {

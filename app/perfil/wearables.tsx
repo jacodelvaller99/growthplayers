@@ -448,6 +448,115 @@ const discStyles = StyleSheet.create({
   },
 });
 
+// ─── Hero Card (agregador universal — "Cualquier reloj") ──────────────────────
+// El agregador (Terra) es el camino recomendado: una sola conexión, cualquier
+// marca, funciona en navegador. Por eso se destaca como héroe arriba del resto.
+const HERO_BRANDS = ['Garmin', 'Polar', 'Coros', 'Apple', 'Oura', 'Fitbit', 'Withings', 'Samsung'];
+
+function AggregatorHeroCard({
+  provider, onConnect, isConnecting,
+}: {
+  provider: ProviderMeta;
+  onConnect: () => void;
+  isConnecting: boolean;
+}) {
+  return (
+    <PremiumCard style={heroStyles.card}>
+      <View style={heroStyles.ribbon}>
+        <MaterialIcons name="star" size={12} color={palette.ink} />
+        <Text style={heroStyles.ribbonText}>RECOMENDADO</Text>
+      </View>
+
+      <View style={heroStyles.header}>
+        <View style={heroStyles.iconWrap}>
+          <MaterialIcons name="watch" size={26} color={palette.gold} />
+        </View>
+        <View style={heroStyles.info}>
+          <Text style={heroStyles.name}>{provider.name}</Text>
+          <Text style={heroStyles.sub}>Una conexión · cualquier marca · también en web</Text>
+        </View>
+      </View>
+
+      <Text style={heroStyles.description}>{provider.description}</Text>
+
+      {/* Cobertura de marcas */}
+      <View style={heroStyles.brandRow}>
+        {HERO_BRANDS.map((b) => (
+          <View key={b} style={heroStyles.brandChip}>
+            <Text style={heroStyles.brandText}>{b}</Text>
+          </View>
+        ))}
+        <View style={[heroStyles.brandChip, heroStyles.brandChipMore]}>
+          <Text style={[heroStyles.brandText, heroStyles.brandTextMore]}>+500 dispositivos</Text>
+        </View>
+      </View>
+
+      <Pressable
+        style={[heroStyles.connectBtn, isConnecting && { opacity: 0.6 }]}
+        onPress={onConnect}
+        disabled={isConnecting}
+        accessibilityRole="button"
+        accessibilityLabel={`Conectar ${provider.name}`}>
+        {isConnecting
+          ? <ActivityIndicator size="small" color={palette.ink} />
+          : <>
+              <MaterialIcons name="link" size={18} color={palette.ink} />
+              <Text style={heroStyles.connectText}>CONECTAR MI DISPOSITIVO</Text>
+            </>
+        }
+      </Pressable>
+    </PremiumCard>
+  );
+}
+
+const heroStyles = StyleSheet.create({
+  card: { gap: spacing.md, borderWidth: 1, borderColor: palette.lineGold, backgroundColor: palette.goldGlow },
+  ribbon: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: palette.gold,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderRadius: radii.sm,
+  },
+  ribbonText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  iconWrap: {
+    width: 52, height: 52,
+    borderRadius: radii.md,
+    backgroundColor: palette.black,
+    borderWidth: 1, borderColor: palette.lineGold,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  info: { flex: 1 },
+  name: { ...typography.section, color: palette.ivory, fontSize: 18 },
+  sub:  { ...typography.mono, color: palette.goldText, fontSize: 10, marginTop: 3, letterSpacing: 0.5 },
+  description: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
+  brandRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  brandChip: {
+    backgroundColor: palette.black,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 5,
+    borderWidth: 1, borderColor: palette.charcoal,
+  },
+  brandChipMore: { borderColor: palette.lineGold, backgroundColor: palette.goldGlow },
+  brandText: { ...typography.mono, color: palette.ash, fontSize: 10 },
+  brandTextMore: { color: palette.goldText },
+  connectBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, backgroundColor: palette.gold,
+    borderRadius: radii.sm, paddingVertical: 14,
+    minHeight: 48,
+  },
+  connectText: {
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    fontWeight: '800',
+    color: palette.ink,
+    letterSpacing: 1,
+  },
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function WearablesScreen() {
   const sc = useScreen();
@@ -459,7 +568,7 @@ export default function WearablesScreen() {
   const { connections, loading, isConnected, getConnection, reload } = useWearableConnections();
   const [connecting, setConnecting] = useState<WearableProvider | null>(null);
   const [syncing,    setSyncing]    = useState<WearableProvider | null>(null);
-  const [banner, setBanner] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [banner, setBanner] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
   const [owPickerOpen, setOwPickerOpen] = useState(false);
 
   // Handle OAuth callback params (?connected=whoop or ?error=...)
@@ -497,13 +606,26 @@ export default function WearablesScreen() {
       }
       // Terra: widget multi-marca hosteado, funciona en web.
       setConnecting(provider);
+      // "conectando…" honesto: en web la página se redirige, así que el banner
+      // queda visible hasta que el navegador cambia de URL.
+      setBanner({ type: 'info', msg: 'Conectando… abriendo tu dispositivo' });
       try {
         const res = await connectAggregator();
         if (!res.ok) {
-          setBanner({ type: 'error', msg: res.error ?? 'No se pudo conectar' });
+          if (res.notConfigured) {
+            // El backend respondió pero faltan los secrets del agregador.
+            // Honesto: la integración existe, está en activación — NO afirmamos
+            // que ya funciona ni mostramos un error crudo.
+            setBanner({
+              type: 'info',
+              msg: res.error ?? 'Integración en activación — disponible muy pronto.',
+            });
+          } else {
+            setBanner({ type: 'error', msg: res.error ?? 'No se pudo conectar' });
+          }
         }
-        // En web se redirige la página; en nativo el browser maneja el retorno.
-        // El webhook del agregador vincula la cuenta y empuja los datos.
+        // En web se redirige la página (si res.ok); en nativo el browser maneja
+        // el retorno. El webhook del agregador vincula la cuenta y empuja los datos.
         await reload();
       } finally {
         setConnecting(null);
@@ -600,9 +722,16 @@ export default function WearablesScreen() {
     setOwPickerOpen(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setConnecting('aggregator');
+    setBanner({ type: 'info', msg: 'Conectando…' });
     try {
       const res = await connectAggregator(brand);
-      if (!res.ok) setBanner({ type: 'error', msg: res.error ?? 'No se pudo conectar' });
+      if (!res.ok) {
+        setBanner(
+          res.notConfigured
+            ? { type: 'info', msg: res.error ?? 'Integración en activación — disponible muy pronto.' }
+            : { type: 'error', msg: res.error ?? 'No se pudo conectar' },
+        );
+      }
       await reload();
     } finally {
       setConnecting(null);
@@ -687,21 +816,27 @@ export default function WearablesScreen() {
       </View>
 
       {/* Banner */}
-      {banner && (
-        <Pressable
-          style={[styles.banner, banner.type === 'success' ? styles.bannerSuccess : styles.bannerError]}
-          onPress={() => setBanner(null)}>
-          <MaterialIcons
-            name={banner.type === 'success' ? 'check-circle' : 'error-outline'}
-            size={18}
-            color={banner.type === 'success' ? palette.success : palette.danger}
-          />
-          <Text style={[styles.bannerText, { color: banner.type === 'success' ? palette.success : palette.danger }]}>
-            {banner.msg}
-          </Text>
-          <MaterialIcons name="close" size={15} color={palette.smoke} />
-        </Pressable>
-      )}
+      {banner && (() => {
+        const tone =
+          banner.type === 'success' ? palette.success
+          : banner.type === 'error' ? palette.danger
+          : palette.goldText;
+        const bannerStyle =
+          banner.type === 'success' ? styles.bannerSuccess
+          : banner.type === 'error' ? styles.bannerError
+          : styles.bannerInfo;
+        const icon =
+          banner.type === 'success' ? 'check-circle'
+          : banner.type === 'error' ? 'error-outline'
+          : 'info-outline';
+        return (
+          <Pressable style={[styles.banner, bannerStyle]} onPress={() => setBanner(null)}>
+            <MaterialIcons name={icon} size={18} color={tone} />
+            <Text style={[styles.bannerText, { color: tone }]}>{banner.msg}</Text>
+            <MaterialIcons name="close" size={15} color={palette.smoke} />
+          </Pressable>
+        );
+      })()}
 
       {/* Info card */}
       <PremiumCard style={styles.infoCard}>
@@ -728,16 +863,30 @@ export default function WearablesScreen() {
           const connected = isConnected(p.id);
           const conn      = getConnection(p.id);
 
-          return connected ? (
-            <ConnectedCard
-              key={p.id}
-              provider={p}
-              conn={conn}
-              onSync={() => handleSync(p.id)}
-              onDisconnect={() => handleDisconnect(p.id)}
-              isSyncing={syncing === p.id}
-            />
-          ) : (
+          if (connected) {
+            return (
+              <ConnectedCard
+                key={p.id}
+                provider={p}
+                conn={conn}
+                onSync={() => handleSync(p.id)}
+                onDisconnect={() => handleDisconnect(p.id)}
+                isSyncing={syncing === p.id}
+              />
+            );
+          }
+          // El agregador universal se destaca como héroe (camino recomendado).
+          if (p.id === 'aggregator') {
+            return (
+              <AggregatorHeroCard
+                key={p.id}
+                provider={p}
+                onConnect={() => handleConnect(p.id)}
+                isConnecting={connecting === p.id}
+              />
+            );
+          }
+          return (
             <DisconnectedCard
               key={p.id}
               provider={p}
@@ -868,6 +1017,7 @@ const styles = StyleSheet.create({
   },
   bannerSuccess: { backgroundColor: 'rgba(100,200,100,0.08)', borderColor: palette.success + '44' },
   bannerError:   { backgroundColor: 'rgba(200,60,60,0.08)',   borderColor: palette.danger  + '44' },
+  bannerInfo:    { backgroundColor: palette.goldGlow,         borderColor: palette.lineGold },
   bannerText:    { ...typography.body, flex: 1, fontSize: 13 },
 
   // Info card

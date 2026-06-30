@@ -168,6 +168,38 @@ export function terraSourceDevice(raw: any): string | null {
   return p ? String(p).toUpperCase() : null;
 }
 
+// El feed de Terra no es 100% uniforme entre proveedores: un mismo dato llega a
+// veces bajo claves alternas (HRV como `avg_hrv_rmssd` o `hrv_rmssd`, FC reposo
+// como `resting_hr_bpm` o `resting_hr`). Estos helpers de "primer no-null gana"
+// concentran esa tolerancia en un único lugar, sin sacar el conocimiento del
+// formato Terra de `terraToDaily`. DOC-BASED: las alternas vienen de la doc de
+// Terra y de variaciones observadas entre marcas; validar contra payloads REALES.
+function firstNum(...vals: unknown[]): number | null {
+  for (const v of vals) {
+    const x = n(v);
+    if (x !== null) return x;
+  }
+  return null;
+}
+
+function firstSecToMin(...vals: unknown[]): number | null {
+  for (const v of vals) {
+    const x = secToMin(v);
+    if (x !== null) return x;
+  }
+  return null;
+}
+
+/** HRV (rmssd) tolerando las distintas claves que Terra emite según el proveedor. */
+function terraHrv(hr: any): number | null {
+  return firstNum(hr?.avg_hrv_rmssd, hr?.hrv_rmssd, hr?.user_hrv_rmssd, hr?.avg_hrv_sdnn, hr?.hrv_sdnn);
+}
+
+/** FC en reposo tolerando claves alternas. */
+function terraRestingHr(hr: any): number | null {
+  return firstNum(hr?.resting_hr_bpm, hr?.resting_hr, hr?.hr_resting, hr?.min_hr_bpm);
+}
+
 /** Adapter: un payload Terra (`daily`|`sleep`|`activity`|`body`) → AggregatorDaily[]. */
 export function terraToDaily(raw: any): AggregatorDaily[] {
   const type = terraPayloadType(raw);
@@ -176,7 +208,16 @@ export function terraToDaily(raw: any): AggregatorDaily[] {
   const out: AggregatorDaily[] = [];
 
   for (const rec of records) {
-    const date = isoToDate(rec?.metadata?.start_time ?? rec?.metadata?.end_time ?? rec?.metadata?.date);
+    if (!rec || typeof rec !== 'object') continue;
+    const date = isoToDate(
+      rec?.metadata?.start_time ??
+        rec?.metadata?.end_time ??
+        rec?.metadata?.date ??
+        rec?.metadata?.upload_type ?? // algunos payloads ponen la fecha sólo arriba
+        rec?.day ??
+        rec?.date ??
+        rec?.summary_date,
+    );
     if (!date) continue;
 
     const base: AggregatorDaily = { date, sourceDevice: device };
@@ -185,51 +226,81 @@ export function terraToDaily(raw: any): AggregatorDaily[] {
       const sd = rec?.sleep_durations_data ?? {};
       const asleep = sd?.asleep ?? {};
       const hr = rec?.heart_rate_data?.summary ?? {};
+      // La eficiencia puede venir como fracción (0–1) o ya en porcentaje (0–100).
+      const effRaw = firstNum(sd?.sleep_efficiency, rec?.sleep_efficiency);
+      const sleepEfficiency = effRaw === null ? null : effRaw <= 1 ? effRaw * 100 : effRaw;
       out.push({
         ...base,
-        sleepDurationMin: secToMin(asleep?.duration_asleep_state_seconds),
-        remMin: secToMin(asleep?.duration_REM_sleep_state_seconds),
-        deepMin: secToMin(asleep?.duration_deep_sleep_state_seconds),
-        lightMin: secToMin(asleep?.duration_light_sleep_state_seconds),
-        awakeMin: secToMin(sd?.awake?.duration_awake_state_seconds),
-        sleepEfficiency: n(sd?.sleep_efficiency) !== null ? (sd.sleep_efficiency as number) * 100 : null,
-        hrvMs: n(hr?.avg_hrv_rmssd),
-        restingHr: n(hr?.resting_hr_bpm),
-        respiratoryRate: n(rec?.respiration_data?.breaths_data?.avg_breaths_per_min),
-        spo2Avg: n(rec?.respiration_data?.oxygen_saturation_data?.avg_saturation_percentage),
-        bodyTempDelta: n(rec?.temperature_data?.delta),
-        recoveryScore: n(rec?.readiness_data?.readiness),
-        sleepScore: n(rec?.sleep_score) ?? n(rec?.scores?.sleep),
+        sleepDurationMin: firstSecToMin(
+          asleep?.duration_asleep_state_seconds,
+          sd?.duration_asleep_state_seconds,
+          rec?.duration_asleep_state_seconds,
+        ),
+        remMin: firstSecToMin(asleep?.duration_REM_sleep_state_seconds, sd?.duration_REM_sleep_state_seconds),
+        deepMin: firstSecToMin(asleep?.duration_deep_sleep_state_seconds, sd?.duration_deep_sleep_state_seconds),
+        lightMin: firstSecToMin(asleep?.duration_light_sleep_state_seconds, sd?.duration_light_sleep_state_seconds),
+        awakeMin: firstSecToMin(sd?.awake?.duration_awake_state_seconds, sd?.duration_awake_state_seconds),
+        sleepEfficiency,
+        hrvMs: terraHrv(hr),
+        restingHr: terraRestingHr(hr),
+        respiratoryRate: firstNum(
+          rec?.respiration_data?.breaths_data?.avg_breaths_per_min,
+          rec?.respiration_data?.breaths_data?.avg_breaths_per_minute,
+        ),
+        spo2Avg: firstNum(
+          rec?.respiration_data?.oxygen_saturation_data?.avg_saturation_percentage,
+          rec?.oxygen_data?.avg_saturation_percentage,
+        ),
+        bodyTempDelta: firstNum(rec?.temperature_data?.delta, rec?.temperature_data?.temperature_delta),
+        recoveryScore: firstNum(rec?.readiness_data?.readiness, rec?.scores?.readiness, rec?.scores?.recovery),
+        sleepScore: firstNum(rec?.sleep_score, rec?.scores?.sleep),
       });
     } else if (type === 'daily') {
       const hr = rec?.heart_rate_data?.summary ?? {};
       out.push({
         ...base,
-        recoveryScore: n(rec?.scores?.recovery),
-        activityScore: n(rec?.scores?.activity),
-        restingHr: n(hr?.resting_hr_bpm),
-        hrvMs: n(hr?.avg_hrv_rmssd),
-        spo2Avg: n(rec?.oxygen_data?.avg_saturation_percentage),
-        steps: n(rec?.distance_data?.steps) ?? n(rec?.distance_data?.summary?.steps),
-        caloriesActive: n(rec?.calories_data?.net_activity_calories) ?? n(rec?.calories_data?.total_burned_calories),
-        activeMin: secToMin(rec?.active_durations_data?.activity_seconds),
-        stressScore: n(rec?.stress_data?.avg_stress_level),
+        recoveryScore: firstNum(rec?.scores?.recovery, rec?.scores?.readiness, rec?.readiness_data?.readiness),
+        activityScore: firstNum(rec?.scores?.activity, rec?.activity_score),
+        restingHr: terraRestingHr(hr),
+        hrvMs: terraHrv(hr),
+        spo2Avg: firstNum(
+          rec?.oxygen_data?.avg_saturation_percentage,
+          rec?.oxygen_data?.avg_saturation,
+        ),
+        steps: firstNum(rec?.distance_data?.steps, rec?.distance_data?.summary?.steps, rec?.steps),
+        caloriesActive: firstNum(
+          rec?.calories_data?.net_activity_calories,
+          rec?.calories_data?.total_burned_calories,
+          rec?.calories_data?.net_intake_calories,
+        ),
+        activeMin: firstSecToMin(
+          rec?.active_durations_data?.activity_seconds,
+          rec?.active_durations_data?.active_seconds,
+        ),
+        stressScore: firstNum(rec?.stress_data?.avg_stress_level, rec?.stress_data?.avg_stress),
       });
     } else if (type === 'activity') {
       out.push({
         ...base,
-        strainScore: n(rec?.strain_data?.strain_level),
-        caloriesActive: n(rec?.calories_data?.net_activity_calories) ?? n(rec?.calories_data?.total_burned_calories),
-        activeMin: secToMin(rec?.active_durations_data?.activity_seconds),
-        steps: n(rec?.distance_data?.steps),
+        strainScore: firstNum(rec?.strain_data?.strain_level, rec?.strain_data?.strain, rec?.scores?.strain),
+        caloriesActive: firstNum(
+          rec?.calories_data?.net_activity_calories,
+          rec?.calories_data?.total_burned_calories,
+        ),
+        activeMin: firstSecToMin(
+          rec?.active_durations_data?.activity_seconds,
+          rec?.active_durations_data?.active_seconds,
+        ),
+        steps: firstNum(rec?.distance_data?.steps, rec?.distance_data?.summary?.steps),
       });
     } else if (type === 'body') {
+      const hr = rec?.heart_rate_data?.summary ?? {};
       out.push({
         ...base,
-        hrvMs: n(rec?.heart_rate_data?.summary?.avg_hrv_rmssd),
-        restingHr: n(rec?.heart_rate_data?.summary?.resting_hr_bpm),
-        spo2Avg: n(rec?.oxygen_data?.avg_saturation_percentage),
-        bodyTempDelta: n(rec?.temperature_data?.delta),
+        hrvMs: terraHrv(hr),
+        restingHr: terraRestingHr(hr),
+        spo2Avg: firstNum(rec?.oxygen_data?.avg_saturation_percentage, rec?.oxygen_data?.avg_saturation),
+        bodyTempDelta: firstNum(rec?.temperature_data?.delta, rec?.temperature_data?.temperature_delta),
       });
     }
   }

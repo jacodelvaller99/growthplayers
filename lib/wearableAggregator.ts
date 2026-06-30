@@ -22,6 +22,13 @@ export interface ConnectAggregatorResult {
   /** URL del widget hosteado (abrir en navegador / in-app browser). */
   url?: string;
   error?: string;
+  /**
+   * true cuando el backend respondió pero el agregador todavía no tiene sus
+   * secrets (TERRA_*) configurados — la integración existe pero está en
+   * activación. La UI lo distingue de un error de red para mostrar un estado
+   * honesto ("disponible muy pronto") en vez de un fallo crudo.
+   */
+  notConfigured?: boolean;
 }
 
 /**
@@ -40,11 +47,23 @@ export async function requestAggregatorWidgetUrl(provider?: string): Promise<Con
       body: { action: 'connect', provider },
     });
     if (error) {
+      // La edge function devuelve error cuando aún no tiene secrets (TERRA_*) o
+      // no está desplegada: lo tratamos como "en activación", no como fallo duro.
       logSilentError('aggregator.widget', error);
-      return { ok: false, error: 'No se pudo iniciar la conexión. Intenta de nuevo.' };
+      return {
+        ok: false,
+        notConfigured: true,
+        error: 'Integración en activación — disponible muy pronto.',
+      };
     }
     const url = (data as { url?: string } | null)?.url;
-    if (!url) return { ok: false, error: 'El agregador no está configurado todavía.' };
+    if (!url) {
+      return {
+        ok: false,
+        notConfigured: true,
+        error: 'Integración en activación — disponible muy pronto.',
+      };
+    }
     return { ok: true, url };
   } catch (e) {
     logSilentError('aggregator.widget', e);
