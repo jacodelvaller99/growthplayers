@@ -41,6 +41,20 @@ const CATEGORIES: Category[] = [
   { id: 'performance', label: 'PERFORMANCE',   icon: 'trending-up',      color: palette.ash },
 ];
 
+// ─── Lecturas recomendadas ────────────────────────────────────────────────────
+// Curaduría inicial de libros REALES (existen) alineados al Método. Son
+// recomendaciones honestas para leer fuera de la app, no contenido in-app falso.
+// El catálogo completo lo amplía el operador.
+interface Reading { title: string; author: string; why: string; tag: string }
+const READINGS: Reading[] = [
+  { title: 'Meditaciones',                  author: 'Marco Aurelio',  why: 'El manual estoico para gobernar tu mente bajo presión.', tag: 'MENTE' },
+  { title: 'El hombre en busca de sentido', author: 'Viktor Frankl',  why: 'Por qué el propósito sostiene cuando todo lo demás cede.',  tag: 'PROPÓSITO' },
+  { title: 'Hábitos atómicos',              author: 'James Clear',    why: 'Los pequeños cambios que componen tu identidad.',          tag: 'HÁBITOS' },
+  { title: 'Por qué dormimos',              author: 'Matthew Walker', why: 'La evidencia de que el sueño es tu primer activo.',        tag: 'CUERPO' },
+  { title: 'Respira',                       author: 'James Nestor',   why: 'Cómo tu respiración regula el sistema nervioso.',          tag: 'RECUPERACIÓN' },
+  { title: 'Enfócate (Deep Work)',          author: 'Cal Newport',    why: 'Trabajo profundo en un mundo de distracción.',             tag: 'ENFOQUE' },
+];
+
 export default function BibliotecaScreen() {
   const sc = useScreen();
   const router = useRouter();
@@ -150,6 +164,29 @@ export default function BibliotecaScreen() {
           </Pressable>
         ))}
       </View>
+
+      {/* Lecturas recomendadas — libros reales (curaduría) */}
+      {!query && !activeCategory && (
+        <>
+          <GoldDivider label="LECTURAS" />
+          <Text style={styles.readingsHint}>Curaduría inicial. Libros que sostienen el Método.</Text>
+          <View style={styles.readings}>
+            {READINGS.map((r) => (
+              <View key={r.title} style={styles.readingCard}>
+                <View style={styles.readingIcon}>
+                  <MaterialIcons name="menu-book" size={20} color={palette.goldText} />
+                </View>
+                <View style={styles.readingBody}>
+                  <Text style={styles.readingTitle} numberOfLines={1}>{r.title}</Text>
+                  <Text style={styles.readingAuthor} numberOfLines={1}>{r.author}</Text>
+                  <Text style={styles.readingWhy} numberOfLines={2}>{r.why}</Text>
+                </View>
+                <Text style={styles.readingTag}>{r.tag}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Favoritos (placeholder) */}
       {!query && !activeCategory && (
@@ -280,6 +317,37 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   catCount: { ...typography.caption, color: palette.smoke, fontSize: 11 },
+
+  // Lecturas recomendadas (libros reales)
+  readingsHint: { ...typography.caption, color: palette.smoke, fontSize: 12, marginTop: -spacing.xs, marginBottom: spacing.md },
+  readings:     { gap: spacing.sm, marginBottom: spacing.lg },
+  readingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  readingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.sm,
+    backgroundColor: palette.goldLight,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  readingBody:   { flex: 1, gap: 1 },
+  readingTitle:  { ...typography.label, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },
+  readingAuthor: { ...typography.caption, color: palette.goldText, fontSize: 11 },
+  readingWhy:    { ...typography.caption, color: palette.smoke, fontSize: 11.5, lineHeight: 16, marginTop: 2 },
+  readingTag:    { ...typography.mono, color: palette.smoke, fontSize: 8.5, letterSpacing: 1, flexShrink: 0 },
 
   emptyBox: {
     alignItems: 'center',
