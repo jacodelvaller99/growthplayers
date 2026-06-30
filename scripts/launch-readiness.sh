@@ -12,7 +12,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
-PROD_URL="${POLARIS_PROD_URL:-https://growthplayers.vercel.app}"
+PROD_URL="${POLARIS_PROD_URL:-https://polarisgrowthinstitute.vercel.app}"
 SUPA_URL=$(grep -E '^EXPO_PUBLIC_SUPABASE_URL=' .env.local 2>/dev/null | cut -d= -f2- | tr -d '\r"')
 ANON=$(grep -E '^EXPO_PUBLIC_SUPABASE_ANON_KEY=' .env.local 2>/dev/null | cut -d= -f2- | tr -d '\r"')
 
