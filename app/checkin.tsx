@@ -272,6 +272,10 @@ export default function CheckInScreen() {
   const [sleep, setSleep] = useState(todayCheckIn?.sleep ?? 7);
   const [systemNeed, setSystemNeed] = useState(todayCheckIn?.systemNeed ?? '');
   const [saved, setSaved] = useState(false);
+  // Simplificación (feedback Capuozzo): camino mínimo = 4 sliders → guardar.
+  // La lectura interna es opcional, y el ritual/recomendación se difieren a una oferta.
+  const [showNeed, setShowNeed]     = useState(false);
+  const [showRegula, setShowRegula] = useState(false);
 
   // Real-time coherence score
   const coherence = Math.round((energy + clarity + sleep + (11 - stress)) / 4);
@@ -502,6 +506,42 @@ export default function CheckInScreen() {
     </PremiumCard>
   );
 
+  // Toggle de "lectura interna" — opcional, fuera del camino mínimo.
+  const needToggle = (
+    <Pressable
+      onPress={() => setShowNeed((v) => !v)}
+      accessibilityRole="button"
+      accessibilityLabel={showNeed ? 'Ocultar lectura interna' : 'Anotar qué necesita tu sistema'}
+      style={({ pressed }) => [styles.needToggle, pressed && { opacity: 0.7 }]}>
+      <MaterialIcons name={showNeed ? 'remove' : 'add'} size={16} color={palette.goldText} />
+      <Text style={styles.needToggleText}>
+        {showNeed ? 'Ocultar lectura interna' : '¿Algo más? Anota qué necesita tu sistema (opcional)'}
+      </Text>
+    </Pressable>
+  );
+
+  // Post-guardado — una sola oferta sutil, sin desplegar todo de golpe.
+  const savedOffer = (
+    <PremiumCard style={styles.savedOffer}>
+      <View style={styles.savedRow}>
+        <MaterialIcons name="check-circle" size={18} color={palette.success} />
+        <Text style={styles.savedText}>Check-in guardado.</Text>
+      </View>
+      <Text style={styles.savedSub}>¿Dos minutos para regular tu sistema antes de seguir?</Text>
+      <PrimaryButton label="SÍ, RESPIRAR 2 MIN" icon="self-improvement" onPress={() => setShowRegula(true)} />
+      <SecondaryButton label="VOLVER AL COMANDO" icon="dashboard" onPress={goToCommando} />
+    </PremiumCard>
+  );
+
+  // Bloque completo de regulación (ritual + recomendación) — solo si lo pide.
+  const regulaBlock = (
+    <>
+      {ritualBlock}
+      <GoldDivider label="O SIGUE TU MOVIMIENTO" />
+      {recommendationCard}
+    </>
+  );
+
   // ── Desktop layout ──────────────────────────────────────────────────────────
   if (isDesktop) {
     return (
@@ -558,21 +598,17 @@ export default function CheckInScreen() {
             <View style={styles.desktopRight}>
               {coherenceCard}
 
-              <GoldDivider label={saved ? 'REGULA AHORA' : 'LECTURA INTERNA'} />
-
-              {saved ? (
+              {!saved ? (
                 <>
-                  {ritualBlock}
-                  <GoldDivider label="O SIGUE TU MOVIMIENTO" />
-                  {recommendationCard}
-                </>
-              ) : (
-                <>
-                  {systemNeedCard}
-
                   <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+                  {needToggle}
+                  {showNeed && systemNeedCard}
                   <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
                 </>
+              ) : !showRegula ? (
+                savedOffer
+              ) : (
+                regulaBlock
               )}
             </View>
           </View>
@@ -641,22 +677,20 @@ export default function CheckInScreen() {
         <ScaleSelector label="CALIDAD DE SUEÑO" value={sleep} onChange={setSleep} icon="bedtime" />
       </PremiumCard>
 
-      {/* ── Índice de capacidad ── */}
+      {/* ── Lectura en vivo: se evalúa al mover los sliders ── */}
       {capacityCardMobile}
 
-      {/* ── System Need ── */}
-      <GoldDivider label={saved ? 'REGULA AHORA' : 'LECTURA INTERNA'} />
-      {saved ? (
+      {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
+      {!saved ? (
         <>
-          {ritualBlock}
-          <GoldDivider label="O SIGUE TU MOVIMIENTO" />
-          {recommendationCard}
-        </>
-      ) : (
-        <>
-          {systemNeedCard}
           <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+          {needToggle}
+          {showNeed && systemNeedCard}
         </>
+      ) : !showRegula ? (
+        savedOffer
+      ) : (
+        regulaBlock
       )}
     </ScrollView>
     </KeyboardAvoidingView>
@@ -853,6 +887,43 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: spacing.lg,
     textAlignVertical: 'top',
+  },
+
+  // Lectura interna opcional (toggle) + oferta post-guardado
+  needToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+  },
+  needToggleText: {
+    ...typography.caption,
+    color: palette.ash,
+    fontSize: 13,
+    flex: 1,
+  },
+  savedOffer: {
+    borderColor: palette.lineGold,
+    borderWidth: 1,
+    gap: spacing.md,
+  },
+  savedRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  savedText: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  savedSub: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 14,
+    lineHeight: 21,
   },
 
   // Recommendation (post-save closing card)

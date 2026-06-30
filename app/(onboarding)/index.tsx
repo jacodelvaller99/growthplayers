@@ -299,6 +299,7 @@ export default function OnboardingScreen() {
       {step === 2 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="PASO 1 · IDENTIDAD" />
+          <Text style={styles.stepSubtitle}>Cuéntame quién eres</Text>
           <Text style={styles.stepTitle}>OPERADOR{'\n'}SOBERANO.</Text>
           <Text style={styles.stepBody}>
             Define como opera el sistema. Tu nombre y rol aparecen en el perfil y contextualizan al mentor.
@@ -337,6 +338,7 @@ export default function OnboardingScreen() {
       {step === 3 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="PASO 2 · MI NORTE" tone="gold" dot />
+          <Text style={styles.stepSubtitle}>Tu propósito para los próximos 90 días</Text>
           <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
             Antes de la táctica, la dirección. Estas declaraciones orientan cada decisión del
@@ -387,6 +389,7 @@ export default function OnboardingScreen() {
       {step === 4 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="PASO 3 · TU SITUACIÓN" />
+          <Text style={styles.stepSubtitle}>Qué cambia todo — opcional</Text>
           <Text style={styles.stepTitle}>NOMBRA EL{'\n'}OBSTÁCULO.</Text>
           <Text style={styles.stepBody}>
             Opcional, pero útil: una línea sobre lo que se interpone te da a tu mentor contexto desde
@@ -441,6 +444,7 @@ export default function OnboardingScreen() {
       {step === 5 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="PASO 4 · MEMBRESÍA" />
+          <Text style={styles.stepSubtitle}>Tu código de acceso, si tienes</Text>
           <Text style={styles.stepTitle}>ACTIVA TU{'\n'}MEMBRESÍA.</Text>
           <Text style={styles.stepBody}>
             Tu coach te entregó un código al inscribirte. Ingrésalo aquí para desbloquear el acceso
@@ -668,6 +672,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     lineHeight: 40,
     textTransform: 'uppercase',
+  },
+  stepSubtitle: {
+    ...typography.caption,
+    color: palette.goldText,
+    fontSize: 12,
+    marginTop: -spacing.sm,
   },
   stepBody: {
     ...typography.body,

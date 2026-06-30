@@ -755,6 +755,7 @@ export interface BreathingTechnique {
   subtitle: string;
   description: string;
   benefit: string;
+  whenToUse?: string;
   cycles: number; // default cycles
   phases: BreathPhase[];
   icon: string;
@@ -767,6 +768,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Calma profunda',
     description: 'Inhala 4s · Retén 7s · Exhala 8s',
     benefit: 'Respiración pensada para bajar revoluciones y favorecer la calma.',
+    whenToUse: 'Antes de dormir o tras un pico de estrés.',
     cycles: 4,
     icon: 'air',
     phases: [
@@ -781,6 +783,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Enfoque y control',
     description: 'Inhala 4s · Retén 4s · Exhala 4s · Retén 4s',
     benefit: 'Usado por fuerzas especiales. Calma sin adormecimiento.',
+    whenToUse: 'Antes de algo que exige foco o una decisión.',
     cycles: 5,
     icon: 'crop-square',
     phases: [
@@ -796,6 +799,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Coherencia cardíaca',
     description: 'Inhala 5s · Exhala 5s',
     benefit: 'Ritmo de respiración para entrar en foco sostenido.',
+    whenToUse: 'Para estabilizar el ritmo, en cualquier momento.',
     cycles: 6,
     icon: 'favorite',
     phases: [
@@ -809,6 +813,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Energía y activación',
     description: '30 resp. rápidas · Retención · Recuperación',
     benefit: 'Muchos la usan para sentir más energía y activación. Practícala con precaución.',
+    whenToUse: 'En la mañana o pre-entreno — no de noche.',
     cycles: 3,
     icon: 'bolt',
     phases: [
@@ -823,6 +828,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Reset rápido de estrés',
     description: 'Doble inhalación nasal · Exhalación larga por boca',
     benefit: 'Patrón de doble inhalación y exhalación larga que muchos usan para descargar tensión rápido.',
+    whenToUse: 'Cuando necesitas bajar la tensión en segundos.',
     cycles: 5,
     icon: 'air',
     phases: [
@@ -837,6 +843,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Equilibrio y claridad',
     description: 'Inhala · Retén · Exhala alternando fosas nasales',
     benefit: 'Práctica tradicional de respiración alterna que muchos usan para ordenar la mente.',
+    whenToUse: 'Para ordenar la mente antes de concentrarte.',
     cycles: 6,
     icon: 'sync',
     phases: [
@@ -851,6 +858,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Calma parasimpática',
     description: 'Inhala 4s · Exhala 8s',
     benefit: 'La exhalación más larga que la inhalación se asocia a una mayor sensación de calma.',
+    whenToUse: 'Para relajarte o antes de dormir.',
     cycles: 6,
     icon: 'waves',
     phases: [
@@ -864,6 +872,7 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     subtitle: 'Calor y energía interna',
     description: 'Inhala fuerte · Exhala con fuerza',
     benefit: 'Respiración tibetana tradicional del "calor interno". Muchos la usan para activarse.',
+    whenToUse: 'Para activarte; con precaución.',
     cycles: 4,
     icon: 'whatshot',
     phases: [

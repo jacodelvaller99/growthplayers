@@ -200,11 +200,12 @@ export default function MentoriaScreen() {
         </View>
       )}
 
+      <Text style={styles.addHint}>Una acción concreta y ejecutable que TÚ te comprometes a hacer esta semana.</Text>
       <View style={styles.addRow}>
         <TextInput
           value={manualText}
           onChangeText={setManualText}
-          placeholder="Agregar una acción manual…"
+          placeholder="Ej: Terminar el reporte antes del jueves"
           placeholderTextColor={palette.smoke}
           selectionColor={palette.gold}
           style={styles.addInput}
@@ -591,7 +592,7 @@ function DraftEditor({
           <TextInput
             value={a}
             onChangeText={(t) => onChangeAction(i, t)}
-            placeholder="Acción…"
+            placeholder="Ej: Llamar a Juan el lunes"
             placeholderTextColor={palette.smoke}
             selectionColor={palette.gold}
             style={styles.draftActionInput}
@@ -675,6 +676,7 @@ const styles = StyleSheet.create({
   itemTextDone: { color: palette.smoke, textDecorationLine: 'line-through' },
 
   // Add row
+  addHint: { ...typography.body, fontSize: 11.5, color: palette.smoke, lineHeight: 16, marginTop: 6 },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   addInput: {
     flex: 1, minHeight: 44, paddingHorizontal: 12, borderRadius: 8,

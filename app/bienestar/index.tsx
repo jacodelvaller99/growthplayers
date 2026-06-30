@@ -122,35 +122,36 @@ type Block = {
   route: string;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   label: string;
+  sub: string;
   color: string;
   type: 'meditation' | 'breathing' | 'binaural' | 'sleep' | 'library' | 'journal';
 };
 
 // Monochrome — spec: "Sin colores por categoría (todo monocromo excepto el gold CTA)"
 const BLOCKS: Block[] = [
-  { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'BINAURALES',  color: palette.ash, type: 'binaural'   },
-  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', color: palette.ash, type: 'breathing'  },
-  { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  color: palette.ash, type: 'meditation' },
-  { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       color: palette.ash, type: 'sleep'      },
-  { route: '/bienestar/biblioteca',  icon: 'local-library',    label: 'BIBLIOTECA',  color: palette.ash, type: 'library'    },
-  { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      color: palette.ash, type: 'journal'    },
+  { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'BINAURALES',  sub: 'enfoque y relajación', color: palette.ash, type: 'binaural'   },
+  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', sub: 'regula tu sistema',    color: palette.ash, type: 'breathing'  },
+  { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  sub: 'calma la mente',       color: palette.ash, type: 'meditation' },
+  { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       sub: 'descansa mejor',       color: palette.ash, type: 'sleep'      },
+  { route: '/bienestar/biblioteca',  icon: 'local-library',    label: 'BIBLIOTECA',  sub: 'audios y lecturas',    color: palette.ash, type: 'library'    },
+  { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      sub: 'procesa el día',       color: palette.ash, type: 'journal'    },
 ];
 
 const BLOCKS_EXTENDED = [
-  { id: 'internista',  icon: 'medical-services' as const, label: 'INTERNISTA',  route: '/bienestar/internista' },
-  { id: 'habitos',     icon: 'checklist' as const,        label: 'HÁBITOS',     route: '/bienestar/habitos' },
-  { id: 'ayuno',       icon: 'schedule' as const,         label: 'AYUNO',       route: '/bienestar/ayuno' },
-  { id: 'nutricion',   icon: 'restaurant' as const,       label: 'NUTRICIÓN',   route: '/bienestar/nutricion' },
-  { id: 'cuerpo',      icon: 'fitness-center' as const,   label: 'CUERPO',      route: '/bienestar/cuerpo' },
-  { id: 'suplementos', icon: 'medication' as const,       label: 'SUPLEMENTOS', route: '/bienestar/suplementacion' },
-  { id: 'comunidad',   icon: 'groups' as const,           label: 'COMUNIDAD',   route: '/bienestar/comunidad' },
+  { id: 'internista',  icon: 'medical-services' as const, label: 'INTERNISTA',  sub: 'entiende tus exámenes', route: '/bienestar/internista' },
+  { id: 'habitos',     icon: 'checklist' as const,        label: 'HÁBITOS',     sub: 'rutinas diarias',       route: '/bienestar/habitos' },
+  { id: 'ayuno',       icon: 'schedule' as const,         label: 'AYUNO',       sub: 'timer + guía',          route: '/bienestar/ayuno' },
+  { id: 'nutricion',   icon: 'restaurant' as const,       label: 'NUTRICIÓN',   sub: 'tu plan de comidas',    route: '/bienestar/nutricion' },
+  { id: 'cuerpo',      icon: 'fitness-center' as const,   label: 'CUERPO',      sub: 'registra medidas',      route: '/bienestar/cuerpo' },
+  { id: 'suplementos', icon: 'medication' as const,       label: 'SUPLEMENTOS', sub: 'dosis y horarios',      route: '/bienestar/suplementacion' },
+  { id: 'comunidad',   icon: 'groups' as const,           label: 'COMUNIDAD',   sub: 'feed del grupo',        route: '/bienestar/comunidad' },
 ];
 
 // Herramientas emocionales del curso (Docs 3.2, 3.4 y 4.3)
 const BLOCKS_EMOCIONAL = [
-  { id: 'grito',       icon: 'campaign' as const,        label: 'GRITO',       route: '/bienestar/grito' },
-  { id: 'tapping',     icon: 'touch-app' as const,       label: 'TAPPING',     route: '/bienestar/tapping' },
-  { id: 'consciencia', icon: 'psychology-alt' as const,  label: 'CONSCIENCIA', route: '/bienestar/consciencia' },
+  { id: 'grito',       icon: 'campaign' as const,        label: 'GRITO',       sub: 'descarga emocional', route: '/bienestar/grito' },
+  { id: 'tapping',     icon: 'touch-app' as const,       label: 'TAPPING',     sub: 'EFT, baja tensión',  route: '/bienestar/tapping' },
+  { id: 'consciencia', icon: 'psychology-alt' as const,  label: 'CONSCIENCIA', sub: 'calibra tu estado',  route: '/bienestar/consciencia' },
 ];
 
 function getWeekDots(sessions: { completedAt: string }[]): boolean[] {
@@ -341,6 +342,7 @@ export default function BienestarHub() {
                     style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
                     <MaterialIcons name={block.icon} size={28} color={palette.ash} />
                     <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -355,6 +357,7 @@ export default function BienestarHub() {
                     style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
                     <MaterialIcons name={block.icon} size={28} color={palette.ash} />
                     <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -369,6 +372,7 @@ export default function BienestarHub() {
                     style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
                     <MaterialIcons name={block.icon} size={28} color={palette.ash} />
                     <Text style={desktopStyles.gridLabel}>{block.label}</Text>
+                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -489,7 +493,7 @@ export default function BienestarHub() {
       <GoldDivider label="PRÁCTICA" />
       <View style={styles.grid}>
         {BLOCKS.map((b) => (
-          <HubTile key={b.route} icon={b.icon} label={b.label} onPress={() => router.push(b.route as never)} />
+          <HubTile key={b.route} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />
         ))}
       </View>
 
@@ -497,7 +501,7 @@ export default function BienestarHub() {
       <GoldDivider label="SISTEMA INTEGRAL" />
       <View style={styles.grid}>
         {BLOCKS_EXTENDED.map((b) => (
-          <HubTile key={b.id} icon={b.icon} label={b.label} onPress={() => router.push(b.route as never)} />
+          <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />
         ))}
       </View>
 
@@ -505,7 +509,7 @@ export default function BienestarHub() {
       <GoldDivider label="LIBERACIÓN EMOCIONAL" />
       <View style={styles.grid}>
         {BLOCKS_EMOCIONAL.map((b) => (
-          <HubTile key={b.id} icon={b.icon} label={b.label} gold onPress={() => router.push(b.route as never)} />
+          <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} gold onPress={() => router.push(b.route as never)} />
         ))}
       </View>
 
@@ -523,11 +527,13 @@ export default function BienestarHub() {
 function HubTile({
   icon,
   label,
+  sub,
   gold,
   onPress,
 }: {
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   label: string;
+  sub?: string;
   gold?: boolean;
   onPress: () => void;
 }) {
@@ -541,6 +547,7 @@ function HubTile({
       ]}>
       <MaterialIcons name={icon} size={28} color={gold ? palette.goldText : palette.ivory} />
       <Text style={[styles.gridLabel, gold && styles.gridLabelGold]}>{label}</Text>
+      {sub ? <Text style={styles.gridSub} numberOfLines={2}>{sub}</Text> : null}
     </Pressable>
   );
 }
@@ -603,14 +610,14 @@ const styles = StyleSheet.create({
   gridCard: {
     width: '30%',
     flexGrow: 1,
-    aspectRatio: 1,
+    aspectRatio: 0.92,
     backgroundColor: palette.graphite,
     borderWidth: 1,
     borderColor: palette.line,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     padding: spacing.md,
     minWidth: 92,
   },
@@ -626,6 +633,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   gridLabelGold: { color: palette.goldText },
+  gridSub: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 9,
+    lineHeight: 13,
+    textAlign: 'center',
+  },
 
   // Frase del día (italic, centered)
   phraseQuote: {
@@ -696,16 +710,23 @@ const desktopStyles = StyleSheet.create({
   },
   gridCard: {
     width: '31%',
-    aspectRatio: 1.2,
+    aspectRatio: 1.35,
     backgroundColor: palette.graphite,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
+    paddingHorizontal: 8,
   },
   gridLabel: {
     ...typography.label,
     color: palette.ivory,
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  gridSub: {
+    ...typography.caption,
+    color: palette.smoke,
     fontSize: 10,
     textAlign: 'center',
   },

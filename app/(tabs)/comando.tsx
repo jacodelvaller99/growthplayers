@@ -348,6 +348,9 @@ export default function DashboardScreen() {
         style={({ pressed }) => [styles.mandoStrip, pressed && { opacity: 0.85 }]}>
         <Text style={styles.mandoLabel}>TU MANDO DE HOY</Text>
         <Text style={styles.mandoText}>{mandoDeHoy}</Text>
+        <Text style={styles.mandoCaption}>
+          Tu única decisión no-negociable de hoy — sale de tu Norte y tu lectura del check-in.
+        </Text>
       </Pressable>
       <Text style={styles.time}>
         {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
@@ -1306,6 +1309,12 @@ const styles = StyleSheet.create({
     color: palette.ivory,
     fontSize: 15,
     lineHeight: 21,
+  },
+  mandoCaption: {
+    ...typography.body,
+    color: palette.smoke,
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   // ── Shared ────────────────────────────────────────────────────────────────

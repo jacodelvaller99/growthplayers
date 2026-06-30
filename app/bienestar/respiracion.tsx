@@ -250,6 +250,19 @@ export default function RespiracionScreen() {
           })}
         </ScrollView>
 
+        {/* Detalle de la técnica seleccionada */}
+        {!running && (
+          <View style={styles.detail}>
+            <Text style={styles.detailBenefit}>{tech.benefit}</Text>
+            {tech.whenToUse && (
+              <Text style={styles.detailWhen}>
+                <Text style={styles.detailWhenLabel}>Cuándo: </Text>
+                {tech.whenToUse}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Primary action */}
         <Pressable
           onPress={() => (running ? stop() : start())}
@@ -411,6 +424,28 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: palette.ink,
     fontWeight: '700',
+  },
+
+  // Detalle técnica
+  detail: {
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
+  },
+  detailBenefit: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    lineHeight: 19,
+    color: palette.ash,
+  },
+  detailWhen: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    lineHeight: 18,
+    color: palette.goldMuted,
+  },
+  detailWhenLabel: {
+    fontWeight: '700',
+    color: palette.goldText,
   },
 
   // CTA

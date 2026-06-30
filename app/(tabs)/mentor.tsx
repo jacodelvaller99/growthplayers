@@ -267,6 +267,9 @@ export default function MentorScreen() {
   const [loadingMore, setLoadingMore]   = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(() => state.mentorMessages.length >= 50);
 
+  // "Analizo en base a" — qué recibe Norman (plegable)
+  const [showBasis, setShowBasis] = useState(false);
+
   // Threads state
   const [showThreads, setShowThreads] = useState(false);
   const [threads, setThreads] = useState<Array<{ id: string; title: string; created_at: string }>>([]);
@@ -685,6 +688,37 @@ export default function MentorScreen() {
           {state.northStar.dailyReminder ? (
             <Text style={styles.contextNorth}>{state.northStar.dailyReminder}</Text>
           ) : null}
+
+          {/* ── Transparencia: qué recibe Norman ── */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Analizo en base a"
+            accessibilityState={{ expanded: showBasis }}
+            onPress={() => setShowBasis((v) => !v)}
+            style={styles.basisToggle}>
+            <MaterialIcons name="visibility" size={13} color={palette.goldText} />
+            <Text style={styles.basisToggleText}>ANALIZO EN BASE A</Text>
+            <MaterialIcons
+              name={showBasis ? 'expand-less' : 'expand-more'}
+              size={16}
+              color={palette.smoke}
+            />
+          </Pressable>
+          {showBasis ? (
+            <View style={styles.basisList}>
+              {[
+                { icon: 'event-available' as const, label: 'Tus últimos check-ins' },
+                { icon: 'explore' as const, label: 'Tu Norte' },
+                { icon: 'favorite' as const, label: 'Tu biometría del día (si hay wearable)' },
+                { icon: 'history' as const, label: 'Lo que has compartido antes' },
+              ].map((item) => (
+                <View key={item.label} style={styles.basisRow}>
+                  <MaterialIcons name={item.icon} size={13} color={palette.goldText} />
+                  <Text style={styles.basisRowText}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </PremiumCard>
 
         {/* ── Paywall banner ── */}
@@ -1001,6 +1035,30 @@ const styles = StyleSheet.create({
     color: palette.ash,
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  basisToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  basisToggleText: {
+    ...typography.label,
+    color: palette.goldText,
+    flex: 1,
+    fontSize: 11,
+  },
+  basisList: {
+    gap: spacing.xs,
+  },
+  basisRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  basisRowText: {
+    ...typography.body,
+    color: palette.ash,
+    fontSize: 13,
   },
 
   // Memory summary card

@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, screen, useScreen } from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { palette, radii, spacing, typography } from '@/constants/theme';
 
 // ─── Time chips ───────────────────────────────────────────────────────────────
 const TIME_CHIPS = [1, 3, 5, 10, 15, 20] as const;
@@ -23,27 +23,22 @@ interface Category {
   label: string;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   color: string;
-  count: number;
+  /** Ruta a la práctica real. Si está, la categoría abre contenido que YA existe.
+   *  Si no, es un tema en curaduría (se muestra "próximamente", sin contar sesiones falsas). */
+  route?: string;
 }
 
 const CATEGORIES: Category[] = [
-  { id: 'binaural',    label: 'BINAURALES',    icon: 'graphic-eq',       color: palette.ash, count: 5  },
-  { id: 'breathing',   label: 'RESPIRACIÓN',   icon: 'air',              color: palette.ash, count: 4  },
-  { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: palette.ash, count: 5  },
-  { id: 'sleep',       label: 'SUEÑO',         icon: 'bedtime',          color: palette.ash, count: 8  },
-  { id: 'focus',       label: 'ENFOQUE',       icon: 'psychology',       color: palette.ash, count: 6  },
-  { id: 'energy',      label: 'ENERGÍA',       icon: 'bolt',             color: palette.ash, count: 4  },
-  { id: 'anxiety',     label: 'ANSIEDAD',      icon: 'spa',              color: palette.ash, count: 7  },
-  { id: 'morning',     label: 'MAÑANA',        icon: 'wb-sunny',         color: palette.ash, count: 5  },
-  { id: 'evening',     label: 'NOCHE',         icon: 'nights-stay',      color: palette.ash, count: 4  },
-  { id: 'performance', label: 'PERFORMANCE',   icon: 'trending-up',      color: palette.ash, count: 6  },
-];
-
-// ─── Recent items (mock) ──────────────────────────────────────────────────────
-const RECENT = [
-  { id: 'r1', title: 'Alpha — Flow & Relax',  type: 'BINAURAL',   duration: '10 min', color: palette.ash },
-  { id: 'r2', title: '4-7-8 Calma',           type: 'RESPIRACIÓN',duration: '4 min',  color: palette.ash },
-  { id: 'r3', title: 'Despertar Consciente',  type: 'MEDITACIÓN', duration: '5 min',  color: palette.ash },
+  { id: 'binaural',    label: 'BINAURALES',    icon: 'graphic-eq',       color: palette.ash, route: '/bienestar/binaurales'  },
+  { id: 'breathing',   label: 'RESPIRACIÓN',   icon: 'air',              color: palette.ash, route: '/bienestar/respiracion' },
+  { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: palette.ash, route: '/bienestar/meditacion'  },
+  { id: 'sleep',       label: 'SUEÑO',         icon: 'bedtime',          color: palette.ash, route: '/bienestar/sueno'       },
+  { id: 'focus',       label: 'ENFOQUE',       icon: 'psychology',       color: palette.ash },
+  { id: 'energy',      label: 'ENERGÍA',       icon: 'bolt',             color: palette.ash },
+  { id: 'anxiety',     label: 'ANSIEDAD',      icon: 'spa',              color: palette.ash },
+  { id: 'morning',     label: 'MAÑANA',        icon: 'wb-sunny',         color: palette.ash },
+  { id: 'evening',     label: 'NOCHE',         icon: 'nights-stay',      color: palette.ash },
+  { id: 'performance', label: 'PERFORMANCE',   icon: 'trending-up',      color: palette.ash },
 ];
 
 export default function BibliotecaScreen() {
@@ -111,23 +106,15 @@ export default function BibliotecaScreen() {
         ))}
       </View>
 
-      {/* Recent */}
+      {/* Aviso honesto: la biblioteca está en curaduría. Las categorías con
+          práctica real abren contenido que YA existe; el resto, próximamente. */}
       {!query && !activeCategory && (
-        <>
-          <GoldDivider label="RECIENTES" />
-          {RECENT.map((r) => (
-            <Pressable
-              key={r.id}
-              style={({ pressed }) => [styles.recentCard, pressed && { opacity: 0.75 }]}>
-              <View style={[styles.recentDot, { backgroundColor: r.color }]} />
-              <View style={styles.recentBody}>
-                <Text style={styles.recentTitle}>{r.title}</Text>
-                <Text style={styles.recentMeta}>{r.type} · {r.duration}</Text>
-              </View>
-              <MaterialIcons name="play-circle-outline" size={24} color={r.color} />
-            </Pressable>
-          ))}
-        </>
+        <View style={styles.notice}>
+          <MaterialIcons name="auto-stories" size={16} color={palette.goldText} />
+          <Text style={styles.noticeText}>
+            Biblioteca en curaduría. Las categorías con práctica abren contenido real; el resto llega pronto.
+          </Text>
+        </View>
       )}
 
       {/* Categories */}
@@ -142,17 +129,24 @@ export default function BibliotecaScreen() {
         {filtered.map((cat) => (
           <Pressable
             key={cat.id}
-            onPress={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+            onPress={() =>
+              cat.route
+                ? router.push(cat.route as never)
+                : setActiveCategory(activeCategory === cat.id ? null : cat.id)
+            }
+            accessibilityRole="button"
+            accessibilityLabel={cat.route ? `Abrir ${cat.label}` : `${cat.label} próximamente`}
             style={({ pressed }) => [
               styles.catCard,
               activeCategory === cat.id && styles.catCardActive,
+              !cat.route && { opacity: 0.7 },
               pressed && { opacity: 0.8 },
             ]}>
             <View style={[styles.catIcon, { backgroundColor: cat.color + '22' }]}>
               <MaterialIcons name={cat.icon} size={24} color={cat.color} />
             </View>
             <Text style={[styles.catLabel, { color: cat.color }]}>{cat.label}</Text>
-            <Text style={styles.catCount}>{cat.count} sesiones</Text>
+            <Text style={styles.catCount}>{cat.route ? 'ABRIR →' : 'PRÓXIMAMENTE'}</Text>
           </Pressable>
         ))}
       </View>
@@ -206,6 +200,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  // Aviso honesto de curaduría
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(201,160,0,0.06)',
+    borderColor: palette.gold + '33',
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  noticeText: {
+    ...typography.caption,
+    color: palette.ash,
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 17,
+  },
+
   chipsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -222,27 +237,6 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   chipText: { ...typography.label, color: palette.ash },
   chipTextActive: { color: palette.goldText },
-
-  recentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: palette.graphite,
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  recentDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  recentBody: { flex: 1, gap: 2 },
-  recentTitle: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 1.5 },
-  recentMeta: { ...typography.mono, color: palette.smoke, fontSize: 10 },
 
   clearFilter: {
     flexDirection: 'row',
