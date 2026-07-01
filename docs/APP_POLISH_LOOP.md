@@ -42,7 +42,7 @@
 - [x] app/bienestar/nutricion.tsx · a11y integral del wizard de 5 pasos: progressbar con value, back (paso anterior/volver), selecciones de dieta/objetivo/calorías (role=radio+selected), chips de restricciones/alergias (role=checkbox+checked), botón siguiente (state disabled), y la sección de plan (abrir/inputs/guardar). render smoke test.
 - [x] app/bienestar/cuerpo.tsx · a11y: back + inputs de peso/altura + los 7 inputs de medidas opcionales (con label del campo) + botón guardar (state disabled). render smoke test (IMC en vivo + formulario + estado vacío).
 - [x] app/bienestar/body-context.tsx — componente compartido de prácticas (contexto biométrico honesto). Ya tenía a11y en ambos Pressables + tokens theme-aware (cv) + estado honesto sin datos falsos. a11y: cada métrica (HRV/FC/recuperación) ahora es un solo elemento accesible en orden natural (etiqueta→valor→unidad) en vez de leerse fragmentada y desordenada en lector de pantalla. render smoke test de las 4 ramas (con dato / sin dato / cargando / cierre).
-- [ ] app/bienestar/suplementacion.tsx
+- [x] app/bienestar/suplementacion.tsx · **bug de modo claro corregido**: el ícono del botón "GUARDAR STACK" usaba `palette.black` (=`cv('--c-bg')`) sobre fondo `palette.gold` constante → en tema claro se volvía claro sobre gold brillante (casi invisible); ahora `palette.ink` (constante) como el texto contiguo. a11y: back, tabs con role=tab+selected+label, botón editar con role+expanded, inputs de dosis/timing con label ligado al suplemento, botón guardar con role/label/selected. render smoke test (3 tabs + catálogo + guardar). Disclaimer médico ("consulta a tu médico") INTACTO.
 - [ ] app/bienestar/biometrics.tsx
 - [ ] app/bienestar/grito.tsx
 - [ ] app/bienestar/tapping.tsx

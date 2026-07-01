@@ -149,7 +149,11 @@ export default function SuplementacionScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <Text style={styles.title}>SUPLEMENTOS</Text>
@@ -171,6 +175,9 @@ export default function SuplementacionScreen() {
             key={tab.id}
             onPress={() => { setActiveTab(tab.id); setSavedStack(null); setEditing(null); }}
             style={[styles.tab, activeTab === tab.id && styles.tabActive]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.id }}
+            accessibilityLabel={`Suplementos para ${tab.label.toLowerCase()}`}
           >
             <MaterialIcons name={tab.icon as any} size={16} color={activeTab === tab.id ? palette.ink : palette.ash} />
             <Text style={[styles.tabText, activeTab === tab.id && { color: palette.ink }]}>{tab.label}</Text>
@@ -195,7 +202,9 @@ export default function SuplementacionScreen() {
                   onPress={() => setEditing(isEditing ? null : s.name)}
                   hitSlop={8}
                   style={styles.editBtn}
-                  accessibilityLabel={isEditing ? 'Cerrar edición' : `Editar dosis de ${s.name}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: isEditing }}
+                  accessibilityLabel={isEditing ? `Cerrar edición de ${s.name}` : `Editar dosis y horario de ${s.name}`}
                 >
                   <MaterialIcons name={isEditing ? 'check' : 'edit'} size={16} color={palette.goldText} />
                 </Pressable>
@@ -211,6 +220,7 @@ export default function SuplementacionScreen() {
                       onChangeText={(v) => setField(s.name, 'dose', v)}
                       placeholder="Ej: 300 mg"
                       placeholderTextColor={palette.smoke}
+                      accessibilityLabel={`Dosis de ${s.name}`}
                     />
                   </View>
                   <View style={styles.editField}>
@@ -221,6 +231,7 @@ export default function SuplementacionScreen() {
                       onChangeText={(v) => setField(s.name, 'timing', v)}
                       placeholder="Ej: Mañana con comida"
                       placeholderTextColor={palette.smoke}
+                      accessibilityLabel={`Horario de ${s.name}`}
                     />
                   </View>
                 </View>
@@ -240,11 +251,14 @@ export default function SuplementacionScreen() {
         <Pressable
           onPress={saveStack}
           style={[styles.saveBtn, savedStack === activeTab && styles.saveBtnSaved]}
+          accessibilityRole="button"
+          accessibilityLabel={savedStack === activeTab ? 'Stack guardado' : 'Guardar este stack'}
+          accessibilityState={{ selected: savedStack === activeTab }}
         >
           <MaterialIcons
             name={savedStack === activeTab ? 'check-circle' : 'bookmark-add'}
             size={18}
-            color={savedStack === activeTab ? palette.ink : palette.black}
+            color={palette.ink}
           />
           <Text style={styles.saveBtnText}>
             {savedStack === activeTab ? 'STACK GUARDADO' : 'GUARDAR ESTE STACK'}
