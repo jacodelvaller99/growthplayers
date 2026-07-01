@@ -290,8 +290,11 @@ export default function ConscienciaScreen() {
                 isSelected && styles.cellSelected,
               ]}
               accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
               accessibilityLabel={`${level.hz} Hz, ${level.name}`}>
-              <Text style={[styles.cellHz, { color: isPoder ? palette.gold : palette.ivory }]}>{level.hz}</Text>
+              {/* goldText (no gold): este es TEXTO. palette.gold (#FFC804) sobre la
+                  celda de poder (fondo goldLight claro) es ilegible en tema claro. */}
+              <Text style={[styles.cellHz, { color: isPoder ? palette.goldText : palette.ivory }]}>{level.hz}</Text>
               <Text style={styles.cellName} numberOfLines={1}>{level.name}</Text>
             </Pressable>
           );
@@ -366,7 +369,9 @@ export default function ConscienciaScreen() {
           onPress={saveWeekly}
           disabled={weeklyHz.length === 0}
           style={[styles.weeklyBtn, weeklyHz.length === 0 && styles.weeklyBtnDisabled]}
-          accessibilityRole="button">
+          accessibilityRole="button"
+          accessibilityLabel={weeklySaved ? 'Calibración guardada' : 'Registrar esta semana'}
+          accessibilityState={{ disabled: weeklyHz.length === 0, selected: !!weeklySaved }}>
           <MaterialIcons
             name={weeklySaved ? 'check-circle' : 'event-available'}
             size={16}
