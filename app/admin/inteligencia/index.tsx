@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin CMI — Inteligencia ML
  *
  * Dashboard completo: engagement, churn, cohorts, affinities,
@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { recalculateAllMLAction } from '@/lib/admin/actions';
@@ -32,7 +32,11 @@ function CohortBar({ label, count, total }: { label: string; count: number; tota
   return (
     <View style={s.barRow}>
       <Text style={s.barLabel}>{label.replace(/_/g, ' ').toUpperCase()}</Text>
-      <View style={s.barTrack}>
+      <View
+        style={s.barTrack}
+        accessibilityRole="progressbar"
+        accessibilityLabel={label.replace(/_/g, ' ')}
+        accessibilityValue={{ min: 0, max: total, now: count }}>
         <View style={[s.barFill, { width: `${pct}%` as unknown as number }]} />
       </View>
       <Text style={s.barCount}>{count}</Text>
@@ -45,7 +49,11 @@ function AffinityBar({ label, value }: { label: string; value: number }) {
   return (
     <View style={s.barRow}>
       <Text style={s.barLabel}>{label.toUpperCase()}</Text>
-      <View style={s.barTrack}>
+      <View
+        style={s.barTrack}
+        accessibilityRole="progressbar"
+        accessibilityLabel={label}
+        accessibilityValue={{ min: 0, max: 100, now: pct }}>
         <View style={[s.barFill, { width: `${pct}%` as unknown as number, backgroundColor: palette.goldMuted }]} />
       </View>
       <Text style={s.barCount}>{pct}%</Text>
@@ -60,7 +68,11 @@ function ChurnBlock({ distribution }: { distribution: Record<string, number> }) 
       {['low', 'medium', 'high', 'critical'].map(key => {
         const count = distribution[key] ?? 0;
         return (
-          <View key={key} style={[s.churnBlock, { borderColor: colorMap[key] }]}>
+          <View
+            key={key}
+            style={[s.churnBlock, { borderColor: colorMap[key] }]}
+            accessible
+            accessibilityLabel={`Churn ${key}: ${count} usuarios`}>
             <Text style={[s.churnCount, { color: colorMap[key] }]}>{count}</Text>
             <Text style={s.churnLabel}>{key.toUpperCase()}</Text>
           </View>
@@ -74,7 +86,11 @@ function AtRiskRow({ user, onPress }: { user: AtRiskUser; onPress: () => void })
   const col = user.churn_risk_label === 'critical' ? palette.danger
     : user.churn_risk_label === 'high' ? palette.warning : palette.warning;
   return (
-    <Pressable style={s.riskRow} onPress={onPress}>
+    <Pressable
+      style={s.riskRow}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${user.name ?? 'Usuario'}, riesgo ${user.churn_risk_label}, engagement ${user.engagement_score}${user.days_since_last_act > 0 ? `, inactivo ${user.days_since_last_act} días` : ''}${user.anomaly_detected ? ', con anomalía' : ''}`}>
       <View style={[s.riskDot, { backgroundColor: col }]} />
       <View style={{ flex: 1 }}>
         <Text style={s.riskName}>{user.name ?? user.user_id.substring(0, 8)}</Text>
@@ -151,7 +167,10 @@ export default function InteligenciaScreen() {
         <Pressable
           style={[s.recalcBtn, recalcLoading && { opacity: 0.5 }]}
           onPress={handleRecalcAll}
-          disabled={recalcLoading}>
+          disabled={recalcLoading}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: recalcLoading }}
+          accessibilityLabel="Recalcular ML de todos los usuarios">
           {recalcLoading ? (
             <ActivityIndicator color={palette.ink} size="small" />
           ) : (
