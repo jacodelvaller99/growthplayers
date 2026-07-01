@@ -28,7 +28,7 @@
 - [x] app/mentoria/index.tsx — mentoría · a11y: chips de semana con accessibilityState={selected} + label; role=button en los 3 botones de eliminar (acción/nota/acción del borrador) + render smoke test mobile/desktop (con y sin borrador de Norman; máquina de estados de grabación IA). Guardrails de consentimiento de grabación intactos.
 
 ### Bienestar
-- [ ] app/bienestar/index.tsx — hub (repulir)
+- [x] app/bienestar/index.tsx — hub (repulir) · a11y: role=button + labels descriptivos ({label}: {sub}) en el HubTile compartido (cubre todos los tiles móviles) + los 4 grids desktop (HOY/práctica/sistema/emocional) + WearableCard (ambas ramas) + back button. Ya reducido en Ola 1 (HOY+Ver todo); render test bienestarHub existente sigue verde.
 - [ ] app/bienestar/binaurales.tsx
 - [ ] app/bienestar/respiracion.tsx
 - [ ] app/bienestar/meditacion.tsx

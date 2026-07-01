@@ -182,6 +182,8 @@ function WearableCard({ router }: { router: ReturnType<typeof useRouter> }) {
     return (
       <Pressable
         onPress={() => router.push('/bienestar/biometrics' as never)}
+        accessibilityRole="button"
+        accessibilityLabel="Mi cuerpo hoy — ver biometría"
         style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}>
         <PremiumCard style={wearableCardStyles.container}>
           <MaterialIcons name="monitor-heart" size={20} color={palette.goldMuted} />
@@ -331,7 +333,11 @@ export default function BienestarHub() {
 
           {/* ── Header row ── */}
           <View style={styles.topRow}>
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Volver">
               <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
             </Pressable>
             <Text style={styles.screenTitle}>BIENESTAR</Text>
@@ -354,6 +360,8 @@ export default function BienestarHub() {
                   <Pressable
                     key={`hoy-${block.route}`}
                     onPress={() => router.push(block.route as never)}
+                    accessibilityRole="button"
+                    accessibilityLabel={block.label}
                     style={({ pressed }) => [desktopStyles.gridCard, desktopStyles.gridCardHoy, pressed && { opacity: 0.75 }]}>
                     <MaterialIcons name={block.icon} size={28} color={palette.goldText} />
                     <Text style={desktopStyles.gridLabel}>{block.label}</Text>
@@ -369,6 +377,8 @@ export default function BienestarHub() {
                   <Pressable
                     key={block.route}
                     onPress={() => router.push(block.route as never)}
+                    accessibilityRole="button"
+                    accessibilityLabel={block.label}
                     style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
                     <MaterialIcons name={block.icon} size={28} color={palette.ash} />
                     <Text style={desktopStyles.gridLabel}>{block.label}</Text>
@@ -392,6 +402,8 @@ export default function BienestarHub() {
                       <Pressable
                         key={block.route}
                         onPress={() => router.push(block.route as never)}
+                        accessibilityRole="button"
+                        accessibilityLabel={block.label}
                         style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
                         <MaterialIcons name={block.icon} size={28} color={palette.ash} />
                         <Text style={desktopStyles.gridLabel}>{block.label}</Text>
@@ -407,6 +419,8 @@ export default function BienestarHub() {
                       <Pressable
                         key={block.route}
                         onPress={() => router.push(block.route as never)}
+                        accessibilityRole="button"
+                        accessibilityLabel={block.label}
                         style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
                         <MaterialIcons name={block.icon} size={28} color={palette.ash} />
                         <Text style={desktopStyles.gridLabel}>{block.label}</Text>
@@ -609,6 +623,8 @@ function HubTile({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={sub ? `${label}: ${sub}` : label}
       style={({ pressed }) => [
         styles.gridCard,
         gold && styles.gridCardGold,
