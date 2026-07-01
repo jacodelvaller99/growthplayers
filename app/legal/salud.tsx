@@ -88,7 +88,7 @@ export default function SaludScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
-        <Text style={styles.title}>SALUD</Text>
+        <Text style={styles.title} accessibilityRole="header">SALUD</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -97,8 +97,11 @@ export default function SaludScreen() {
         Este descargo forma parte integrante de los Términos y Condiciones. Léalo con atención antes de usar el mentor IA y las herramientas de salud.
       </Text>
 
-      {/* Emergency callout */}
-      <View style={styles.alertCard}>
+      {/* Emergency callout — info de seguridad crítica, agrupada como un solo nodo accesible. */}
+      <View
+        style={styles.alertCard}
+        accessible
+        accessibilityLabel="Advertencia: La App no es para emergencias. Ante una crisis médica o de salud mental, contacte de inmediato a los servicios de emergencia locales.">
         <MaterialIcons name="warning-amber" size={18} color={palette.danger} />
         <Text style={styles.alertText}>
           La App no es para emergencias. Ante una crisis médica o de salud mental, contacte de inmediato a los servicios de emergencia locales.
@@ -115,7 +118,7 @@ export default function SaludScreen() {
       {SECTIONS.map((section) => (
         <View key={section.heading} style={styles.section}>
           <GoldDivider />
-          <Text style={styles.heading}>{section.heading}</Text>
+          <Text style={styles.heading} accessibilityRole="header">{section.heading}</Text>
           {section.body.map((paragraph, i) => (
             <Text key={i} style={styles.paragraph}>{paragraph}</Text>
           ))}
