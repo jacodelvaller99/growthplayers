@@ -1,14 +1,14 @@
-﻿/**
+/**
  * Admin CMI — Códigos de Acceso
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { createAccessCode, deactivateAccessCode } from '@/lib/admin/actions';
@@ -54,17 +54,20 @@ function CodeRow({ code, onCopy, onDeactivate }: { code: AccessCode; onCopy: () 
         </Text>
         {code.label && <Text style={cr.label}>{code.label}</Text>}
         {code.max_uses !== -1 && (
-          <View style={cr.track}>
+          <View
+            style={cr.track}
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 0, max: code.max_uses, now: code.uses_count }}>
             <View style={[cr.fill, { width: `${pctUsed}%` as unknown as number }]} />
           </View>
         )}
       </View>
       <View style={cr.actions}>
-        <Pressable style={cr.copyBtn} onPress={onCopy}>
+        <Pressable style={cr.copyBtn} onPress={onCopy} accessibilityRole="button" accessibilityLabel={`Copiar código ${code.code}`}>
           <MaterialIcons name="content-copy" size={14} color={palette.goldText} />
         </Pressable>
         {code.is_active && (
-          <Pressable style={cr.deactivateBtn} onPress={onDeactivate}>
+          <Pressable style={cr.deactivateBtn} onPress={onDeactivate} accessibilityRole="button" accessibilityLabel={`Desactivar código ${code.code}`}>
             <MaterialIcons name="block" size={14} color={palette.smoke} />
           </Pressable>
         )}
@@ -125,7 +128,7 @@ export default function CodigosScreen() {
 
   const handleCopy = async (code: string) => {
     if (Platform.OS === 'web') {
-      try { await navigator.clipboard.writeText(code); } catch (_) { /* ignore */ }
+      try { await navigator.clipboard.writeText(code); } catch { /* ignore */ }
     }
     Alert.alert('✅ Código', `${code}\n\nCopia este código manualmente.`);
   };
@@ -164,7 +167,11 @@ export default function CodigosScreen() {
 
       {/* Last generated */}
       {lastGenerated && (
-        <Pressable style={s.lastGenCard} onPress={() => handleCopy(lastGenerated)}>
+        <Pressable
+          style={s.lastGenCard}
+          onPress={() => handleCopy(lastGenerated)}
+          accessibilityRole="button"
+          accessibilityLabel={`Copiar último código generado ${lastGenerated}`}>
           <Text style={s.lastGenLabel}>ÚLTIMO GENERADO (toca para copiar)</Text>
           <Text style={s.lastGenCode}>{lastGenerated}</Text>
         </Pressable>
@@ -180,7 +187,10 @@ export default function CodigosScreen() {
             <Pressable
               key={t}
               style={[s.optChip, codeType === t && s.optChipActive]}
-              onPress={() => setCodeType(t)}>
+              onPress={() => setCodeType(t)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: codeType === t }}
+              accessibilityLabel={`Tipo de acceso ${CODE_TYPE_LABELS[t]}`}>
               <Text style={[s.optText, codeType === t && s.optTextActive]}>
                 {CODE_TYPE_LABELS[t]}
               </Text>
@@ -195,7 +205,10 @@ export default function CodigosScreen() {
             <Pressable
               key={n}
               style={[s.optChip, maxUses === n && s.optChipActive]}
-              onPress={() => setMaxUses(n)}>
+              onPress={() => setMaxUses(n)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: maxUses === n }}
+              accessibilityLabel={`Usos máximos ${maxUsesLabel(n)}`}>
               <Text style={[s.optText, maxUses === n && s.optTextActive]}>{maxUsesLabel(n)}</Text>
             </Pressable>
           ))}
@@ -236,7 +249,10 @@ export default function CodigosScreen() {
         <Pressable
           style={[s.submitBtn, saving && { opacity: 0.5 }]}
           onPress={handleCreate}
-          disabled={saving}>
+          disabled={saving}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: saving }}
+          accessibilityLabel="Generar código de acceso">
           {saving ? (
             <ActivityIndicator color={palette.ink} size="small" />
           ) : (
