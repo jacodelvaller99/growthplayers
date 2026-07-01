@@ -74,7 +74,7 @@ export default function ResetPasswordScreen() {
 
         <View style={styles.head}>
           <PolarisMark size={44} />
-          <Text style={styles.title}>NUEVA CONTRASEÑA</Text>
+          <Text style={styles.title} accessibilityRole="header">NUEVA CONTRASEÑA</Text>
           <Text style={styles.sub}>Define una contraseña nueva para tu cuenta Polaris.</Text>
         </View>
 
@@ -102,6 +102,9 @@ export default function ResetPasswordScreen() {
                 placeholder="Mínimo 8 caracteres"
                 secureTextEntry
                 autoCapitalize="none"
+                textContentType="newPassword"
+                autoComplete="password-new"
+                accessibilityLabel="Nueva contraseña"
               />
             </View>
             <View style={styles.field}>
@@ -114,9 +117,14 @@ export default function ResetPasswordScreen() {
                 autoCapitalize="none"
                 returnKeyType="send"
                 onSubmitEditing={submit}
+                textContentType="newPassword"
+                autoComplete="password-new"
+                accessibilityLabel="Confirmar contraseña"
               />
             </View>
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && (
+              <Text style={styles.error} accessibilityRole="alert" accessibilityLiveRegion="assertive">{error}</Text>
+            )}
             <PrimaryButton
               label={loading ? 'GUARDANDO…' : 'GUARDAR CONTRASEÑA'}
               icon={loading ? 'hourglass-empty' : 'lock'}
