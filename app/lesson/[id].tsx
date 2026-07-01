@@ -126,7 +126,10 @@ function CheckboxField({
           <Pressable
             key={opt}
             style={[styles.checkItem, checked && styles.checkItemSelected]}
-            onPress={() => toggle(opt)}>
+            onPress={() => toggle(opt)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked }}
+            accessibilityLabel={opt}>
             <MaterialIcons
               name={checked ? 'check-box' : 'check-box-outline-blank'}
               size={20}
@@ -227,7 +230,9 @@ function FocusRitualModal({
               </Text>
               <Pressable
                 style={({ pressed }) => [ritualStyles.btn, pressed && { opacity: 0.85 }]}
-                onPress={handleBreathDone}>
+                onPress={handleBreathDone}
+                accessibilityRole="button"
+                accessibilityLabel="Listo, respiración completada">
                 <Text style={ritualStyles.btnText}>LISTO</Text>
               </Pressable>
             </>
@@ -242,7 +247,9 @@ function FocusRitualModal({
                 <Pressable
                   key={opt}
                   style={({ pressed }) => [ritualStyles.intentBtn, pressed && { opacity: 0.8 }]}
-                  onPress={() => handleIntention(opt)}>
+                  onPress={() => handleIntention(opt)}
+                  accessibilityRole="button"
+                  accessibilityLabel={opt}>
                   <Text style={ritualStyles.intentText}>{opt}</Text>
                 </Pressable>
               ))}
@@ -261,13 +268,15 @@ function FocusRitualModal({
               </Text>
               <Pressable
                 style={({ pressed }) => [ritualStyles.btn, pressed && { opacity: 0.85 }]}
-                onPress={handleCommit}>
+                onPress={handleCommit}
+                accessibilityRole="button"
+                accessibilityLabel="Entro y me comprometo">
                 <Text style={ritualStyles.btnText}>ENTRO · ME COMPROMETO</Text>
               </Pressable>
             </>
           )}
 
-          <Pressable onPress={onComplete} style={ritualStyles.skipBtn}>
+          <Pressable onPress={onComplete} style={ritualStyles.skipBtn} accessibilityRole="button" accessibilityLabel="Saltar ritual de enfoque">
             <Text style={ritualStyles.skipText}>Saltar ritual →</Text>
           </Pressable>
         </View>
@@ -397,6 +406,8 @@ function ArchetypeModal({
           <Pressable
             style={({ pressed }) => [archStyles.btn, pressed && { opacity: 0.85 }]}
             onPress={onContinue}
+            accessibilityRole="button"
+            accessibilityLabel="Continuar el protocolo"
           >
             <Text style={archStyles.btnText}>CONTINUAR EL PROTOCOLO</Text>
             <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />
@@ -459,7 +470,7 @@ function LessonCelebrationModal({
 
   return (
     <Modal visible={visible} transparent animationType="none">
-      <Pressable style={celebStyles.overlay} onPress={onContinue}>
+      <Pressable style={celebStyles.overlay} onPress={onContinue} accessibilityRole="button" accessibilityLabel="Continuar a la siguiente lección">
         <Animated.View style={[celebStyles.card, cardStyle]}>
           {/* Eyebrow */}
           <Text style={celebStyles.eyebrow}>LECCIÓN COMPLETADA</Text>
@@ -502,7 +513,9 @@ function LessonCelebrationModal({
           {/* CTA */}
           <Pressable
             style={({ pressed }) => [celebStyles.btn, pressed && { opacity: 0.85 }]}
-            onPress={onContinue}>
+            onPress={onContinue}
+            accessibilityRole="button"
+            accessibilityLabel="Siguiente">
             <Text style={celebStyles.btnText}>SIGUIENTE →</Text>
           </Pressable>
         </Animated.View>
@@ -531,7 +544,8 @@ const celebStyles = StyleSheet.create({
     maxWidth:        360,
   },
   eyebrow: {
-    color:       palette.gold,
+    // goldText (no gold): texto sobre card con fondo palette.black (theme-aware).
+    color:       palette.goldText,
     fontFamily:  Fonts.mono,
     fontSize:    9,
     letterSpacing: 3,
@@ -572,7 +586,7 @@ const celebStyles = StyleSheet.create({
     color: palette.smoke,
   },
   progressPct: {
-    color:       palette.gold,
+    color:       palette.goldText,
     fontFamily:  Fonts.mono,
     fontSize:    12,
     fontWeight:  '700',
@@ -622,7 +636,7 @@ const celebStyles = StyleSheet.create({
     marginTop:         spacing.xs,
   },
   btnText: {
-    color:         palette.gold,
+    color:         palette.goldText,
     fontFamily:    Fonts.mono,
     fontSize:      12,
     fontWeight:    '700',
@@ -957,6 +971,7 @@ export default function LessonScreen() {
             <Pressable
               style={styles.notesSaveBtn}
               onPress={handleSaveNotes}
+              accessibilityRole="button"
               accessibilityLabel="Guardar notas">
               <MaterialIcons name="save" size={14} color={palette.goldText} />
               <Text style={styles.notesSaveBtnText}>GUARDAR NOTAS</Text>
@@ -1390,7 +1405,8 @@ const styles = StyleSheet.create({
     gap:           spacing.xs,
   },
   notesSaveBtnText: {
-    color:       palette.gold,
+    // goldText (no gold): texto del botón sobre la página (fondo theme-aware).
+    color:       palette.goldText,
     fontFamily:  Fonts.mono,
     fontSize:    10,
     letterSpacing: 1.5,
