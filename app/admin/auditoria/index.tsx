@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin CMI — Auditoría
  *
  * Log completo de todas las acciones admin.
@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { fetchAuditLog } from '@/lib/admin/queries';
 import type { AuditLogEntry } from '@/lib/admin/types';
@@ -54,17 +54,25 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
   const [expanded, setExpanded] = useState(false);
   const icon = ACTION_ICONS[entry.action] ?? '⚡';
   const hasMetadata = entry.metadata && Object.keys(entry.metadata).length > 0;
+  const actionLabel = entry.action.replace(/_/g, ' ');
 
   return (
-    <Pressable style={s.row} onPress={() => setExpanded(e => !e)}>
+    <Pressable
+      style={s.row}
+      onPress={() => setExpanded(e => !e)}
+      disabled={!hasMetadata}
+      accessibilityRole="button"
+      accessibilityState={{ expanded, disabled: !hasMetadata }}
+      accessibilityLabel={`${actionLabel}, ${timeAgo(entry.created_at)}${hasMetadata ? (expanded ? '. Contraer detalles' : '. Ver detalles') : ''}`}>
       <Text style={s.icon}>{icon}</Text>
       <View style={{ flex: 1 }}>
-        <Text style={s.action}>{entry.action.replace(/_/g, ' ')}</Text>
+        <Text style={s.action}>{actionLabel}</Text>
         {entry.target_type && entry.target_id && (
           <Text style={s.target}>{entry.target_type} · {entry.target_id.substring(0, 16)}</Text>
         )}
         {expanded && hasMetadata && (
           <View style={s.metaBlock}>
+            <Text style={s.metaLine}>fecha exacta: {formatDate(entry.created_at)}</Text>
             {Object.entries(entry.metadata!).map(([k, v]) => (
               <Text key={k} style={s.metaLine}>
                 {k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}
@@ -101,7 +109,7 @@ export default function AuditoriaScreen() {
       style={sc.root}
       contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.gold} />}>
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.goldText} />}>
 
       <View style={s.header}>
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
