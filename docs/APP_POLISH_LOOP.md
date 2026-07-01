@@ -20,7 +20,7 @@
 - [x] app/(auth)/index.tsx — login/registro · autofill de password managers (textContentType + autoComplete en email/pass/código) + a11y (errores role=alert/live-region, tabs con estado seleccionado) + render test login/register
 - [x] app/(onboarding)/index.tsx — onboarding + consent · guard anti-doble-tap del cierre (finish async no re-dispara, botón muestra "INICIANDO…" y se deshabilita) + a11y (progressbar en el indicador de paso con accessibilityValue, roles/labels en los 3 skip-links) + render smoke test del consent gate. Sin tocar el gate de consentimiento ni la lógica RGPD.
 - [x] app/(tabs)/comando.tsx — home/dashboard · seguridad: window.open del link de sesión en vivo ahora con noopener,noreferrer (evita reverse-tabnabbing) + a11y: roles/labels en 7 tarjetas accionables que no los tenían (anomalía, NBA, ancla del Norte, comunidad, sesión en vivo, posts del preview, ver-todo) + render smoke test mobile/desktop de la home (la red que faltaba cuando un re-render tumbó el chat).
-- [ ] app/checkin.tsx — check-in
+- [x] app/checkin.tsx — check-in · guard anti-doble-tap en GUARDAR (saveCheckIn async → botón "GUARDANDO…"+disabled, re-habilita si falla) + fix typo "TERRENo"→"TERRENO" + a11y (roles/labels en pills de sugerencia) + render smoke test mobile/desktop (incluye micro-ritual con Animated/timers).
 - [ ] app/(tabs)/norte.tsx — Mi Norte
 - [ ] app/(tabs)/mentor.tsx — Norman
 - [ ] app/(tabs)/programas.tsx — programa

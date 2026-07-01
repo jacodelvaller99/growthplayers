@@ -33,7 +33,7 @@ const CHECK_IN_TITLES = [
   'LEE EL\nSISTEMA.',
   'AUDITA\nTU ESTADO.',
   'CALIBRA\nEL SISTEMA.',
-  'MIDE EL\nTERRENo.',
+  'MIDE EL\nTERRENO.',
   'ENTRA\nEN DATA.',
   'REGISTRA\nLA SEÑAL.',
   'VERIFICA\nTU BASE.',
@@ -272,6 +272,8 @@ export default function CheckInScreen() {
   const [sleep, setSleep] = useState(todayCheckIn?.sleep ?? 7);
   const [systemNeed, setSystemNeed] = useState(todayCheckIn?.systemNeed ?? '');
   const [saved, setSaved] = useState(false);
+  // Guard anti-doble-tap: saveCheckIn es async → evita doble submit del check-in.
+  const [submitting, setSubmitting] = useState(false);
   // Simplificación (feedback Capuozzo): camino mínimo = 4 sliders → guardar.
   // La lectura interna es opcional, y el ritual/recomendación se difieren a una oferta.
   const [showNeed, setShowNeed]     = useState(false);
@@ -300,21 +302,28 @@ export default function CheckInScreen() {
           : null;
 
   const submit = async () => {
-    const syncStatus = await saveCheckIn({
-      energy,
-      clarity,
-      stress,
-      sleep,
-      systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
-    });
-    analytics.checkinSubmit(energy, clarity, stress, sleep);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Honestidad de guardado: si no hubo red, el dato quedó encolado — se dice.
-    if (syncStatus === 'queued') {
-      showToast('Guardado en este dispositivo — se sincronizará al recuperar conexión', 'warning');
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const syncStatus = await saveCheckIn({
+        energy,
+        clarity,
+        stress,
+        sleep,
+        systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
+      });
+      analytics.checkinSubmit(energy, clarity, stress, sleep);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Honestidad de guardado: si no hubo red, el dato quedó encolado — se dice.
+      if (syncStatus === 'queued') {
+        showToast('Guardado en este dispositivo — se sincronizará al recuperar conexión', 'warning');
+      }
+      // Revela la recomendación de cierre antes de redirigir (WS-3).
+      setSaved(true);
+    } catch {
+      // Si el guardado falla, re-habilita para reintentar (no dejamos el botón muerto).
+      setSubmitting(false);
     }
-    // Revela la recomendación de cierre antes de redirigir (WS-3).
-    setSaved(true);
   };
 
   // ── Recomendación accionable post-guardado ──────────────────────────────────
@@ -489,6 +498,8 @@ export default function CheckInScreen() {
             <Pressable
               key={s}
               onPress={() => setSystemNeed(s)}
+              accessibilityRole="button"
+              accessibilityLabel={`Usar: ${s}`}
               style={({ pressed }) => [styles.needPill, pressed && { opacity: 0.7 }]}>
               <Text style={styles.needPillText}>+ {s}</Text>
             </Pressable>
@@ -600,7 +611,12 @@ export default function CheckInScreen() {
 
               {!saved ? (
                 <>
-                  <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+                  <PrimaryButton
+            label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
+            icon={submitting ? 'hourglass-empty' : 'check'}
+            onPress={submit}
+            disabled={submitting}
+          />
                   {needToggle}
                   {showNeed && systemNeedCard}
                   <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
@@ -683,7 +699,12 @@ export default function CheckInScreen() {
       {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
       {!saved ? (
         <>
-          <PrimaryButton label="GUARDAR CHECK-IN" icon="check" onPress={submit} />
+          <PrimaryButton
+            label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
+            icon={submitting ? 'hourglass-empty' : 'check'}
+            onPress={submit}
+            disabled={submitting}
+          />
           {needToggle}
           {showNeed && systemNeedCard}
         </>
