@@ -249,7 +249,12 @@ export default function HabitosScreen() {
               )}
             </Pressable>
 
-            <Pressable style={styles.habitInfo} onPress={() => setExpanded(isExpanded ? null : habit.id)}>
+            <Pressable
+              style={styles.habitInfo}
+              onPress={() => setExpanded(isExpanded ? null : habit.id)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: isExpanded }}
+              accessibilityLabel={`${habit.name}, ${habit.points} puntos. Ver detalle`}>
               <View style={styles.habitTitleRow}>
                 {tmpl?.icon && (
                   <MaterialIcons name={tmpl.icon} size={16} color={palette.goldText} style={{ marginRight: 6 }} />
@@ -267,7 +272,13 @@ export default function HabitosScreen() {
               </View>
             </Pressable>
 
-            <Pressable onPress={() => setExpanded(isExpanded ? null : habit.id)} hitSlop={8} style={styles.expandBtn}>
+            <Pressable
+              onPress={() => setExpanded(isExpanded ? null : habit.id)}
+              hitSlop={8}
+              style={styles.expandBtn}
+              accessibilityRole="button"
+              accessibilityLabel={isExpanded ? 'Ocultar detalle' : 'Ver detalle'}
+              accessibilityState={{ expanded: isExpanded }}>
               <MaterialIcons
                 name={isExpanded ? 'expand-less' : 'expand-more'}
                 size={22}
@@ -309,25 +320,30 @@ export default function HabitosScreen() {
 
               <View style={styles.detailActions}>
                 {!!route && (
-                  <Pressable style={styles.detailAction} onPress={() => router.push(route as never)}>
+                  <Pressable style={styles.detailAction} onPress={() => router.push(route as never)} accessibilityRole="button" accessibilityLabel="Abrir práctica">
                     <MaterialIcons name="play-circle-outline" size={16} color={palette.goldText} />
                     <Text style={styles.detailActionText}>Abrir práctica</Text>
                   </Pressable>
                 )}
                 {!!habit.guideUrl && (
-                  <Pressable style={styles.detailAction} onPress={() => openExternal(habit.guideUrl!)}>
+                  <Pressable style={styles.detailAction} onPress={() => openExternal(habit.guideUrl!)} accessibilityRole="button" accessibilityLabel="Abrir guía (enlace externo)">
                     <MaterialIcons name="menu-book" size={16} color={palette.goldText} />
                     <Text style={styles.detailActionText}>Guía</Text>
                   </Pressable>
                 )}
                 {!!habit.videoUrl && (
-                  <Pressable style={styles.detailAction} onPress={() => openExternal(habit.videoUrl!)}>
+                  <Pressable style={styles.detailAction} onPress={() => openExternal(habit.videoUrl!)} accessibilityRole="button" accessibilityLabel="Ver video (enlace externo)">
                     <MaterialIcons name="ondemand-video" size={16} color={palette.goldText} />
                     <Text style={styles.detailActionText}>Video</Text>
                   </Pressable>
                 )}
                 {(tmpl?.reminderHour !== undefined) && (
-                  <Pressable style={styles.detailAction} onPress={() => toggleReminder(habit)}>
+                  <Pressable
+                    style={styles.detailAction}
+                    onPress={() => toggleReminder(habit)}
+                    accessibilityRole="button"
+                    accessibilityLabel={hasReminder ? 'Desactivar recordatorio' : 'Activar recordatorio'}
+                    accessibilityState={{ selected: hasReminder }}>
                     <MaterialIcons
                       name={hasReminder ? 'notifications-active' : 'notifications-none'}
                       size={16}
@@ -368,7 +384,12 @@ export default function HabitosScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>{title}</Text>
         {pending.map((t) => (
-          <Pressable key={t.category} onPress={() => createHabit(t)} style={styles.templateRow}>
+          <Pressable
+            key={t.category}
+            onPress={() => createHabit(t)}
+            style={styles.templateRow}
+            accessibilityRole="button"
+            accessibilityLabel={`Añadir hábito: ${t.name}, ${t.points} puntos`}>
             <View style={styles.templateIcon}>
               <MaterialIcons name={t.icon} size={20} color={palette.goldText} />
             </View>
@@ -390,7 +411,7 @@ export default function HabitosScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <Text style={styles.title}>HÁBITOS</Text>
@@ -454,7 +475,8 @@ export default function HabitosScreen() {
 function openExternal(url: string) {
   try {
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined') window.open(url, '_blank');
+      // noopener,noreferrer: evita reverse-tabnabbing en el link externo.
+      if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
       return;
     }
     const Linking = require('expo-linking');
