@@ -4,13 +4,12 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import {
   useWearableConnections,
   useWearableDaily,
   useWearableTimeseries,
-  calculateBiometricReadiness,
   recoveryLabel,
   hrvToNormanLanguage,
   type WearableDaily,
@@ -25,7 +24,12 @@ function ScoreBar({
   const pct = score != null ? Math.round((score / max) * 100) : 0;
   const display = score != null ? String(Math.round(score)) : '–';
   return (
-    <View style={scoreBarStyles.container}>
+    <View
+      style={scoreBarStyles.container}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={score != null ? { min: 0, max, now: Math.round(score) } : { text: 'Sin datos' }}>
       <Text style={scoreBarStyles.label}>{label}</Text>
       <View style={scoreBarStyles.track}>
         <View style={[scoreBarStyles.fill, { width: `${pct}%`, backgroundColor: color }]} />
@@ -116,7 +120,10 @@ function WeeklyBars({ data, field, color }: {
         const h = Math.round((vals[i] / max) * 32) + 4;
         return (
           <View key={d.id} style={weeklyStyles.col}>
-            <View style={[weeklyStyles.bar, { height: h, backgroundColor: color + (vals[i] > 0 ? 'cc' : '33') }]} />
+            {/* Opacidad por `style`, no concatenando alpha al color: `color` puede ser
+                un token cv() → 'var(--c-gold-text)' en web, y 'var(...)cc' es CSS inválido
+                (las barras de recuperación no se renderizaban en web). */}
+            <View style={[weeklyStyles.bar, { height: h, backgroundColor: color, opacity: vals[i] > 0 ? 0.8 : 0.2 }]} />
             <Text style={weeklyStyles.label}>
               {new Date(d.date + 'T12:00:00').toLocaleDateString('es', { weekday: 'narrow' })}
             </Text>
@@ -139,7 +146,7 @@ export default function BiometricsScreen() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
 
-  const { connections, isConnected } = useWearableConnections();
+  const { connections } = useWearableConnections();
   const { data: dailyData, today, averages } = useWearableDaily(7);
   const { data: hrPoints } = useWearableTimeseries('heart_rate', 24);
 
@@ -153,7 +160,11 @@ export default function BiometricsScreen() {
         style={sc.root}
         contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Volver">
             <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
           </Pressable>
           <Text style={styles.title}>MI CUERPO</Text>
@@ -169,7 +180,9 @@ export default function BiometricsScreen() {
           </Text>
           <Pressable
             style={styles.connectBtn}
-            onPress={() => router.push('/perfil/wearables' as never)}>
+            onPress={() => router.push('/perfil/wearables' as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Conectar dispositivo wearable">
             <Text style={styles.connectBtnText}>CONECTAR DISPOSITIVO →</Text>
           </Pressable>
         </PremiumCard>
@@ -177,7 +190,6 @@ export default function BiometricsScreen() {
     );
   }
 
-  const readiness = calculateBiometricReadiness(dailyData);
   const recovLabel = today?.recovery_score != null
     ? recoveryLabel(today.recovery_score)
     : 'Sin datos';
@@ -198,7 +210,11 @@ export default function BiometricsScreen() {
 
       {/* Header */}
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>MI CUERPO HOY</Text>
@@ -329,7 +345,9 @@ export default function BiometricsScreen() {
       {/* Quick link to devices */}
       <Pressable
         style={styles.devicesLink}
-        onPress={() => router.push('/perfil/wearables' as never)}>
+        onPress={() => router.push('/perfil/wearables' as never)}
+        accessibilityRole="button"
+        accessibilityLabel="Gestionar dispositivos">
         <MaterialIcons name="settings" size={14} color={palette.smoke} />
         <Text style={styles.devicesLinkText}>Gestionar dispositivos</Text>
         <MaterialIcons name="chevron-right" size={14} color={palette.smoke} />
@@ -343,7 +361,9 @@ export default function BiometricsScreen() {
 function scoreColor(score: number | null | undefined): string {
   if (score == null) return palette.smoke;
   if (score >= 70) return '#2e7d52';
-  if (score >= 50) return palette.gold;
+  // goldText (no gold): este color también es el TEXTO del score (22px). `palette.gold`
+  // (#FFC804) como texto es ilegible sobre superficie clara; goldText es theme-aware.
+  if (score >= 50) return palette.goldText;
   if (score >= 30) return '#b07d1a';
   return '#e63946';
 }
