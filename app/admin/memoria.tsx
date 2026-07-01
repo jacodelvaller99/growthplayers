@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin — Dashboard de Memoria (cross-client).
  *
  * Vista operativa: qué clientes tienen más loops abiertos, follow-up estancado, o
@@ -17,9 +17,13 @@ import { fetchMemoryDashboard, type MemoryDashboardRow } from '@/lib/admin/queri
 
 const RISK_RANK: Record<string, number> = { critical: 3, high: 2, medium: 1, low: 0 };
 
-function Row({ row, metric, onPress }: { row: MemoryDashboardRow; metric: string; onPress: () => void }) {
+function Row({ row, metric, metricA11y, onPress }: { row: MemoryDashboardRow; metric: string; metricA11y: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${row.name}, ${metricA11y}. Ver perfil`}>
       <View style={{ flex: 1 }}>
         <Text style={s.rowName}>{row.name}</Text>
         {row.topThemes.length > 0 && (
@@ -70,7 +74,7 @@ export default function AdminMemoriaScreen() {
       <Text style={s.intro}>Prioriza a quién atender: loops abiertos, follow-up estancado y riesgo.</Text>
 
       {loading ? (
-        <ActivityIndicator color={palette.gold} style={{ marginTop: spacing.xxxl }} />
+        <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xxxl }} />
       ) : rows.length === 0 ? (
         <PremiumCard style={s.card}>
           <Text style={s.empty}>Aún no hay memoria registrada. Aparecerá a medida que los clientes conversen y tengan mentorías.</Text>
@@ -80,19 +84,19 @@ export default function AdminMemoriaScreen() {
           <GoldDivider label="MÁS LOOPS ABIERTOS" />
           <PremiumCard style={s.card}>
             {byLoops.length === 0 ? <Text style={s.empty}>Ninguno.</Text> :
-              byLoops.map((r) => <Row key={r.user_id} row={r} metric={`${r.openLoops}`} onPress={() => go(r.user_id)} />)}
+              byLoops.map((r) => <Row key={r.user_id} row={r} metric={`${r.openLoops}`} metricA11y={`${r.openLoops} loops abiertos`} onPress={() => go(r.user_id)} />)}
           </PremiumCard>
 
           <GoldDivider label="FOLLOW-UP ESTANCADO" />
           <PremiumCard style={s.card}>
             {byStale.length === 0 ? <Text style={s.empty}>Todos al día.</Text> :
-              byStale.map((r) => <Row key={r.user_id} row={r} metric={`${r.staleDays}d`} onPress={() => go(r.user_id)} />)}
+              byStale.map((r) => <Row key={r.user_id} row={r} metric={`${r.staleDays}d`} metricA11y={`${r.staleDays} días de follow-up estancado`} onPress={() => go(r.user_id)} />)}
           </PremiumCard>
 
           <GoldDivider label="RIESGO DE CHURN" />
           <PremiumCard style={s.card}>
             {byRisk.length === 0 ? <Text style={s.empty}>Sin clientes en riesgo alto.</Text> :
-              byRisk.map((r) => <Row key={r.user_id} row={r} metric={(r.churnLabel ?? '').toUpperCase()} onPress={() => go(r.user_id)} />)}
+              byRisk.map((r) => <Row key={r.user_id} row={r} metric={(r.churnLabel ?? '').toUpperCase()} metricA11y={`riesgo de churn ${(r.churnLabel ?? '').toLowerCase()}`} onPress={() => go(r.user_id)} />)}
           </PremiumCard>
         </>
       )}
