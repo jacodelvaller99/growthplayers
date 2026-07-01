@@ -35,7 +35,7 @@
 - [x] app/bienestar/sueno.tsx · funcionalidad: botón "VER PLANES" era muerto (sin onPress) → ahora va a /pricing; ítems bloqueados ya no hacen tap muerto → van a /pricing (upsell). a11y: back + tarjetas de contenido (label con duración + estado premium) + CTA con role/label. SafetyWarning (insomnio/apnea) INTACTO. render smoke test free/premium.
 - [x] app/bienestar/diario.tsx · a11y: back + selector de tipo (accessibilityState=selected) + input con label + botón guardar (state disabled) + banners de éxito/error con accessibilityLiveRegion (polite/assertive) para screen readers. Buen manejo de error ya existía (texto preservado en fallo). render smoke test.
 - [x] app/bienestar/biblioteca.tsx · funcionalidad: quitados los chips de tiempo (filtro MUERTO — togglaban estado pero no afectaban resultados; las categorías no tienen duración) → menos falsa afordancia + declutter. a11y: back + input de búsqueda + "mostrar todas" con role/label. Ya tenía LECTURAS reales + curaduría honesta (Ola 2); render test bibliotecaScreen existente sigue verde.
-- [ ] app/bienestar/internista.tsx
+- [x] app/bienestar/internista.tsx · a11y: botones del consent gate (aceptar/ahora-no), quick-prompts e input con role/label (back/exams/send ya tenían). GUARDRAILS INTACTOS: consent gate, disclaimer permanente, derivación red-flag sin LLM (lib/internist.ts), PHI/RLS, admin-blind. render smoke test (loading/consent, storage forzado a web).
 - [ ] app/bienestar/examenes.tsx
 - [ ] app/bienestar/habitos.tsx
 - [ ] app/bienestar/ayuno.tsx

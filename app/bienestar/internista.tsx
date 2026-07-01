@@ -205,10 +205,14 @@ export default function InternistaScreen() {
             <Text style={s.consentBullet}>• Deriva ante red-flags sin negociar.</Text>
             <Text style={s.consentBullet}>• Tus datos son tuyos; puedes borrar todo cuando quieras.</Text>
           </View>
-          <Pressable onPress={acceptConsent} style={s.consentBtn}>
+          <Pressable
+            onPress={acceptConsent}
+            style={s.consentBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Entiendo y acepto, activar el internista educativo">
             <Text style={s.consentBtnText}>ENTIENDO Y ACEPTO</Text>
           </Pressable>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Ahora no, volver">
             <Text style={s.consentSkip}>Ahora no</Text>
           </Pressable>
         </PremiumCard>
@@ -260,7 +264,7 @@ export default function InternistaScreen() {
       {turns.length === 0 && (
         <View style={s.quickRow}>
           {QUICK_PROMPTS.map((q) => (
-            <Pressable key={q} onPress={() => send(q)} style={s.quickChip}>
+            <Pressable key={q} onPress={() => send(q)} style={s.quickChip} accessibilityRole="button" accessibilityLabel={q}>
               <Text style={s.quickText}>{q}</Text>
             </Pressable>
           ))}
@@ -290,6 +294,7 @@ export default function InternistaScreen() {
           onSubmitEditing={() => send()}
           returnKeyType="send"
           multiline
+          accessibilityLabel="Pregunta al internista"
         />
         <Pressable
           onPress={() => (streaming ? abortRef.current?.abort() : send())}
