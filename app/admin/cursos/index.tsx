@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin CMI — Gestión de Cursos
  */
 
@@ -17,14 +17,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { grantCourseAccess, revokeCourseAccess } from '@/lib/admin/actions';
 import { fetchCourseAccess, searchUsers } from '@/lib/admin/queries';
 import { COURSE_LABELS, type AdminUser, type CourseId, type UserCourseAccess } from '@/lib/admin/types';
 
-const COURSES: Array<{ id: CourseId; modules: number; desc: string }> = [
+const COURSES: { id: CourseId; modules: number; desc: string }[] = [
   { id: 'polaris',           modules: 9,  desc: '9 módulos · 27+ lecciones' },
   { id: 'growthplayers',     modules: 6,  desc: '6 módulos · 18+ lecciones' },
   { id: 'lifeflow_bienestar',modules: 3,  desc: '3 módulos · bienestar integral' },
@@ -118,7 +118,10 @@ export default function CursosScreen() {
           <Pressable
             key={c.id}
             style={[s.courseCard, selectedCourse === c.id && s.courseCardActive]}
-            onPress={() => setSelectedCourse(c.id)}>
+            onPress={() => setSelectedCourse(c.id)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: selectedCourse === c.id }}
+            accessibilityLabel={`Curso ${COURSE_LABELS[c.id]}, ${access.filter(a => a.course_id === c.id).length} usuarios`}>
             <Text style={[s.courseCardName, selectedCourse === c.id && { color: palette.goldText }]}>
               {COURSE_LABELS[c.id]}
             </Text>
@@ -137,7 +140,7 @@ export default function CursosScreen() {
         {selectedUser ? (
           <View style={s.selectedUser}>
             <Text style={s.selectedName}>{selectedUser.name}</Text>
-            <Pressable onPress={() => setSelectedUser(null)}>
+            <Pressable onPress={() => setSelectedUser(null)} accessibilityRole="button" accessibilityLabel="Quitar usuario seleccionado">
               <MaterialIcons name="close" size={18} color={palette.smoke} />
             </Pressable>
           </View>
@@ -153,7 +156,7 @@ export default function CursosScreen() {
             {userResults.length > 0 && (
               <View style={s.dropdown}>
                 {userResults.map(u => (
-                  <Pressable key={u.id} style={s.dropdownItem} onPress={() => { setSelectedUser(u); setUserResults([]); setUserQuery(''); }}>
+                  <Pressable key={u.id} style={s.dropdownItem} onPress={() => { setSelectedUser(u); setUserResults([]); setUserQuery(''); }} accessibilityRole="button" accessibilityLabel={`Seleccionar ${u.name}`}>
                     <Text style={s.dropdownName}>{u.name}</Text>
                   </Pressable>
                 ))}
@@ -164,7 +167,10 @@ export default function CursosScreen() {
         <Pressable
           style={[s.grantBtn, (!selectedUser || saving) && { opacity: 0.4 }]}
           onPress={handleGrant}
-          disabled={!selectedUser || saving}>
+          disabled={!selectedUser || saving}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !selectedUser || saving }}
+          accessibilityLabel="Dar acceso al curso">
           {saving ? (
             <ActivityIndicator color={palette.ink} size="small" />
           ) : (
@@ -191,7 +197,7 @@ export default function CursosScreen() {
                   {ca.expires_at ? ` · Expira ${formatDate(ca.expires_at)}` : ''}
                 </Text>
               </View>
-              <Pressable style={s.revokeBtn} onPress={() => handleRevoke(ca)}>
+              <Pressable style={s.revokeBtn} onPress={() => handleRevoke(ca)} accessibilityRole="button" accessibilityLabel={`Revocar acceso de usuario ${ca.user_id.substring(0, 8)}`}>
                 <Text style={s.revokeText}>REVOCAR</Text>
               </Pressable>
             </View>
