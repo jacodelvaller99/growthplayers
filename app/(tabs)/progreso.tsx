@@ -482,6 +482,7 @@ export default function ProgresoScreen() {
   const [north, setNorth] = useState<NorthStar>(state.northStar);
   const [notificationsOn, setNotificationsOn] = useState(false);
   const [savingNorth, setSavingNorth] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Check if notifications are already scheduled
   useEffect(() => {
@@ -709,6 +710,18 @@ export default function ProgresoScreen() {
     await updateNorthStar(north);
     setSavingNorth(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  // Guard anti-doble-tap: updateProfile es async → evita doble submit del perfil.
+  const handleSaveProfile = async () => {
+    if (savingProfile) return;
+    setSavingProfile(true);
+    try {
+      await updateProfile({ name, role });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleSignOut = () => {
@@ -941,12 +954,10 @@ export default function ProgresoScreen() {
                   returnKeyType="done"
                 />
                 <PrimaryButton
-                  label="GUARDAR PERFIL"
+                  label={savingProfile ? 'GUARDANDO...' : 'GUARDAR PERFIL'}
                   icon="check"
-                  onPress={async () => {
-                    await updateProfile({ name, role });
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  }}
+                  onPress={handleSaveProfile}
+                  disabled={savingProfile}
                 />
               </PremiumCard>
 
@@ -973,7 +984,7 @@ export default function ProgresoScreen() {
                   )}
                 </View>
                 {subTier === 'free' && (
-                  <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)}>
+                  <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)} accessibilityRole="button" accessibilityLabel="Actualizar plan">
                     <Text style={styles.tierUpgradeText}>UPGRADE</Text>
                   </Pressable>
                 )}
@@ -1042,7 +1053,11 @@ export default function ProgresoScreen() {
                   </View>
                   <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
                 </Pressable>
-                <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
+                <Pressable
+                  style={styles.signOutBtn}
+                  onPress={handleSignOut}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar sesión">
                   <MaterialIcons name="logout" size={18} color={palette.danger} />
                   <Text style={styles.signOutText}>CERRAR SESIÓN</Text>
                 </Pressable>
@@ -1148,6 +1163,7 @@ export default function ProgresoScreen() {
       <Pressable
         style={shareStyles.row}
         onPress={() => router.push('/perfil' as never)}
+        accessibilityRole="button"
         accessibilityLabel="Ver y compartir tarjeta soberana">
         <MaterialIcons name="share" size={16} color={palette.goldText} />
         <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
@@ -1489,12 +1505,10 @@ export default function ProgresoScreen() {
           returnKeyType="done"
         />
         <PrimaryButton
-          label="GUARDAR PERFIL"
+          label={savingProfile ? 'GUARDANDO...' : 'GUARDAR PERFIL'}
           icon="check"
-          onPress={async () => {
-            await updateProfile({ name, role });
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }}
+          onPress={handleSaveProfile}
+          disabled={savingProfile}
         />
       </PremiumCard>
 
@@ -1643,7 +1657,11 @@ export default function ProgresoScreen() {
           icon="restart-alt"
           onPress={resetOnboarding}
         />
-        <Pressable onPress={handleSignOut} style={styles.signOutBtn}>
+        <Pressable
+          onPress={handleSignOut}
+          style={styles.signOutBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar sesión">
           <MaterialIcons name="logout" size={18} color={palette.danger} />
           <Text style={styles.signOutText}>CERRAR SESIÓN</Text>
         </Pressable>
@@ -1659,6 +1677,7 @@ export default function ProgresoScreen() {
         <Pressable
           style={styles.adminBtn}
           onPress={() => router.push('/admin' as never)}
+          accessibilityRole="button"
           accessibilityLabel="Cuadro de Mando Integral">
           <MaterialIcons name="dashboard-customize" size={16} color={palette.goldText} />
           <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>

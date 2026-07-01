@@ -24,7 +24,7 @@
 - [x] app/(tabs)/norte.tsx — Mi Norte · guard anti-doble-tap en GUARDAR (updateNorthStar async → "GUARDANDO…"+disabled en ambos layouts) + a11y (roles/labels en CTA de estado vacío desktop+mobile y en pills de sugerencia; toast de éxito con accessibilityLiveRegion=polite+role=alert para screen readers) + render smoke test mobile-vacío/desktop-con-datos.
 - [x] app/(tabs)/mentor.tsx — Norman · a11y (role=button en botón CHATS y en filas del historial) + **render smoke test de la pantalla más crítica** (apertura sin mensajes + con historial; muchos hooks/IA mockeados). Guardrails intactos: disclosure IA persistente, crisis routing (lib/mentor.ts), abort/timeout, gate premium, modos. NO se tocó la cadena de seguridad.
 - [x] app/(tabs)/programas.tsx — programa · a11y: toast de bloqueo/pronto con accessibilityLiveRegion=polite+role=alert (screen readers lo anuncian) en mobile+desktop; roles/labels en botón cerrar y "seguir en mi módulo" del modal teaser + render smoke test mobile/desktop (lógica de desbloqueo por módulo).
-- [ ] app/(tabs)/progreso.tsx — progreso
+- [x] app/(tabs)/progreso.tsx — progreso · guard anti-doble-tap en GUARDAR PERFIL (updateProfile async, "GUARDANDO…"+disabled en desktop+mobile) + a11y (role=button en Cuadro de Mando, Upgrade de plan, Cerrar sesión ×2, y ver-tarjeta-soberana) + render smoke test mobile/desktop de la pantalla grande (score/sparklines SVG/heatmap/ADN/GDPR; fuerza Platform=web para saltar el import dinámico de expo-notifications).
 - [ ] app/mentoria/index.tsx — mentoría
 
 ### Bienestar
