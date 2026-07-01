@@ -306,7 +306,7 @@ export default function ComunidadScreen() {
   // ── EULA gate ────────────────────────────────────────────────────────────────
   const Header = (
     <View style={styles.header}>
-      <Pressable onPress={() => router.back()} style={styles.backBtn}>
+      <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
         <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
       </Pressable>
       <Text style={styles.title}>COMUNIDAD</Text>
@@ -314,6 +314,7 @@ export default function ComunidadScreen() {
         <Pressable
           onPress={() => router.push('/comunidad/mensajes' as never)}
           style={styles.backBtn}
+          accessibilityRole="button"
           accessibilityLabel="Mensajes directos">
           <MaterialIcons name="forum" size={20} color={palette.goldText} />
         </Pressable>
@@ -368,10 +369,10 @@ export default function ComunidadScreen() {
               ))}
             </View>
             <Text style={styles.eulaAgreement}>{COMMUNITY_EULA.agreement}</Text>
-            <Pressable onPress={acceptEula} style={styles.eulaAcceptBtn}>
+            <Pressable onPress={acceptEula} style={styles.eulaAcceptBtn} accessibilityRole="button" accessibilityLabel="Acepto las normas y entro a la comunidad">
               <Text style={styles.eulaAcceptText}>ACEPTO Y ENTRO</Text>
             </Pressable>
-            <Pressable onPress={() => router.back()} style={styles.eulaDeclineBtn}>
+            <Pressable onPress={() => router.back()} style={styles.eulaDeclineBtn} accessibilityRole="button" accessibilityLabel="Ahora no">
               <Text style={styles.eulaDeclineText}>Ahora no</Text>
             </Pressable>
           </ScrollView>
@@ -391,7 +392,12 @@ export default function ComunidadScreen() {
 
         {/* Notice (reporte/bloqueo) */}
         {notice && (
-          <Pressable onPress={() => setNotice(null)} style={styles.notice}>
+          <Pressable
+            onPress={() => setNotice(null)}
+            style={styles.notice}
+            accessibilityRole="button"
+            accessibilityLabel={`${notice}. Toca para descartar`}
+            accessibilityLiveRegion="polite">
             <MaterialIcons name="info" size={16} color={palette.goldText} />
             <Text style={styles.noticeText}>{notice}</Text>
             <MaterialIcons name="close" size={16} color={palette.smoke} />
@@ -414,11 +420,16 @@ export default function ComunidadScreen() {
             onPress={submitPost}
             disabled={submitting || !newPost.trim()}
             style={[styles.sendBtn, (!newPost.trim() || submitting) && styles.sendBtnDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="Publicar"
+            accessibilityState={{ disabled: submitting || !newPost.trim() }}
           >
+            {/* palette.ink (constante) sobre el fondo gold: palette.black es cv('--c-bg')
+                y en tema claro se vuelve claro -> icono claro sobre gold = invisible. */}
             <MaterialIcons
               name="send"
               size={20}
-              color={!newPost.trim() || submitting ? palette.ash : palette.black}
+              color={!newPost.trim() || submitting ? palette.ash : palette.ink}
             />
           </Pressable>
         </View>
@@ -472,6 +483,7 @@ export default function ComunidadScreen() {
                   <Pressable
                     onPress={() => setActionPost(post)}
                     style={styles.moreBtn}
+                    accessibilityRole="button"
                     accessibilityLabel="Opciones de la publicación">
                     <MaterialIcons name="more-horiz" size={20} color={palette.smoke} />
                   </Pressable>
@@ -479,7 +491,12 @@ export default function ComunidadScreen() {
               </View>
               <Text style={styles.postContent}>{post.content}</Text>
               <View style={styles.postActions}>
-                <Pressable onPress={() => toggleLike(post)} style={styles.likeBtn}>
+                <Pressable
+                  onPress={() => toggleLike(post)}
+                  style={styles.likeBtn}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: post.liked }}
+                  accessibilityLabel={post.liked ? `Quitar me gusta, ${post.likes_count} me gusta` : `Me gusta, ${post.likes_count} me gusta`}>
                   <MaterialIcons
                     name={post.liked ? 'favorite' : 'favorite-border'}
                     size={18}
@@ -493,6 +510,7 @@ export default function ComunidadScreen() {
                   <Pressable
                     onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: post.user_id, name: post.author_name } } as never)}
                     style={styles.likeBtn}
+                    accessibilityRole="button"
                     accessibilityLabel={`Enviar mensaje a ${post.author_name}`}>
                     <MaterialIcons name="chat-bubble-outline" size={16} color={palette.ash} />
                   </Pressable>
@@ -516,6 +534,8 @@ export default function ComunidadScreen() {
               <Text style={styles.sheetTitle}>{actionPost?.author_name}</Text>
               <Pressable
                 style={styles.sheetRow}
+                accessibilityRole="button"
+                accessibilityLabel="Enviar mensaje"
                 onPress={() => {
                   const p = actionPost;
                   setActionPost(null);
@@ -526,17 +546,21 @@ export default function ComunidadScreen() {
               </Pressable>
               <Pressable
                 style={styles.sheetRow}
+                accessibilityRole="button"
+                accessibilityLabel="Reportar publicación"
                 onPress={() => { if (actionPost) setReportFor(actionPost); }}>
                 <MaterialIcons name="flag" size={20} color={palette.goldText} />
                 <Text style={styles.sheetRowText}>Reportar publicación</Text>
               </Pressable>
               <Pressable
                 style={styles.sheetRow}
+                accessibilityRole="button"
+                accessibilityLabel="Bloquear a este usuario"
                 onPress={() => { if (actionPost) blockUser(actionPost); }}>
                 <MaterialIcons name="block" size={20} color={palette.danger} />
                 <Text style={[styles.sheetRowText, { color: palette.danger }]}>Bloquear a este usuario</Text>
               </Pressable>
-              <Pressable style={styles.sheetCancel} onPress={() => setActionPost(null)}>
+              <Pressable style={styles.sheetCancel} onPress={() => setActionPost(null)} accessibilityRole="button" accessibilityLabel="Cancelar">
                 <Text style={styles.sheetCancelText}>Cancelar</Text>
               </Pressable>
             </Pressable>
@@ -559,12 +583,15 @@ export default function ComunidadScreen() {
                   key={r.value}
                   style={styles.sheetRow}
                   disabled={reportBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel={r.label}
+                  accessibilityState={{ disabled: reportBusy }}
                   onPress={() => reportFor && submitReport(reportFor, r.value)}>
                   <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
                   <Text style={styles.sheetRowText}>{r.label}</Text>
                 </Pressable>
               ))}
-              <Pressable style={styles.sheetCancel} onPress={() => { setReportFor(null); setActionPost(null); }}>
+              <Pressable style={styles.sheetCancel} onPress={() => { setReportFor(null); setActionPost(null); }} accessibilityRole="button" accessibilityLabel="Cancelar">
                 <Text style={styles.sheetCancelText}>Cancelar</Text>
               </Pressable>
             </Pressable>
