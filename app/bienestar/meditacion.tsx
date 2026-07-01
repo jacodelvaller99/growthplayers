@@ -254,7 +254,7 @@ function MeditationPlayer({
   return (
     <View style={player.root}>
       <View style={player.header}>
-        <Pressable onPress={() => { handleStop(); onExit(); }} style={player.backBtn}>
+        <Pressable onPress={() => { handleStop(); onExit(); }} style={player.backBtn} accessibilityRole="button" accessibilityLabel="Salir de la sesión">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <StatusPill label={session.category.toUpperCase()} tone="gold" />
@@ -290,18 +290,18 @@ function MeditationPlayer({
       {/* Controls */}
       <View style={player.controls}>
         {!running && !paused && !done && (
-          <Pressable style={player.startBtn} onPress={startSession}>
+          <Pressable style={player.startBtn} onPress={startSession} accessibilityRole="button" accessibilityLabel="Iniciar sesión">
             <MaterialIcons name="play-arrow" size={28} color={palette.ink} />
             <Text style={player.startBtnText}>INICIAR SESIÓN</Text>
           </Pressable>
         )}
         {running && (
           <View style={player.controlRow}>
-            <Pressable style={player.pauseBtn} onPress={handlePause}>
+            <Pressable style={player.pauseBtn} onPress={handlePause} accessibilityRole="button" accessibilityLabel="Pausar sesión">
               <MaterialIcons name="pause" size={22} color={palette.goldText} />
               <Text style={player.pauseBtnText}>PAUSAR</Text>
             </Pressable>
-            <Pressable style={player.stopBtn} onPress={handleStop}>
+            <Pressable style={player.stopBtn} onPress={handleStop} accessibilityRole="button" accessibilityLabel="Detener sesión">
               <MaterialIcons name="stop" size={22} color={palette.ash} />
               <Text style={player.stopBtnText}>DETENER</Text>
             </Pressable>
@@ -309,18 +309,18 @@ function MeditationPlayer({
         )}
         {paused && !done && (
           <View style={player.controlRow}>
-            <Pressable style={player.startBtn} onPress={handleResume}>
+            <Pressable style={player.startBtn} onPress={handleResume} accessibilityRole="button" accessibilityLabel="Reanudar sesión">
               <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
               <Text style={player.startBtnText}>REANUDAR</Text>
             </Pressable>
-            <Pressable style={player.stopBtn} onPress={handleStop}>
+            <Pressable style={player.stopBtn} onPress={handleStop} accessibilityRole="button" accessibilityLabel="Detener sesión">
               <MaterialIcons name="stop" size={22} color={palette.ash} />
               <Text style={player.stopBtnText}>DETENER</Text>
             </Pressable>
           </View>
         )}
         {done && (
-          <Pressable style={player.startBtn} onPress={onExit}>
+          <Pressable style={player.startBtn} onPress={onExit} accessibilityRole="button" accessibilityLabel="Completado, volver">
             <MaterialIcons name="check" size={22} color={palette.ink} />
             <Text style={player.startBtnText}>COMPLETADO</Text>
           </Pressable>
@@ -377,7 +377,7 @@ export default function MeditacionScreen() {
       showsVerticalScrollIndicator={false}>
 
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>MEDITACIÓN</Text>
@@ -406,6 +406,8 @@ export default function MeditacionScreen() {
           <Pressable
             key={session.id}
             onPress={() => { haptic('light'); setActive(session); }}
+            accessibilityRole="button"
+            accessibilityLabel={`${session.title}, ${session.category}, ${session.durationMinutes} minutos${done ? ', completada' : ''}`}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
             <PremiumCard style={styles.cardInner}>
               <View style={styles.cardTop}>
