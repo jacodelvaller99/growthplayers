@@ -143,7 +143,7 @@ export default function PrivacidadScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
-        <Text style={styles.title}>PRIVACIDAD</Text>
+        <Text style={styles.title} accessibilityRole="header">PRIVACIDAD</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -163,7 +163,7 @@ export default function PrivacidadScreen() {
       {SECTIONS.map((section) => (
         <View key={section.heading} style={styles.section}>
           <GoldDivider />
-          <Text style={styles.heading}>{section.heading}</Text>
+          <Text style={styles.heading} accessibilityRole="header">{section.heading}</Text>
           {section.body.map((paragraph, i) => (
             <Text key={i} style={styles.paragraph}>{paragraph}</Text>
           ))}
