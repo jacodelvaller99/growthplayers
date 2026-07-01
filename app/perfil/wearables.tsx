@@ -33,8 +33,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supa: any = supabase;
 import {
   OAUTH_URLS,
   isNativeProvider,
@@ -50,6 +48,9 @@ import { requestNativePermissions, syncRange, nativeProviderForPlatform } from '
 import { WearableCompat } from '@/components/wearable-compat';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ENV } from '@/app/config/env';
+
+// Cliente sin tipar para wearable_connections (update is_active en desconexión).
+const supa: any = supabase;
 
 const PROVIDER_NAME: Record<WearableProvider, string> = {
   whoop:          'WHOOP',
@@ -222,9 +223,11 @@ function ConnectedCard({
   const strain = today?.strain_score ?? null;
   const rhr   = today?.resting_hr ?? null;
 
+  // goldText (no gold): recColor también es el color del VALOR (texto) en la MetricChip,
+  // cuyo fondo es palette.black (theme-aware) → gold brillante como texto es ilegible en claro.
   const recColor = rec == null ? palette.smoke
     : rec >= 70 ? palette.success
-    : rec >= 50 ? palette.gold
+    : rec >= 50 ? palette.goldText
     : rec >= 30 ? palette.warning
     : palette.danger;
 
@@ -290,6 +293,8 @@ function ConnectedCard({
           style={[connStyles.syncBtn, isSyncing && { opacity: 0.6 }]}
           onPress={onSync}
           disabled={isSyncing}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSyncing }}
           accessibilityLabel={`Sincronizar ${provider.name}`}>
           {isSyncing
             ? <ActivityIndicator size="small" color={palette.goldText} />
@@ -299,7 +304,7 @@ function ConnectedCard({
               </>
           }
         </Pressable>
-        <Pressable style={connStyles.disconnectBtn} onPress={onDisconnect} accessibilityLabel={`Desconectar ${provider.name}`}>
+        <Pressable style={connStyles.disconnectBtn} onPress={onDisconnect} accessibilityRole="button" accessibilityLabel={`Desconectar ${provider.name}`}>
           <Text style={connStyles.disconnectText}>Desconectar</Text>
         </Pressable>
       </View>
@@ -388,6 +393,7 @@ function DisconnectedCard({
         onPress={onConnect}
         disabled={isConnecting}
         accessibilityRole="button"
+        accessibilityState={{ disabled: isConnecting }}
         accessibilityLabel={`Conectar ${provider.name}`}>
         {isConnecting
           ? <ActivityIndicator size="small" color={palette.ink} />
@@ -469,7 +475,8 @@ function AggregatorHeroCard({
 
       <View style={heroStyles.header}>
         <View style={heroStyles.iconWrap}>
-          <MaterialIcons name="watch" size={26} color={palette.gold} />
+          {/* goldText (no gold): ícono sobre iconWrap con fondo palette.black (theme-aware). */}
+          <MaterialIcons name="watch" size={26} color={palette.goldText} />
         </View>
         <View style={heroStyles.info}>
           <Text style={heroStyles.name}>{provider.name}</Text>
@@ -496,6 +503,7 @@ function AggregatorHeroCard({
         onPress={onConnect}
         disabled={isConnecting}
         accessibilityRole="button"
+        accessibilityState={{ disabled: isConnecting }}
         accessibilityLabel={`Conectar ${provider.name}`}>
         {isConnecting
           ? <ActivityIndicator size="small" color={palette.ink} />
@@ -565,7 +573,7 @@ export default function WearablesScreen() {
   const insets  = useSafeAreaInsets();
   const params  = useLocalSearchParams<{ connected?: string; error?: string }>();
 
-  const { connections, loading, isConnected, getConnection, reload } = useWearableConnections();
+  const { loading, isConnected, getConnection, reload } = useWearableConnections();
   const [connecting, setConnecting] = useState<WearableProvider | null>(null);
   const [syncing,    setSyncing]    = useState<WearableProvider | null>(null);
   const [banner, setBanner] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
@@ -802,7 +810,7 @@ export default function WearablesScreen() {
     <>
       {/* Top nav */}
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Volver">
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>DISPOSITIVOS</Text>
@@ -830,7 +838,12 @@ export default function WearablesScreen() {
           : banner.type === 'error' ? 'error-outline'
           : 'info-outline';
         return (
-          <Pressable style={[styles.banner, bannerStyle]} onPress={() => setBanner(null)}>
+          <Pressable
+            style={[styles.banner, bannerStyle]}
+            onPress={() => setBanner(null)}
+            accessibilityRole="button"
+            accessibilityLabel={`${banner.msg}. Toca para descartar`}
+            accessibilityLiveRegion={banner.type === 'error' ? 'assertive' : 'polite'}>
             <MaterialIcons name={icon} size={18} color={tone} />
             <Text style={[styles.bannerText, { color: tone }]}>{banner.msg}</Text>
             <MaterialIcons name="close" size={15} color={palette.smoke} />
@@ -924,7 +937,7 @@ export default function WearablesScreen() {
   // Selector de marca (solo modo self-host / Open Wearables).
   const owPicker = (
     <Modal visible={owPickerOpen} transparent animationType="fade" onRequestClose={() => setOwPickerOpen(false)}>
-      <Pressable style={styles.owBackdrop} onPress={() => setOwPickerOpen(false)} accessibilityLabel="Cerrar selector">
+      <Pressable style={styles.owBackdrop} onPress={() => setOwPickerOpen(false)} accessibilityRole="button" accessibilityLabel="Cerrar selector">
         <Pressable style={styles.owSheet} onPress={() => {}}>
           <Text style={styles.owSheetTitle}>ELIGE TU RELOJ</Text>
           <Text style={styles.owSheetSub}>
@@ -942,7 +955,7 @@ export default function WearablesScreen() {
               </Pressable>
             ))}
           </View>
-          <Pressable style={styles.owCancel} onPress={() => setOwPickerOpen(false)}>
+          <Pressable style={styles.owCancel} onPress={() => setOwPickerOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
             <Text style={styles.owCancelText}>Cancelar</Text>
           </Pressable>
         </Pressable>
