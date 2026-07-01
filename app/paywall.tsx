@@ -15,12 +15,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, screen, useScreen } from '@/components/polaris';
+import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { TESTIMONIALS } from '@/data/testimonials';
 import { captureWebLead, isValidEmail } from '@/lib/webLeads';
 import {
-  checkSubscription,
   getOfferings,
   purchasePackage,
   restorePurchases,
@@ -245,6 +244,7 @@ export default function PaywallScreen() {
                 autoCorrect={false}
                 editable={leadStatus !== 'sending'}
                 onSubmitEditing={handleLeadSubmit}
+                accessibilityLabel="Tu correo electrónico"
               />
               <Pressable
                 style={[
@@ -252,7 +252,10 @@ export default function PaywallScreen() {
                   (leadStatus === 'sending' || leadEmail.trim().length === 0) && { opacity: 0.5 },
                 ]}
                 onPress={handleLeadSubmit}
-                disabled={leadStatus === 'sending' || leadEmail.trim().length === 0}>
+                disabled={leadStatus === 'sending' || leadEmail.trim().length === 0}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: leadStatus === 'sending' || leadEmail.trim().length === 0 }}
+                accessibilityLabel="Avísame cuando pueda suscribirme">
                 {leadStatus === 'sending' ? (
                   <ActivityIndicator size="small" color={palette.ink} />
                 ) : (
@@ -286,6 +289,9 @@ export default function PaywallScreen() {
               <Pressable
                 key={pkg.packageType}
                 style={[styles.packageCard, isSelected && styles.packageCardSelected]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${pkg.packageType === 'ANNUAL' ? 'Plan anual' : 'Plan mensual'}, ${pkg.product.priceString}`}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setSelected(pkg);
@@ -337,7 +343,10 @@ export default function PaywallScreen() {
       <Pressable
         style={[styles.restoreBtn, isLoading && { opacity: 0.5 }]}
         onPress={handleRestore}
-        disabled={isLoading}>
+        disabled={isLoading}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isLoading }}
+        accessibilityLabel="Restaurar compras anteriores">
         {restoring ? (
           <ActivityIndicator size="small" color={palette.smoke} />
         ) : (
@@ -351,15 +360,15 @@ export default function PaywallScreen() {
 
       <Text style={styles.legal}>
         Al continuar aceptas los{' '}
-        <Text style={styles.legalLink} onPress={() => router.push('/legal/terminos' as never)}>
+        <Text style={styles.legalLink} accessibilityRole="link" onPress={() => router.push('/legal/terminos' as never)}>
           Términos de Uso
         </Text>
         , la{' '}
-        <Text style={styles.legalLink} onPress={() => router.push('/legal/privacidad' as never)}>
+        <Text style={styles.legalLink} accessibilityRole="link" onPress={() => router.push('/legal/privacidad' as never)}>
           Política de Privacidad
         </Text>{' '}
         y el{' '}
-        <Text style={styles.legalLink} onPress={() => router.push('/legal/salud' as never)}>
+        <Text style={styles.legalLink} accessibilityRole="link" onPress={() => router.push('/legal/salud' as never)}>
           Descargo de Salud
         </Text>{' '}
         de Polaris Growth Institute.

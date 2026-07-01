@@ -60,7 +60,7 @@
 
 ### Comercial / legal / auth
 - [x] app/pricing.tsx — planes (free/premium/premium_plus) + canje de código de acceso. **bug de modo claro**: el color de acento del tier premium es `#FFC804` (gold brillante, de SUBSCRIPTION_TIERS) y se usaba como color del NOMBRE del plan + íconos de features sobre la tarjeta graphite (cv) → en tema claro el plan PREMIUM (el upsell principal) quedaba ilegible. Derivé `accentText` (gold→goldText theme-aware) separado del color de fill (dot/badge/borde, que sí debe ser gold brillante). Los otros tiers (#888/#C0A060) son mid-tones legibles → sin cambio. a11y: botón CANJEAR con role+state disabled+label, input de código con label, banner de resultado con role=alert + accessibilityLiveRegion (anuncia éxito/error del canje). Limpieza: 2 imports muertos (PrimaryButton, screen) → 0 warnings. render smoke test.
-- [ ] app/paywall.tsx
+- [x] app/paywall.tsx — upsell premium (hero + features + prueba de transformación + garantía store-compliant + descope web honesto con captura de lead + maquinaria RevenueCat solo-nativo + disclosures de auto-renovación). **Tema OK aquí**: usa `goldText` consistentemente para texto/ícono gold (packageTypeSelected, feature icons) y `gold`/`ink` solo para fills → sin bug de color. a11y: selector de paquete anual/mensual como role=radio + selected + label (tipo + precio); botón AVÍSAME + input de email del lead web; botón restaurar-compras con role/state/label; 3 links legales inline con role=link. Limpieza: 2 imports muertos (screen, checkSubscription) → 0 warnings. render smoke test (web: descope + lead). **Descope web honesto + disclosures de tienda (cancelar/auto-renovación) INTACTOS.**
 - [ ] app/legal/privacidad.tsx
 - [ ] app/legal/terminos.tsx
 - [ ] app/legal/salud.tsx
