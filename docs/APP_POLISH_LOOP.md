@@ -40,7 +40,7 @@
 - [x] app/bienestar/habitos.tsx · seguridad: openExternal (guía/video) usaba window.open sin noopener → añadido noopener,noreferrer (reverse-tabnabbing). a11y: back, expandir hábito (habitInfo+chevron con expanded), fila de plantilla (añadir), y las 4 acciones de detalle (práctica/guía/video/recordar) con role/label. El check de hábito ya tenía role=checkbox. render smoke test.
 - [x] app/bienestar/ayuno.tsx · a11y: back, selector de protocolo (accessibilityState=selected), CTA iniciar/romper, y botones/chips/input de ambos modales (disclaimer médico + refeeding). El disclaimer MÉDICO no-omitible antes de iniciar (diabetes/embarazo/TCA/medicación) INTACTO. render smoke test.
 - [x] app/bienestar/nutricion.tsx · a11y integral del wizard de 5 pasos: progressbar con value, back (paso anterior/volver), selecciones de dieta/objetivo/calorías (role=radio+selected), chips de restricciones/alergias (role=checkbox+checked), botón siguiente (state disabled), y la sección de plan (abrir/inputs/guardar). render smoke test.
-- [ ] app/bienestar/cuerpo.tsx
+- [x] app/bienestar/cuerpo.tsx · a11y: back + inputs de peso/altura + los 7 inputs de medidas opcionales (con label del campo) + botón guardar (state disabled). render smoke test (IMC en vivo + formulario + estado vacío).
 - [ ] app/bienestar/body-context.tsx
 - [ ] app/bienestar/suplementacion.tsx
 - [ ] app/bienestar/biometrics.tsx

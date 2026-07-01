@@ -154,7 +154,7 @@ export default function CuerpoScreen() {
       <View style={[styles.root, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
             <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
           </Pressable>
           <Text style={styles.title}>CUERPO</Text>
@@ -200,6 +200,7 @@ export default function CuerpoScreen() {
                   keyboardType="decimal-pad"
                   placeholder="75.0"
                   placeholderTextColor={palette.smoke}
+                  accessibilityLabel="Peso en kilogramos"
                 />
               </View>
               <View style={styles.inputGroup}>
@@ -211,6 +212,7 @@ export default function CuerpoScreen() {
                   keyboardType="decimal-pad"
                   placeholder="175"
                   placeholderTextColor={palette.smoke}
+                  accessibilityLabel="Altura en centímetros"
                 />
               </View>
             </View>
@@ -228,6 +230,7 @@ export default function CuerpoScreen() {
                     keyboardType="decimal-pad"
                     placeholder={f.placeholder}
                     placeholderTextColor={palette.smoke}
+                    accessibilityLabel={f.label}
                   />
                 </View>
               ))}
@@ -236,6 +239,9 @@ export default function CuerpoScreen() {
             <Pressable
               onPress={saveMeasurement}
               disabled={saving || !weightNum || !heightNum}
+              accessibilityRole="button"
+              accessibilityLabel="Guardar medición"
+              accessibilityState={{ disabled: saving || !weightNum || !heightNum }}
               style={[styles.saveBtn, (saving || !weightNum || !heightNum) && styles.saveBtnDisabled]}
             >
               <Text style={[styles.saveBtnText, (saving || !weightNum || !heightNum) && { color: palette.ash }]}>
