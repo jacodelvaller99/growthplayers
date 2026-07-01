@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldAccentCard, GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
+import { GoldAccentCard, GoldDivider, PremiumCard, StatusPill, useScreen } from '@/components/polaris';
 import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -33,7 +33,6 @@ import {
   fetchUserCheckIns,
   fetchUserDetail,
   fetchUserEvents,
-  fetchUserMemberships,
   fetchUserMentorship,
   fetchUserMemory,
 } from '@/lib/admin/queries';
@@ -85,7 +84,7 @@ import {
 // seedSyntheticData / clearSyntheticData se cargan dinámicamente — solo
 // activos en QA demos, no en el load inicial del dossier.
 import type { Scenario } from '@/lib/biometricSimulator';
-import type { AdminUserDetail, AuditLogEntry, JournalEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
+import type { AdminUserDetail, AuditLogEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, setUserRole, updateUserProfile, APP_ROLE_LABEL, type AppRole } from '@/lib/admin/actions';
 import { intel } from '@/lib/supabase';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
@@ -134,7 +133,7 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
     <View style={h.row}>
       <Text style={h.title}>{title}</Text>
       {action && (
-        <Pressable onPress={onAction} style={h.actionBtn}>
+        <Pressable onPress={onAction} style={h.actionBtn} accessibilityRole="button" accessibilityLabel={action}>
           <Text style={h.actionText}>{action}</Text>
         </Pressable>
       )}
@@ -214,12 +213,15 @@ function NormanModal({
             placeholderTextColor={palette.smoke}
           />
           <View style={mo.actions}>
-            <Pressable style={mo.cancelBtn} onPress={onClose}>
+            <Pressable style={mo.cancelBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancelar">
               <Text style={mo.cancelText}>CANCELAR</Text>
             </Pressable>
             <Pressable
               style={[mo.sendBtn, !msg.trim() && mo.sendBtnDisabled]}
-              onPress={() => { if (msg.trim()) { onSend(msg.trim()); setMsg(''); } }}>
+              onPress={() => { if (msg.trim()) { onSend(msg.trim()); setMsg(''); } }}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !msg.trim() }}
+              accessibilityLabel="Enviar mensaje">
               <Text style={mo.sendText}>ENVIAR</Text>
             </Pressable>
           </View>
@@ -243,7 +245,7 @@ export default function UserDetailScreen() {
   const [roleBusy, setRoleBusy] = useState(false);
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [conversations, setConversations] = useState<MentorConversation[]>([]);
-  const [checkIns, setCheckIns] = useState<Array<{ date: string; energy: number; clarity: number; stress: number; sleep: number }>>([]);
+  const [checkIns, setCheckIns] = useState<{ date: string; energy: number; clarity: number; stress: number; sleep: number }[]>([]);
   const [mentorship, setMentorship] = useState<AdminMentorshipData>({ sessions: [], tasks: [] });
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -433,7 +435,6 @@ export default function UserDetailScreen() {
   // ¿el admin que mira es SuperAdmin? (gate de UX; el servidor también lo impone)
   useEffect(() => {
     if (!adminId) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     intel.profiles().select('is_superadmin').eq('id', adminId).maybeSingle()
       .then(({ data }: { data: any }) => setViewerSuper(data?.is_superadmin === true))
       .catch(() => {});
@@ -567,6 +568,8 @@ export default function UserDetailScreen() {
                 key={sec.id}
                 onPress={() => scrollToSection(sec.id)}
                 hitSlop={4}
+                accessibilityRole="button"
+                accessibilityLabel={`Ir a la sección ${sec.label}`}
                 style={({ pressed }) => [s.navChip, pressed && { opacity: 0.6 }]}>
                 <Text style={s.navChipTxt}>{sec.label}</Text>
               </Pressable>
@@ -625,17 +628,22 @@ export default function UserDetailScreen() {
             const activeMembership = (user.memberships ?? []).find(m => m.status === 'active');
             const currentTier = activeMembership?.product ?? 'free';
             const tierColor = getTierColor(currentTier);
+            // El tier premium es #FFC804 (gold brillante). Como TEXTO sobre la tarjeta
+            // (theme-aware) es ilegible en tema claro → goldText. Fills/bordes usan tierColor.
+            const tierText = tierColor === palette.gold ? palette.goldText : tierColor;
             return (
               <View style={[s.currentTierRow, { borderColor: tierColor + '55' }]}>
                 <View style={[s.currentTierDot, { backgroundColor: tierColor }]} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.currentTierLabel}>TIER ACTUAL</Text>
-                  <Text style={[s.currentTierName, { color: tierColor }]}>{getTierLabel(currentTier).toUpperCase()}</Text>
+                  <Text style={[s.currentTierName, { color: tierText }]}>{getTierLabel(currentTier).toUpperCase()}</Text>
                 </View>
                 <Pressable
                   style={[s.changeTierBtn, { borderColor: tierColor + '88' }]}
-                  onPress={() => router.push(`/admin/membresias?userId=${userId}` as never)}>
-                  <Text style={[s.changeTierText, { color: tierColor }]}>CAMBIAR TIER →</Text>
+                  onPress={() => router.push(`/admin/membresias?userId=${userId}` as never)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cambiar tier de membresía">
+                  <Text style={[s.changeTierText, { color: tierText }]}>CAMBIAR TIER →</Text>
                 </Pressable>
               </View>
             );
@@ -664,6 +672,9 @@ export default function UserDetailScreen() {
                       key={r}
                       disabled={active || locked || roleBusy}
                       onPress={() => handleSetRole(r)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active, disabled: active || locked || roleBusy }}
+                      accessibilityLabel={`Nivel de acceso ${APP_ROLE_LABEL[r]}${locked ? ', solo SuperAdmin' : ''}`}
                       style={({ pressed }) => [
                         s.roleOption,
                         active && s.roleOptionActive,
@@ -690,11 +701,15 @@ export default function UserDetailScreen() {
           {(user.memberships ?? []).length === 0 ? (
             <Text style={s.emptyText}>Sin membresías activas</Text>
           ) : (
-            user.memberships!.map(m => (
+            user.memberships!.map(m => {
+              const mCol = getTierColor(m.product);
+              // goldText (no gold) como TEXTO del producto en membresías activas premium.
+              const mText = mCol === palette.gold ? palette.goldText : mCol;
+              return (
               <View key={m.id} style={s.membershipRow}>
-                <View style={[s.statusDot, { backgroundColor: m.status === 'active' ? getTierColor(m.product) : palette.smoke }]} />
+                <View style={[s.statusDot, { backgroundColor: m.status === 'active' ? mCol : palette.smoke }]} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.membershipProduct, m.status === 'active' && { color: getTierColor(m.product) }]}>
+                  <Text style={[s.membershipProduct, m.status === 'active' && { color: mText }]}>
                     {getTierLabel(m.product).toUpperCase()}
                   </Text>
                   <Text style={s.membershipMeta}>
@@ -703,15 +718,18 @@ export default function UserDetailScreen() {
                   </Text>
                   {m.price_paid ? <Text style={s.membershipPrice}>${m.price_paid} {m.currency}</Text> : null}
                 </View>
-                <Pressable onPress={() => handleDeactivateMembership(m)} style={s.deactivateBtn}>
+                <Pressable onPress={() => handleDeactivateMembership(m)} style={s.deactivateBtn} accessibilityRole="button" accessibilityLabel={`Desactivar membresía ${getTierLabel(m.product)}`}>
                   <Text style={s.deactivateText}>DESACTIVAR</Text>
                 </Pressable>
               </View>
-            ))
+              );
+            })
           )}
           <Pressable
             style={s.addBtn}
-            onPress={() => router.push(`/admin/membresias?userId=${userId}` as never)}>
+            onPress={() => router.push(`/admin/membresias?userId=${userId}` as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Activar membresía">
             <MaterialIcons name="add" size={16} color={palette.goldText} />
             <Text style={s.addBtnText}>ACTIVAR MEMBRESÍA</Text>
           </Pressable>
@@ -835,7 +853,12 @@ export default function UserDetailScreen() {
             conversations.slice(0, 10).map(conv => {
               const isExpanded = expandedConv === conv.id;
               return (
-                <Pressable key={conv.id} onPress={() => setExpandedConv(isExpanded ? null : conv.id)}>
+                <Pressable
+                  key={conv.id}
+                  onPress={() => setExpandedConv(isExpanded ? null : conv.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: isExpanded }}
+                  accessibilityLabel={`${conv.role === 'assistant' ? 'Mensaje del mentor' : 'Mensaje del usuario'}. ${isExpanded ? 'Contraer' : 'Expandir'}`}>
                   <View style={[s.convBubble, conv.role === 'assistant' ? s.bubbleLeft : s.bubbleRight]}>
                     <Text style={s.convRole}>{conv.role === 'assistant' ? 'MENTOR' : 'USUARIO'}</Text>
                     <Text style={s.convText} numberOfLines={isExpanded ? undefined : 2}>
@@ -932,7 +955,6 @@ export default function UserDetailScreen() {
                 {sess.action_plan.length > 0 && (
                   <View style={s.planList}>
                     {sess.action_plan.slice(0, 6).map((item, i) => {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const it = item as any;
                       const label =
                         typeof it === 'string'
@@ -1019,7 +1041,10 @@ export default function UserDetailScreen() {
           <Pressable
             style={[s.addBtn, generatingSession && { opacity: 0.6 }]}
             onPress={handleGenerateWeeklySession}
-            disabled={generatingSession}>
+            disabled={generatingSession}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: generatingSession }}
+            accessibilityLabel="Generar sesión semanal con Norman">
             <MaterialIcons name="psychology" size={16} color={palette.goldText} />
             <Text style={s.addBtnText}>
               {generatingSession ? 'GENERANDO...' : 'GENERAR SESIÓN SEMANAL NORMAN'}
@@ -1028,7 +1053,10 @@ export default function UserDetailScreen() {
           {weeklySession && showWeeklySession && (
             <Pressable
               onPress={() => setShowWeeklySession(v => !v)}
-              style={s.weeklySessionBox}>
+              style={s.weeklySessionBox}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showWeeklySession }}
+              accessibilityLabel="Contraer mensaje de la sesión semanal">
               <View style={s.weeklySessionHeader}>
                 <Text style={s.mlLabel}>SEMANA {weeklySession.week_number} · MENSAJE</Text>
                 <MaterialIcons name="expand-less" size={16} color={palette.goldText} />
@@ -1175,13 +1203,16 @@ export default function UserDetailScreen() {
             />
             <Text style={mo.edHint}>El tier de suscripción se cambia en “B. Membresías y acceso”.</Text>
             <View style={mo.edFooter}>
-              <Pressable style={mo.edCancel} onPress={() => setEditOpen(false)}>
+              <Pressable style={mo.edCancel} onPress={() => setEditOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
                 <Text style={mo.edCancelText}>CANCELAR</Text>
               </Pressable>
               <Pressable
                 style={[mo.edSave, savingEdit && { opacity: 0.6 }]}
                 onPress={handleSaveIdentity}
-                disabled={savingEdit}>
+                disabled={savingEdit}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: savingEdit }}
+                accessibilityLabel="Guardar identidad">
                 {savingEdit ? (
                   <ActivityIndicator color={palette.ink} size="small" />
                 ) : (
