@@ -155,7 +155,11 @@ export default function ClienteMemoriaScreen() {
                   {activeTasks.map((t, i) => {
                     const st = CLIENT_STATUS[t.status] ?? CLIENT_STATUS.not_started;
                     return (
-                      <View key={i} style={s.taskRow}>
+                      <View
+                        key={i}
+                        style={s.taskRow}
+                        accessible
+                        accessibilityLabel={`${t.title}. ${st.label}${t.pendingReview ? '. Propuesta de Norman, pendiente de tu coach' : ''}`}>
                         <MaterialIcons name="radio-button-unchecked" size={16} color={palette.smoke} />
                         <View style={{ flex: 1 }}>
                           <Text style={s.taskText}>{t.title}</Text>
