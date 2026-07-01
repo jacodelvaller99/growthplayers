@@ -68,6 +68,8 @@ export default function OnboardingScreen() {
   const [accessCode, setAccessCode] = useState('');
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
   const [codeMessage, setCodeMessage] = useState('');
+  // Guard anti-doble-tap del cierre (completeOnboarding es async → evita doble submit).
+  const [finishing, setFinishing] = useState(false);
 
   // ── Consent gate (Step 0) ──────────────────────────────────────────────────
   const [consents, setConsents] = useState<Record<ConsentKey, boolean>>({
@@ -148,12 +150,19 @@ export default function OnboardingScreen() {
   };
 
   const finish = async () => {
-    await completeOnboarding({
-      profile: { name: name.trim() || 'Juan Carlos', role: role.trim() || 'Empresario' },
-      activeProgramId: 'protocolo-soberano',
-      northStar: north,
-    });
-    router.replace('/(tabs)/comando');
+    if (finishing) return;
+    setFinishing(true);
+    try {
+      await completeOnboarding({
+        profile: { name: name.trim() || 'Juan Carlos', role: role.trim() || 'Empresario' },
+        activeProgramId: 'protocolo-soberano',
+        northStar: north,
+      });
+      router.replace('/(tabs)/comando');
+    } catch {
+      // Si falla el cierre, re-habilita para reintentar (no dejamos el botón muerto).
+      setFinishing(false);
+    }
   };
 
   return (
@@ -168,7 +177,12 @@ export default function OnboardingScreen() {
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
       {/* ── Step Progress ── */}
-      <View style={styles.stepRow}>
+      <View
+        style={styles.stepRow}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Paso ${step + 1} de ${TOTAL_STEPS}`}
+        accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: step + 1 }}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <View key={i} style={[styles.stepSeg, i <= step && styles.stepSegActive]} />
         ))}
@@ -289,7 +303,11 @@ export default function OnboardingScreen() {
           </View>
 
           <PrimaryButton label="EMPEZAR" icon="arrow-forward" onPress={() => setStep(2)} />
-          <Pressable onPress={() => setStep(2)} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+          <Pressable
+            onPress={() => setStep(2)}
+            accessibilityRole="button"
+            accessibilityLabel="Saltar intro"
+            style={{ alignItems: 'center', marginTop: -spacing.sm }}>
             <Text style={styles.skipText}>Saltar →</Text>
           </Pressable>
         </View>
@@ -434,7 +452,11 @@ export default function OnboardingScreen() {
             <SecondaryButton label="ATRAS" onPress={() => setStep(3)} />
             <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={goFromObstacleToCode} />
           </View>
-          <Pressable onPress={goFromObstacleToCode} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+          <Pressable
+            onPress={goFromObstacleToCode}
+            accessibilityRole="button"
+            accessibilityLabel="Continuar sin definir el obstáculo"
+            style={{ alignItems: 'center', marginTop: -spacing.sm }}>
             <Text style={styles.skipText}>Continuar sin definirlo →</Text>
           </Pressable>
         </PremiumCard>
@@ -482,9 +504,18 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(4)} />
-            <PrimaryButton label="INICIAR EL PROTOCOLO" icon="military-tech" onPress={finish} />
+            <PrimaryButton
+              label={finishing ? 'INICIANDO...' : 'INICIAR EL PROTOCOLO'}
+              icon={finishing ? 'hourglass-empty' : 'military-tech'}
+              onPress={finish}
+              disabled={finishing}
+            />
           </View>
-          <Pressable onPress={finish} style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+          <Pressable
+            onPress={finish}
+            disabled={finishing}
+            accessibilityRole="button"
+            style={{ alignItems: 'center', marginTop: -spacing.sm }}>
             <Text style={styles.skipText}>Iniciar sin código →</Text>
           </Pressable>
         </PremiumCard>

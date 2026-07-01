@@ -18,7 +18,7 @@
 ### Núcleo del journey
 - [x] app/(auth)/welcome.tsx — primera impresión · reduced-motion (a11y Apple HIG: salta la intro si el usuario reduce movimiento) + render smoke test móvil/desktop
 - [x] app/(auth)/index.tsx — login/registro · autofill de password managers (textContentType + autoComplete en email/pass/código) + a11y (errores role=alert/live-region, tabs con estado seleccionado) + render test login/register
-- [ ] app/(onboarding)/index.tsx — onboarding + consent
+- [x] app/(onboarding)/index.tsx — onboarding + consent · guard anti-doble-tap del cierre (finish async no re-dispara, botón muestra "INICIANDO…" y se deshabilita) + a11y (progressbar en el indicador de paso con accessibilityValue, roles/labels en los 3 skip-links) + render smoke test del consent gate. Sin tocar el gate de consentimiento ni la lógica RGPD.
 - [ ] app/(tabs)/comando.tsx — home/dashboard
 - [ ] app/checkin.tsx — check-in
 - [ ] app/(tabs)/norte.tsx — Mi Norte
