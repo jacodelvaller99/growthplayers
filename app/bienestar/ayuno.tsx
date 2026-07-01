@@ -162,7 +162,7 @@ export default function AyunoScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <Text style={styles.title}>AYUNO</Text>
@@ -205,6 +205,9 @@ export default function AyunoScreen() {
               <Pressable
                 key={p.label}
                 onPress={() => setSelectedProtocol(p)}
+                accessibilityRole="button"
+                accessibilityLabel={`Protocolo ${p.label}: ${p.description}`}
+                accessibilityState={{ selected: selectedProtocol.label === p.label }}
                 style={[styles.protocolRow, selectedProtocol.label === p.label && styles.protocolRowActive]}
               >
                 <View style={styles.protocolLeft}>
@@ -261,6 +264,8 @@ export default function AyunoScreen() {
         {/* Botón de acción */}
         <Pressable
           onPress={isActive ? () => setShowBreakModal(true) : () => setShowDisclaimer(true)}
+          accessibilityRole="button"
+          accessibilityLabel={isActive ? 'Romper ayuno' : 'Iniciar ayuno'}
           style={[styles.ctaBtn, isActive && styles.ctaBtnEnd]}
         >
           <Text style={styles.ctaBtnText}>
@@ -281,10 +286,10 @@ export default function AyunoScreen() {
               {'\n\n'}Este protocolo es solo para adultos sanos. No es consejo médico.
             </Text>
             <View style={styles.modalActions}>
-              <Pressable onPress={() => setShowDisclaimer(false)} style={styles.modalCancel}>
+              <Pressable onPress={() => setShowDisclaimer(false)} style={styles.modalCancel} accessibilityRole="button" accessibilityLabel="Cancelar">
                 <Text style={styles.modalCancelText}>Cancelar</Text>
               </Pressable>
-              <Pressable onPress={startFast} style={styles.modalConfirm}>
+              <Pressable onPress={startFast} style={styles.modalConfirm} accessibilityRole="button" accessibilityLabel="Entendido, iniciar ayuno">
                 <Text style={styles.modalConfirmText}>ENTENDIDO · INICIAR</Text>
               </Pressable>
             </View>
@@ -309,19 +314,20 @@ export default function AyunoScreen() {
               onChangeText={setBreakingFood}
               placeholder="Ej: caldo de huesos"
               placeholderTextColor={palette.smoke}
+              accessibilityLabel="Con qué alimento vas a romper el ayuno"
             />
             <View style={styles.breakChips}>
               {BREAKING_FOOD_SUGGESTIONS.map(s => (
-                <Pressable key={s} onPress={() => setBreakingFood(s)} style={styles.breakChip}>
+                <Pressable key={s} onPress={() => setBreakingFood(s)} style={styles.breakChip} accessibilityRole="button" accessibilityLabel={`Usar: ${s}`}>
                   <Text style={styles.breakChipText}>{s}</Text>
                 </Pressable>
               ))}
             </View>
             <View style={styles.modalActions}>
-              <Pressable onPress={() => setShowBreakModal(false)} style={styles.modalCancel}>
+              <Pressable onPress={() => setShowBreakModal(false)} style={styles.modalCancel} accessibilityRole="button" accessibilityLabel="Cancelar">
                 <Text style={styles.modalCancelText}>Cancelar</Text>
               </Pressable>
-              <Pressable onPress={endFast} style={styles.modalConfirm}>
+              <Pressable onPress={endFast} style={styles.modalConfirm} accessibilityRole="button" accessibilityLabel="Confirmar romper ayuno">
                 <Text style={styles.modalConfirmText}>ROMPER AYUNO</Text>
               </Pressable>
             </View>
