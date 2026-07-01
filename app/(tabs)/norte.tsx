@@ -34,6 +34,8 @@ export default function NorteScreen() {
 
   const isNorteEmpty = !purpose.trim() && !identity.trim();
   const [saved, setSaved] = useState(false);
+  // Guard anti-doble-tap: updateNorthStar es async → deshabilita durante la escritura.
+  const [saving, setSaving] = useState(false);
 
   // Norte completeness — 4 fields, each contributes 25%
   const norteScore = [
@@ -44,17 +46,23 @@ export default function NorteScreen() {
   ].filter(Boolean).length * 25;
 
   const save = async () => {
-    await updateNorthStar({
-      purpose,
-      identity,
-      dailyReminder,
-      nonNegotiables: nonNegotiables
-        .split('\n')
-        .map((item) => item.trim())
-        .filter(Boolean),
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updateNorthStar({
+        purpose,
+        identity,
+        dailyReminder,
+        nonNegotiables: nonNegotiables
+          .split('\n')
+          .map((item) => item.trim())
+          .filter(Boolean),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ── "Valores núcleo" chips (mobile) — backed by the same `nonNegotiables`
@@ -108,6 +116,8 @@ export default function NorteScreen() {
               {isNorteEmpty && (
                 <Pressable
                   onPress={() => router.push('/(onboarding)' as never)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Configurar tu Norte ahora"
                   style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
                   <MaterialIcons name="explore" size={20} color={palette.goldText} />
                   <Text style={styles.emptyCtaText}>
@@ -174,6 +184,8 @@ export default function NorteScreen() {
                         <Pressable
                           key={s}
                           onPress={() => setNonNegotiables((prev) => prev ? `${prev}\n${s}` : s)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Añadir no-negociable: ${s}`}
                           style={({ pressed }) => [styles.suggestionPill, pressed && { opacity: 0.7 }]}>
                           <Text style={styles.suggestionText}>+ {s}</Text>
                         </Pressable>
@@ -201,9 +213,10 @@ export default function NorteScreen() {
                   />
                 </View>
                 <PrimaryButton
-                  label={saved ? 'NORTE DECLARADO ✓' : 'GUARDAR NORTE'}
+                  label={saved ? 'NORTE DECLARADO ✓' : saving ? 'GUARDANDO...' : 'GUARDAR NORTE'}
                   icon={saved ? 'check-circle' : 'check'}
                   onPress={save}
+                  disabled={saving}
                 />
                 {saved ? (
                   <Text style={styles.savedToast}>
@@ -250,6 +263,8 @@ export default function NorteScreen() {
       {isNorteEmpty && (
         <Pressable
           onPress={() => router.push('/(onboarding)' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Configurar tu Norte ahora"
           style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
           <MaterialIcons name="explore" size={20} color={palette.goldText} />
           <Text style={styles.emptyCtaText}>
@@ -333,15 +348,20 @@ export default function NorteScreen() {
       />
 
       <PrimaryButton
-        label={saved ? 'NORTE DECLARADO' : 'GUARDAR NORTE'}
+        label={saved ? 'NORTE DECLARADO' : saving ? 'GUARDANDO...' : 'GUARDAR NORTE'}
         icon={saved ? 'check-circle' : 'explore'}
         onPress={save}
+        disabled={saving}
       />
     </ScrollView>
 
     {/* ── Toast: NORTE FIJADO EN EL SISTEMA ── */}
     {saved ? (
-      <View style={[styles.toast, { bottom: insets.bottom + 24 }]} pointerEvents="none">
+      <View
+        style={[styles.toast, { bottom: insets.bottom + 24 }]}
+        pointerEvents="none"
+        accessibilityLiveRegion="polite"
+        accessibilityRole="alert">
         <MaterialIcons name="check" size={16} color={palette.ink} />
         <Text style={styles.toastText}>NORTE FIJADO EN EL SISTEMA</Text>
       </View>

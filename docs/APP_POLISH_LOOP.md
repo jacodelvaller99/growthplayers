@@ -21,7 +21,7 @@
 - [x] app/(onboarding)/index.tsx — onboarding + consent · guard anti-doble-tap del cierre (finish async no re-dispara, botón muestra "INICIANDO…" y se deshabilita) + a11y (progressbar en el indicador de paso con accessibilityValue, roles/labels en los 3 skip-links) + render smoke test del consent gate. Sin tocar el gate de consentimiento ni la lógica RGPD.
 - [x] app/(tabs)/comando.tsx — home/dashboard · seguridad: window.open del link de sesión en vivo ahora con noopener,noreferrer (evita reverse-tabnabbing) + a11y: roles/labels en 7 tarjetas accionables que no los tenían (anomalía, NBA, ancla del Norte, comunidad, sesión en vivo, posts del preview, ver-todo) + render smoke test mobile/desktop de la home (la red que faltaba cuando un re-render tumbó el chat).
 - [x] app/checkin.tsx — check-in · guard anti-doble-tap en GUARDAR (saveCheckIn async → botón "GUARDANDO…"+disabled, re-habilita si falla) + fix typo "TERRENo"→"TERRENO" + a11y (roles/labels en pills de sugerencia) + render smoke test mobile/desktop (incluye micro-ritual con Animated/timers).
-- [ ] app/(tabs)/norte.tsx — Mi Norte
+- [x] app/(tabs)/norte.tsx — Mi Norte · guard anti-doble-tap en GUARDAR (updateNorthStar async → "GUARDANDO…"+disabled en ambos layouts) + a11y (roles/labels en CTA de estado vacío desktop+mobile y en pills de sugerencia; toast de éxito con accessibilityLiveRegion=polite+role=alert para screen readers) + render smoke test mobile-vacío/desktop-con-datos.
 - [ ] app/(tabs)/mentor.tsx — Norman
 - [ ] app/(tabs)/programas.tsx — programa
 - [ ] app/(tabs)/progreso.tsx — progreso
