@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin — Biometric Intelligence (dashboard cross-client).
  *
  * Quién necesita descanso, quién está en caída fisiológica, quién está sólido.
@@ -31,12 +31,19 @@ const TREND_LABEL: Record<TrendState, string> = {
 
 function Row({ row, onPress }: { row: BiometricDashboardRow; onPress: () => void }) {
   const lvl = LEVEL_META[row.intervention_level] ?? LEVEL_META.low;
+  const recovery = RECOVERY_LABEL[row.recovery_state as RecoveryState] ?? row.recovery_state;
+  const trend = TREND_LABEL[row.trend_state as TrendState] ?? row.trend_state;
   return (
-    <Pressable onPress={onPress} hitSlop={4} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+    <Pressable
+      onPress={onPress}
+      hitSlop={4}
+      style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${row.name ?? 'Usuario'}, ${lvl.label.toLowerCase()}, ${recovery}, tendencia ${trend}. Ver perfil`}>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={s.rowName}>{row.name ?? 'Usuario'}</Text>
         <Text style={s.rowSub} numberOfLines={1}>
-          {RECOVERY_LABEL[row.recovery_state as RecoveryState] ?? row.recovery_state} · tendencia {TREND_LABEL[row.trend_state as TrendState] ?? row.trend_state}
+          {recovery} · tendencia {trend}
         </Text>
         {row.summary ? (
           <Text style={s.rowDriver} numberOfLines={2}>{row.summary}</Text>
@@ -64,18 +71,24 @@ function DistributionHero({ rows }: { rows: BiometricDashboardRow[] }) {
   const segments = [
     { count: counts.urgent, color: palette.danger,  label: 'URG' },
     { count: counts.high,   color: palette.warning, label: 'ATD' },
-    { count: counts.medium, color: palette.goldText, label: 'OBS' },
+    { count: counts.medium, color: palette.gold, label: 'OBS' },
     { count: counts.low,    color: palette.success, label: 'OK' },
   ];
   return (
     <PremiumCard style={s.heroCard}>
-      <View style={s.heroHead}>
+      <View
+        style={s.heroHead}
+        accessible
+        accessibilityLabel={`Equipo de ${total}, ${alertPct} por ciento en alerta fisiológica`}>
         <Text style={s.heroTotal}>EQUIPO: {total}</Text>
         <Text style={[s.heroAlert, { color: alertPct >= 25 ? palette.danger : alertPct >= 10 ? palette.warning : palette.success }]}>
           {alertPct}% EN ALERTA
         </Text>
       </View>
-      <View style={s.heroBar}>
+      <View
+        style={s.heroBar}
+        accessible
+        accessibilityLabel={`Distribución: urgente ${counts.urgent}, atender ${counts.high}, observar ${counts.medium}, sólidos ${counts.low}`}>
         {segments.map((seg, i) => seg.count > 0 ? (
           <View key={i} style={[s.heroSeg, { flex: seg.count, backgroundColor: seg.color }]} />
         ) : null)}
@@ -128,7 +141,7 @@ export default function AdminBiometriaScreen() {
       <Text style={s.intro}>Estado fisiológico del equipo: a quién darle descanso, quién está en caída, quién está sólido.</Text>
 
       {loading ? (
-        <ActivityIndicator color={palette.gold} style={{ marginTop: spacing.xxxl }} />
+        <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xxxl }} />
       ) : rows.length === 0 ? (
         <PremiumCard style={s.card}>
           <Text style={s.empty}>
