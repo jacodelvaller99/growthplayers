@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin CMI — Moderación de Comunidad
  *
  * Cola de reportes (community_reports). Lista los reportes por estado y permite
@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -150,17 +151,30 @@ export default function AdminComunidadScreen() {
   };
 
   // Acción dura opcional: borrar el post reportado (si el admin es dueño vía RLS de posts).
-  const deletePost = async (item: ReportItem) => {
+  // Destructiva e irreversible → confirmación obligatoria antes de ejecutar.
+  const deletePost = (item: ReportItem) => {
     if (!item.post_id) return;
-    setBusyId(item.id);
-    try {
-      await anyDb.from('community_posts').delete().eq('id', item.post_id);
-      await anyDb.from('community_reports').update({ status: 'actioned' }).eq('id', item.id);
-      setItems((prev) => prev.filter((r) => r.id !== item.id));
-    } catch {
-      load();
-    }
-    setBusyId(null);
+    Alert.alert(
+      'Eliminar publicación',
+      'La publicación reportada se eliminará permanentemente y el reporte quedará como accionado. ¿Continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar', style: 'destructive',
+          onPress: async () => {
+            setBusyId(item.id);
+            try {
+              await anyDb.from('community_posts').delete().eq('id', item.post_id);
+              await anyDb.from('community_reports').update({ status: 'actioned' }).eq('id', item.id);
+              setItems((prev) => prev.filter((r) => r.id !== item.id));
+            } catch {
+              load();
+            }
+            setBusyId(null);
+          },
+        },
+      ],
+    );
   };
 
   if (loading) {
@@ -189,7 +203,10 @@ export default function AdminComunidadScreen() {
           <Pressable
             key={f}
             style={[s.filterChip, filter === f && s.filterChipActive]}
-            onPress={() => setFilter(f)}>
+            onPress={() => setFilter(f)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: filter === f }}
+            accessibilityLabel={`Reportes ${STATUS_LABEL[f].toLowerCase()}`}>
             <Text style={[s.filterText, filter === f && s.filterTextActive]}>{STATUS_LABEL[f]}</Text>
           </Pressable>
         ))}
@@ -202,7 +219,7 @@ export default function AdminComunidadScreen() {
         keyExtractor={(r) => r.id}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + spacing.xxxl, gap: spacing.md }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.gold} />
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.goldText} />
         }
         ListEmptyComponent={
           <Text style={s.emptyText}>
@@ -232,26 +249,35 @@ export default function AdminComunidadScreen() {
               <View style={s.actions}>
                 {item.post_id && (
                   <Pressable
-                    style={[s.actionBtn, s.actionDanger]}
+                    style={[s.actionBtn, s.actionDanger, busyId === item.id && { opacity: 0.5 }]}
                     disabled={busyId === item.id}
-                    onPress={() => deletePost(item)}>
+                    onPress={() => deletePost(item)}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: busyId === item.id }}
+                    accessibilityLabel="Eliminar la publicación reportada (permanente)">
                     <MaterialIcons name="delete" size={15} color={palette.danger} />
                     <Text style={[s.actionText, { color: palette.danger }]}>ELIMINAR POST</Text>
                   </Pressable>
                 )}
                 {filter === 'open' && (
                   <Pressable
-                    style={s.actionBtn}
+                    style={[s.actionBtn, busyId === item.id && { opacity: 0.5 }]}
                     disabled={busyId === item.id}
-                    onPress={() => setStatus(item, 'reviewed')}>
+                    onPress={() => setStatus(item, 'reviewed')}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: busyId === item.id }}
+                    accessibilityLabel="Marcar reporte como revisado">
                     <MaterialIcons name="visibility" size={15} color={palette.goldText} />
                     <Text style={s.actionText}>REVISADO</Text>
                   </Pressable>
                 )}
                 <Pressable
-                  style={s.actionBtn}
+                  style={[s.actionBtn, busyId === item.id && { opacity: 0.5 }]}
                   disabled={busyId === item.id}
-                  onPress={() => setStatus(item, 'dismissed')}>
+                  onPress={() => setStatus(item, 'dismissed')}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: busyId === item.id }}
+                  accessibilityLabel="Descartar reporte">
                   <MaterialIcons name="close" size={15} color={palette.ash} />
                   <Text style={[s.actionText, { color: palette.ash }]}>DESCARTAR</Text>
                 </Pressable>
@@ -259,9 +285,12 @@ export default function AdminComunidadScreen() {
             ) : (
               <View style={s.actions}>
                 <Pressable
-                  style={s.actionBtn}
+                  style={[s.actionBtn, busyId === item.id && { opacity: 0.5 }]}
                   disabled={busyId === item.id}
-                  onPress={() => setStatus(item, 'open')}>
+                  onPress={() => setStatus(item, 'open')}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: busyId === item.id }}
+                  accessibilityLabel="Reabrir reporte">
                   <MaterialIcons name="undo" size={15} color={palette.goldText} />
                   <Text style={s.actionText}>REABRIR</Text>
                 </Pressable>
