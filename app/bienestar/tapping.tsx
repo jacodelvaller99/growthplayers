@@ -139,7 +139,8 @@ function IntensitySelector({ value, onChange }: { value: number; onChange: (v: n
             onPress={() => { onChange(n); haptic('light'); }}
             style={[styles.intensityBtn, on && styles.intensityBtnActive]}
             accessibilityRole="button"
-            accessibilityLabel={`Intensidad ${n}`}>
+            accessibilityState={{ selected: n === value }}
+            accessibilityLabel={`Intensidad ${n} de 10`}>
             <Text style={[styles.intensityNum, on && styles.intensityNumActive]}>{n}</Text>
           </Pressable>
         );
@@ -291,7 +292,12 @@ export default function TappingScreen() {
         {renderHeader(() => setScreen('setup'))}
 
         {/* Progress */}
-        <View style={styles.progressRow}>
+        <View
+          style={styles.progressRow}
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel="Progreso de la secuencia"
+          accessibilityValue={{ min: 1, max: TAPPING_POINTS.length, now: pointIdx + 1 }}>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress * 100}%` as `${number}%` }]} />
           </View>
