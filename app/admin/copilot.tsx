@@ -9,13 +9,13 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable,
+  KeyboardAvoidingView, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { fetchAtRiskUsers } from '@/lib/admin/queries';
 import { fetchNotesByUsers, type NoteSummary } from '@/lib/memory';
@@ -124,7 +124,7 @@ export default function AdminCopilotScreen() {
           </View>
         ))}
         {streaming && (
-          <View style={[s.bubble, s.bubbleAI]}>
+          <View style={[s.bubble, s.bubbleAI]} accessibilityLiveRegion="polite">
             <Text style={s.bubbleAIText}>{streamText || '…'}</Text>
           </View>
         )}
@@ -133,7 +133,12 @@ export default function AdminCopilotScreen() {
       {turns.length === 0 && (
         <View style={s.quickRow}>
           {QUICK.map((q) => (
-            <Pressable key={q} onPress={() => send(q)} style={s.quickChip}>
+            <Pressable
+              key={q}
+              onPress={() => send(q)}
+              style={s.quickChip}
+              accessibilityRole="button"
+              accessibilityLabel={`Preguntar: ${q}`}>
               <Text style={s.quickText}>{q}</Text>
             </Pressable>
           ))}
@@ -151,6 +156,7 @@ export default function AdminCopilotScreen() {
           editable={!streaming}
           onSubmitEditing={() => send()}
           returnKeyType="send"
+          accessibilityLabel="Pregúntale al copiloto"
         />
         <Pressable
           onPress={() => (streaming ? abortRef.current?.abort() : send())}
