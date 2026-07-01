@@ -309,6 +309,8 @@ export default function ChatThreadScreen() {
                     <Pressable
                       onLongPress={() => { if (!m.id.startsWith('tmp-')) setReactingId(isReacting ? null : m.id); }}
                       delayLongPress={250}
+                      accessibilityLabel={`${mine ? 'Tú' : peerName}: ${m.body}`}
+                      accessibilityHint={m.id.startsWith('tmp-') ? undefined : 'Mantén pulsado para reaccionar'}
                       style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
                       <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{m.body}</Text>
                     </Pressable>
@@ -318,6 +320,8 @@ export default function ChatThreadScreen() {
                           <Pressable
                             key={r.uid}
                             onPress={() => { if (r.uid === userId) toggleReaction(m.id, r.emoji); }}
+                            accessibilityRole="button"
+                            accessibilityLabel={r.uid === userId ? `Tu reacción ${r.emoji}, toca para quitar` : `Reacción ${r.emoji}`}
                             style={[styles.reactionChip, r.uid === userId && styles.reactionChipMine]}>
                             <Text style={styles.reactionChipText}>{r.emoji}</Text>
                           </Pressable>
@@ -366,6 +370,7 @@ export default function ChatThreadScreen() {
               disabled={sending || !draft.trim()}
               accessibilityRole="button"
               accessibilityLabel="Enviar mensaje"
+              accessibilityState={{ disabled: sending || !draft.trim() }}
               style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}>
               <MaterialIcons name="send" size={20} color={!draft.trim() || sending ? palette.ash : palette.ink} />
             </Pressable>

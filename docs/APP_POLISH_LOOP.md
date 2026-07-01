@@ -51,7 +51,7 @@
 
 ### Comunidad / perfil / contenido
 - [x] app/comunidad/mensajes.tsx — inbox de DM (conversaciones agrupadas por peer, presence + realtime + filtrado de bloqueos + estado vacío honesto). Ya sólida (a11y en back+fila, tokens theme-aware — sin bug de color). a11y mejorada: el label de cada fila ahora anuncia estado no-leído + preview del último mensaje + hora (contexto completo en un foco de lector de pantalla, antes solo "Conversación con X"). render smoke test (loading/vacío, Supabase + realtime channel mockeados).
-- [ ] app/comunidad/chat/[id].tsx
+- [x] app/comunidad/chat/[id].tsx — hilo 1-a-1 (optimista + realtime + reacciones long-press + recibos leído/enviado + separadores de fecha + estados de bloqueo bidireccional). **Tema OK aquí**: burbuja propia usa `palette.gold` (fill) + texto/ícono-enviar `palette.ink` (constante) — bien hecho, sin bug. a11y: burbuja de mensaje con label ("Tú/peer: cuerpo") + hint "mantén pulsado para reaccionar" (el reaccionar era gesto-solo); chips de reacción con role/label (propia="toca para quitar"); botón enviar con accessibilityState disabled. render smoke test (loading/vacío, Supabase + channel mockeados).
 - [ ] app/perfil/index.tsx
 - [ ] app/perfil/cliente.tsx
 - [ ] app/perfil/wearables.tsx
