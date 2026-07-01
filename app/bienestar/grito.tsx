@@ -146,7 +146,12 @@ const ringStyles = StyleSheet.create({
 // ─── Progress steps (4 segments across the 4 phases) ──────────────────────────
 function PhaseSteps({ phase }: { phase: Phase }) {
   return (
-    <View style={styles.steps}>
+    <View
+      style={styles.steps}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel="Progreso del ejercicio"
+      accessibilityValue={{ min: 1, max: 4, now: Math.min(phase, 3) + 1 }}>
       {[0, 1, 2, 3].map((i) => (
         <View
           key={i}
@@ -339,8 +344,9 @@ export default function GritoScreen() {
                 key={m.id}
                 onPress={() => chooseModality(m.id)}
                 style={[styles.modalityCard, active && styles.modalityCardActive]}
-                accessibilityRole="button"
-                accessibilityLabel={m.label}>
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${m.label}. ${m.sub}`}>
                 <MaterialIcons name={m.icon} size={26} color={active ? palette.goldText : palette.ash} />
                 <View style={styles.modalityText}>
                   <Text style={[styles.modalityLabel, active && { color: palette.goldText }]}>{m.label}</Text>
@@ -357,6 +363,7 @@ export default function GritoScreen() {
           onPress={() => modality && setPhase(3)}
           disabled={!modality}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !modality }}
           accessibilityLabel="Ejecutar y cerrar">
           <MaterialIcons name="arrow-forward" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>EJECUTAR Y CERRAR</Text>
