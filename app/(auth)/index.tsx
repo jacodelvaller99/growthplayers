@@ -205,6 +205,9 @@ export default function AuthScreen() {
           <View style={styles.modeSwitcher}>
             <Pressable
               onPress={() => reset('login')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: mode === 'login' }}
+              accessibilityLabel="Iniciar sesión"
               style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}>
               <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>
                 INICIAR SESIÓN
@@ -212,6 +215,9 @@ export default function AuthScreen() {
             </Pressable>
             <Pressable
               onPress={() => reset('register')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: mode === 'register' }}
+              accessibilityLabel="Registrarse"
               style={[styles.modeTab, mode === 'register' && styles.modeTabActive]}>
               <Text style={[styles.modeTabText, mode === 'register' && styles.modeTabTextActive]}>
                 REGISTRARSE
@@ -233,6 +239,9 @@ export default function AuthScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              textContentType="emailAddress"
+              autoComplete="email"
+              accessibilityLabel="Email"
               returnKeyType={mode === 'forgot' ? 'send' : 'next'}
               onSubmitEditing={mode === 'forgot' ? handleForgot : undefined}
             />
@@ -245,6 +254,9 @@ export default function AuthScreen() {
                 onChangeText={setPassword}
                 placeholder="••••••••"
                 secureTextEntry
+                textContentType={mode === 'register' ? 'newPassword' : 'password'}
+                autoComplete={mode === 'register' ? 'password-new' : 'password'}
+                accessibilityLabel="Contraseña"
                 returnKeyType={mode === 'register' ? 'next' : 'done'}
                 onSubmitEditing={mode === 'register' ? undefined : submit}
               />
@@ -259,6 +271,8 @@ export default function AuthScreen() {
                 placeholder="POLARIS-XXXX"
                 autoCapitalize="characters"
                 autoCorrect={false}
+                autoComplete="off"
+                accessibilityLabel="Código de acceso"
                 returnKeyType="done"
                 onSubmitEditing={submit}
               />
@@ -271,13 +285,13 @@ export default function AuthScreen() {
 
         {/* ── Feedback ── */}
         {!!error && (
-          <View style={styles.feedbackBox}>
+          <View style={styles.feedbackBox} accessibilityRole="alert" accessibilityLiveRegion="assertive">
             <MaterialIcons name="error-outline" size={16} color={palette.danger} />
             <Text style={[styles.feedbackText, { color: palette.danger }]}>{error}</Text>
           </View>
         )}
         {!!success && (
-          <View style={styles.feedbackBox}>
+          <View style={styles.feedbackBox} accessibilityRole="alert" accessibilityLiveRegion="polite">
             <MaterialIcons name="check-circle-outline" size={16} color={palette.success} />
             <Text style={[styles.feedbackText, { color: palette.success }]}>{success}</Text>
           </View>

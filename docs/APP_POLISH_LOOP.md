@@ -17,7 +17,7 @@
 
 ### Núcleo del journey
 - [x] app/(auth)/welcome.tsx — primera impresión · reduced-motion (a11y Apple HIG: salta la intro si el usuario reduce movimiento) + render smoke test móvil/desktop
-- [ ] app/(auth)/index.tsx — login/registro
+- [x] app/(auth)/index.tsx — login/registro · autofill de password managers (textContentType + autoComplete en email/pass/código) + a11y (errores role=alert/live-region, tabs con estado seleccionado) + render test login/register
 - [ ] app/(onboarding)/index.tsx — onboarding + consent
 - [ ] app/(tabs)/comando.tsx — home/dashboard
 - [ ] app/checkin.tsx — check-in
