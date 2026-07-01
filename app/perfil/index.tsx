@@ -31,8 +31,6 @@ import {
   PremiumCard,
   ProgressCard,
   SovereignDeltaTag,
-  SovereignScore,
-  screen,
   useScreen,
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
@@ -49,10 +47,13 @@ function scoreTierLabel(score: number): string {
   return 'INICIANDO';
 }
 
+// goldText (no gold): este color es principalmente TEXTO (número de 80px + tier label).
+// palette.gold (#FFC804) como texto es ilegible sobre superficie clara; goldText es
+// theme-aware. También se usa como fill (dot/barra), donde goldText funciona igual.
 function scoreTierColor(score: number): string {
-  if (score >= 900) return palette.gold;
+  if (score >= 900) return palette.goldText;
   if (score >= 700) return palette.success;
-  if (score >= 500) return palette.gold;
+  if (score >= 500) return palette.goldText;
   return palette.smoke;
 }
 
@@ -159,8 +160,7 @@ export default function PerfilSoberanoScreen() {
 
     try {
       if (Platform.OS === 'web') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const nav = (typeof navigator !== 'undefined' ? navigator : null) as any;
+        const nav = (typeof navigator !== 'undefined' ? navigator : null) as { share?: (d: unknown) => Promise<void>; clipboard?: { writeText?: (t: string) => Promise<void> } } | null;
         if (nav?.share) {
           await nav.share({ title: 'Mi Score Soberano — Polaris', text });
         } else if (nav?.clipboard?.writeText) {
@@ -194,6 +194,7 @@ export default function PerfilSoberanoScreen() {
         <Pressable
           style={styles.backBtn}
           onPress={() => router.back()}
+          accessibilityRole="button"
           accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
@@ -202,6 +203,8 @@ export default function PerfilSoberanoScreen() {
           style={[styles.shareIconBtn, sharing && { opacity: 0.5 }]}
           onPress={handleShare}
           disabled={sharing}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: sharing }}
           accessibilityLabel="Compartir Score Soberano">
           <MaterialIcons name="share" size={20} color={palette.goldText} />
         </Pressable>
@@ -263,8 +266,9 @@ export default function PerfilSoberanoScreen() {
           <Text style={styles.scoreMax}>/1000</Text>
         </View>
 
-        {/* Tier badge */}
-        <View style={[styles.tierBadge, { borderColor: tierColor + '55' }]}>
+        {/* Tier badge — borde con el color sólido del tier (no concatenar alpha:
+            tierColor puede ser un token cv() 'var(--c-*)' y 'var(...)55' es CSS inválido). */}
+        <View style={[styles.tierBadge, { borderColor: tierColor }]}>
           <View style={[styles.tierDot, { backgroundColor: tierColor }]} />
           <Text style={[styles.tierLabel, { color: tierColor }]}>{tier}</Text>
         </View>
@@ -340,6 +344,7 @@ export default function PerfilSoberanoScreen() {
       <Pressable
         style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
         onPress={() => router.push('/perfil/cliente' as never)}
+        accessibilityRole="button"
         accessibilityLabel="Ver mi memoria">
         <View style={styles.navIcon}>
           <MaterialIcons name="auto-stories" size={22} color={palette.goldText} />
@@ -356,6 +361,7 @@ export default function PerfilSoberanoScreen() {
       <Pressable
         style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
         onPress={() => router.push('/perfil/wearables' as never)}
+        accessibilityRole="button"
         accessibilityLabel="Ver dispositivos wearables">
         <View style={styles.navIcon}>
           <MaterialIcons name="monitor-heart" size={22} color={palette.goldText} />
@@ -371,6 +377,7 @@ export default function PerfilSoberanoScreen() {
       <Pressable
         style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
         onPress={() => router.push('/(tabs)/progreso' as never)}
+        accessibilityRole="button"
         accessibilityLabel="Ver perfil completo">
         <View style={styles.navIcon}>
           <MaterialIcons name="bar-chart" size={22} color={palette.ash} />
@@ -387,6 +394,8 @@ export default function PerfilSoberanoScreen() {
         style={[styles.shareCTA, (sharing || copied) && { opacity: 0.75 }]}
         onPress={handleShare}
         disabled={sharing}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: sharing }}
         accessibilityLabel="Compartir Score Soberano">
         <MaterialIcons
           name={copied ? 'check' : 'share'}
@@ -548,7 +557,9 @@ const styles = StyleSheet.create({
   // Score section — luxury hero
   scoreSection: {
     alignItems: 'center',
-    backgroundColor: 'rgba(10,10,10,0.8)',
+    // Token theme-aware (antes 'rgba(10,10,10,0.8)' hardcodeado): en tema claro el
+    // fondo se quedaba negro mientras el texto se invertía a oscuro → hero ilegible.
+    backgroundColor: palette.graphite,
     borderColor: palette.lineSoft,
     borderRadius: radii.md,
     borderWidth: 1,
