@@ -32,7 +32,7 @@
 - [x] app/bienestar/binaurales.tsx · a11y integral (estaba sin roles): back ×2, tarjetas de preset y mezclador (con estado selected), transporte del reproductor (iniciar/pausar/detener/reanudar/continuar/lanzar), toggle de modo + timer + ambiente con accessibilityState=selected + labels. SafetyWarning de binaurales INTACTO. render smoke test (lista + SafetyWarning).
 - [x] app/bienestar/respiracion.tsx · ya tenía buena a11y (back/CTA/chips con role+label) y SafetyWarning; añadido accessibilityState={selected} a los chips de técnica + render smoke test (orbe animado + SafetyWarning preservado).
 - [x] app/bienestar/meditacion.tsx · a11y (estaba sin roles): back ×2, tarjetas de sesión (label rico título/categoría/duración/completada) y transporte del reproductor (iniciar/pausar/detener×2/reanudar/completado). SafetyWarning (salud mental/conducción) INTACTO. render smoke test (lista + SafetyWarning).
-- [ ] app/bienestar/sueno.tsx
+- [x] app/bienestar/sueno.tsx · funcionalidad: botón "VER PLANES" era muerto (sin onPress) → ahora va a /pricing; ítems bloqueados ya no hacen tap muerto → van a /pricing (upsell). a11y: back + tarjetas de contenido (label con duración + estado premium) + CTA con role/label. SafetyWarning (insomnio/apnea) INTACTO. render smoke test free/premium.
 - [ ] app/bienestar/diario.tsx
 - [ ] app/bienestar/biblioteca.tsx
 - [ ] app/bienestar/internista.tsx

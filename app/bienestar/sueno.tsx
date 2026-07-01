@@ -162,7 +162,7 @@ export default function SuenoScreen() {
 
       {/* Header */}
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>SUEÑO</Text>
@@ -205,12 +205,15 @@ export default function SuenoScreen() {
               <Pressable
                 key={item.id}
                 onPress={() => {
-                  if (locked) return;
+                  // Bloqueado → llevar a planes (upsell) en vez de tap muerto.
+                  if (locked) { router.push('/pricing' as never); return; }
                   handlePlay(item, cat.color);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.title}, ${item.duration}${locked ? ', premium — ver planes' : ''}`}
                 style={({ pressed }) => [
                   styles.itemCard,
-                  pressed && !locked && { opacity: 0.75 },
+                  pressed && { opacity: 0.75 },
                 ]}>
                 <View style={[styles.itemIcon, { backgroundColor: cat.color + '22' }]}>
                   <MaterialIcons name={item.icon} size={22} color={locked ? palette.smoke : cat.color} />
@@ -242,7 +245,11 @@ export default function SuenoScreen() {
           <Text style={styles.premiumCtaBody}>
             Historias, Yoga Nidra, relajaciones guiadas y más con Polaris Premium.
           </Text>
-          <Pressable style={styles.premiumBtn}>
+          <Pressable
+            style={styles.premiumBtn}
+            onPress={() => router.push('/pricing' as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Ver planes">
             <Text style={styles.premiumBtnText}>VER PLANES</Text>
           </Pressable>
         </PremiumCard>
