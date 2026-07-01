@@ -31,19 +31,30 @@ function scoreColor(score: number): string {
 }
 
 function Row({ r, onPress }: { r: RankedUser; onPress: () => void }) {
+  const col = scoreColor(r.score);
+  // goldText es token de TEXTO; como fill de barra usamos el gold constante (regla de color).
+  const fillCol = col === palette.goldText ? palette.gold : col;
   return (
-    <Pressable onPress={onPress} hitSlop={4} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+    <Pressable
+      onPress={onPress}
+      hitSlop={4}
+      style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
+      accessibilityRole="button"
+      accessibilityLabel={`Puesto ${r.rank}: ${r.name}, score ${r.score}, percentil ${r.percentile}${r.topDriver ? `, lidera ${r.topDriver.label}` : ''}. Ver perfil`}>
       <Text style={s.rank}>{r.rank}</Text>
       <View style={{ flex: 1 }}>
         <Text style={s.name}>{r.name}</Text>
         <Text style={s.sub} numberOfLines={1}>
           {r.topDriver ? `Lidera: ${r.topDriver.label}` : 'Sin señal dominante'} · percentil {r.percentile}
         </Text>
-        <View style={s.barTrack}>
-          <View style={[s.barFill, { width: `${r.score}%`, backgroundColor: scoreColor(r.score) }]} />
+        <View
+          style={s.barTrack}
+          accessibilityRole="progressbar"
+          accessibilityValue={{ min: 0, max: 100, now: r.score }}>
+          <View style={[s.barFill, { width: `${r.score}%`, backgroundColor: fillCol }]} />
         </View>
       </View>
-      <Text style={[s.score, { color: scoreColor(r.score) }]}>{r.score}</Text>
+      <Text style={[s.score, { color: col }]}>{r.score}</Text>
       <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
     </Pressable>
   );
@@ -89,7 +100,13 @@ export default function AdminRankingScreen() {
           const active = dim === d;
           const label = d === 'TODOS' ? 'GENERAL' : DIMENSION_LABEL[d].toUpperCase();
           return (
-            <Pressable key={d} onPress={() => setDim(d)} style={[s.chip, active && s.chipActive]}>
+            <Pressable
+              key={d}
+              onPress={() => setDim(d)}
+              style={[s.chip, active && s.chipActive]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`Ordenar por ${label.toLowerCase()}`}>
               <Text style={[s.chipText, active && s.chipTextActive]}>{label}</Text>
             </Pressable>
           );
@@ -97,7 +114,7 @@ export default function AdminRankingScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={palette.gold} style={{ marginTop: spacing.xxxl }} />
+        <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xxxl }} />
       ) : ranked.length === 0 ? (
         <PremiumCard style={s.card}>
           <Text style={s.empty}>Aún no hay usuarios con señales para rankear.</Text>
