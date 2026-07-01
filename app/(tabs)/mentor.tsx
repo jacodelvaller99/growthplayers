@@ -639,6 +639,7 @@ export default function MentorScreen() {
               <TouchableOpacity
                 onPress={() => { loadThreads(); setShowThreads(true); }}
                 style={styles.chatsBtn}
+                accessibilityRole="button"
                 accessibilityLabel="Ver historial de chats">
                 <Text style={styles.chatsBtnText}>CHATS</Text>
               </TouchableOpacity>
@@ -831,6 +832,8 @@ export default function MentorScreen() {
                   <Pressable
                     key={t.id}
                     onPress={() => setShowThreads(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.title || 'Conversación sin título'}
                     style={styles.threadRow}>
                     <MaterialIcons name="chat-bubble-outline" size={16} color={palette.goldText} />
                     <View style={{ flex: 1 }}>

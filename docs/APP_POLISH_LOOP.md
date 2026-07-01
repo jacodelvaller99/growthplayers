@@ -22,7 +22,7 @@
 - [x] app/(tabs)/comando.tsx — home/dashboard · seguridad: window.open del link de sesión en vivo ahora con noopener,noreferrer (evita reverse-tabnabbing) + a11y: roles/labels en 7 tarjetas accionables que no los tenían (anomalía, NBA, ancla del Norte, comunidad, sesión en vivo, posts del preview, ver-todo) + render smoke test mobile/desktop de la home (la red que faltaba cuando un re-render tumbó el chat).
 - [x] app/checkin.tsx — check-in · guard anti-doble-tap en GUARDAR (saveCheckIn async → botón "GUARDANDO…"+disabled, re-habilita si falla) + fix typo "TERRENo"→"TERRENO" + a11y (roles/labels en pills de sugerencia) + render smoke test mobile/desktop (incluye micro-ritual con Animated/timers).
 - [x] app/(tabs)/norte.tsx — Mi Norte · guard anti-doble-tap en GUARDAR (updateNorthStar async → "GUARDANDO…"+disabled en ambos layouts) + a11y (roles/labels en CTA de estado vacío desktop+mobile y en pills de sugerencia; toast de éxito con accessibilityLiveRegion=polite+role=alert para screen readers) + render smoke test mobile-vacío/desktop-con-datos.
-- [ ] app/(tabs)/mentor.tsx — Norman
+- [x] app/(tabs)/mentor.tsx — Norman · a11y (role=button en botón CHATS y en filas del historial) + **render smoke test de la pantalla más crítica** (apertura sin mensajes + con historial; muchos hooks/IA mockeados). Guardrails intactos: disclosure IA persistente, crisis routing (lib/mentor.ts), abort/timeout, gate premium, modos. NO se tocó la cadena de seguridad.
 - [ ] app/(tabs)/programas.tsx — programa
 - [ ] app/(tabs)/progreso.tsx — progreso
 - [ ] app/mentoria/index.tsx — mentoría
