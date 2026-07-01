@@ -417,7 +417,12 @@ export default function UserDetailScreen() {
     if (!userId || !adminId) return;
     setSavingEdit(true);
     try {
-      await updateUserProfile({ adminId, userId, name: eName, label: eLabel });
+      const res = await updateUserProfile({ adminId, userId, name: eName, label: eLabel });
+      if (!res.success) {
+        // Antes se cerraba en silencio aunque fallara → "no me permite guardar".
+        Alert.alert('No se pudo guardar', res.error ?? 'Intenta de nuevo en un momento.');
+        return;
+      }
       setEditOpen(false);
       await load();
     } finally {

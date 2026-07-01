@@ -54,35 +54,23 @@ async function syncTier(
   // Normalize product names to canonical tier values expected by the app
   const normalizedTier = PRODUCT_TO_TIER[tier] ?? tier;
 
-  const payload: Record<string, unknown> = {
-    subscription_tier: normalizedTier,
-    updated_at: new Date().toISOString(),
-  };
-  if (expiresAt !== undefined) payload.subscription_expires_at = expiresAt ?? null;
-
-  // El tier vive en dos tablas (profiles + user_profiles). Si una se actualiza y
-  // la otra no, el app muestra un tier inconsistente. allSettled tolera la red,
-  // pero NO debemos tragarnos un fallo parcial en silencio: lo inspeccionamos y
-  // lo reportamos para que el admin sepa que quedó a medias.
-  const results = await Promise.allSettled([
-    intel.profiles().update(payload).eq('id', userId),          // profiles: id = auth.uid()
-    supa.from('user_profiles').update(payload).eq('user_id', userId), // user_profiles
-  ]);
-
-  const errors: string[] = [];
-  results.forEach((r, i) => {
-    const table = i === 0 ? 'profiles' : 'user_profiles';
-    if (r.status === 'rejected') {
-      errors.push(`${table}: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
-    } else {
-      // fulfilled todavía puede traer un error de Supabase en el cuerpo.
-      const err = (r.value as { error?: { message?: string } } | null)?.error;
-      if (err) errors.push(`${table}: ${err.message ?? 'update failed'}`);
-    }
+  // El tier vive en dos tablas (profiles + user_profiles). Un UPDATE directo con
+  // el cliente anon a OTRO usuario matchea 0 filas (RLS self-only) y el trigger
+  // anti-escalada bloquea subscription_tier desde 'authenticated' → el mirror
+  // fallaba en silencio (membresía activa, perfil en 'free'). Vía RPC SECURITY
+  // DEFINER admin_sync_tier: verifica al admin llamante y espeja a AMBAS tablas.
+  const { error } = await supa.rpc('admin_sync_tier', {
+    target_user: userId,
+    new_tier: normalizedTier,
+    set_expires: expiresAt !== undefined,
+    new_expires_at: expiresAt ?? null,
   });
 
+  const errors: string[] = [];
+  if (error) errors.push(`admin_sync_tier: ${error.message}`);
+
   if (errors.length > 0) {
-    console.warn(`[admin] syncTier parcial para ${userId}:`, errors.join(' · '));
+    console.warn(`[admin] syncTier falló para ${userId}:`, errors.join(' · '));
   }
   return { ok: errors.length === 0, errors };
 }
@@ -331,14 +319,20 @@ export async function updateUserProfile(params: {
   label?: string;           // user_profiles.tier — el badge que el admin ve como "rol"
 }): Promise<{ success: boolean; error?: string }> {
   const { adminId, userId, name, label } = params;
-  const patch: Record<string, unknown> = {};
-  if (typeof name === 'string') patch.name = name.trim();
-  if (typeof label === 'string') patch.tier = label.trim();
-  if (Object.keys(patch).length === 0) return { success: true };
+  const newName = typeof name === 'string' ? name.trim() : null;
+  const newTier = typeof label === 'string' ? label.trim() : null;
+  if (!newName && !newTier) return { success: true };
   try {
-    const { error } = await supa.from('user_profiles').update(patch).eq('user_id', userId);
+    // Vía RPC SECURITY DEFINER (admin_update_user_profile): un UPDATE directo con
+    // el cliente anon matchea 0 filas para OTRO usuario (RLS self-only) y no da
+    // error → guardado silencioso. La RPC verifica al admin llamante en servidor.
+    const { error } = await supa.rpc('admin_update_user_profile', {
+      target_user: userId,
+      new_name: newName,
+      new_tier: newTier,
+    });
     if (error) return { success: false, error: error.message };
-    await auditLog(adminId, 'update_user_profile', 'user', userId, patch);
+    await auditLog(adminId, 'update_user_profile', 'user', userId, { name: newName, tier: newTier });
     return { success: true };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Error desconocido';
@@ -399,11 +393,15 @@ export async function extendMembership(params: {
 
     if (error) throw new Error(error.message);
 
-    // Sync expiry date to profiles
-    await Promise.allSettled([
-      intel.profiles().update({ subscription_expires_at: newExpiresAt }).eq('id', userId),
-      supa.from('user_profiles').update({ subscription_expires_at: newExpiresAt }).eq('user_id', userId),
-    ]);
+    // Sync expiry date to profiles — vía RPC SECURITY DEFINER (el UPDATE directo
+    // anon a otro usuario fallaba en silencio, ver admin_sync_tier). new_tier NULL
+    // = solo actualizar la expiración, sin tocar el tier.
+    await supa.rpc('admin_sync_tier', {
+      target_user: userId,
+      new_tier: null,
+      set_expires: true,
+      new_expires_at: newExpiresAt,
+    });
 
     await auditLog(adminId, 'extend_membership', 'user', userId, {
       membership_id: membershipId, new_expires_at: newExpiresAt,
