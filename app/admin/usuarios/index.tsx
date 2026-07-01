@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin CMI — Usuarios
  *
  * Lista completa de usuarios con búsqueda y filtros.
@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, useScreen } from '@/components/polaris';
 import { TIER_ORDER, getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -42,9 +42,12 @@ const isNuevo = (u: AdminUser) =>
 function MemberBadge({ tier }: { tier?: string }) {
   // getTierColor/getTierLabel cubren los 5 tiers (free→growthplayers) con su color real.
   const color = getTierColor(tier);
+  // El tier premium es #FFC804 (gold brillante). Como TEXTO sobre la fila (theme-aware)
+  // es ilegible en tema claro → goldText. El borde se queda con el color real del tier.
+  const textColor = color === palette.gold ? palette.goldText : color;
   return (
     <View style={[rb.pill, { borderColor: color }]}>
-      <Text style={[rb.pillText, { color }]}>
+      <Text style={[rb.pillText, { color: textColor }]}>
         {getTierLabel(tier).toUpperCase()}
       </Text>
     </View>
@@ -65,8 +68,14 @@ function RoleBadge({ kind }: { kind: 'superadmin' | 'admin' }) {
 
 function UserRow({ user, notes, onPress }: { user: AdminUser; notes?: NoteSummary; onPress: () => void }) {
   const initials = user.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  const roleLabel = user.is_superadmin ? 'SuperAdmin' : user.is_admin ? 'Admin' : (user.subscription_tier ?? 'free');
   return (
-    <Pressable style={s.row} onPress={onPress}>
+    <Pressable
+      style={s.row}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${user.name}, ${roleLabel}. Abrir dossier`}>
+
       <View style={s.avatar}>
         <Text style={s.avatarText}>{initials}</Text>
       </View>
@@ -244,7 +253,7 @@ export default function UsuariosScreen() {
           onChangeText={setSearch}
         />
         {search.length > 0 && (
-          <Pressable onPress={() => setSearch('')} style={{ marginRight: spacing.md }}>
+          <Pressable onPress={() => setSearch('')} style={{ marginRight: spacing.md }} accessibilityRole="button" accessibilityLabel="Limpiar búsqueda">
             <MaterialIcons name="close" size={18} color={palette.smoke} />
           </Pressable>
         )}
@@ -256,7 +265,10 @@ export default function UsuariosScreen() {
           <Pressable
             key={f}
             style={[s.filterChip, filter === f && s.filterChipActive]}
-            onPress={() => setFilter(f)}>
+            onPress={() => setFilter(f)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: filter === f }}
+            accessibilityLabel={`Filtro ${f}`}>
             <Text style={[s.filterText, filter === f && s.filterTextActive]}>{f}</Text>
           </Pressable>
         ))}
@@ -293,7 +305,7 @@ export default function UsuariosScreen() {
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View style={m.header}>
                 <Text style={m.title}>CREAR PERFIL</Text>
-                <Pressable onPress={() => setCreateOpen(false)} hitSlop={8}>
+                <Pressable onPress={() => setCreateOpen(false)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cerrar">
                   <MaterialIcons name="close" size={20} color={palette.ash} />
                 </Pressable>
               </View>
@@ -337,7 +349,10 @@ export default function UsuariosScreen() {
                     <Pressable
                       key={t}
                       onPress={() => setCTier(t)}
-                      style={[m.tierChip, active && { backgroundColor: getTierColor(t), borderColor: getTierColor(t) }]}>
+                      style={[m.tierChip, active && { backgroundColor: getTierColor(t), borderColor: getTierColor(t) }]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`Tier ${getTierLabel(t)}`}>
                       <Text style={[m.tierChipText, active && { color: palette.ink }]}>{getTierLabel(t)}</Text>
                     </Pressable>
                   );
@@ -345,13 +360,16 @@ export default function UsuariosScreen() {
               </View>
 
               <View style={m.footer}>
-                <Pressable style={m.cancelBtn} onPress={() => setCreateOpen(false)}>
+                <Pressable style={m.cancelBtn} onPress={() => setCreateOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
                   <Text style={m.cancelText}>CANCELAR</Text>
                 </Pressable>
                 <Pressable
                   style={[m.submitBtn, creating && { opacity: 0.6 }]}
                   onPress={handleCreate}
-                  disabled={creating}>
+                  disabled={creating}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: creating }}
+                  accessibilityLabel="Crear perfil">
                   {creating ? (
                     <ActivityIndicator color={palette.ink} size="small" />
                   ) : (
