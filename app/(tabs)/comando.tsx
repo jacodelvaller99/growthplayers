@@ -366,6 +366,8 @@ export default function DashboardScreen() {
   const anomalyBlock = intelligence.anomaly_detected && intelligence.anomaly_type && (
     <Pressable
       onPress={() => router.push('/(tabs)/mentor')}
+      accessibilityRole="button"
+      accessibilityLabel="Señal detectada — hablar con Norman"
       style={({ pressed }) => [styles.anomalyCard, pressed && { opacity: 0.85 }]}>
       <MaterialIcons name="warning-amber" size={18} color={palette.goldText} />
       <View style={styles.anomalyTextBlock}>
@@ -385,6 +387,8 @@ export default function DashboardScreen() {
   const nbaBlock = nextActionConfig && intelligence.next_action_urgency !== 'low' && (
     <Pressable
       onPress={() => router.push(nextActionConfig.screen as never)}
+      accessibilityRole="button"
+      accessibilityLabel={`Próxima acción recomendada: ${nextActionConfig.label}`}
       style={({ pressed }) => [styles.nbaCard, pressed && { opacity: 0.85 }]}>
       <View style={styles.nbaBadge}>
         <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.ink} />
@@ -404,6 +408,8 @@ export default function DashboardScreen() {
   const northAnchorStrip = state.northStar.dailyReminder ? (
     <Pressable
       onPress={() => router.push('/(tabs)/norte')}
+      accessibilityRole="button"
+      accessibilityLabel="Recordatorio de tu Norte — ir a Mi Norte"
       style={({ pressed }) => [styles.northAnchor, pressed && { opacity: 0.8 }]}>
       <MaterialIcons name="north" size={12} color={palette.goldText} />
       <Text style={styles.northAnchorText} numberOfLines={2}>
@@ -698,12 +704,14 @@ export default function DashboardScreen() {
       ]}
       onPress={() => {
         if (typeof window !== 'undefined') {
-          window.open(LIVE_SESSION.joinUrl, '_blank');
+          // noopener,noreferrer: evita reverse-tabnabbing en el link externo.
+          window.open(LIVE_SESSION.joinUrl, '_blank', 'noopener,noreferrer');
         } else {
           const Linking = require('expo-linking');
           Linking.openURL(LIVE_SESSION.joinUrl);
         }
       }}
+      accessibilityRole="button"
       accessibilityLabel="Unirse a la sesión en vivo">
       {/* Live indicator */}
       <View style={styles.liveTopRow}>
@@ -763,6 +771,7 @@ export default function DashboardScreen() {
     <Pressable
       style={({ pressed }) => [styles.communityCard, pressed && { opacity: 0.85 }]}
       onPress={() => router.push('/bienestar/comunidad' as never)}
+      accessibilityRole="button"
       accessibilityLabel="Ver comunidad de Operadores Soberanos">
       <View style={styles.communityHeader}>
         <View style={styles.communityIconBox}>
@@ -2217,6 +2226,7 @@ function CommunityPreview() {
           key={p.id}
           onPress={() => router.push('/bienestar/comunidad' as never)}
           style={({ pressed }) => [cp.post, pressed && { opacity: 0.85 }]}
+          accessibilityRole="button"
           accessibilityLabel={`Publicación de ${p.author}`}>
           <View style={cp.avatar}>
             <Text style={cp.avatarText}>{p.author.charAt(0).toUpperCase()}</Text>
@@ -2229,6 +2239,8 @@ function CommunityPreview() {
       ))}
       <Pressable
         onPress={() => router.push('/bienestar/comunidad' as never)}
+        accessibilityRole="button"
+        accessibilityLabel="Ver toda la comunidad"
         style={({ pressed }) => [cp.viewAll, pressed && { opacity: 0.8 }]}>
         <Text style={cp.viewAllText}>VER TODA LA COMUNIDAD</Text>
         <MaterialIcons name="arrow-forward" size={14} color={palette.goldText} />
