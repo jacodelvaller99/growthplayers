@@ -36,7 +36,7 @@
 - [x] app/bienestar/diario.tsx · a11y: back + selector de tipo (accessibilityState=selected) + input con label + botón guardar (state disabled) + banners de éxito/error con accessibilityLiveRegion (polite/assertive) para screen readers. Buen manejo de error ya existía (texto preservado en fallo). render smoke test.
 - [x] app/bienestar/biblioteca.tsx · funcionalidad: quitados los chips de tiempo (filtro MUERTO — togglaban estado pero no afectaban resultados; las categorías no tienen duración) → menos falsa afordancia + declutter. a11y: back + input de búsqueda + "mostrar todas" con role/label. Ya tenía LECTURAS reales + curaduría honesta (Ola 2); render test bibliotecaScreen existente sigue verde.
 - [x] app/bienestar/internista.tsx · a11y: botones del consent gate (aceptar/ahora-no), quick-prompts e input con role/label (back/exams/send ya tenían). GUARDRAILS INTACTOS: consent gate, disclaimer permanente, derivación red-flag sin LLM (lib/internist.ts), PHI/RLS, admin-blind. render smoke test (loading/consent, storage forzado a web).
-- [ ] app/bienestar/examenes.tsx
+- [x] app/bienestar/examenes.tsx · seguridad UX: borrar examen (PHI, irreversible) ahora PIDE CONFIRMACIÓN (Alert nativo / window.confirm web) antes de borrar — antes un tap borraba un registro médico. La pantalla ya tenía a11y completa (back/panel/switch-compartir/upload/abrir con roles+estados) + window.open con noopener + bucket privado/RLS/consent. render smoke test.
 - [ ] app/bienestar/habitos.tsx
 - [ ] app/bienestar/ayuno.tsx
 - [ ] app/bienestar/nutricion.tsx

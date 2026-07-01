@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   Pressable,
@@ -151,10 +152,22 @@ export default function ExamenesScreen() {
     }
   }, []);
 
-  const handleDelete = useCallback(async (exam: MedicalExamRecord) => {
-    const ok = await deleteExam(exam);
-    if (ok) setExams((prev) => prev.filter((e) => e.id !== exam.id));
-    else setUploadMsg('No se pudo borrar el examen.');
+  const handleDelete = useCallback((exam: MedicalExamRecord) => {
+    // Borrado de PHI = irreversible → confirmar antes.
+    const proceed = async () => {
+      const ok = await deleteExam(exam);
+      if (ok) setExams((prev) => prev.filter((e) => e.id !== exam.id));
+      else setUploadMsg('No se pudo borrar el examen.');
+    };
+    const msg = `¿Borrar "${exam.file_name}"? Esta acción no se puede deshacer.`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm(msg)) void proceed();
+      return;
+    }
+    Alert.alert('Borrar examen', msg, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Borrar', style: 'destructive', onPress: () => { void proceed(); } },
+    ]);
   }, []);
 
   return (
