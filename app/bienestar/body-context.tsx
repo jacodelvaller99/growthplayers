@@ -82,8 +82,11 @@ export function BodyContextCard({ frame }: { frame: string }) {
 
 function Metric({ label, value, unit }: { label: string; value: string; unit: string }) {
   const has = value !== '—';
+  // Un solo elemento accesible por métrica, en orden natural (etiqueta → valor),
+  // en vez de leer "45", "ms", "HRV" suelto y fuera de orden.
+  const a11yLabel = has ? `${label}: ${value} ${unit}` : `${label}: sin dato`;
   return (
-    <View style={styles.metric}>
+    <View style={styles.metric} accessible accessibilityLabel={a11yLabel}>
       <Text style={styles.metricValue}>
         {value}
         {has ? <Text style={styles.metricUnit}> {unit}</Text> : null}
