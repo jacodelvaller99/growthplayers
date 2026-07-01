@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin CMI — Contenido
  *
  * Diarios (journal_entries), conversaciones con mentor, respuestas de lecciones.
@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { fetchJournalEntries, fetchMentorConversations } from '@/lib/admin/queries';
 import type { JournalEntry, MentorConversation } from '@/lib/admin/types';
@@ -39,7 +39,7 @@ function JournalCard({ entry, onUserPress }: { entry: JournalEntry; onUserPress:
   return (
     <PremiumCard style={jc.card}>
       <View style={jc.header}>
-        <Pressable onPress={onUserPress}>
+        <Pressable onPress={onUserPress} accessibilityRole="button" accessibilityLabel={`Ver perfil de ${entry.user_name ?? 'usuario'}`}>
           <Text style={jc.userId}>👤 {entry.user_name ?? entry.user_id.substring(0, 8)}</Text>
         </Pressable>
         <Text style={jc.time}>{timeAgo(entry.created_at)}</Text>
@@ -48,7 +48,11 @@ function JournalCard({ entry, onUserPress }: { entry: JournalEntry; onUserPress:
       {entry.mood !== null && entry.mood !== undefined && (
         <Text style={jc.mood}>Mood: {entry.mood}/10</Text>
       )}
-      <Pressable onPress={() => setExpanded(e => !e)}>
+      <Pressable
+        onPress={() => setExpanded(e => !e)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={expanded ? 'Contraer entrada de diario' : 'Ver entrada de diario completa'}>
         <Text style={jc.content} numberOfLines={expanded ? undefined : 3}>
           {entry.content}
         </Text>
@@ -71,11 +75,15 @@ function ConvThread({ convs, userId, onUserPress }: {
   return (
     <PremiumCard style={cv.card}>
       <View style={cv.header}>
-        <Pressable onPress={onUserPress}>
+        <Pressable onPress={onUserPress} accessibilityRole="button" accessibilityLabel={`Ver perfil de ${sample.user_name ?? 'usuario'}`}>
           <Text style={cv.userId}>👤 {sample.user_name ?? userId.substring(0, 8)}</Text>
         </Pressable>
         <Text style={cv.count}>{convs.length} mensajes</Text>
-        <Pressable onPress={() => setCollapsed(c => !c)}>
+        <Pressable
+          onPress={() => setCollapsed(c => !c)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: !collapsed }}
+          accessibilityLabel={collapsed ? `Expandir conversación (${convs.length} mensajes)` : 'Contraer conversación'}>
           <MaterialIcons name={collapsed ? 'expand-more' : 'expand-less'} size={18} color={palette.ash} />
         </Pressable>
       </View>
@@ -140,7 +148,10 @@ export default function ContenidoScreen() {
       </View>
 
       {/* Privacy banner */}
-      <View style={s.privacyBanner}>
+      <View
+        style={s.privacyBanner}
+        accessible
+        accessibilityLabel="Contenido privado de cada usuario. Solo visible para administradores del programa.">
         <MaterialIcons name="lock" size={14} color={palette.warning} />
         <Text style={s.privacyText}>
           Contenido privado de cada usuario. Solo visible para administradores del programa.
@@ -153,7 +164,10 @@ export default function ContenidoScreen() {
           <Pressable
             key={t}
             style={[s.tabBtn, tab === t && s.tabBtnActive]}
-            onPress={() => setTab(t)}>
+            onPress={() => setTab(t)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === t }}
+            accessibilityLabel={t === 'diarios' ? `Diarios, ${journals.length} entradas` : `Conversaciones, ${Object.keys(convsByUser).length} usuarios`}>
             <Text style={[s.tabText, tab === t && s.tabTextActive]}>
               {t.toUpperCase()}
               {t === 'diarios' ? ` (${journals.length})` : ` (${Object.keys(convsByUser).length})`}
