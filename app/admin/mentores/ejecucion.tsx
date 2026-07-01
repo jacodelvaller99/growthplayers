@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin — Mentor Execution OS (dashboard cross-client).
  *
  * Operación del equipo de mentoría: quién necesita intervención, quién está más
@@ -11,7 +11,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
-import { palette, radii, spacing, typography } from '@/constants/theme';
+import { palette, spacing, typography } from '@/constants/theme';
 import { fetchExecutionDashboard, type ExecutionDashboardRow } from '@/lib/mentorExecution';
 
 const MOMENTUM_LABEL: Record<string, string> = {
@@ -19,11 +19,16 @@ const MOMENTUM_LABEL: Record<string, string> = {
 };
 const MOMENTUM_RANK: Record<string, number> = { rising: 0, stable: 1, fragile: 2, declining: 3, critical: 4 };
 
-function Row({ row, metric, metricColor, onPress }: {
-  row: ExecutionDashboardRow; metric: string; metricColor?: string; onPress: () => void;
+function Row({ row, metric, metricA11y, metricColor, onPress }: {
+  row: ExecutionDashboardRow; metric: string; metricA11y: string; metricColor?: string; onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} hitSlop={4} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+    <Pressable
+      onPress={onPress}
+      hitSlop={4}
+      style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${row.name}, ${metricA11y}, ${row.openTasks} tareas abiertas, ${row.overdue} vencidas, momentum ${MOMENTUM_LABEL[row.momentum] ?? row.momentum}. Ver perfil`}>
       <View style={{ flex: 1 }}>
         <Text style={s.rowName}>{row.name}</Text>
         <Text style={s.rowSub} numberOfLines={1}>
@@ -53,19 +58,25 @@ function MomentumHero({ rows }: { rows: ExecutionDashboardRow[] }) {
   const segments = [
     { count: counts.critical,  color: palette.danger,   label: 'CRÍTICO' },
     { count: counts.declining, color: palette.warning,  label: 'CAÍDA' },
-    { count: counts.fragile,   color: palette.goldText, label: 'FRÁGIL' },
+    { count: counts.fragile,   color: palette.gold,     label: 'FRÁGIL' },
     { count: counts.stable,    color: palette.ash,      label: 'ESTABLE' },
     { count: counts.rising,    color: palette.success,  label: 'ASCENSO' },
   ];
   return (
     <PremiumCard style={s.heroCard}>
-      <View style={s.heroHead}>
+      <View
+        style={s.heroHead}
+        accessible
+        accessibilityLabel={`Equipo de ${total}, ${alertPct} por ciento con momentum en riesgo`}>
         <Text style={s.heroTotal}>EQUIPO: {total}</Text>
         <Text style={[s.heroAlert, { color: alertPct >= 30 ? palette.danger : alertPct >= 15 ? palette.warning : palette.success }]}>
           {alertPct}% MOMENTUM EN RIESGO
         </Text>
       </View>
-      <View style={s.heroBar}>
+      <View
+        style={s.heroBar}
+        accessible
+        accessibilityLabel={`Distribución de momentum: crítico ${counts.critical}, en caída ${counts.declining}, frágil ${counts.fragile}, estable ${counts.stable}, en ascenso ${counts.rising}`}>
         {segments.map((seg, i) => seg.count > 0 ? (
           <View key={i} style={[s.heroSeg, { flex: seg.count, backgroundColor: seg.color }]} />
         ) : null)}
@@ -122,7 +133,7 @@ export default function AdminEjecucionScreen() {
       <Text style={s.intro}>Operación del equipo: a quién intervenir, quién está retrasado, quién en caída.</Text>
 
       {loading ? (
-        <ActivityIndicator color={palette.gold} style={{ marginTop: spacing.xxxl }} />
+        <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xxxl }} />
       ) : rows.length === 0 ? (
         <PremiumCard style={s.card}>
           <Text style={s.empty}>Aún no hay tareas operativas. Aparecerán al confirmar mentorías y al detectar compromisos en los chats.</Text>
@@ -134,19 +145,19 @@ export default function AdminEjecucionScreen() {
           <GoldDivider label="NECESITAN INTERVENCIÓN" />
           <PremiumCard style={s.card}>
             {byAttention.length === 0 ? <Text style={s.empty}>Nadie en alerta.</Text> :
-              byAttention.map((r) => <Row key={r.user_id} row={r} metric={`${r.attention}`} metricColor={attColor(r.attention)} onPress={() => go(r.user_id)} />)}
+              byAttention.map((r) => <Row key={r.user_id} row={r} metric={`${r.attention}`} metricA11y={`atención ${r.attention} de 100`} metricColor={attColor(r.attention)} onPress={() => go(r.user_id)} />)}
           </PremiumCard>
 
           <GoldDivider label="MÁS RETRASADOS" />
           <PremiumCard style={s.card}>
             {byOverdue.length === 0 ? <Text style={s.empty}>Sin tareas vencidas.</Text> :
-              byOverdue.map((r) => <Row key={r.user_id} row={r} metric={`${r.overdue}`} metricColor={palette.warning} onPress={() => go(r.user_id)} />)}
+              byOverdue.map((r) => <Row key={r.user_id} row={r} metric={`${r.overdue}`} metricA11y={`${r.overdue} tareas vencidas`} metricColor={palette.warning} onPress={() => go(r.user_id)} />)}
           </PremiumCard>
 
           <GoldDivider label="MOMENTUM EN RIESGO" />
           <PremiumCard style={s.card}>
             {byMomentum.length === 0 ? <Text style={s.empty}>Momentum saludable en todos.</Text> :
-              byMomentum.map((r) => <Row key={r.user_id} row={r} metric={(MOMENTUM_LABEL[r.momentum] ?? '').toUpperCase()} metricColor={palette.danger} onPress={() => go(r.user_id)} />)}
+              byMomentum.map((r) => <Row key={r.user_id} row={r} metric={(MOMENTUM_LABEL[r.momentum] ?? '').toUpperCase()} metricA11y={`momentum en ${MOMENTUM_LABEL[r.momentum] ?? r.momentum}`} metricColor={palette.danger} onPress={() => go(r.user_id)} />)}
           </PremiumCard>
         </>
       )}
