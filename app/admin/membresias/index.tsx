@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin CMI — Gestión de Membresías (completo)
  *
  * - Lista paginada con filtros (Todas / Activas / Expiradas / Canceladas)
@@ -7,11 +7,10 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -22,7 +21,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import {
   SUBSCRIPTION_TIERS,
   TIER_ORDER,
@@ -80,10 +79,13 @@ function Toast({ msg, type }: { msg: string; type: 'success' | 'error' }) {
 // ─── Tier badge ───────────────────────────────────────────────────────────────
 function TierBadge({ tier }: { tier: string }) {
   const col = getTierColor(tier);
+  // El tier premium es #FFC804 (gold brillante). Como TEXTO sobre superficie theme-aware
+  // es ilegible en tema claro → goldText. Borde/dot conservan el color real del tier.
+  const colText = col === palette.gold ? palette.goldText : col;
   return (
     <View style={[tb.wrap, { borderColor: col }]}>
       <View style={[tb.dot, { backgroundColor: col }]} />
-      <Text style={[tb.text, { color: col }]}>{getTierLabel(tier).toUpperCase()}</Text>
+      <Text style={[tb.text, { color: colText }]}>{getTierLabel(tier).toUpperCase()}</Text>
     </View>
   );
 }
@@ -94,7 +96,6 @@ export default function MembresiasScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId: adminId } = useLifeFlow();
-  const { userId: preselectedUserId } = useLocalSearchParams<{ userId?: string }>();
 
   const [memberships, setMemberships]   = useState<UserMembership[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -270,7 +271,9 @@ export default function MembresiasScreen() {
           <Text style={s.title}>MEMBRESÍAS</Text>
           <Pressable
             style={s.activateBtn}
-            onPress={() => setActivateOpen(true)}>
+            onPress={() => setActivateOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Activar membresía">
             <MaterialIcons name="add" size={16} color={palette.ink} />
             <Text style={s.activateBtnText}>ACTIVAR</Text>
           </Pressable>
@@ -282,7 +285,10 @@ export default function MembresiasScreen() {
             <Pressable
               key={f.value}
               onPress={() => setFilterStatus(f.value)}
-              style={[s.filterChip, filterStatus === f.value && s.filterChipActive]}>
+              style={[s.filterChip, filterStatus === f.value && s.filterChipActive]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: filterStatus === f.value }}
+              accessibilityLabel={`Filtro ${f.label}`}>
               <Text style={[s.filterText, filterStatus === f.value && s.filterTextActive]}>
                 {f.label}
               </Text>
@@ -328,22 +334,22 @@ export default function MembresiasScreen() {
                 {m.status === 'active' && (
                   <View style={s.rowActions}>
                     {getTiersAbove(m.product).length > 0 && (
-                      <Pressable style={s.rowBtn} onPress={() => openAction(m, 'upgrade')}>
+                      <Pressable style={s.rowBtn} onPress={() => openAction(m, 'upgrade')} accessibilityRole="button" accessibilityLabel={`Subir de nivel a ${m.user_name ?? 'usuario'}`}>
                         <MaterialIcons name="arrow-upward" size={12} color={palette.goldText} />
                         <Text style={s.rowBtnText}>SUBIR</Text>
                       </Pressable>
                     )}
                     {getTiersBelow(m.product).length > 0 && (
-                      <Pressable style={s.rowBtn} onPress={() => openAction(m, 'downgrade')}>
+                      <Pressable style={s.rowBtn} onPress={() => openAction(m, 'downgrade')} accessibilityRole="button" accessibilityLabel={`Bajar de nivel a ${m.user_name ?? 'usuario'}`}>
                         <MaterialIcons name="arrow-downward" size={12} color={palette.ash} />
                         <Text style={[s.rowBtnText, { color: palette.ash }]}>BAJAR</Text>
                       </Pressable>
                     )}
-                    <Pressable style={s.rowBtn} onPress={() => openAction(m, 'extend')}>
+                    <Pressable style={s.rowBtn} onPress={() => openAction(m, 'extend')} accessibilityRole="button" accessibilityLabel={`Extender membresía de ${m.user_name ?? 'usuario'}`}>
                       <MaterialIcons name="schedule" size={12} color={palette.ash} />
                       <Text style={[s.rowBtnText, { color: palette.ash }]}>EXTENDER</Text>
                     </Pressable>
-                    <Pressable style={s.rowBtn} onPress={() => openAction(m, 'cancel')}>
+                    <Pressable style={s.rowBtn} onPress={() => openAction(m, 'cancel')} accessibilityRole="button" accessibilityLabel={`Cancelar membresía de ${m.user_name ?? 'usuario'}`}>
                       <MaterialIcons name="cancel" size={12} color={palette.danger} />
                       <Text style={[s.rowBtnText, { color: palette.danger }]}>CANCELAR</Text>
                     </Pressable>
@@ -370,8 +376,8 @@ export default function MembresiasScreen() {
           <View style={modal.sheet}>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View style={modal.header}>
-                <Text style={modal.title}>ACTIVAR MEMBRESÍA</Text>
-                <Pressable onPress={() => setActivateOpen(false)}>
+                <Text style={modal.title} accessibilityRole="header">ACTIVAR MEMBRESÍA</Text>
+                <Pressable onPress={() => setActivateOpen(false)} accessibilityRole="button" accessibilityLabel="Cerrar">
                   <MaterialIcons name="close" size={20} color={palette.ash} />
                 </Pressable>
               </View>
@@ -382,7 +388,7 @@ export default function MembresiasScreen() {
                 <View style={modal.selectedUser}>
                   <Text style={modal.selectedName}>{selectedUser.name}</Text>
                   <TierBadge tier={selectedUser.role ?? 'free'} />
-                  <Pressable onPress={() => setSelectedUser(null)}>
+                  <Pressable onPress={() => setSelectedUser(null)} accessibilityRole="button" accessibilityLabel="Quitar usuario seleccionado">
                     <MaterialIcons name="close" size={16} color={palette.smoke} />
                   </Pressable>
                 </View>
@@ -401,7 +407,9 @@ export default function MembresiasScreen() {
                         <Pressable
                           key={u.id}
                           style={modal.dropdownItem}
-                          onPress={() => { setSelectedUser(u); setUserResults([]); setUserQuery(''); }}>
+                          onPress={() => { setSelectedUser(u); setUserResults([]); setUserQuery(''); }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Seleccionar ${u.name}`}>
                           <Text style={modal.dropdownName}>{u.name}</Text>
                           <TierBadge tier={u.role ?? 'free'} />
                         </Pressable>
@@ -417,7 +425,10 @@ export default function MembresiasScreen() {
                 <Pressable
                   key={t}
                   style={[modal.tierRow, selectedTier === t && modal.tierRowActive]}
-                  onPress={() => setSelectedTier(t)}>
+                  onPress={() => setSelectedTier(t)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selectedTier === t }}
+                  accessibilityLabel={`Nivel ${getTierLabel(t)}`}>
                   <View style={[modal.tierDot, { backgroundColor: getTierColor(t) }]} />
                   <Text style={[modal.tierName, selectedTier === t && { color: palette.ivory }]}>
                     {getTierLabel(t)}
@@ -449,7 +460,10 @@ export default function MembresiasScreen() {
                   <Pressable
                     key={d.label}
                     style={[modal.durationChip, durationDays === d.days && modal.durationChipActive]}
-                    onPress={() => setDurationDays(d.days)}>
+                    onPress={() => setDurationDays(d.days)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: durationDays === d.days }}
+                    accessibilityLabel={`Duración ${d.label}`}>
                     <Text style={[modal.durationText, durationDays === d.days && modal.durationTextActive]}>
                       {d.label}
                     </Text>
@@ -470,13 +484,16 @@ export default function MembresiasScreen() {
 
               {/* Actions */}
               <View style={modal.footer}>
-                <Pressable style={modal.cancelBtn} onPress={() => setActivateOpen(false)}>
+                <Pressable style={modal.cancelBtn} onPress={() => setActivateOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
                   <Text style={modal.cancelText}>CANCELAR</Text>
                 </Pressable>
                 <Pressable
                   style={[modal.submitBtn, (!selectedUser || saving) && modal.submitBtnDisabled]}
                   onPress={handleActivate}
-                  disabled={!selectedUser || saving}>
+                  disabled={!selectedUser || saving}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !selectedUser || saving }}
+                  accessibilityLabel="Activar membresía">
                   {saving ? (
                     <ActivityIndicator color={palette.ink} size="small" />
                   ) : (
@@ -509,7 +526,7 @@ export default function MembresiasScreen() {
                  actionType === 'extend'    ? '⏱ EXTENDER'         :
                                               '✖ CANCELAR MEMBRESÍA'}
               </Text>
-              <Pressable onPress={() => { setActionTarget(null); setActionType(null); }}>
+              <Pressable onPress={() => { setActionTarget(null); setActionType(null); }} accessibilityRole="button" accessibilityLabel="Cerrar">
                 <MaterialIcons name="close" size={20} color={palette.ash} />
               </Pressable>
             </View>
@@ -531,7 +548,10 @@ export default function MembresiasScreen() {
                   <Pressable
                     key={t}
                     style={[modal.tierRow, actionTier === t && modal.tierRowActive]}
-                    onPress={() => setActionTier(t)}>
+                    onPress={() => setActionTier(t)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: actionTier === t }}
+                    accessibilityLabel={`Nuevo nivel ${getTierLabel(t)}`}>
                     <View style={[modal.tierDot, { backgroundColor: getTierColor(t) }]} />
                     <Text style={[modal.tierName, actionTier === t && { color: palette.ivory }]}>
                       {getTierLabel(t)}
@@ -573,7 +593,7 @@ export default function MembresiasScreen() {
             )}
 
             <View style={modal.footer}>
-              <Pressable style={modal.cancelBtn} onPress={() => { setActionTarget(null); setActionType(null); }}>
+              <Pressable style={modal.cancelBtn} onPress={() => { setActionTarget(null); setActionType(null); }} accessibilityRole="button" accessibilityLabel="Volver">
                 <Text style={modal.cancelText}>VOLVER</Text>
               </Pressable>
               <Pressable
@@ -583,7 +603,10 @@ export default function MembresiasScreen() {
                   actionSaving && modal.submitBtnDisabled,
                 ]}
                 onPress={handleRowAction}
-                disabled={actionSaving}>
+                disabled={actionSaving}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: actionSaving }}
+                accessibilityLabel={actionType === 'cancel' ? 'Sí, cancelar membresía' : 'Confirmar'}>
                 {actionSaving ? (
                   <ActivityIndicator color={palette.ink} size="small" />
                 ) : (
