@@ -186,6 +186,7 @@ export default function ProgramasScreen() {
                 <Pressable
                   onPress={() => setTeaser(null)}
                   hitSlop={8}
+                  accessibilityRole="button"
                   accessibilityLabel="Cerrar">
                   <MaterialIcons name="close" size={20} color={palette.smoke} />
                 </Pressable>
@@ -222,7 +223,9 @@ export default function ProgramasScreen() {
 
               <Pressable
                 style={({ pressed }) => [styles.teaserDismiss, pressed && { opacity: 0.85 }]}
-                onPress={() => setTeaser(null)}>
+                onPress={() => setTeaser(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Seguir en mi módulo actual">
                 <Text style={styles.teaserDismissText}>SEGUIR EN MI MÓDULO ACTUAL</Text>
               </Pressable>
             </>
@@ -290,7 +293,10 @@ export default function ProgramasScreen() {
 
         {/* Toast */}
         {toast && (
-          <View style={[styles.toast, { bottom: insets.bottom + 16 }]}>
+          <View
+            style={[styles.toast, { bottom: insets.bottom + 16 }]}
+            accessibilityLiveRegion="polite"
+            accessibilityRole="alert">
             <Text style={styles.toastText}>{toast}</Text>
           </View>
         )}
@@ -338,7 +344,10 @@ export default function ProgramasScreen() {
 
       {/* ── Toast ── */}
       {toast && (
-        <View style={[styles.toast, { bottom: insets.bottom + 16 }]}>
+        <View
+          style={[styles.toast, { bottom: insets.bottom + 16 }]}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert">
           <Text style={styles.toastText}>{toast}</Text>
         </View>
       )}
