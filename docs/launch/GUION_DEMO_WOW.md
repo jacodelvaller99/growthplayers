@@ -44,6 +44,26 @@
 | Sin red / Vercel caído | nada carga | Screenshots de respaldo de las 11 paradas (se capturan en el ensayo) en una carpeta local. |
 | Pregunta sobre precios/pago en web | — | "La suscripción va por iOS/Android (App Store); en web capturamos el lead" — NO abrir el paywall web más de 5 segundos. |
 
+## ANEXO — Script de las conversaciones con Norman (cuenta demo, Fase 2)
+
+> El motor de confrontación solo cita compromisos EXPLÍCITOS. En los 2–3 chats de
+> preparación (día antes de la demo, con la cuenta demo ya sembrada con el escenario
+> `burnout_week`), usa frases de compromiso en primera persona, claras y medibles:
+
+**Chat 1 (modo diagnóstico):** cuenta el contexto ("vengo de semanas de mucha carga,
+duermo poco, dejé el gimnasio") y cierra con: *"Me comprometo a dormir 7 horas cada
+noche a partir de hoy"* y *"Me comprometo a entrenar fuerza 3 veces por semana"*.
+
+**Chat 2 (modo accountability, día siguiente):** reporta a medias: *"Anoche dormí 5
+horas otra vez, no fui al gimnasio"*. Esto crea el gap DIJO vs HIZO que — junto al
+dato del wearable sintético — produce la fricción citable.
+
+**Chat 3 (opcional, modo decisión):** una decisión de negocio corta — muestra el
+cambio de modo en vivo.
+
+Además: 3+ check-ins en días distintos (estrés alto 7–8, energía baja) y confirmar
+un plan de acción de mentoría (crea las tareas de ejecución del dossier).
+
 ## Qué NO tocar durante la demo
 
 - Admin: ejecución de mentores, comunidad, auditoría, ranking, copilot (funcionales pero sin el pulido final — el guion las rodea).
