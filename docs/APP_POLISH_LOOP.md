@@ -67,7 +67,7 @@
 - [x] app/(auth)/reset-password.tsx — recuperación de contraseña web (detecta PASSWORD_RECOVERY → updateUser; 3 estados: sin-sesión / form / listo). Cierra Comercial/legal/auth. Pantalla limpia, tokens theme-aware, sin bug. a11y: título con role="header"; los 2 inputs de contraseña con `textContentType="newPassword"` + `autoComplete="password-new"` (password managers ofrecen guardar) + accessibilityLabel; error de validación con role=alert + accessibilityLiveRegion=assertive. render smoke test. Flujo de recuperación (getSession + onAuthStateChange + updateUser) INTACTO.
 
 ### Admin (interno — al final)
-- [ ] app/admin/index.tsx
+- [x] app/admin/index.tsx — CMI Mission Control (KPIs + estrella polar retención + a-contactar-hoy + embudo + señal de práctica + membresías por tier + actividad en vivo + acciones + 10 módulos). Inicia la sección Admin. **bug de modo claro** (admin es web y togglea tema): `tierCountValue` usaba `getTierColor(tier)` como texto; premium=#FFC804 gold brillante sobre tarjeta graphite (cv) → conteo premium ilegible en claro. Derivé `tierText` (gold→goldText), fill del dot/borde sin cambio. a11y: role/label en 6 filas de a-contactar (nombre + riesgo %), 5 tarjetas de tier (label + conteo), 3 botones de acción (recalcular con state disabled), 10 tarjetas de módulo (label + desc). Limpieza: `channelRef` (useRef muerto) + imports `intel`/`useRef` sin uso → 0 warnings. render smoke test (queries admin con allSettled, mocks). Notas privadas admin-only INTACTAS.
 - [ ] app/admin/usuarios/index.tsx
 - [ ] app/admin/usuarios/[id].tsx
 - [ ] app/admin/membresias/index.tsx

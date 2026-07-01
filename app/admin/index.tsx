@@ -6,7 +6,7 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, StatusPill, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, StatusPill, useScreen } from '@/components/polaris';
 import { getTierColor, getTierLabel } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -32,7 +32,6 @@ import type {
   AtRiskUser, DashboardKPIs, LiveEvent, PracticeSignal, ProtocolFunnel, RetentionStat,
 } from '@/lib/admin/types';
 import { recalculateAllMLAction } from '@/lib/admin/actions';
-import { intel } from '@/lib/supabase';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -138,7 +137,6 @@ export default function MissionControl() {
   const [refreshing, setRefreshing] = useState(false);
   const [mlRecalculating, setMlRecalculating] = useState(false);
   const [now, setNow] = useState(new Date());
-  const channelRef = useRef<ReturnType<typeof intel.events> | null>(null);
 
   const loadData = useCallback(async () => {
     // allSettled: una query que falle NO debe dejar el dashboard en spinner infinito.
@@ -254,6 +252,8 @@ export default function MissionControl() {
               key={u.user_id}
               onPress={() => router.push(`/admin/usuarios/${u.user_id}` as never)}
               hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`${u.name ?? 'Usuario'}, riesgo de abandono ${Math.round(u.churn_risk * 100)} por ciento. Abrir dossier`}
               style={({ pressed }) => [s.riskRow, pressed && { opacity: 0.7 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={s.riskName}>{u.name ?? 'Usuario'}</Text>
@@ -282,18 +282,26 @@ export default function MissionControl() {
       {/* 💰 Financiera — membresías por tier */}
       <GoldDivider label="💰 MEMBRESÍAS POR TIER" />
       <View style={s.kpiGrid}>
-        {(['free', 'premium', 'premium_plus', 'polaris', 'growthplayers'] as const).map((tier) => (
+        {(['free', 'premium', 'premium_plus', 'polaris', 'growthplayers'] as const).map((tier) => {
+          const tierCol = getTierColor(tier);
+          // El tier premium es #FFC804 (gold brillante). Como TEXTO del conteo sobre
+          // la tarjeta graphite (theme-aware) es ilegible en claro → goldText.
+          const tierText = tierCol === palette.gold ? palette.goldText : tierCol;
+          return (
           <Pressable
             key={tier}
-            style={[s.tierCountCard, { borderColor: getTierColor(tier) + '55' }]}
-            onPress={() => router.push('/admin/membresias' as never)}>
-            <View style={[s.tierDot, { backgroundColor: getTierColor(tier) }]} />
-            <Text style={[s.tierCountValue, { color: getTierColor(tier) }]}>
+            style={[s.tierCountCard, { borderColor: tierCol + '55' }]}
+            onPress={() => router.push('/admin/membresias' as never)}
+            accessibilityRole="button"
+            accessibilityLabel={`${getTierLabel(tier)}: ${tierCounts[tier] ?? 0} miembros`}>
+            <View style={[s.tierDot, { backgroundColor: tierCol }]} />
+            <Text style={[s.tierCountValue, { color: tierText }]}>
               {tierCounts[tier] ?? 0}
             </Text>
             <Text style={s.tierCountLabel}>{getTierLabel(tier).toUpperCase()}</Text>
           </Pressable>
-        ))}
+          );
+        })}
       </View>
 
       {/* Alertas críticas (si las hay) */}
@@ -324,7 +332,10 @@ export default function MissionControl() {
         <Pressable
           style={[s.actionBtn, mlRecalculating && { opacity: 0.5 }]}
           onPress={handleRecalculateML}
-          disabled={mlRecalculating}>
+          disabled={mlRecalculating}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: mlRecalculating }}
+          accessibilityLabel="Recalcular inteligencia de machine learning">
           <MaterialIcons name="psychology" size={18} color={palette.goldText} />
           <Text style={s.actionBtnText}>
             {mlRecalculating ? 'CALCULANDO...' : 'RECALCULAR ML'}
@@ -332,13 +343,17 @@ export default function MissionControl() {
         </Pressable>
         <Pressable
           style={s.actionBtn}
-          onPress={() => router.push('/admin/copilot' as never)}>
+          onPress={() => router.push('/admin/copilot' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Copiloto IA">
           <MaterialIcons name="smart-toy" size={18} color={palette.goldText} />
           <Text style={s.actionBtnText}>COPILOTO IA</Text>
         </Pressable>
         <Pressable
           style={s.actionBtn}
-          onPress={() => router.push('/admin/ranking' as never)}>
+          onPress={() => router.push('/admin/ranking' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Ranking de usuarios">
           <MaterialIcons name="leaderboard" size={18} color={palette.goldText} />
           <Text style={s.actionBtnText}>RANKING</Text>
         </Pressable>
@@ -351,7 +366,9 @@ export default function MissionControl() {
           <Pressable
             key={sec.route}
             style={s.sectionCard}
-            onPress={() => router.push(sec.route as never)}>
+            onPress={() => router.push(sec.route as never)}
+            accessibilityRole="button"
+            accessibilityLabel={`${sec.label}: ${sec.desc}`}>
             <Text style={s.sectionIcon}>{sec.icon}</Text>
             <Text style={s.sectionLabel}>{sec.label}</Text>
             <Text style={s.sectionDesc}>{sec.desc}</Text>
