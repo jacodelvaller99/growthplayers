@@ -243,7 +243,8 @@ export default function RespiracionScreen() {
                 onPress={() => selectTech(t)}
                 style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
                 accessibilityRole="button"
-                accessibilityLabel={t.title}>
+                accessibilityLabel={t.title}
+                accessibilityState={{ selected: active }}>
                 <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.title}</Text>
               </Pressable>
             );
