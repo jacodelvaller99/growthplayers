@@ -11,7 +11,6 @@ import {
   ProgressCard,
   SecondaryButton,
   StatusPill,
-  screen,
   useScreen,
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
@@ -26,7 +25,9 @@ function lessonIcon(status: string) {
 
 function lessonIconColor(status: string) {
   if (status === 'completed') return palette.success;
-  if (status === 'active') return palette.gold;
+  // La fila activa tiene fondo gold (lessonRowActive) → el ícono debe ser ink
+  // (oscuro), no gold: gold-sobre-gold es invisible. El resto de la fila ya usa ink.
+  if (status === 'active') return palette.ink;
   return palette.smoke;
 }
 
@@ -146,6 +147,9 @@ export default function ModuleDetailScreen() {
             <Pressable
               key={lesson.id}
               disabled={!isNavigable}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !isNavigable }}
+              accessibilityLabel={`Lección ${index + 1}: ${lesson.title}. ${isCompleted ? 'Completada' : isActive ? 'Disponible' : 'Bloqueada'}`}
               onPress={() => router.push(`/lesson/${lesson.id}` as never)}>
               <PremiumCard
                 style={[styles.lessonRow, isActive && styles.lessonRowActive]}>
