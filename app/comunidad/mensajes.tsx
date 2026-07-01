@@ -191,7 +191,7 @@ export default function MensajesScreen() {
             <Pressable
               style={styles.row}
               accessibilityRole="button"
-              accessibilityLabel={`Conversación con ${item.peerName}`}
+              accessibilityLabel={`Conversación con ${item.peerName}.${item.unread ? ' Mensaje sin leer.' : ''} ${item.lastBody}. Hace ${timeAgo(item.lastAt)}`}
               onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: item.peerId, name: item.peerName } } as never)}>
               <Avatar
                 id={item.peerId}

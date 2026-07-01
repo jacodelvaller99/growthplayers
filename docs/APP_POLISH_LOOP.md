@@ -50,7 +50,7 @@
 - [x] app/bienestar/comunidad.tsx — feed (cierra Bienestar). **bug de modo claro**: el ícono de enviar (publicar) usaba `palette.black` (=cv('--c-bg')) sobre fondo `palette.gold` constante → invisible en tema claro; ahora `palette.ink` constante. a11y integral de una pantalla muy interactiva (13 Pressables): back, DM header, EULA aceptar/rechazar, enviar (role+label+disabled), notice (role+label+liveRegion), like (role+selected+label dinámico con conteo), más-opciones, chat, y las filas de los 2 action sheets (enviar/reportar/bloquear/cancelar + razones de reporte con disabled). render smoke test. **MODERACIÓN INTACTA: EULA de tolerancia cero (gate primer acceso), filtro `containsBannedContent` al publicar, reportar publicación, bloquear usuario (filtra feed), consent merge no-destructivo.**
 
 ### Comunidad / perfil / contenido
-- [ ] app/comunidad/mensajes.tsx
+- [x] app/comunidad/mensajes.tsx — inbox de DM (conversaciones agrupadas por peer, presence + realtime + filtrado de bloqueos + estado vacío honesto). Ya sólida (a11y en back+fila, tokens theme-aware — sin bug de color). a11y mejorada: el label de cada fila ahora anuncia estado no-leído + preview del último mensaje + hora (contexto completo en un foco de lector de pantalla, antes solo "Conversación con X"). render smoke test (loading/vacío, Supabase + realtime channel mockeados).
 - [ ] app/comunidad/chat/[id].tsx
 - [ ] app/perfil/index.tsx
 - [ ] app/perfil/cliente.tsx
