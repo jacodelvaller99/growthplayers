@@ -195,7 +195,7 @@ export default function NutricionScreen() {
       </View>
 
       {savedPlanUrl ? (
-        <Pressable onPress={openPlan} style={styles.planSaved}>
+        <Pressable onPress={openPlan} style={styles.planSaved} accessibilityRole="button" accessibilityLabel="Abrir plan de nutrición guardado">
           <MaterialIcons name="insert-drive-file" size={22} color={palette.goldText} />
           <View style={styles.planSavedText}>
             <Text style={styles.planSavedLabel} numberOfLines={1}>Plan guardado</Text>
@@ -220,6 +220,7 @@ export default function NutricionScreen() {
         placeholderTextColor={palette.smoke}
         autoCapitalize="none"
         keyboardType="url"
+        accessibilityLabel="Enlace del plan de nutrición"
       />
       <Text style={styles.planInputLabel}>NUTRIÓLOGO (OPCIONAL)</Text>
       <TextInput
@@ -228,10 +229,14 @@ export default function NutricionScreen() {
         onChangeText={setNutritionistName}
         placeholder="Nombre del profesional"
         placeholderTextColor={palette.smoke}
+        accessibilityLabel="Nombre del nutriólogo (opcional)"
       />
       <Pressable
         onPress={savePlan}
         disabled={planSaving || !planUrl.trim()}
+        accessibilityRole="button"
+        accessibilityLabel={savedPlanUrl ? 'Actualizar plan de nutrición' : 'Agregar plan de nutrición'}
+        accessibilityState={{ disabled: planSaving || !planUrl.trim() }}
         style={[styles.planSaveBtn, (planSaving || !planUrl.trim()) && styles.planSaveBtnDisabled]}
       >
         <MaterialIcons name="upload-file" size={16} color={(planSaving || !planUrl.trim()) ? palette.ash : palette.ink} />
@@ -249,7 +254,7 @@ export default function NutricionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={insets.top}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
             <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
           </Pressable>
           <Text style={styles.title}>NUTRICIÓN</Text>
@@ -268,7 +273,7 @@ export default function NutricionScreen() {
 
           {PlanSection}
 
-          <Pressable onPress={() => router.back()} style={styles.doneBtn}>
+          <Pressable onPress={() => router.back()} style={styles.doneBtn} accessibilityRole="button" accessibilityLabel="Volver al hub">
             <Text style={styles.doneBtnText}>VOLVER AL HUB</Text>
           </Pressable>
         </ScrollView>
@@ -283,7 +288,11 @@ export default function NutricionScreen() {
       keyboardVerticalOffset={insets.top}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={step > 1 ? () => setStep(step - 1) : () => router.back()} style={styles.backBtn}>
+        <Pressable
+          onPress={step > 1 ? () => setStep(step - 1) : () => router.back()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel={step > 1 ? 'Paso anterior' : 'Volver'}>
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <Text style={styles.title}>NUTRICIÓN</Text>
@@ -291,7 +300,12 @@ export default function NutricionScreen() {
       </View>
 
       {/* Progress bar */}
-      <View style={styles.progressBar}>
+      <View
+        style={styles.progressBar}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Paso ${step} de ${TOTAL_STEPS}`}
+        accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: step }}>
         <View style={[styles.progressFill, { width: progressPct }]} />
       </View>
 
@@ -306,6 +320,9 @@ export default function NutricionScreen() {
               <Pressable
                 key={d.id}
                 onPress={() => setAnswers(prev => ({ ...prev, dietType: d.id }))}
+                accessibilityRole="radio"
+                accessibilityLabel={`${d.label}: ${d.desc}`}
+                accessibilityState={{ selected: answers.dietType === d.id }}
                 style={[styles.optionRow, answers.dietType === d.id && styles.optionRowActive]}
               >
                 <View style={[styles.optionIcon, answers.dietType === d.id && styles.optionIconActive]}>
@@ -338,6 +355,9 @@ export default function NutricionScreen() {
                   <Pressable
                     key={r.id}
                     onPress={() => toggleMulti('restrictions', r.id)}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={r.label}
+                    accessibilityState={{ checked: selected }}
                     style={[styles.chip, selected && styles.chipActive]}
                   >
                     <Text style={[styles.chipText, selected && styles.chipTextActive]}>{r.label}</Text>
@@ -360,6 +380,9 @@ export default function NutricionScreen() {
                   <Pressable
                     key={a.id}
                     onPress={() => toggleMulti('allergies', a.id)}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={a.label}
+                    accessibilityState={{ checked: selected }}
                     style={[styles.chip, selected && styles.chipActive]}
                   >
                     <Text style={[styles.chipText, selected && styles.chipTextActive]}>{a.label}</Text>
@@ -382,6 +405,9 @@ export default function NutricionScreen() {
                   <Pressable
                     key={g.id}
                     onPress={() => setAnswers(prev => ({ ...prev, goal: g.id }))}
+                    accessibilityRole="radio"
+                    accessibilityLabel={g.label}
+                    accessibilityState={{ selected }}
                     style={[styles.goalCard, selected && styles.goalCardActive]}
                   >
                     <MaterialIcons name={g.icon as any} size={28} color={selected ? palette.ink : palette.goldText} />
@@ -402,6 +428,9 @@ export default function NutricionScreen() {
               <Pressable
                 key={c.id}
                 onPress={() => setAnswers(prev => ({ ...prev, calories: c.id }))}
+                accessibilityRole="radio"
+                accessibilityLabel={`${c.label}: ${c.desc}`}
+                accessibilityState={{ selected: answers.calories === c.id }}
                 style={[styles.calRow, answers.calories === c.id && styles.calRowActive]}
               >
                 <View style={styles.calLeft}>
@@ -420,6 +449,9 @@ export default function NutricionScreen() {
         <Pressable
           onPress={handleNext}
           disabled={!canNext()}
+          accessibilityRole="button"
+          accessibilityLabel={step === TOTAL_STEPS ? 'Guardar perfil' : 'Continuar'}
+          accessibilityState={{ disabled: !canNext() }}
           style={[styles.nextBtn, !canNext() && styles.nextBtnDisabled]}
         >
           <Text style={[styles.nextBtnText, !canNext() && { color: palette.ash }]}>

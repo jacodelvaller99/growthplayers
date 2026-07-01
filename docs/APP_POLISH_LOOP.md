@@ -39,7 +39,7 @@
 - [x] app/bienestar/examenes.tsx · seguridad UX: borrar examen (PHI, irreversible) ahora PIDE CONFIRMACIÓN (Alert nativo / window.confirm web) antes de borrar — antes un tap borraba un registro médico. La pantalla ya tenía a11y completa (back/panel/switch-compartir/upload/abrir con roles+estados) + window.open con noopener + bucket privado/RLS/consent. render smoke test.
 - [x] app/bienestar/habitos.tsx · seguridad: openExternal (guía/video) usaba window.open sin noopener → añadido noopener,noreferrer (reverse-tabnabbing). a11y: back, expandir hábito (habitInfo+chevron con expanded), fila de plantilla (añadir), y las 4 acciones de detalle (práctica/guía/video/recordar) con role/label. El check de hábito ya tenía role=checkbox. render smoke test.
 - [x] app/bienestar/ayuno.tsx · a11y: back, selector de protocolo (accessibilityState=selected), CTA iniciar/romper, y botones/chips/input de ambos modales (disclaimer médico + refeeding). El disclaimer MÉDICO no-omitible antes de iniciar (diabetes/embarazo/TCA/medicación) INTACTO. render smoke test.
-- [ ] app/bienestar/nutricion.tsx
+- [x] app/bienestar/nutricion.tsx · a11y integral del wizard de 5 pasos: progressbar con value, back (paso anterior/volver), selecciones de dieta/objetivo/calorías (role=radio+selected), chips de restricciones/alergias (role=checkbox+checked), botón siguiente (state disabled), y la sección de plan (abrir/inputs/guardar). render smoke test.
 - [ ] app/bienestar/cuerpo.tsx
 - [ ] app/bienestar/body-context.tsx
 - [ ] app/bienestar/suplementacion.tsx
