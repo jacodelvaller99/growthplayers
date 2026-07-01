@@ -340,6 +340,8 @@ export default function MentoriaScreen() {
                   onPress={() => setNoteWeek(w)}
                   style={[styles.weekChip, noteWeek === w && styles.weekChipOn]}
                   accessibilityRole="button"
+                  accessibilityLabel={`Semana ${w}`}
+                  accessibilityState={{ selected: noteWeek === w }}
                 >
                   <Text style={[styles.weekChipText, noteWeek === w && styles.weekChipTextOn]}>
                     SEM {w}
@@ -445,7 +447,7 @@ function ActionRow({ item, onToggle, onRemove }: { item: ActionItem; onToggle: (
       </Pressable>
       <Text style={[styles.itemText, item.done && styles.itemTextDone]}>{item.text}</Text>
       {item.source === 'ia' && <MaterialIcons name="auto-awesome" size={13} color={palette.goldText} style={{ marginRight: 4 }} />}
-      <Pressable onPress={onRemove} hitSlop={8} accessibilityLabel="Eliminar acción">
+      <Pressable onPress={onRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel="Eliminar acción">
         <MaterialIcons name="close" size={15} color={palette.smoke} />
       </Pressable>
     </View>
@@ -512,7 +514,7 @@ function NoteCard({ n, weekRange, onRemove }: { n: SessionNote; weekRange: strin
             {fromVoice ? 'LO QUE NORMAN VIO' : 'TU REGISTRO'}
           </Text>
         </View>
-        <Pressable onPress={onRemove} hitSlop={8} accessibilityLabel="Eliminar nota">
+        <Pressable onPress={onRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel="Eliminar nota">
           <MaterialIcons name="close" size={14} color={palette.smoke} />
         </Pressable>
       </View>
@@ -597,7 +599,7 @@ function DraftEditor({
             selectionColor={palette.gold}
             style={styles.draftActionInput}
           />
-          <Pressable onPress={() => onRemoveAction(i)} hitSlop={8} accessibilityLabel="Quitar acción">
+          <Pressable onPress={() => onRemoveAction(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Quitar acción">
             <MaterialIcons name="close" size={15} color={palette.smoke} />
           </Pressable>
         </View>

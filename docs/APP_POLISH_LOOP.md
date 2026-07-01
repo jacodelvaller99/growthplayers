@@ -25,7 +25,7 @@
 - [x] app/(tabs)/mentor.tsx — Norman · a11y (role=button en botón CHATS y en filas del historial) + **render smoke test de la pantalla más crítica** (apertura sin mensajes + con historial; muchos hooks/IA mockeados). Guardrails intactos: disclosure IA persistente, crisis routing (lib/mentor.ts), abort/timeout, gate premium, modos. NO se tocó la cadena de seguridad.
 - [x] app/(tabs)/programas.tsx — programa · a11y: toast de bloqueo/pronto con accessibilityLiveRegion=polite+role=alert (screen readers lo anuncian) en mobile+desktop; roles/labels en botón cerrar y "seguir en mi módulo" del modal teaser + render smoke test mobile/desktop (lógica de desbloqueo por módulo).
 - [x] app/(tabs)/progreso.tsx — progreso · guard anti-doble-tap en GUARDAR PERFIL (updateProfile async, "GUARDANDO…"+disabled en desktop+mobile) + a11y (role=button en Cuadro de Mando, Upgrade de plan, Cerrar sesión ×2, y ver-tarjeta-soberana) + render smoke test mobile/desktop de la pantalla grande (score/sparklines SVG/heatmap/ADN/GDPR; fuerza Platform=web para saltar el import dinámico de expo-notifications).
-- [ ] app/mentoria/index.tsx — mentoría
+- [x] app/mentoria/index.tsx — mentoría · a11y: chips de semana con accessibilityState={selected} + label; role=button en los 3 botones de eliminar (acción/nota/acción del borrador) + render smoke test mobile/desktop (con y sin borrador de Norman; máquina de estados de grabación IA). Guardrails de consentimiento de grabación intactos.
 
 ### Bienestar
 - [ ] app/bienestar/index.tsx — hub (repulir)
