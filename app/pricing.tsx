@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, PrimaryButton, SecondaryButton, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, SecondaryButton, useScreen } from '@/components/polaris';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -39,7 +39,10 @@ function PlanCard({
   highlight?: boolean;
 }) {
   const info = SUBSCRIPTION_TIERS[tier];
-  const accentColor = info.color;
+  const accentColor = info.color;                                   // fills (dot/badge/borde)
+  // El tier premium usa #FFC804 (gold brillante). Como TEXTO/ícono sobre la tarjeta
+  // (fondo graphite theme-aware) es ilegible en tema claro → goldText (theme-aware).
+  const accentText  = accentColor === palette.gold ? palette.goldText : accentColor;
 
   return (
     <PremiumCard
@@ -55,7 +58,7 @@ function PlanCard({
       )}
       <View style={s.planHeader}>
         <View style={[s.planDot, { backgroundColor: accentColor }]} />
-        <Text style={[s.planName, { color: accentColor }]}>{info.name.toUpperCase()}</Text>
+        <Text style={[s.planName, { color: accentText }]}>{info.name.toUpperCase()}</Text>
         {isActive && (
           <View style={s.activePill}>
             <Text style={s.activePillText}>ACTIVO</Text>
@@ -66,7 +69,7 @@ function PlanCard({
       <View style={s.featureList}>
         {info.features.map((feat, i) => (
           <View key={i} style={s.featureRow}>
-            <MaterialIcons name="check-circle" size={14} color={accentColor} />
+            <MaterialIcons name="check-circle" size={14} color={accentText} />
             <Text style={s.featureText}>{feat}</Text>
           </View>
         ))}
@@ -176,16 +179,23 @@ export default function PricingScreen() {
             returnKeyType="done"
             onSubmitEditing={handleRedeem}
             maxLength={20}
+            accessibilityLabel="Código de acceso"
           />
           <Pressable
             style={[s.codeBtn, (loading || !code.trim()) && { opacity: 0.4 }]}
             onPress={handleRedeem}
-            disabled={loading || !code.trim()}>
+            disabled={loading || !code.trim()}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: loading || !code.trim() }}
+            accessibilityLabel="Canjear código">
             <Text style={s.codeBtnText}>{loading ? '...' : 'CANJEAR'}</Text>
           </Pressable>
         </View>
         {result ? (
-          <View style={[s.resultBanner, { backgroundColor: resultOk ? palette.successMuted : palette.dangerMuted }]}>
+          <View
+            style={[s.resultBanner, { backgroundColor: resultOk ? palette.successMuted : palette.dangerMuted }]}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive">
             <Text style={[s.resultText, { color: resultOk ? palette.success : palette.danger }]}>
               {result}
             </Text>
