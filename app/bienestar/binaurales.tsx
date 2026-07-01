@@ -360,7 +360,7 @@ function BinauralPlayer({
 
       {/* Header */}
       <View style={play.header}>
-        <Pressable onPress={onExit} style={play.backBtn}>
+        <Pressable onPress={onExit} style={play.backBtn} accessibilityRole="button" accessibilityLabel="Salir de la sesión">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={play.titleText}>{preset.label}</Text>
@@ -407,6 +407,9 @@ function BinauralPlayer({
               <Pressable
                 key={m}
                 onPress={() => { setTimerMinutes(m); haptic('light'); }}
+                accessibilityRole="button"
+                accessibilityLabel={`Temporizador ${m} minutos`}
+                accessibilityState={{ selected: timerMinutes === m }}
                 style={[play.timerBtn, timerMinutes === m && play.timerBtnActive]}>
                 <Text style={[play.timerBtnText, timerMinutes === m && play.timerBtnTextActive]}>
                   {m}m
@@ -421,6 +424,9 @@ function BinauralPlayer({
               <Pressable
                 key={a.id}
                 onPress={() => handleAmbience(a.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Ambiente ${a.label}`}
+                accessibilityState={{ selected: ambience === a.id }}
                 style={[play.ambienceBtn, ambience === a.id && play.ambienceBtnActive]}>
                 <MaterialIcons
                   name={a.icon as React.ComponentProps<typeof MaterialIcons>['name']}
@@ -450,18 +456,18 @@ function BinauralPlayer({
 
       {/* CTA */}
       {!running && !paused && !done && (
-        <Pressable style={play.startBtn} onPress={startSession}>
+        <Pressable style={play.startBtn} onPress={startSession} accessibilityRole="button" accessibilityLabel={`Iniciar sesión de ${timerMinutes} minutos`}>
           <MaterialIcons name="play-arrow" size={24} color={palette.ink} />
           <Text style={play.startBtnText}>INICIAR {timerMinutes} MIN</Text>
         </Pressable>
       )}
       {running && (
         <View style={play.controlRow}>
-          <Pressable style={play.pauseBtn} onPress={pauseSession}>
+          <Pressable style={play.pauseBtn} onPress={pauseSession} accessibilityRole="button" accessibilityLabel="Pausar sesión">
             <MaterialIcons name="pause" size={20} color={palette.goldText} />
             <Text style={play.pauseBtnText}>PAUSAR</Text>
           </Pressable>
-          <Pressable style={play.stopBtn} onPress={stopSession}>
+          <Pressable style={play.stopBtn} onPress={stopSession} accessibilityRole="button" accessibilityLabel="Detener sesión">
             <MaterialIcons name="stop" size={20} color={palette.ash} />
             <Text style={play.stopBtnText}>DETENER</Text>
           </Pressable>
@@ -469,11 +475,11 @@ function BinauralPlayer({
       )}
       {paused && !done && (
         <View style={play.controlRow}>
-          <Pressable style={play.startBtn} onPress={resumeSession}>
+          <Pressable style={play.startBtn} onPress={resumeSession} accessibilityRole="button" accessibilityLabel="Reanudar sesión">
             <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
             <Text style={play.startBtnText}>REANUDAR</Text>
           </Pressable>
-          <Pressable style={play.stopBtn} onPress={stopSession}>
+          <Pressable style={play.stopBtn} onPress={stopSession} accessibilityRole="button" accessibilityLabel="Detener sesión">
             <MaterialIcons name="stop" size={20} color={palette.ash} />
             <Text style={play.stopBtnText}>DETENER</Text>
           </Pressable>
@@ -482,7 +488,7 @@ function BinauralPlayer({
       {done && (
         <View style={play.doneBox}>
           <Text style={play.doneText}>SESIÓN COMPLETADA</Text>
-          <Pressable style={play.startBtn} onPress={onExit}>
+          <Pressable style={play.startBtn} onPress={onExit} accessibilityRole="button" accessibilityLabel="Continuar">
             <Text style={play.startBtnText}>CONTINUAR</Text>
           </Pressable>
         </View>
@@ -609,7 +615,7 @@ export default function BinauralesScreen() {
 
       {/* Header */}
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>BINAURALES</Text>
@@ -637,12 +643,18 @@ export default function BinauralesScreen() {
       <View style={styles.modeToggleRow}>
         <Pressable
           onPress={() => { setMixerMode(false); haptic('light'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Modo básico"
+          accessibilityState={{ selected: !mixerMode }}
           style={[styles.modeBtn, !mixerMode && styles.modeBtnActive]}>
           <MaterialIcons name="queue-music" size={16} color={!mixerMode ? palette.ink : palette.ash} />
           <Text style={[styles.modeBtnText, !mixerMode && styles.modeBtnTextActive]}>BÁSICO</Text>
         </Pressable>
         <Pressable
           onPress={() => { setMixerMode(true); haptic('light'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Modo mezclador"
+          accessibilityState={{ selected: mixerMode }}
           style={[styles.modeBtn, mixerMode && styles.modeBtnActive]}>
           <MaterialIcons name="tune" size={16} color={mixerMode ? palette.ink : palette.ash} />
           <Text style={[styles.modeBtnText, mixerMode && styles.modeBtnTextActive]}>MEZCLADOR</Text>
@@ -656,6 +668,8 @@ export default function BinauralesScreen() {
             <Pressable
               key={preset.id}
               onPress={() => { haptic('light'); analytics.binauralStart(preset.label, 0, preset.beatHz); setActive(preset); }}
+              accessibilityRole="button"
+              accessibilityLabel={`${preset.label}: ${preset.description}`}
               style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
               <View style={[styles.colorBar, { backgroundColor: preset.color }]} />
               <View style={styles.cardContent}>
@@ -692,6 +706,9 @@ export default function BinauralesScreen() {
               <Pressable
                 key={mp.id}
                 onPress={() => { setActiveMixer(activeMixer?.id === mp.id ? null : mp); haptic('light'); }}
+                accessibilityRole="button"
+                accessibilityLabel={`${mp.label}: ${mp.description}`}
+                accessibilityState={{ selected: activeMixer?.id === mp.id }}
                 style={[
                   styles.mixerCard,
                   activeMixer?.id === mp.id && { borderColor: mp.color, backgroundColor: mp.color + '18' },
@@ -734,6 +751,8 @@ export default function BinauralesScreen() {
               </View>
               <Pressable
                 style={[styles.mixerStartBtn, { backgroundColor: activeMixer.color }]}
+                accessibilityRole="button"
+                accessibilityLabel={`Lanzar sesión ${activeMixer.label}`}
                 onPress={() => {
                   haptic('medium');
                   // Convert mixer preset to BinauralPreset shape and launch player

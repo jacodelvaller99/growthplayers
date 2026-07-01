@@ -29,7 +29,7 @@
 
 ### Bienestar
 - [x] app/bienestar/index.tsx — hub (repulir) · a11y: role=button + labels descriptivos ({label}: {sub}) en el HubTile compartido (cubre todos los tiles móviles) + los 4 grids desktop (HOY/práctica/sistema/emocional) + WearableCard (ambas ramas) + back button. Ya reducido en Ola 1 (HOY+Ver todo); render test bienestarHub existente sigue verde.
-- [ ] app/bienestar/binaurales.tsx
+- [x] app/bienestar/binaurales.tsx · a11y integral (estaba sin roles): back ×2, tarjetas de preset y mezclador (con estado selected), transporte del reproductor (iniciar/pausar/detener/reanudar/continuar/lanzar), toggle de modo + timer + ambiente con accessibilityState=selected + labels. SafetyWarning de binaurales INTACTO. render smoke test (lista + SafetyWarning).
 - [ ] app/bienestar/respiracion.tsx
 - [ ] app/bienestar/meditacion.tsx
 - [ ] app/bienestar/sueno.tsx
