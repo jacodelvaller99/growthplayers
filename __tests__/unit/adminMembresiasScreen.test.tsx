@@ -2,13 +2,19 @@
  * Render smoke test de Admin Membresías (loop de pulido, iteración 47).
  * Lista + filtros + búsqueda + acciones por fila + modales activar/acción.
  * Monta con membresías pobladas sin throw (libs admin mockeadas).
+ *
+ * Además cubre el deep-link ?userId= (cableado del dossier "CAMBIAR TIER" /
+ * "ACTIVAR MEMBRESÍA"): con el param presente, resuelve el usuario vía
+ * fetchUserById y abre el modal de activación preseleccionado.
  */
-import { render } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+const mockParams = jest.fn(() => ({}) as { userId?: string });
+
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: jest.fn() }),
-  useLocalSearchParams: () => ({}),
+  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  useLocalSearchParams: () => mockParams(),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -41,13 +47,32 @@ jest.mock('@/lib/admin/queries', () => ({
     { id: 'm1', user_id: 'u1', user_name: 'Ana', user_email: 'a@a.com', product: 'premium', status: 'active', activated_at: '2026-06-01', expires_at: null, price_paid: 100, currency: 'USD', activated_by: 'admin' },
   ]),
   searchUsers: jest.fn().mockResolvedValue([]),
+  fetchUserById: jest.fn().mockResolvedValue({ id: 'u1', email: '', name: 'Ana', role: 'Aprendiz', subscription_tier: 'premium', created_at: '' }),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { fetchUserById } = require('@/lib/admin/queries');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MembresiasScreen = require('@/app/admin/membresias/index').default;
 
 describe('MembresiasScreen (admin) — render smoke', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockParams.mockReturnValue({});
+  });
+
   it('lista + filtros + acciones renderiza sin throw', () => {
     expect(() => render(<MembresiasScreen />)).not.toThrow();
+  });
+
+  it('sin deep-link no resuelve usuario por id', () => {
+    render(<MembresiasScreen />);
+    expect(fetchUserById).not.toHaveBeenCalled();
+  });
+
+  it('deep-link ?userId= preselecciona el usuario (fetchUserById) y abre el modal', async () => {
+    mockParams.mockReturnValue({ userId: 'u1' });
+    render(<MembresiasScreen />);
+    await waitFor(() => expect(fetchUserById).toHaveBeenCalledWith('u1'));
   });
 });

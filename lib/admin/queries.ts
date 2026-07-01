@@ -1030,3 +1030,45 @@ export async function searchUsers(query: string): Promise<AdminUser[]> {
     created_at: '',
   }));
 }
+
+/**
+ * Un solo usuario por id — para preseleccionar en modales que reciben deep-links
+ * (ej. /admin/membresias?userId=… desde el dossier "CAMBIAR TIER" / "ACTIVAR MEMBRESÍA").
+ * Mismo shape/tabla que searchUsers (user_progress). Degradable: null si no existe o falla.
+ */
+export async function fetchUserById(id: string): Promise<AdminUser | null> {
+  const { data } = await supa
+    .from('user_progress')
+    .select('user_id, name, tier, sovereign_score')
+    .eq('user_id', id)
+    .maybeSingle();
+  if (!data) return null;
+  const p = data as Record<string, unknown>;
+
+  // Tier REAL = membresía activa más alta (igual que fetchUsers), NO user_progress.tier
+  // (que es la etiqueta de rol editable, default 'Aprendiz'). Así el badge del usuario
+  // preseleccionado coincide con el "TIER ACTUAL" que el dossier acaba de mostrar.
+  let subscriptionTier = 'free';
+  const { data: memb } = await supa
+    .from('user_memberships')
+    .select('product')
+    .eq('user_id', id)
+    .eq('status', 'active');
+  for (const m of (memb ?? []) as { product: string }[]) {
+    const t = String(m.product).replace('lifeflow_', ''); // normaliza legacy
+    if (TIER_ORDER.indexOf(t as never) > TIER_ORDER.indexOf(subscriptionTier as never)) {
+      subscriptionTier = t;
+    }
+  }
+
+  return {
+    id: p.user_id as string,
+    email: '',
+    name: (p.name as string) ?? 'Usuario',
+    role: p.tier as string | undefined,            // etiqueta de rol editable
+    subscription_tier: subscriptionTier,           // TIER REAL de la membresía activa
+    sovereign_score: p.sovereign_score as number | undefined,
+    is_admin: false,
+    created_at: '',
+  };
+}

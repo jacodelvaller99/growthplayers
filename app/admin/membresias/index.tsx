@@ -7,7 +7,7 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -39,7 +39,7 @@ import {
   changeTier,
   extendMembership,
 } from '@/lib/admin/actions';
-import { fetchAllMemberships, searchUsers } from '@/lib/admin/queries';
+import { fetchAllMemberships, fetchUserById, searchUsers } from '@/lib/admin/queries';
 import type { AdminUser, UserMembership } from '@/lib/admin/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -96,6 +96,10 @@ export default function MembresiasScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId: adminId } = useLifeFlow();
+  // Deep-link param: expo-router puede devolver string | string[] (params duplicados);
+  // normalizamos al primer valor para un tipo honesto.
+  const searchParams = useLocalSearchParams<{ userId?: string | string[] }>();
+  const preselectId = Array.isArray(searchParams.userId) ? searchParams.userId[0] : searchParams.userId;
 
   const [memberships, setMemberships]   = useState<UserMembership[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -146,6 +150,27 @@ export default function MembresiasScreen() {
     return () => clearTimeout(t);
   }, [userQuery]);
 
+  // Deep-link: /admin/membresias?userId=<id> (desde el dossier: "CAMBIAR TIER →" /
+  // "ACTIVAR MEMBRESÍA") → resuelve el usuario y abre el modal de activación ya
+  // preseleccionado. Si no se resuelve (usuario sin fila de progreso), abre el modal
+  // vacío para buscar a mano — nunca deja al admin en la lista sin contexto.
+  useEffect(() => {
+    if (!preselectId) return;
+    let cancelled = false;
+    (async () => {
+      let user: AdminUser | null = null;
+      try { user = await fetchUserById(preselectId); } catch { /* degradable: abre el modal vacío */ }
+      if (cancelled) return;
+      if (user) {
+        setSelectedUser(user);
+        setUserResults([]);
+        setUserQuery('');
+      }
+      setActivateOpen(true);
+    })();
+    return () => { cancelled = true; };
+  }, [preselectId]);
+
   // ── Filtered display ────────────────────────────────────────────────────────
   const displayed = memberships.filter((m) => {
     if (!searchQuery.trim()) return true;
@@ -188,6 +213,18 @@ export default function MembresiasScreen() {
     } else {
       showToast(result.error ?? 'Error al activar', 'error');
     }
+  };
+
+  // Cierra el modal de activación descartando la selección/borrador. Evita que una
+  // preselección por deep-link (?userId=) quede pegada y se active para el usuario
+  // equivocado en un siguiente "ACTIVAR" manual.
+  const closeActivateModal = () => {
+    setActivateOpen(false);
+    setSelectedUser(null);
+    setUserQuery('');
+    setUserResults([]);
+    setPricePaid('');
+    setNotes('');
   };
 
   // ── Row action handler ──────────────────────────────────────────────────────
@@ -371,13 +408,13 @@ export default function MembresiasScreen() {
       {/* ══════════════════════════════════════════════════════════════════════
           MODAL: ACTIVAR MEMBRESÍA
       ══════════════════════════════════════════════════════════════════════ */}
-      <Modal visible={activateOpen} transparent animationType="slide" onRequestClose={() => setActivateOpen(false)}>
+      <Modal visible={activateOpen} transparent animationType="slide" onRequestClose={closeActivateModal}>
         <View style={modal.overlay}>
           <View style={modal.sheet}>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View style={modal.header}>
                 <Text style={modal.title} accessibilityRole="header">ACTIVAR MEMBRESÍA</Text>
-                <Pressable onPress={() => setActivateOpen(false)} accessibilityRole="button" accessibilityLabel="Cerrar">
+                <Pressable onPress={closeActivateModal} accessibilityRole="button" accessibilityLabel="Cerrar">
                   <MaterialIcons name="close" size={20} color={palette.ash} />
                 </Pressable>
               </View>
@@ -387,7 +424,7 @@ export default function MembresiasScreen() {
               {selectedUser ? (
                 <View style={modal.selectedUser}>
                   <Text style={modal.selectedName}>{selectedUser.name}</Text>
-                  <TierBadge tier={selectedUser.role ?? 'free'} />
+                  <TierBadge tier={selectedUser.subscription_tier ?? selectedUser.role ?? 'free'} />
                   <Pressable onPress={() => setSelectedUser(null)} accessibilityRole="button" accessibilityLabel="Quitar usuario seleccionado">
                     <MaterialIcons name="close" size={16} color={palette.smoke} />
                   </Pressable>
@@ -484,7 +521,7 @@ export default function MembresiasScreen() {
 
               {/* Actions */}
               <View style={modal.footer}>
-                <Pressable style={modal.cancelBtn} onPress={() => setActivateOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
+                <Pressable style={modal.cancelBtn} onPress={closeActivateModal} accessibilityRole="button" accessibilityLabel="Cancelar">
                   <Text style={modal.cancelText}>CANCELAR</Text>
                 </Pressable>
                 <Pressable
