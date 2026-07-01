@@ -12,8 +12,8 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -83,11 +83,20 @@ export default function WelcomeScreen() {
     ctaY.value  = withTiming(0, { duration: 0 });
   };
 
+  const introTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    runIntro();
-    // La intro termina ~1620ms (último delay 1100 + duración 520) → libera la capa.
-    const t = setTimeout(() => setIntroPlaying(false), 1650);
-    return () => clearTimeout(t);
+    let cancelled = false;
+    const playFull = () => {
+      runIntro();
+      // La intro termina ~1620ms (último delay 1100 + duración 520) → libera la capa.
+      introTimer.current = setTimeout(() => { if (!cancelled) setIntroPlaying(false); }, 1650);
+    };
+    // Apple HIG / a11y: si el usuario pidió "reducir movimiento", saltamos la intro
+    // cinemática y mostramos el estado final al instante (sin animación).
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduced) => { if (!cancelled) (reduced ? skipIntro() : playFull()); })
+      .catch(() => { if (!cancelled) playFull(); });
+    return () => { cancelled = true; if (introTimer.current) clearTimeout(introTimer.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
