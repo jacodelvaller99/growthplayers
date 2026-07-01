@@ -74,7 +74,7 @@ export default function DiarioScreen() {
 
         {/* Header */}
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
             <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
           </Pressable>
           <Text style={styles.title}>DIARIO</Text>
@@ -92,6 +92,9 @@ export default function DiarioScreen() {
             <Pressable
               key={t.id}
               onPress={() => setType(t.id)}
+              accessibilityRole="button"
+              accessibilityLabel={t.label}
+              accessibilityState={{ selected: type === t.id }}
               style={[styles.typeBtn, type === t.id && styles.typeBtnActive]}>
               <MaterialIcons
                 name={t.icon}
@@ -116,11 +119,15 @@ export default function DiarioScreen() {
             placeholder={current.placeholder}
             placeholderTextColor={palette.smoke}
             textAlignVertical="top"
+            accessibilityLabel={`Entrada de ${current.label.toLowerCase()}`}
           />
           <Pressable
             style={[styles.saveBtn, (!text.trim() || saving) && { opacity: 0.4 }]}
             onPress={save}
-            disabled={!text.trim() || saving}>
+            disabled={!text.trim() || saving}
+            accessibilityRole="button"
+            accessibilityLabel="Guardar entrada"
+            accessibilityState={{ disabled: !text.trim() || saving }}>
             {saving ? (
               <ActivityIndicator size="small" color={palette.ink} />
             ) : saved ? (
@@ -135,14 +142,14 @@ export default function DiarioScreen() {
         </PremiumCard>
 
         {saved && (
-          <View style={styles.savedBanner}>
+          <View style={styles.savedBanner} accessibilityLiveRegion="polite" accessibilityRole="alert">
             <MaterialIcons name="check-circle" size={16} color={palette.success} />
             <Text style={styles.savedText}>Entrada guardada correctamente.</Text>
           </View>
         )}
 
         {saveError && (
-          <View style={styles.errorBanner}>
+          <View style={styles.errorBanner} accessibilityLiveRegion="assertive" accessibilityRole="alert">
             <MaterialIcons name="error-outline" size={16} color={palette.danger} />
             <Text style={styles.errorText}>{saveError}</Text>
           </View>

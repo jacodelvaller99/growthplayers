@@ -33,7 +33,7 @@
 - [x] app/bienestar/respiracion.tsx · ya tenía buena a11y (back/CTA/chips con role+label) y SafetyWarning; añadido accessibilityState={selected} a los chips de técnica + render smoke test (orbe animado + SafetyWarning preservado).
 - [x] app/bienestar/meditacion.tsx · a11y (estaba sin roles): back ×2, tarjetas de sesión (label rico título/categoría/duración/completada) y transporte del reproductor (iniciar/pausar/detener×2/reanudar/completado). SafetyWarning (salud mental/conducción) INTACTO. render smoke test (lista + SafetyWarning).
 - [x] app/bienestar/sueno.tsx · funcionalidad: botón "VER PLANES" era muerto (sin onPress) → ahora va a /pricing; ítems bloqueados ya no hacen tap muerto → van a /pricing (upsell). a11y: back + tarjetas de contenido (label con duración + estado premium) + CTA con role/label. SafetyWarning (insomnio/apnea) INTACTO. render smoke test free/premium.
-- [ ] app/bienestar/diario.tsx
+- [x] app/bienestar/diario.tsx · a11y: back + selector de tipo (accessibilityState=selected) + input con label + botón guardar (state disabled) + banners de éxito/error con accessibilityLiveRegion (polite/assertive) para screen readers. Buen manejo de error ya existía (texto preservado en fallo). render smoke test.
 - [ ] app/bienestar/biblioteca.tsx
 - [ ] app/bienestar/internista.tsx
 - [ ] app/bienestar/examenes.tsx
