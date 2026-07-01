@@ -34,7 +34,7 @@
 - [x] app/bienestar/meditacion.tsx · a11y (estaba sin roles): back ×2, tarjetas de sesión (label rico título/categoría/duración/completada) y transporte del reproductor (iniciar/pausar/detener×2/reanudar/completado). SafetyWarning (salud mental/conducción) INTACTO. render smoke test (lista + SafetyWarning).
 - [x] app/bienestar/sueno.tsx · funcionalidad: botón "VER PLANES" era muerto (sin onPress) → ahora va a /pricing; ítems bloqueados ya no hacen tap muerto → van a /pricing (upsell). a11y: back + tarjetas de contenido (label con duración + estado premium) + CTA con role/label. SafetyWarning (insomnio/apnea) INTACTO. render smoke test free/premium.
 - [x] app/bienestar/diario.tsx · a11y: back + selector de tipo (accessibilityState=selected) + input con label + botón guardar (state disabled) + banners de éxito/error con accessibilityLiveRegion (polite/assertive) para screen readers. Buen manejo de error ya existía (texto preservado en fallo). render smoke test.
-- [ ] app/bienestar/biblioteca.tsx
+- [x] app/bienestar/biblioteca.tsx · funcionalidad: quitados los chips de tiempo (filtro MUERTO — togglaban estado pero no afectaban resultados; las categorías no tienen duración) → menos falsa afordancia + declutter. a11y: back + input de búsqueda + "mostrar todas" con role/label. Ya tenía LECTURAS reales + curaduría honesta (Ola 2); render test bibliotecaScreen existente sigue verde.
 - [ ] app/bienestar/internista.tsx
 - [ ] app/bienestar/examenes.tsx
 - [ ] app/bienestar/habitos.tsx

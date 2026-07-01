@@ -14,9 +14,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, screen, useScreen } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 
-// ─── Time chips ───────────────────────────────────────────────────────────────
-const TIME_CHIPS = [1, 3, 5, 10, 15, 20] as const;
-
 // ─── Category grid ────────────────────────────────────────────────────────────
 interface Category {
   id: string;
@@ -60,7 +57,6 @@ export default function BibliotecaScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery]           = useState('');
-  const [activeTime, setActiveTime] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -81,7 +77,7 @@ export default function BibliotecaScreen() {
 
       {/* Header */}
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={styles.title}>BIBLIOTECA</Text>
@@ -98,26 +94,13 @@ export default function BibliotecaScreen() {
           value={query}
           onChangeText={setQuery}
           returnKeyType="search"
+          accessibilityLabel="Buscar en la biblioteca"
         />
         {query.length > 0 && (
           <Pressable onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel="Limpiar búsqueda">
             <MaterialIcons name="close" size={18} color={palette.smoke} />
           </Pressable>
         )}
-      </View>
-
-      {/* Time chips */}
-      <View style={styles.chipsRow}>
-        {TIME_CHIPS.map((t) => (
-          <Pressable
-            key={t}
-            onPress={() => setActiveTime(activeTime === t ? null : t)}
-            style={[styles.chip, activeTime === t && styles.chipActive]}>
-            <Text style={[styles.chipText, activeTime === t && styles.chipTextActive]}>
-              {t}min
-            </Text>
-          </Pressable>
-        ))}
       </View>
 
       {/* Aviso honesto: la biblioteca está en curaduría. Las categorías con
@@ -134,7 +117,7 @@ export default function BibliotecaScreen() {
       {/* Categories */}
       <GoldDivider label={activeCategory ? 'CATEGORÍA' : 'EXPLORAR'} />
       {activeCategory && (
-        <Pressable onPress={() => setActiveCategory(null)} style={styles.clearFilter}>
+        <Pressable onPress={() => setActiveCategory(null)} style={styles.clearFilter} accessibilityRole="button" accessibilityLabel="Mostrar todas las categorías">
           <MaterialIcons name="close" size={14} color={palette.goldText} />
           <Text style={styles.clearFilterText}>Mostrar todas</Text>
         </Pressable>
@@ -257,23 +240,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 17,
   },
-
-  chipsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
-    marginBottom: spacing.lg,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.line,
-  },
-  chipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
-  chipText: { ...typography.label, color: palette.ash },
-  chipTextActive: { color: palette.goldText },
 
   clearFilter: {
     flexDirection: 'row',
