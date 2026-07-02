@@ -42,15 +42,30 @@ const REASON_LABEL: Record<string, string> = Object.fromEntries(
   REPORT_REASONS.map((r) => [r.value, r.label]),
 );
 
+type ReportTargetType = 'post' | 'comment' | 'event' | 'space';
+
+const TARGET_LABEL: Record<ReportTargetType, string> = {
+  post: 'POST', comment: 'COMENTARIO', event: 'EVENTO', space: 'ESPACIO',
+};
+
+const TARGET_ACTION_LABEL: Record<ReportTargetType, string> = {
+  post: 'ELIMINAR POST',
+  comment: 'ELIMINAR COMENTARIO',
+  event: 'CANCELAR EVENTO',
+  space: 'ARCHIVAR ESPACIO',
+};
+
 interface ReportItem {
   id:          string;
   reporter_id: string;
   post_id:     string | null;
+  targetType:  ReportTargetType;
+  targetId:    string | null;
   reason:      string | null;
   status:      string;
   created_at:  string;
   reporterName: string;
-  postContent:  string | null;
+  targetContent: string | null;   // contenido resuelto del post/comentario/evento/espacio
   postAuthorId: string | null;
 }
 
@@ -75,27 +90,65 @@ export default function AdminComunidadScreen() {
 
   const load = useCallback(async () => {
     try {
-      const { data, error } = await anyDb
+      // Columnas polimórficas con FALLBACK: si la migración 20260702 no está
+      // aplicada (sin target_type/target_id), reintenta con el select clásico.
+      let res = await anyDb
         .from('community_reports')
-        .select('id, reporter_id, post_id, reason, status, created_at')
+        .select('id, reporter_id, post_id, reason, status, created_at, target_type, target_id')
         .eq('status', filter)
         .order('created_at', { ascending: false })
         .limit(100);
+      if (res.error) {
+        res = await anyDb
+          .from('community_reports')
+          .select('id, reporter_id, post_id, reason, status, created_at')
+          .eq('status', filter)
+          .order('created_at', { ascending: false })
+          .limit(100);
+      }
+      const { data, error } = res;
 
       if (error || !data) { setItems([]); return; }
-      const rows = data as any[];
+      const rows = (data as any[]).map((r) => ({
+        ...r,
+        target_type: (r.target_type ?? 'post') as ReportTargetType,
+        target_id: r.target_id ?? r.post_id ?? null,
+      }));
 
-      // Resolver contenido de los posts reportados.
-      const postIds = [...new Set(rows.map((r) => r.post_id).filter(Boolean))];
+      // Resolver contenido por tipo (tolerante a "ya borrado").
+      const idsOf = (t: ReportTargetType) =>
+        [...new Set(rows.filter((r) => r.target_type === t).map((r) => r.target_id).filter(Boolean))];
+
       const postMap: Record<string, { content: string; user_id: string }> = {};
+      const contentMap: Record<string, string> = {};
+
+      const postIds = idsOf('post');
       if (postIds.length > 0) {
         try {
-          const { data: posts } = await anyDb
-            .from('community_posts')
-            .select('id, content, user_id')
-            .in('id', postIds);
+          const { data: posts } = await anyDb.from('community_posts').select('id, content, user_id').in('id', postIds);
           (posts ?? []).forEach((p: any) => { postMap[p.id] = { content: p.content, user_id: p.user_id }; });
         } catch { /* posts pueden no existir */ }
+      }
+      const commentIds = idsOf('comment');
+      if (commentIds.length > 0) {
+        try {
+          const { data: cs } = await anyDb.from('post_comments').select('id, content').in('id', commentIds);
+          (cs ?? []).forEach((c: any) => { contentMap[c.id] = c.content; });
+        } catch { /* degradable */ }
+      }
+      const eventIds = idsOf('event');
+      if (eventIds.length > 0) {
+        try {
+          const { data: evs } = await anyDb.from('community_events').select('id, title, description').in('id', eventIds);
+          (evs ?? []).forEach((e: any) => { contentMap[e.id] = [e.title, e.description].filter(Boolean).join(' — '); });
+        } catch { /* degradable */ }
+      }
+      const spaceIds = idsOf('space');
+      if (spaceIds.length > 0) {
+        try {
+          const { data: sps } = await anyDb.from('community_spaces').select('id, name, description').in('id', spaceIds);
+          (sps ?? []).forEach((sp: any) => { contentMap[sp.id] = [sp.name, sp.description].filter(Boolean).join(' — '); });
+        } catch { /* degradable */ }
       }
 
       // Resolver nombres (reporters + autores de posts).
@@ -115,16 +168,21 @@ export default function AdminComunidadScreen() {
       }
 
       setItems(rows.map((r) => {
-        const post = r.post_id ? postMap[r.post_id] : undefined;
+        const post = r.target_type === 'post' && r.target_id ? postMap[r.target_id] : undefined;
+        const content = r.target_type === 'post'
+          ? (post?.content ?? null)
+          : (r.target_id ? contentMap[r.target_id] ?? null : null);
         return {
           id:           r.id,
           reporter_id:  r.reporter_id,
           post_id:      r.post_id,
+          targetType:   r.target_type,
+          targetId:     r.target_id,
           reason:       r.reason,
           status:       r.status,
           created_at:   r.created_at,
           reporterName: nameMap[r.reporter_id] ?? 'Miembro',
-          postContent:  post?.content ?? null,
+          targetContent: content,
           postAuthorId: post?.user_id ?? null,
         };
       }));
@@ -150,21 +208,36 @@ export default function AdminComunidadScreen() {
     setBusyId(null);
   };
 
-  // Acción dura opcional: borrar el post reportado (si el admin es dueño vía RLS de posts).
-  // Destructiva e irreversible → confirmación obligatoria antes de ejecutar.
-  const deletePost = (item: ReportItem) => {
-    if (!item.post_id) return;
+  // Acción dura por tipo de contenido (post/comentario → eliminar; evento →
+  // cancelar+eliminar visibilidad; espacio → archivar, NO borrar: sus posts
+  // quedan para auditoría). Destructiva → confirmación obligatoria.
+  const deleteTarget = (item: ReportItem) => {
+    if (!item.targetId) return;
+    const messages: Record<ReportTargetType, string> = {
+      post: 'La publicación reportada se eliminará permanentemente.',
+      comment: 'El comentario reportado se eliminará permanentemente.',
+      event: 'El evento reportado quedará cancelado para todos los asistentes.',
+      space: 'El espacio reportado se archivará (deja de ser visible; su contenido queda para auditoría).',
+    };
     Alert.alert(
-      'Eliminar publicación',
-      'La publicación reportada se eliminará permanentemente y el reporte quedará como accionado. ¿Continuar?',
+      TARGET_ACTION_LABEL[item.targetType],
+      `${messages[item.targetType]} El reporte quedará como accionado. ¿Continuar?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar', style: 'destructive',
+          text: 'Confirmar', style: 'destructive',
           onPress: async () => {
             setBusyId(item.id);
             try {
-              await anyDb.from('community_posts').delete().eq('id', item.post_id);
+              if (item.targetType === 'post') {
+                await anyDb.from('community_posts').delete().eq('id', item.targetId);
+              } else if (item.targetType === 'comment') {
+                await anyDb.from('post_comments').delete().eq('id', item.targetId);
+              } else if (item.targetType === 'event') {
+                await anyDb.from('community_events').update({ status: 'cancelled' }).eq('id', item.targetId);
+              } else if (item.targetType === 'space') {
+                await anyDb.from('community_spaces').update({ is_archived: true }).eq('id', item.targetId);
+              }
               await anyDb.from('community_reports').update({ status: 'actioned' }).eq('id', item.id);
               setItems((prev) => prev.filter((r) => r.id !== item.id));
             } catch {
@@ -233,13 +306,16 @@ export default function AdminComunidadScreen() {
                 <MaterialIcons name="flag" size={12} color={palette.goldText} />
                 <Text style={s.reasonText}>{REASON_LABEL[item.reason ?? ''] ?? (item.reason ?? 'Sin razón').toUpperCase()}</Text>
               </View>
+              <View style={s.typePill}>
+                <Text style={s.typePillText}>{TARGET_LABEL[item.targetType]}</Text>
+              </View>
               <Text style={s.time}>{timeAgo(item.created_at)}</Text>
             </View>
 
-            {item.postContent ? (
-              <Text style={s.postContent} numberOfLines={6}>“{item.postContent}”</Text>
+            {item.targetContent ? (
+              <Text style={s.postContent} numberOfLines={6}>“{item.targetContent}”</Text>
             ) : (
-              <Text style={s.postMissing}>La publicación ya no existe (eliminada).</Text>
+              <Text style={s.postMissing}>El contenido ya no existe (eliminado).</Text>
             )}
 
             <Text style={s.meta}>Reportado por {item.reporterName}</Text>
@@ -247,16 +323,16 @@ export default function AdminComunidadScreen() {
             {/* Acciones de moderación */}
             {filter !== 'actioned' && filter !== 'dismissed' ? (
               <View style={s.actions}>
-                {item.post_id && (
+                {item.targetId && (
                   <Pressable
                     style={[s.actionBtn, s.actionDanger, busyId === item.id && { opacity: 0.5 }]}
                     disabled={busyId === item.id}
-                    onPress={() => deletePost(item)}
+                    onPress={() => deleteTarget(item)}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: busyId === item.id }}
-                    accessibilityLabel="Eliminar la publicación reportada (permanente)">
+                    accessibilityLabel={`${TARGET_ACTION_LABEL[item.targetType]} (permanente)`}>
                     <MaterialIcons name="delete" size={15} color={palette.danger} />
-                    <Text style={[s.actionText, { color: palette.danger }]}>ELIMINAR POST</Text>
+                    <Text style={[s.actionText, { color: palette.danger }]}>{TARGET_ACTION_LABEL[item.targetType]}</Text>
                   </Pressable>
                 )}
                 {filter === 'open' && (
@@ -365,7 +441,9 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   reasonText: { ...typography.label, color: palette.goldText, fontSize: 9 },
-  time: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  typePill: { borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
+  typePillText: { ...typography.label, color: palette.ash, fontSize: 8, letterSpacing: 0.8 },
+  time: { ...typography.mono, color: palette.smoke, fontSize: 10, marginLeft: 'auto' },
 
   postContent: { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, lineHeight: 21, fontStyle: 'italic' },
   postMissing: { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, fontStyle: 'italic' },

@@ -80,6 +80,15 @@ Deno.serve(async (req: Request) => {
       adminSupabase.from('community_posts').delete().eq('user_id', userId),
       adminSupabase.from('community_reactions').delete().eq('user_id', userId),
       adminSupabase.from('community_reports').delete().eq('reporter_id', userId),
+      // El Círculo (espacios, eventos, conexiones, comentarios) — defensa en
+      // profundidad sobre los ON DELETE CASCADE de la migración 20260702.
+      adminSupabase.from('post_comments').delete().eq('user_id', userId),
+      adminSupabase.from('event_rsvps').delete().eq('user_id', userId),
+      adminSupabase.from('user_connections').delete().eq('requester_id', userId),
+      adminSupabase.from('user_connections').delete().eq('addressee_id', userId),
+      adminSupabase.from('space_members').delete().eq('user_id', userId),
+      adminSupabase.from('community_events').delete().eq('created_by', userId),
+      adminSupabase.from('community_spaces').delete().eq('created_by', userId),
       // Bloqueos (como bloqueador y como bloqueado) + mensajes directos (enviados y recibidos)
       adminSupabase.from('user_blocks').delete().eq('blocker_id', userId),
       adminSupabase.from('user_blocks').delete().eq('blocked_id', userId),
