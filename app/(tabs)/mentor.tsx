@@ -20,6 +20,7 @@ import {
   AppHeader,
   ChatBubble,
   GoldDivider,
+  MarkdownText,
   PolarisMark,
   PremiumCard,
   PremiumInput,
@@ -171,7 +172,7 @@ function TypingBubble({ text }: { text: string }) {
   return (
     <View style={styles.typingBubble}>
       {text ? (
-        <Text style={styles.typingText}>{text}</Text>
+        <MarkdownText text={text} style={styles.typingText} />
       ) : (
         <View style={styles.dotsRow}>
           <View style={styles.dot} />

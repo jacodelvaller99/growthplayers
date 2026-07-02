@@ -35,6 +35,7 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
+import { stripMarkdownLite } from '@/lib/markdownLite';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { useWearableConnections } from '@/lib/wearables';
 import { LIVE_SESSION, getNextSession, formatSessionDate } from '@/data/live-sessions';
@@ -420,7 +421,7 @@ export default function DashboardScreen() {
 
   const engagementBlock = intelligence.engagement_score > 0 && (
     <View style={styles.engagementRow}>
-      <Text style={styles.engagementLabel}>ENGAGEMENT</Text>
+      <Text style={styles.engagementLabel} numberOfLines={1}>ENGAGEMENT</Text>
       <Animated.View style={[styles.engagementBar, engagementBarStyle]} />
       <Text style={styles.engagementScore}>{intelligence.engagement_score}/100</Text>
     </View>
@@ -681,7 +682,7 @@ export default function DashboardScreen() {
       {weeklySession && (
         <View style={styles.normanWeeklySnippet}>
           <Text style={styles.normanWeeklyLabel}>DESPACHO · SEMANA {weeklySession.week_number}</Text>
-          <Text style={styles.normanWeeklyText} numberOfLines={4}>{weeklySession.ai_message}</Text>
+          <Text style={styles.normanWeeklyText} numberOfLines={4}>{stripMarkdownLite(weeklySession.ai_message)}</Text>
           <Pressable
             onPress={() => router.push('/(tabs)/mentor' as never)}
             style={({ pressed }) => [styles.normanWeeklyBtn, pressed && { opacity: 0.75 }]}>
@@ -1533,9 +1534,9 @@ const styles = StyleSheet.create({
   engagementLabel: {
     ...typography.label,
     color: palette.smoke,
+    flexShrink: 0,
     fontSize: 11,
     letterSpacing: 1.5,
-    width: 84,
   },
   engagementBar: {
     backgroundColor: palette.gold,

@@ -101,6 +101,15 @@ function MainStack() {
         <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/mensajes" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/chat/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/index" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/conexiones" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/perfil/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/espacios/index" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/espacios/crear" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/espacios/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/eventos/index" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/eventos/crear" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/eventos/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />

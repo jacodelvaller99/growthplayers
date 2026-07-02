@@ -30,6 +30,7 @@ import { AnimatedNumber } from './AnimatedNumber';
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
 
 import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
+import { parseMarkdownLite } from '@/lib/markdownLite';
 import { calcSovereignTier, type SovereignDelta } from '@/lib/utils';
 import { PolarisLogo } from './PolarisLogo';
 
@@ -607,6 +608,42 @@ export const SkeletonBar = memo(function SkeletonBar({
 
 // ─── Chat Bubble ─────────────────────────────────────────────────────────────
 
+/**
+ * Texto con markdown-lite (negrita/itálica/divisores) — para mensajes de
+ * Norman y cualquier salida de modelo que llegue con ** y --- crudos.
+ */
+export const MarkdownText = memo(function MarkdownText({
+  text,
+  style,
+}: {
+  text: string;
+  style?: React.ComponentProps<typeof Text>['style'];
+}) {
+  const blocks = useMemo(() => parseMarkdownLite(text), [text]);
+  return (
+    <>
+      {blocks.map((block, i) =>
+        block.kind === 'divider' ? (
+          <View key={i} style={styles.mdDivider} />
+        ) : (
+          <Text key={i} style={style}>
+            {block.segments.map((seg, j) => (
+              <Text
+                key={j}
+                style={[
+                  seg.bold && { fontFamily: Fonts.sansBold },
+                  seg.italic && { fontStyle: 'italic' },
+                ]}>
+                {seg.text}
+              </Text>
+            ))}
+          </Text>
+        ),
+      )}
+    </>
+  );
+});
+
 export const ChatBubble = memo(function ChatBubble({
   role,
   children,
@@ -614,9 +651,14 @@ export const ChatBubble = memo(function ChatBubble({
   role: 'mentor' | 'user';
   children: React.ReactNode;
 }) {
+  const textStyle = [styles.chatText, role === 'user' && styles.userChatText];
   return (
     <View style={[styles.chatBubble, role === 'user' ? styles.userBubble : styles.mentorBubble]}>
-      <Text style={[styles.chatText, role === 'user' && styles.userChatText]}>{children}</Text>
+      {typeof children === 'string' ? (
+        <MarkdownText text={children} style={textStyle} />
+      ) : (
+        <Text style={textStyle}>{children}</Text>
+      )}
     </View>
   );
 });
@@ -1170,6 +1212,11 @@ const styles = StyleSheet.create({
   userChatText: {
     color: palette.ink,
     fontFamily: Fonts.sansBold,
+  },
+  mdDivider: {
+    backgroundColor: palette.line,
+    height: 1,
+    marginVertical: spacing.sm,
   },
 
   // Pill
