@@ -29,8 +29,8 @@ jest.mock('@/lib/supabase', () => {
     ],
     community_posts: [{ id: 'p1', content: 'contenido reportado por la comunidad', user_id: 'u2' }],
     user_profiles: [
-      { user_id: 'u1', full_name: 'Ana' },
-      { user_id: 'u2', full_name: 'Beto' },
+      { user_id: 'u1', name: 'Ana' },
+      { user_id: 'u2', name: 'Beto' },
     ],
   };
   const makeChain = (table: string) => {

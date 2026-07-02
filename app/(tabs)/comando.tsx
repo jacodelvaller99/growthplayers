@@ -2194,9 +2194,9 @@ function CommunityPreview() {
           try {
             const { data: profiles } = await supabase
               .from('user_profiles')
-              .select('user_id, full_name')
+              .select('user_id, name')
               .in('user_id', ids);
-            (profiles ?? []).forEach((p: any) => { if (p.full_name) nameMap[p.user_id] = p.full_name; });
+            (profiles ?? []).forEach((p: any) => { if (p.name) nameMap[p.user_id] = p.name; });
           } catch { /* nombres por defecto */ }
         }
 
