@@ -21,7 +21,8 @@ type UntypedUpsert = {
     upsert: (
       values: Record<string, unknown>,
       options?: { onConflict?: string },
-    ) => Promise<{ error: unknown }>;
+    ) => Promise<{ error: { message?: string } | null }>;
+    insert: (values: Record<string, unknown>) => Promise<{ error: unknown }>;
   };
 };
 const untyped = supabase as unknown as UntypedUpsert;
@@ -83,7 +84,16 @@ export async function flushQueue(): Promise<void> {
         const { error } = item.onConflict
           ? await table.upsert(item.payload, { onConflict: item.onConflict })
           : await table.upsert(item.payload);
-        if (error) remaining.push(item); // sigue pendiente; reintentar luego
+        if (!error) continue;
+        // 42P10: la BD no tiene árbitro para ese ON CONFLICT (índice ausente o
+        // parcial). Reintentar como insert simple — si el insert entra, el dato
+        // se salvó; si no, el ítem se conserva para el próximo flush.
+        const msg = (error?.message ?? '').toLowerCase();
+        if (item.onConflict && (msg.includes('on conflict') || msg.includes('42p10'))) {
+          const { error: insErr } = await untyped.from(item.table).insert(item.payload);
+          if (!insErr) continue;
+        }
+        remaining.push(item); // sigue pendiente; reintentar luego
       } catch {
         remaining.push(item);
       }

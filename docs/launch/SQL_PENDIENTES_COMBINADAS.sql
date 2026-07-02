@@ -16,10 +16,18 @@
 --     memoria de Norman sobrevive vía mentor_conversations, pero el historial
 --     literal se pierde). Afecta a TODOS los clientes.
 --
--- Causa más probable: la política de INSERT owner sobre mentor_messages quedó
--- ausente o rota tras el hardening (deny-by-default). Este bloque restaura las
--- políticas owner y el índice único del outbox — todo idempotente e inocuo si
--- ya existieran.
+-- Causa raíz (dos capas):
+--   (1) El índice único del outbox (migración 20260618100000, aplicada) es
+--       PARCIAL (`where client_id is not null`) y Postgres NO acepta índices
+--       parciales como árbitro de un `ON CONFLICT (user_id, client_id)` sin
+--       predicado — PostgREST no emite ese predicado → error 42P10 SIEMPRE.
+--       El reintento del outbox usa ese upsert → los mensajes nunca drenan.
+--   (2) El insert simple de respaldo también falló en el momento del envío
+--       (401 transitorio de refresh de token, o policy INSERT ausente).
+-- Este bloque cambia el índice parcial por uno COMPLETO — los client_id NULL
+-- históricos no chocan entre sí (en Postgres los NULL son distintos entre sí)
+-- y el índice completo SÍ sirve de árbitro para ON CONFLICT — y restaura las
+-- políticas owner. Todo idempotente.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Diagnóstico (opcional, correr primero si quieres ver el estado actual):
@@ -27,10 +35,18 @@
 
 alter table public.mentor_messages enable row level security;
 
--- Columna client_id + índice único del outbox idempotente (por si faltaran).
+-- Columna client_id (por si faltara) + índice ÚNICO COMPLETO como árbitro.
 alter table public.mentor_messages add column if not exists client_id text;
+drop index if exists public.mentor_messages_user_client_id;   -- parcial (20260618100000)
+drop index if exists public.mentor_messages_user_client_uidx; -- por si corriste una versión previa de este fix
 create unique index if not exists mentor_messages_user_client_uidx
-  on public.mentor_messages (user_id, client_id) where client_id is not null;
+  on public.mentor_messages (user_id, client_id);
+
+-- Mismo problema en mentorship_sessions (outbox de sesiones de mentoría).
+alter table public.mentorship_sessions add column if not exists client_id text;
+drop index if exists public.mentorship_sessions_user_client_id; -- parcial (20260618100000)
+create unique index if not exists mentorship_sessions_user_client_uidx
+  on public.mentorship_sessions (user_id, client_id);
 
 drop policy if exists "Users read own messages"   on public.mentor_messages;
 drop policy if exists "Users insert own messages" on public.mentor_messages;
