@@ -328,13 +328,24 @@ export default function ComunidadScreen() {
       </Pressable>
       <Text style={styles.title}>COMUNIDAD</Text>
       {COMMUNITY_ENABLED && eulaState === 'ok' ? (
-        <Pressable
-          onPress={() => router.push('/comunidad/mensajes' as never)}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Mensajes directos">
-          <MaterialIcons name="forum" size={20} color={palette.goldText} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+          {ENV.socialSpacesEnabled && (
+            <Pressable
+              onPress={() => router.push('/comunidad' as never)}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Ir a El Círculo: eventos, espacios y conexiones">
+              <MaterialIcons name="workspaces" size={20} color={palette.goldText} />
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => router.push('/comunidad/mensajes' as never)}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Mensajes directos">
+            <MaterialIcons name="forum" size={20} color={palette.goldText} />
+          </Pressable>
+        </View>
       ) : (
         <View style={{ width: 38 }} />
       )}
