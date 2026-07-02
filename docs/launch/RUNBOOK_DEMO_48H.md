@@ -37,15 +37,28 @@ Vercel → proyecto **growthplayers** → **Settings → Environment Variables**
 
 ## Paso 3 — Migraciones SQL pendientes (~10 min)
 
-Supabase → **SQL Editor** → pega y corre el contenido de estos archivos del repo (`supabase/migrations/`), **en este orden**:
+> **⚠ NUEVO P0 (2026-07-02): el chat con Norman NO se está guardando en la nube.**
+> Diagnóstico con tu sesión real: los check-ins guardan bien, pero `mentor_messages`
+> rechaza todos los inserts (política RLS de INSERT ausente/rota) — el hilo se ve
+> vacío tras cada recarga, para todos los clientes. El fix es el bloque **FIX-0**
+> al inicio de `docs/launch/SQL_PENDIENTES_COMBINADAS.sql`. Correlo PRIMERO.
 
-1. `20260625000000_admin_update_user_profile.sql` ← sin esta, "guardar perfil" del admin falla en vivo
+Supabase → **SQL Editor** → lo más rápido: pega y corre **entero** el archivo
+`docs/launch/SQL_PENDIENTES_COMBINADAS.sql` (incluye FIX-0 + las 4 migraciones,
+todo idempotente). O archivo por archivo de `supabase/migrations/`, en este orden:
+
+0. **FIX-0 mentor_messages** (solo está en SQL_PENDIENTES_COMBINADAS.sql) ← P0
+1. `20260625000000_admin_update_user_profile.sql` ← YA aplicada el 2026-07-01
 2. `20260625000000_wearable_daily_merge.sql`
 3. `20260626000000_admin_sync_tier.sql` ← sin esta, el cambio de tier del admin no sincroniza
 4. `20260626000000_web_leads.sql`
 5. `20260701000000_dm_reactions.sql`
 
 Si alguna ya la corriste antes, sáltala (si te da error de "already exists", es señal de que ya estaba — sigue con la siguiente).
+
+Tras FIX-0: manda un mensaje a Norman y recarga la página — la conversación debe
+seguir ahí. Los mensajes atascados en el buzón offline de cada dispositivo se
+reenviarán solos al volver a abrir la app.
 
 ## Paso 4 — Merge a main (~5 min)
 

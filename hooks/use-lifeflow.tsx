@@ -236,7 +236,8 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     db.checkins().select('*').eq('user_id', uid).order('date', { ascending: false }).limit(30),
     db.tasks().select('*').eq('user_id', uid),
     db.completed().select('*').eq('user_id', uid),
-    db.messages().select('*').eq('user_id', uid).order('created_at', { ascending: true }).limit(50),
+    // Los 50 MÁS RECIENTES (desc + reverse al mapear); asc+limit devolvería los 50 más viejos.
+    db.messages().select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(50),
     db.wellness().select('*').eq('user_id', uid).order('completed_at', { ascending: false }).limit(100),
   ]);
 
@@ -275,7 +276,7 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
           role:      (m.role === 'assistant' ? 'mentor' : m.role) as 'mentor' | 'user',
           text:      m.content,
           createdAt: m.created_at ?? new Date().toISOString(),
-        }))
+        })).reverse() // llegaron desc (más nuevos primero) → cronológico para la UI
       : defaultState.mentorMessages;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

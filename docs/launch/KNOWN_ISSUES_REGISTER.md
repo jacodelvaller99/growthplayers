@@ -20,6 +20,15 @@ All paths are relative to the worktree root `.../sweet-diffie/lifeflow/`.
 
 ---
 
+### #0 (2026-07-02) — `mentor_messages` rechaza todos los INSERTs en prod: el chat con Norman no persiste — **S0 · fix SQL listo**
+- **Evidencia (sesión real, local contra prod):** `daily_checkins` acepta el insert del día (2026-07-02, energy 7) → red y sesión OK; `mentor_messages` devuelve `[]` para el owner y los 4 mensajes del chat quedaron atascados en `lifeflow:v2:offline_queue_v1` con `onConflict: user_id,client_id`. La columna `client_id` existe (probe SELECT → 200).
+- **Causa más probable:** política RLS de INSERT owner ausente/rota en prod (deny-by-default). La policy correcta existe en `supabase/migrations/20260619000000_db_hardening_p1.sql:111` pero el estado aplicado de esa migración en prod no está confirmado.
+- **Impacto:** TODOS los clientes pierden el historial literal del chat al recargar (la memoria sintetizada de Norman sobrevive vía `mentor_conversations` — por eso nadie lo notó). El dossier admin "F. CONVERSACIONES" lee `mentor_conversations`, no `mentor_messages`, y enmascaraba el hueco.
+- **Fix:** bloque **FIX-0** en `docs/launch/SQL_PENDIENTES_COMBINADAS.sql` (idempotente: policies SELECT/INSERT/UPDATE owner + columna/índice client_id). Al aplicarlo, los outbox de cada dispositivo drenan solos. Verificación: mensaje a Norman + recarga → el hilo sobrevive.
+- **Fix cliente relacionado (ya en branch):** la carga inicial pedía los 50 mensajes **más viejos** (`ascending: true` + `limit(50)`) — corregido a los 50 más recientes + reverse (`hooks/use-lifeflow.tsx:239`).
+
+---
+
 ### #1 — `userId` exposed as a ref read; consumers see stale `null` — **S0**
 - **Where:** `hooks/use-lifeflow.tsx:962` → `userId: uidRef.current` placed in the context value; `uidRef` is `useRef` (`use-lifeflow.tsx:332`), set in `init()` (`:368`) and `onAuthStateChange` (`:455`).
 - **Problem:** Mutating a ref does not re-render, so the context value's `userId` only updates when the provider re-renders for some other reason. Effects keyed on `[userId]` can fire once with `null` and never re-run with the real id.

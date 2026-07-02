@@ -1,9 +1,51 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- MIGRACIONES PENDIENTES COMBINADAS (demo 48h) — pegar TODO en el SQL Editor y Run.
--- Las 4 son idempotentes (CREATE OR REPLACE / IF NOT EXISTS / DROP POLICY IF EXISTS).
+-- Todas son idempotentes (CREATE OR REPLACE / IF NOT EXISTS / DROP POLICY IF EXISTS).
 -- La 1 del runbook (admin_update_user_profile) YA fue aplicada el 2026-07-01.
--- Orden: wearable_daily_merge → admin_sync_tier → web_leads → dm_reactions.
+-- Orden: FIX-0 mentor_messages → wearable_daily_merge → admin_sync_tier → web_leads → dm_reactions.
 -- ═══════════════════════════════════════════════════════════════════════════
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- FIX-0 (P0 · URGENTE) — mentor_messages no acepta INSERTs del cliente.
+--
+-- Evidencia (2026-07-02, sesión real de Juan Jacobo en local contra prod):
+--   · daily_checkins guarda bien (INSERT owner OK) — la red y la sesión sirven.
+--   · mentor_messages: 0 filas para el usuario; los 4 mensajes del chat de hoy
+--     quedaron atascados en el outbox local (lifeflow:v2:offline_queue_v1).
+--   · Consecuencia UX: el chat con Norman se ve VACÍO tras cada recarga (la
+--     memoria de Norman sobrevive vía mentor_conversations, pero el historial
+--     literal se pierde). Afecta a TODOS los clientes.
+--
+-- Causa más probable: la política de INSERT owner sobre mentor_messages quedó
+-- ausente o rota tras el hardening (deny-by-default). Este bloque restaura las
+-- políticas owner y el índice único del outbox — todo idempotente e inocuo si
+-- ya existieran.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Diagnóstico (opcional, correr primero si quieres ver el estado actual):
+-- select policyname, cmd, roles from pg_policies where tablename = 'mentor_messages';
+
+alter table public.mentor_messages enable row level security;
+
+-- Columna client_id + índice único del outbox idempotente (por si faltaran).
+alter table public.mentor_messages add column if not exists client_id text;
+create unique index if not exists mentor_messages_user_client_uidx
+  on public.mentor_messages (user_id, client_id) where client_id is not null;
+
+drop policy if exists "Users read own messages"   on public.mentor_messages;
+drop policy if exists "Users insert own messages" on public.mentor_messages;
+create policy "Users read own messages" on public.mentor_messages
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Users insert own messages" on public.mentor_messages
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+-- El upsert del outbox necesita UPDATE sobre la fila propia (merge-duplicates).
+drop policy if exists "Users update own messages" on public.mentor_messages;
+create policy "Users update own messages" on public.mentor_messages
+  for update to authenticated using ((select auth.uid()) = user_id)
+                              with check ((select auth.uid()) = user_id);
+
+-- Verificación post-fix: repetir el select de pg_policies (deben salir 3 filas)
+-- y en la app mandar un mensaje a Norman + recargar: el hilo debe sobrevivir.
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- merge_wearable_daily — upsert por-columna race-free para el agregador.
