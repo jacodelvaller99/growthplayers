@@ -424,8 +424,18 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         })(),
       ]);
       if (remote && mounted) {
-        setState(remote);
-        writeLocal(STATE_KEY, remote);
+        setState((prev) => {
+          const next = { ...remote };
+          // Anti-pisoteo: si la nube volvió SIN historial de chat (0 filas →
+          // seed default) pero el estado local tiene una conversación real,
+          // consérvala — el outbox aún no pudo subirla y reemplazarla aquí la
+          // borraría también de localStorage (pérdida definitiva del lado UI).
+          const remoteIsSeed = remote.mentorMessages.length === 1 && remote.mentorMessages[0]?.id === 'seed-mentor';
+          const prevHasReal  = prev.mentorMessages.some((m) => m.id !== 'seed-mentor');
+          if (remoteIsSeed && prevHasReal) next.mentorMessages = prev.mentorMessages;
+          writeLocal(STATE_KEY, next);
+          return next;
+        });
       }
     }
 
