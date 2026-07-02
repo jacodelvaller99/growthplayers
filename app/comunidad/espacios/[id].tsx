@@ -25,7 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ENV } from '@/app/config/env';
 import { Avatar } from '@/components/Avatar';
-import { CircleDisabled, CircleEmpty, EventCard } from '@/components/circle';
+import { CircleDisabled, CircleEmpty, CommentSheet, EmojiReactionBar, EventCard } from '@/components/circle';
 import { GoldDivider, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { REPORT_REASONS, containsBannedContent } from '@/data/moderation';
@@ -35,6 +35,7 @@ import {
   fetchEvents,
   fetchMyMemberships,
   fetchNamesFor,
+  fetchReactionsFor,
   fetchSpace,
   joinSpace,
   leaveSpace,
@@ -42,7 +43,13 @@ import {
   reportTarget,
   setPostReaction,
 } from '@/lib/circle';
-import { isUpcoming, type CircleEvent, type Space } from '@/lib/circleLogic';
+import {
+  groupReactions,
+  isUpcoming,
+  type CircleEvent,
+  type PostReaction,
+  type Space,
+} from '@/lib/circleLogic';
 import { supabase } from '@/lib/supabase';
 
  
@@ -53,10 +60,10 @@ interface SpacePost {
   user_id: string;
   content: string;
   likes_count: number;
+  comments_count: number;
   created_at: string;
   author_name: string;
   author_avatar: string | null;
-  liked: boolean;
 }
 
 function timeAgo(iso: string): string {
@@ -93,44 +100,40 @@ export default function EspacioDetalleScreen() {
   const [reportKind, setReportKind] = useState<'post' | 'space' | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
 
+  // Interacción rica (F4): reacciones agrupadas por post + hoja de comentarios
+  const [reactions, setReactions] = useState<Record<string, PostReaction[]>>({});
+  const [commentsFor, setCommentsFor] = useState<string | null>(null);
+
   const loadPosts = useCallback(async (blocked: Set<string>) => {
     if (!spaceId) return;
     try {
       const { data, error } = await anyDb
         .from('community_posts')
-        .select('id, user_id, content, likes_count, created_at')
+        .select('id, user_id, content, likes_count, comments_count, created_at')
         .eq('space_id', spaceId)
         .order('created_at', { ascending: false })
         .limit(80);
       if (error || !data) { setPosts([]); return; }
-       
+
       const visible = (data as any[]).filter((p) => !blocked.has(p.user_id as string));
       const names = await fetchNamesFor(visible.map((p) => p.user_id as string));
-      let myLikes = new Set<string>();
-      if (userId) {
-        try {
-          const { data: rx } = await anyDb
-            .from('community_reactions')
-            .select('post_id')
-            .eq('user_id', userId)
-            .eq('type', 'like')
-            .in('post_id', visible.map((p) => p.id));
-           
-          myLikes = new Set((rx ?? []).map((r: any) => r.post_id as string));
-        } catch { /* degradable */ }
-      }
+      // Reacciones en LOTE (una query para todos los posts visibles)
+      const rx = await fetchReactionsFor(visible.map((p) => p.id as string));
+      const rxMap: Record<string, PostReaction[]> = {};
+      for (const r of rx) (rxMap[r.post_id] ??= []).push(r);
+      setReactions(rxMap);
       setPosts(visible.map((p) => ({
         id: p.id,
         user_id: p.user_id,
         content: p.content,
         likes_count: p.likes_count ?? 0,
+        comments_count: p.comments_count ?? 0,
         created_at: p.created_at,
         author_name: names[p.user_id]?.name ?? 'Miembro',
         author_avatar: names[p.user_id]?.avatar ?? null,
-        liked: myLikes.has(p.id),
       })));
     } catch { setPosts([]); }
-  }, [spaceId, userId]);
+  }, [spaceId]);
 
   const load = useCallback(async () => {
     if (!spaceId) return;
@@ -186,14 +189,18 @@ export default function EspacioDetalleScreen() {
     setSubmitting(false);
   };
 
-  const toggleLike = async (post: SpacePost) => {
+  /** Reacción con semántica replace (una por usuario). type=null → quitar. */
+  const handleReaction = async (post: SpacePost, type: string | null) => {
     if (!userId) return;
-    setPosts((prev) => prev.map((p) => p.id === post.id
-      ? { ...p, liked: !p.liked, likes_count: Math.max(0, p.likes_count + (p.liked ? -1 : 1)) }
-      : p));
-    const res = post.liked
-      ? await removePostReaction(userId, post.id)
-      : await setPostReaction(userId, post.id, 'like');
+    // Optimista sobre el mapa de reacciones
+    setReactions((prev) => {
+      const list = (prev[post.id] ?? []).filter((r) => r.user_id !== userId);
+      if (type) list.push({ post_id: post.id, user_id: userId, type });
+      return { ...prev, [post.id]: list };
+    });
+    const res = type
+      ? await setPostReaction(userId, post.id, type)
+      : await removePostReaction(userId, post.id);
     if (!res.success) {
       const blocked = await fetchBlockedIds(userId);
       await loadPosts(blocked);
@@ -340,19 +347,23 @@ export default function EspacioDetalleScreen() {
                       </Pressable>
                     </View>
                     <Text style={s.postContent}>{p.content}</Text>
-                    <Pressable
-                      style={s.likeRow}
-                      onPress={() => toggleLike(p)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: p.liked }}
-                      accessibilityLabel={`${p.liked ? 'Quitar' : 'Dar'} apoyo. ${p.likes_count} apoyos`}>
-                      <MaterialIcons
-                        name={p.liked ? 'favorite' : 'favorite-border'}
-                        size={16}
-                        color={p.liked ? palette.goldText : palette.smoke}
-                      />
-                      <Text style={[s.likeCount, p.liked && { color: palette.goldText }]}>{p.likes_count}</Text>
-                    </Pressable>
+                    <View style={s.postFooter}>
+                      <View style={{ flex: 1 }}>
+                        <EmojiReactionBar
+                          groups={groupReactions(reactions[p.id] ?? [], userId ?? null)}
+                          onSelect={(type) => handleReaction(p, type)}
+                          disabled={!userId}
+                        />
+                      </View>
+                      <Pressable
+                        style={s.commentBtn}
+                        onPress={() => setCommentsFor(p.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Comentarios: ${p.comments_count}. Abrir`}>
+                        <MaterialIcons name="chat-bubble-outline" size={15} color={palette.smoke} />
+                        <Text style={s.commentCount}>{p.comments_count}</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 ))
               )}
@@ -364,6 +375,19 @@ export default function EspacioDetalleScreen() {
           <Text style={s.notice} accessibilityLiveRegion="polite" role="alert">{notice}</Text>
         )}
       </ScrollView>
+
+      {/* Comentarios */}
+      <CommentSheet
+        postId={commentsFor}
+        userId={userId ?? null}
+        visible={!!commentsFor}
+        onClose={() => setCommentsFor(null)}
+        onCountChange={(postId, delta) =>
+          setPosts((prev) => prev.map((p) => p.id === postId
+            ? { ...p, comments_count: Math.max(0, p.comments_count + delta) }
+            : p))
+        }
+      />
 
       {/* Action sheet: publicación */}
       <Modal visible={!!actionPost && !reportKind} transparent animationType="fade" onRequestClose={() => setActionPost(null)}>
@@ -438,8 +462,9 @@ const s = StyleSheet.create({
   postAuthor: { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 13, color: palette.ivory },
   postTime: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   postContent: { ...typography.body, color: palette.ivory, fontSize: 13.5, lineHeight: 20 },
-  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', minHeight: 38, paddingRight: spacing.md },
-  likeCount: { ...typography.mono, color: palette.smoke, fontSize: 11 },
+  postFooter: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  commentBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 30, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill },
+  commentCount: { ...typography.mono, color: palette.smoke, fontSize: 11 },
 
   notice: { ...typography.caption, color: palette.goldText, textAlign: 'center', paddingHorizontal: spacing.lg, marginTop: spacing.sm, fontSize: 12 },
 

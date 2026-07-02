@@ -16,7 +16,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ENV } from '@/app/config/env';
 import { Avatar } from '@/components/Avatar';
+import { CommentSheet } from '@/components/circle';
 import { db2, supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
@@ -83,6 +85,9 @@ export default function ComunidadScreen() {
   const [reportFor, setReportFor]   = useState<Post | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
   const [notice, setNotice]         = useState<string | null>(null);
+
+  // El Círculo (flag-gated): hoja de comentarios sobre los posts de la plaza.
+  const [commentsFor, setCommentsFor] = useState<string | null>(null);
 
   // ── EULA: ¿ya aceptó? (profiles.consents.community con fallback local) ───────
   useEffect(() => {
@@ -518,6 +523,15 @@ export default function ComunidadScreen() {
                     {post.likes_count > 0 ? post.likes_count : ''}
                   </Text>
                 </Pressable>
+                {ENV.socialSpacesEnabled && (
+                  <Pressable
+                    onPress={() => setCommentsFor(post.id)}
+                    style={styles.likeBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Ver y escribir comentarios">
+                    <MaterialIcons name="mode-comment" size={16} color={palette.ash} />
+                  </Pressable>
+                )}
                 {post.user_id !== userId && (
                   <Pressable
                     onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: post.user_id, name: post.author_name } } as never)}
@@ -533,6 +547,16 @@ export default function ComunidadScreen() {
 
           <View style={{ height: 20 }} />
         </ScrollView>
+
+        {/* ── El Círculo: comentarios (solo con flag activo) ── */}
+        {ENV.socialSpacesEnabled && (
+          <CommentSheet
+            postId={commentsFor}
+            userId={userId ?? null}
+            visible={!!commentsFor}
+            onClose={() => setCommentsFor(null)}
+          />
+        )}
 
         {/* ── Action sheet por post (reportar / bloquear / mensaje) ── */}
         <Modal

@@ -41,6 +41,7 @@ jest.mock('@/lib/circle', () => ({
   fetchEvents: jest.fn().mockResolvedValue([]),
   fetchBlockedIds: jest.fn().mockResolvedValue(new Set()),
   fetchNamesFor: jest.fn().mockResolvedValue({ u2: { name: 'Beto', avatar: null } }),
+  fetchReactionsFor: jest.fn().mockResolvedValue([{ post_id: 'p1', user_id: 'u2', type: '🔥' }]),
   joinSpace: jest.fn().mockResolvedValue({ success: true }),
   leaveSpace: jest.fn().mockResolvedValue({ success: true }),
   setPostReaction: jest.fn().mockResolvedValue({ success: true }),
