@@ -29,7 +29,17 @@ export type EventType =
   | 'module_view'
   | 'paywall_hit'
   | 'subscription_start'
-  | 'app_crash';
+  | 'app_crash'
+  // El Círculo (red social interna)
+  | 'space_created'
+  | 'space_joined'
+  | 'space_left'
+  | 'event_created'
+  | 'event_rsvp'
+  | 'connection_requested'
+  | 'connection_accepted'
+  | 'comment_created'
+  | 'post_reaction';
 
 interface QueuedEvent {
   event_type: EventType;

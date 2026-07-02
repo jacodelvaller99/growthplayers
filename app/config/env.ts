@@ -35,6 +35,16 @@ export const ENV = {
   confrontationOsEnabled: ((process.env.EXPO_PUBLIC_CONFRONTATION_OS_ENABLED ?? '').toLowerCase() === 'true') as boolean,
 
   /**
+   * Feature flag — El Círculo (red social interna: espacios, eventos con RSVP,
+   * conexiones, comentarios y reacciones). Default false: se enciende primero
+   * en Preview de Vercel y luego en Production. La capa IO en lib/circle.ts
+   * verifica este flag antes de cualquier query; las superficies nuevas solo
+   * se linkean desde la UI cuando está activo. El feed general y los DMs
+   * existentes NO dependen de este flag.
+   */
+  socialSpacesEnabled: ((process.env.EXPO_PUBLIC_SOCIAL_SPACES_ENABLED ?? '').toLowerCase() === 'true') as boolean,
+
+  /**
    * Vendor del agregador universal de wearables: 'terra' (default, comercial,
    * widget multi-marca hosteado) o 'open_wearables' (OSS self-host). En modo
    * open_wearables la conexión es OAuth POR MARCA, así que la UI ofrece un
