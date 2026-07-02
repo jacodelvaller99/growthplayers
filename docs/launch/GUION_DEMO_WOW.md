@@ -44,6 +44,12 @@
 | Sin red / Vercel caído | nada carga | Screenshots de respaldo de las 11 paradas (se capturan en el ensayo) en una carpeta local. |
 | Pregunta sobre precios/pago en web | — | "La suscripción va por iOS/Android (App Store); en web capturamos el lead" — NO abrir el paywall web más de 5 segundos. |
 
+> **Pre-requisito duro (verificado 2026-07-02):** el chat con Norman solo persiste
+> en la nube si el bloque **FIX-0** de `SQL_PENDIENTES_COMBINADAS.sql` está
+> aplicado. Sin él, el hilo sobrevive a recargas en el MISMO navegador (guard
+> local, iter 64) pero NO aparece en otro dispositivo — en una demo PC+móvil
+> con la misma cuenta se notaría. Aplicar FIX-0 antes del ensayo (Fase 5).
+
 ## ANEXO — Script de las conversaciones con Norman (cuenta demo, Fase 2)
 
 > El motor de confrontación solo cita compromisos EXPLÍCITOS. En los 2–3 chats de
