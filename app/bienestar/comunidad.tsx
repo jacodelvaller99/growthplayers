@@ -149,12 +149,24 @@ export default function ComunidadScreen() {
     try {
       const blocks = await loadBlocks();
 
-      // Cargar posts (sin join — evita problema de FK en PostgREST)
-      const { data, error } = await db2.communityPosts()
+      // Cargar posts (sin join — evita problema de FK en PostgREST).
+      // La plaza general = posts SIN espacio (space_id IS NULL, El Círculo).
+      // Fallback degradable: si la columna space_id aún no existe (migración
+      // 20260702 pendiente), reintenta sin el filtro — el feed clásico no cambia.
+      let res = await (db2.communityPosts() as any)
         .select('id, user_id, content, likes_count, is_pinned, created_at')
+        .is('space_id', null)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(80);
+      if (res.error) {
+        res = await db2.communityPosts()
+          .select('id, user_id, content, likes_count, is_pinned, created_at')
+          .order('is_pinned', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(80);
+      }
+      const { data, error } = res;
 
       if (error || !data) { setPosts([]); return; }
 

@@ -279,6 +279,12 @@ ALTER TABLE public.community_reactions DROP CONSTRAINT IF EXISTS community_react
 ALTER TABLE public.community_reactions ADD CONSTRAINT community_reactions_type_check
   CHECK (type IN ('like', '🔥', '💪', '🙏', '👏', '❤️'));
 
+-- Garantiza el arbiter (post_id, user_id) para los upserts de reacción del
+-- cliente, sin importar con qué UNIQUE exacto se creó la tabla en prod.
+-- Seguro hoy: el único type existente es 'like' → no puede haber duplicados.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reactions_post_user
+  ON public.community_reactions(post_id, user_id);
+
 -- Redefinir el trigger de likes_count para contar SOLO type='like' y cubrir
 -- UPDATE (cambio like↔emoji). Para el único valor existente ('like'), el
 -- comportamiento INSERT/DELETE es idéntico al anterior.

@@ -113,6 +113,18 @@ export function CircleEmpty({ icon, text, ctaLabel, onCta }: {
   );
 }
 
+// ─── Guard de flag (deep-link con El Círculo apagado → estado honesto) ───────
+
+export function CircleDisabled() {
+  return (
+    <View style={s.disabledWrap}>
+      <MaterialIcons name="workspaces" size={36} color={palette.goldText} />
+      <Text style={s.disabledTitle}>EL CÍRCULO</Text>
+      <Text style={s.emptyText}>Esta sección aún no está activa para tu cuenta.</Text>
+    </View>
+  );
+}
+
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
@@ -144,6 +156,9 @@ const s = StyleSheet.create({
   },
   rsvpPillGoing: { backgroundColor: palette.gold, borderColor: palette.gold },
   rsvpPillText: { ...typography.label, color: palette.ash, fontSize: 8, letterSpacing: 0.8 },
+
+  disabledWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing.xl },
+  disabledTitle: { ...typography.title, color: palette.ivory, fontSize: 18, letterSpacing: 2 },
 
   empty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
   emptyText: { ...typography.caption, color: palette.smoke, fontSize: 12, textAlign: 'center', lineHeight: 18 },
