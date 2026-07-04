@@ -242,17 +242,6 @@ export const surfaces = {
     borderWidth: 1,
     borderRadius: radii.md,
   },
-  // Accent card — thin left gold border (brand identity element)
-  accentCard: {
-    backgroundColor:    palette.graphite,
-    borderLeftColor:    palette.gold,
-    borderLeftWidth:    2,
-    borderTopColor:     'transparent',
-    borderRightColor:   'transparent',
-    borderBottomColor:  'transparent',
-    borderWidth: 0,
-    borderRadius: radii.md,
-  },
   // Elevated surface (modals, sheets)
   elevated: {
     backgroundColor: palette.graphiteLight,
