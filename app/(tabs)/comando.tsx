@@ -1,8 +1,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  FadeInDown,
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
@@ -15,8 +16,8 @@ import { AnimatedNumber } from '@/components/AnimatedNumber';
 
 import {
   AppHeader,
-  EditorialPanel,
   GoldDivider,
+  HoverCard,
   MetricCard,
   PremiumCard,
   PrimaryButton,
@@ -336,40 +337,27 @@ export default function DashboardScreen() {
 
   // ── Shared JSX blocks (idénticos en mobile y desktop) ─────────────────────
 
-  const heroBlock = (
-    <EditorialPanel
-      eyebrow={`DÍA ${protocolDay} · PROTOCOLO SOBERANO`}
-      title={`${greeting()},\n${state.profile.name}.`}
-      body={intelligenceGreeting ?? undefined}>
-      {/* Mando de hoy — una sola decisión, ancla forward del día */}
-      <Pressable
-        onPress={() => router.push('/(tabs)/norte')}
-        accessibilityRole="button"
-        accessibilityLabel="Tu mando de hoy"
-        style={({ pressed }) => [styles.mandoStrip, pressed && { opacity: 0.85 }]}>
-        <Text style={styles.mandoLabel}>TU MANDO DE HOY</Text>
-        <Text style={styles.mandoText}>{mandoDeHoy}</Text>
-        <Text style={styles.mandoCaption}>
-          Tu única decisión no-negociable de hoy — sale de tu Norte y tu lectura del check-in.
-        </Text>
-      </Pressable>
-      <Text style={styles.time}>
-        {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+  // Mando de hoy — una sola decisión, ancla forward del día (hero desktop)
+  const mandoStripBlock = (
+    <HoverCard
+      onPress={() => router.push('/(tabs)/norte')}
+      accessibilityRole="button"
+      accessibilityLabel="Tu mando de hoy"
+      style={styles.mandoStrip}>
+      <Text style={styles.mandoLabel}>TU MANDO DE HOY</Text>
+      <Text style={styles.mandoText}>{mandoDeHoy}</Text>
+      <Text style={styles.mandoCaption}>
+        Tu única decisión no-negociable de hoy — sale de tu Norte y tu lectura del check-in.
       </Text>
-      <PrimaryButton
-        label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'}
-        icon="assignment"
-        onPress={() => router.push('/checkin')}
-      />
-    </EditorialPanel>
+    </HoverCard>
   );
 
   const anomalyBlock = intelligence.anomaly_detected && intelligence.anomaly_type && (
-    <Pressable
+    <HoverCard
       onPress={() => router.push('/(tabs)/mentor')}
       accessibilityRole="button"
       accessibilityLabel="Señal detectada — hablar con Norman"
-      style={({ pressed }) => [styles.anomalyCard, pressed && { opacity: 0.85 }]}>
+      style={styles.anomalyCard}>
       <MaterialIcons name="warning-amber" size={18} color={palette.goldText} />
       <View style={styles.anomalyTextBlock}>
         <Text style={styles.anomalyTitle}>SEÑAL DETECTADA</Text>
@@ -382,15 +370,15 @@ export default function DashboardScreen() {
         </Text>
       </View>
       <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
-    </Pressable>
+    </HoverCard>
   );
 
   const nbaBlock = nextActionConfig && intelligence.next_action_urgency !== 'low' && (
-    <Pressable
+    <HoverCard
       onPress={() => router.push(nextActionConfig.screen as never)}
       accessibilityRole="button"
       accessibilityLabel={`Próxima acción recomendada: ${nextActionConfig.label}`}
-      style={({ pressed }) => [styles.nbaCard, pressed && { opacity: 0.85 }]}>
+      style={styles.nbaCard}>
       <View style={styles.nbaBadge}>
         <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.ink} />
       </View>
@@ -402,21 +390,21 @@ export default function DashboardScreen() {
         )}
       </View>
       <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
-    </Pressable>
+    </HoverCard>
   );
 
   // North Star daily anchor — identity primer before metrics
   const northAnchorStrip = state.northStar.dailyReminder ? (
-    <Pressable
+    <HoverCard
       onPress={() => router.push('/(tabs)/norte')}
       accessibilityRole="button"
       accessibilityLabel="Recordatorio de tu Norte — ir a Mi Norte"
-      style={({ pressed }) => [styles.northAnchor, pressed && { opacity: 0.8 }]}>
+      style={styles.northAnchor}>
       <MaterialIcons name="north" size={12} color={palette.goldText} />
       <Text style={styles.northAnchorText} numberOfLines={2}>
         {state.northStar.dailyReminder}
       </Text>
-    </Pressable>
+    </HoverCard>
   ) : null;
 
   const engagementBlock = intelligence.engagement_score > 0 && (
@@ -488,21 +476,25 @@ export default function DashboardScreen() {
           <StateMeter label="Estrés" value={checkIn.stress} inverted />
         </PremiumCard>
       ) : (
-        <Pressable
+        <HoverCard
           onPress={() => router.push('/checkin')}
-          style={({ pressed }) => [styles.estadoEmpty, pressed && { opacity: 0.8 }]}>
+          accessibilityRole="button"
+          accessibilityLabel="Registrar check-in de hoy"
+          style={styles.estadoEmpty}>
           <MaterialIcons name="assignment" size={20} color={palette.smoke} />
           <View style={{ flex: 1 }}>
             <Text style={styles.estadoEmptyTitle}>SIN LECTURA HOY</Text>
             <Text style={styles.estadoEmptySub}>Registra tu check-in para calibrar el sistema</Text>
           </View>
           <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-        </Pressable>
+        </HoverCard>
       )}
       {!hasWearable && protocolDay >= 3 && (
-        <Pressable
+        <HoverCard
           onPress={() => router.push('/perfil/wearables' as never)}
-          style={({ pressed }) => [styles.wearableCta, pressed && { opacity: 0.8 }]}>
+          accessibilityRole="button"
+          accessibilityLabel="Conectar wearable"
+          style={styles.wearableCta}>
           <MaterialIcons name="watch" size={16} color={palette.goldText} />
           <View style={styles.wearableCtaCopy}>
             <Text style={styles.wearableCtaTitle}>CONECTA TU WEARABLE</Text>
@@ -511,7 +503,7 @@ export default function DashboardScreen() {
             </Text>
           </View>
           <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-        </Pressable>
+        </HoverCard>
       )}
     </View>
   );
@@ -697,12 +689,8 @@ export default function DashboardScreen() {
   // ── Live Session Card ────────────────────────────────────────────────────────
   const liveSession = getNextSession(LIVE_SESSION);
   const liveSessionBlock = (
-    <Pressable
-      style={({ pressed }) => [
-        styles.liveCard,
-        liveSession.isOngoing && styles.liveCardOngoing,
-        pressed && { opacity: 0.9 },
-      ]}
+    <HoverCard
+      style={[styles.liveCard, liveSession.isOngoing && styles.liveCardOngoing]}
       onPress={() => {
         if (typeof window !== 'undefined') {
           // noopener,noreferrer: evita reverse-tabnabbing en el link externo.
@@ -764,13 +752,13 @@ export default function DashboardScreen() {
           {liveSession.isOngoing ? 'UNIRME A LA SESIÓN' : `AGENDAR · ${LIVE_SESSION.durationMinutes} MIN`}
         </Text>
       </View>
-    </Pressable>
+    </HoverCard>
   );
 
   // ── Community Teaser ─────────────────────────────────────────────────────────
   const communityBlock = (
-    <Pressable
-      style={({ pressed }) => [styles.communityCard, pressed && { opacity: 0.85 }]}
+    <HoverCard
+      style={styles.communityCard}
       onPress={() => router.push('/bienestar/comunidad' as never)}
       accessibilityRole="button"
       accessibilityLabel="Ver comunidad de Operadores Soberanos">
@@ -787,12 +775,12 @@ export default function DashboardScreen() {
       <Text style={styles.communityBody}>
         Comparte insights, celebra victorias y mantén la accountability con otros en el protocolo.
       </Text>
-    </Pressable>
+    </HoverCard>
   );
 
   // ── Bienvenida contextual de mentoría (semana actual + CTA) ──────────────────
   const mentoriaBlock = (
-    <Pressable
+    <HoverCard
       style={styles.mentoriaCard}
       onPress={() => router.push('/mentoria' as never)}
       accessibilityRole="button"
@@ -812,7 +800,7 @@ export default function DashboardScreen() {
         </Text>
       </View>
       <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
-    </Pressable>
+    </HoverCard>
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -858,11 +846,11 @@ export default function DashboardScreen() {
 
   // Check-in: hecho → COHERENCIA DE HOY · pendiente → CALIBRAR SISTEMA HOY
   const mCheckinCard = todayCheckIn ? (
-    <Pressable
+    <HoverCard
       onPress={() => router.push('/checkin')}
       accessibilityRole="button"
       accessibilityLabel="Revisar coherencia de hoy"
-      style={({ pressed }) => [mob.checkinDoneCard, pressed && { opacity: 0.9 }]}>
+      style={mob.checkinDoneCard}>
       <View style={mob.rowBetween}>
         <Text style={[mob.eyebrow, { color: palette.goldText }]}>COHERENCIA DE HOY</Text>
         <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
@@ -875,13 +863,13 @@ export default function DashboardScreen() {
       <View style={mob.track}>
         <View style={[mob.trackFill, { width: `${coherenceToday * 10}%` }]} />
       </View>
-    </Pressable>
+    </HoverCard>
   ) : (
-    <Pressable
+    <HoverCard
       onPress={() => router.push('/checkin')}
       accessibilityRole="button"
       accessibilityLabel="Calibrar sistema hoy"
-      style={({ pressed }) => [mob.checkinCta, pressed && { opacity: 0.9 }]}>
+      style={mob.checkinCta}>
       <View style={mob.checkinCtaIcon}>
         <MaterialIcons name="monitor-heart" size={24} color={palette.goldText} />
       </View>
@@ -890,7 +878,7 @@ export default function DashboardScreen() {
         <Text style={mob.checkinCtaSub}>Aún no lees tu estado de hoy</Text>
       </View>
       <MaterialIcons name="arrow-forward" size={22} color={palette.goldText} />
-    </Pressable>
+    </HoverCard>
   );
 
   // Norman — avatar + nombre + ACTIVO + chip CONSULTAR + insight (borde-izq oro)
@@ -926,13 +914,13 @@ export default function DashboardScreen() {
         <Text style={mob.sectionLabel}>{nextLesson.sectionLabel}</Text>
         <View style={mob.sectionRule} />
       </View>
-      <Pressable
+      <HoverCard
         onPress={() =>
           router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })
         }
         accessibilityRole="button"
         accessibilityLabel={`Abrir lección: ${nextLesson.lessonTitle}`}
-        style={({ pressed }) => [mob.lessonCard, pressed && { opacity: 0.92 }]}>
+        style={mob.lessonCard}>
         <View style={mob.lessonThumb}>
           <View style={mob.lessonPlay}>
             <MaterialIcons name="play-arrow" size={28} color={palette.ink} />
@@ -948,7 +936,7 @@ export default function DashboardScreen() {
             <Text style={mob.lessonPct}>{nextLesson.pct}%</Text>
           </View>
         </View>
-      </Pressable>
+      </HoverCard>
     </View>
   );
 
@@ -975,6 +963,48 @@ export default function DashboardScreen() {
     </View>
   );
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // DESKTOP-ONLY — "Cockpit Polaris": hero cinematográfico + command grid
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Banda hero full-width: estado del sistema (ring) · decisión de hoy (mando)
+  // · calibración (check-in) — el orden narrativo de móvil, en una sola mirada.
+  const deskHero = isDesktop ? (
+    <Animated.View
+      entering={FadeInDown.springify().damping(20).stiffness(180)}
+      style={[styles.deskHeroBand, deskHeroGlow]}>
+      <View style={styles.deskScoreCol}>
+        <ScoreRing value={sovereignScore} max={1000} size={180} stroke={10} sub={`/ ${sovereignTier}`} />
+        <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+        {weeklyScoreDelta > 0 && (
+          <View style={styles.deskDeltaRow}>
+            <MaterialIcons name="trending-up" size={14} color={palette.success} />
+            <Text style={styles.deskDeltaText}>+{weeklyScoreDelta} esta semana</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.deskHeroCenter}>
+        <Text style={styles.deskHeroEyebrow}>{`DÍA ${protocolDay} · PROTOCOLO SOBERANO · ${todayLabel()}`}</Text>
+        <Text style={styles.deskHeroTitle}>{`${greeting()},\n${state.profile.name}.`}</Text>
+        {intelligenceGreeting ? (
+          <Text style={styles.deskHeroBody}>{intelligenceGreeting}</Text>
+        ) : null}
+        {mandoStripBlock}
+        <View style={styles.deskHeroActions}>
+          <PrimaryButton
+            label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'}
+            icon="assignment"
+            onPress={() => router.push('/checkin')}
+          />
+          <Text style={styles.time} numberOfLines={1}>
+            {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.deskHeroCheckin}>{mCheckinCard}</View>
+    </Animated.View>
+  ) : null;
+
   return (
     <ScrollView
       style={sc.root}
@@ -992,62 +1022,75 @@ export default function DashboardScreen() {
 
       {isDesktop ? (
         /* ══════════════════════════════════════════════════════════
-           DESKTOP LAYOUT — full-width, dos columnas en la parte inferior
+           DESKTOP LAYOUT — "Cockpit Polaris": hero + command grid 3/5/3
            ══════════════════════════════════════════════════════════ */
         <>
-          {/* Fila superior: Hero + Engagement */}
           {northAnchorStrip}
-          <View style={styles.desktopTopRow}>
-            <View style={styles.desktopHeroCol}>{heroBlock}</View>
-            <View style={styles.desktopSideCol}>
-              {anomalyBlock}
-              {nbaBlock}
-              {engagementBlock}
+
+          {/* ZONA 1 — hero cinematográfico full-width */}
+          {deskHero}
+
+          {/* ZONA 2 — instrumentos: KPI strip + engagement */}
+          <Animated.View
+            entering={FadeInDown.delay(120).springify().damping(20).stiffness(180)}
+            style={styles.deskZone2}>
+            {metricsRow}
+            {engagementBlock}
+          </Animated.View>
+
+          {/* ZONA 3 — command grid: ESTADO · ACCIÓN · RAIL VIVO */}
+          <View style={styles.deskGrid}>
+            <Animated.View
+              entering={FadeInDown.delay(200).springify().damping(20).stiffness(180)}
+              style={styles.deskColEstado}>
+              <GoldDivider label="ESTADO DEL DÍA" />
+              {estadoBlock}
               <ProgressCard
                 label={protocolDay >= 60 ? 'ARC DE TRANSFORMACIÓN · FASE FINAL' : protocolDay >= 30 ? 'ARC DE TRANSFORMACIÓN · PROFUNDIDAD' : 'ARC DE TRANSFORMACIÓN · BASE'}
                 value={`${progress}% · Día ${protocolDay} de 90`}
                 progress={progress}
               />
-            </View>
-          </View>
-
-          {/* KPI strip — 4 columnas */}
-          {metricsRow}
-
-          {/* Mentoría contextual */}
-          {mentoriaBlock}
-
-          {/* Cuerpo principal — dos columnas */}
-          <View style={styles.desktopBody}>
-            <View style={styles.desktopLeft}>
-              <GoldDivider label="ESTADO DEL DÍA" />
-              {estadoBlock}
               <GoldDivider label="BIENESTAR" />
               {wellnessBlock}
-            </View>
-            <View style={styles.desktopRight}>
-              <GoldDivider label="NORMAN · MENTOR IA" />
-              {normanQuickPanel}
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeInDown.delay(280).springify().damping(20).stiffness(180)}
+              style={styles.deskColAccion}>
+              {anomalyBlock}
+              {nbaBlock}
               <GoldDivider label="HOY EN TU PROTOCOLO" />
               {protocolBlock}
-              <GoldDivider label="SESIÓN EN VIVO" />
-              {liveSessionBlock}
-              <GoldDivider label="COMUNIDAD" />
-              {communityBlock}
-              <CommunityPreview />
-              <GoldDivider label="MI NORTE" />
-              <PremiumCard style={styles.northCard}>
-                <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
-                <Text style={styles.northBody}>
-                  {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
-                </Text>
-                <PrimaryButton
-                  label="EDITAR NORTE"
-                  icon="explore"
-                  onPress={() => router.push('/(tabs)/norte')}
-                />
-              </PremiumCard>
-            </View>
+              {mNextLessonBlock}
+              <GoldDivider label="MENTORÍA" />
+              {mentoriaBlock}
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeInDown.delay(360).springify().damping(20).stiffness(180)}
+              style={styles.deskColRail}>
+              <View style={[styles.deskRailInner, deskRailSticky]}>
+                <GoldDivider label="NORMAN · MENTOR IA" />
+                {normanQuickPanel}
+                <GoldDivider label="SESIÓN EN VIVO" />
+                {liveSessionBlock}
+                <GoldDivider label="COMUNIDAD" />
+                {communityBlock}
+                <CommunityPreview />
+                <GoldDivider label="MI NORTE" />
+                <PremiumCard style={styles.northCard}>
+                  <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
+                  <Text style={styles.northBody}>
+                    {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
+                  </Text>
+                  <PrimaryButton
+                    label="EDITAR NORTE"
+                    icon="explore"
+                    onPress={() => router.push('/(tabs)/norte')}
+                  />
+                </PremiumCard>
+              </View>
+            </Animated.View>
           </View>
         </>
       ) : (
@@ -1105,30 +1148,83 @@ export default function DashboardScreen() {
   );
 }
 
+// ── Desktop-only (web): fondo radial del hero + rail sticky ──────────────────
+// backgroundImage/position:sticky solo existen en react-native-web; en nativo
+// estos objetos son undefined y el spread en el style array es un no-op.
+const deskHeroGlow = Platform.select<object | undefined>({
+  web: {
+    backgroundImage: `radial-gradient(ellipse at 18% 0%, ${palette.goldGlow} 0%, transparent 55%)`,
+  },
+  default: undefined,
+});
+
+const deskRailSticky = Platform.select<object | undefined>({
+  web: { position: 'sticky', top: 24 },
+  default: undefined,
+});
+
 const styles = StyleSheet.create({
-  // ── Desktop content container ──────────────────────────────────────────────
+  // ── Desktop content container — "Cockpit Polaris" ──────────────────────────
   contentDesktop: {
     alignSelf: 'center',
     width: '100%',
-    maxWidth: 1200,
+    maxWidth: 1440,
     paddingHorizontal: 40,
     paddingTop: 32,
-    paddingBottom: 60,
-    gap: 24,
+    paddingBottom: 80,
+    gap: 32,
   },
-  // Desktop top row: hero (60%) + side panel (40%)
-  desktopTopRow: {
+  // ZONA 1 — banda hero full-width (score · mando · check-in)
+  deskHeroBand: {
     flexDirection: 'row',
-    gap: 24,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: spacing.xxl,
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.lineGoldSubtle,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xxl,
+    minHeight: 260,
   },
-  desktopHeroCol: {
-    flex: 3,
+  deskScoreCol: {
+    width: 220,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  desktopSideCol: {
-    flex: 2,
-    gap: 16,
+  deskDeltaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  deskDeltaText: { ...typography.caption, color: palette.success, fontWeight: '600' },
+  deskHeroCenter: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.md,
   },
+  deskHeroEyebrow: {
+    ...typography.label,
+    color: palette.goldText,
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  deskHeroTitle: {
+    ...typography.hero,
+    color: palette.ivory,
+    fontSize: 30,
+    lineHeight: 38,
+    letterSpacing: 1.5,
+  },
+  deskHeroBody: {
+    ...typography.body,
+    color: palette.ash,
+  },
+  deskHeroActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  deskHeroCheckin: { width: 300 },
+  // ZONA 2 — instrumentos
+  deskZone2: { gap: spacing.lg },
   // Metric grid: 4 cols on desktop
   gridDesktop: {
     flexWrap: 'nowrap',
@@ -1138,20 +1234,16 @@ const styles = StyleSheet.create({
     width: undefined,
     minHeight: 120,
   },
-  // Two-column body
-  desktopBody: {
+  // ZONA 3 — command grid 3/5/3
+  deskGrid: {
     flexDirection: 'row',
-    gap: 24,
+    gap: spacing.xl,
     alignItems: 'flex-start',
   },
-  desktopLeft: {
-    flex: 3,
-    gap: 16,
-  },
-  desktopRight: {
-    flex: 2,
-    gap: 16,
-  },
+  deskColEstado: { flex: 3, minWidth: 300, gap: spacing.lg },
+  deskColAccion: { flex: 5, minWidth: 0, gap: spacing.lg },
+  deskColRail: { flex: 3, minWidth: 300 },
+  deskRailInner: { gap: spacing.lg },
 
   // ── Norman Quick Panel ──────────────────────────────────────────────────────
   normanQP: {

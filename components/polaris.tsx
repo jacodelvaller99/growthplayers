@@ -5,12 +5,16 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Platform,
   Pressable,
+  type PressableProps,
+  type PressableStateCallbackType,
+  type StyleProp,
   StyleSheet,
   Text,
   TextInput,
   type TextInputProps,
   View,
   type ViewProps,
+  type ViewStyle,
   useWindowDimensions,
 } from 'react-native';
 import Animated, {
@@ -85,6 +89,70 @@ export function GoldAccentCard({ children, style, ...props }: ViewProps) {
       <View style={styles.goldAccentStripe} />
       <View style={styles.goldAccentContent}>{children}</View>
     </View>
+  );
+}
+
+// ─── Hover Card — Pressable con estados de escritorio (web) ──────────────────
+// El style-callback de react-native-web recibe { hovered, focused } además de
+// { pressed }; los tipos de RN solo declaran pressed, de ahí el cast local.
+// En nativo hovered/focused son undefined → el componente degrada a un
+// Pressable normal con feedback de pressed. Pensado para cards clickeables.
+
+type WebPressableState = PressableStateCallbackType & {
+  hovered?: boolean;
+  focused?: boolean;
+};
+
+// Transición suave del lift/borde en web; en nativo no existe la propiedad.
+const hoverTransition = Platform.select<ViewStyle | undefined>({
+  web: {
+    transitionProperty: 'transform, border-color, background-color',
+    transitionDuration: '160ms',
+  } as unknown as ViewStyle,
+  default: undefined,
+});
+
+const hoverLift: ViewStyle = {
+  borderColor: palette.lineHard,
+  backgroundColor: palette.graphiteLight,
+  transform: [{ translateY: -2 }],
+};
+
+// Anillo de foco oro para navegación por teclado (outline* solo existe en RNW).
+const focusRing = Platform.select<ViewStyle | undefined>({
+  web: {
+    outlineColor: palette.gold,
+    outlineWidth: 2,
+    outlineStyle: 'solid',
+    outlineOffset: 2,
+  } as unknown as ViewStyle,
+  default: undefined,
+});
+
+export function HoverCard({
+  style,
+  hoverStyle,
+  children,
+  ...props
+}: Omit<PressableProps, 'style'> & {
+  style?: StyleProp<ViewStyle>;
+  hoverStyle?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <Pressable
+      {...props}
+      style={(state) => {
+        const { hovered, focused, pressed } = state as WebPressableState;
+        return [
+          hoverTransition,
+          style,
+          hovered && (hoverStyle ?? hoverLift),
+          focused && focusRing,
+          pressed && { opacity: 0.9 },
+        ];
+      }}>
+      {children}
+    </Pressable>
   );
 }
 

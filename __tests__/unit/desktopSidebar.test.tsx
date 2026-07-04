@@ -26,6 +26,17 @@ jest.mock('@/components/PolarisLogo', () => {
   const ReactLib = require('react');
   return { PolarisLogo: () => ReactLib.createElement(RN.View) };
 });
+// El sidebar importa HoverCard desde polaris (que arrastra Skia) — mock ligero.
+jest.mock('@/components/polaris', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ReactLib = require('react');
+  return {
+    HoverCard: ({ children, onPress }: { children?: React.ReactNode; onPress?: () => void }) =>
+      ReactLib.createElement(RN.View, { onPress }, children),
+  };
+});
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { DesktopSidebar } = require('@/components/DesktopSidebar');

@@ -1,8 +1,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { usePathname, useRouter } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { palette, Fonts } from '@/constants/theme';
+import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { PolarisLogo } from '@/components/PolarisLogo';
@@ -62,10 +63,11 @@ export function DesktopSidebar() {
   const renderItem = (item: NavItem) => {
     const isActive = segments.includes(item.match);
     return (
-      <TouchableOpacity
+      <HoverCard
         key={item.route}
         onPress={() => router.push(item.route as never)}
         style={[styles.navItem, isActive && styles.navItemActive]}
+        hoverStyle={styles.navItemHover}
         accessibilityRole="menuitem"
         accessibilityLabel={item.label}
       >
@@ -78,7 +80,7 @@ export function DesktopSidebar() {
         <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
           {item.label}
         </Text>
-      </TouchableOpacity>
+      </HoverCard>
     );
   };
 
@@ -120,10 +122,11 @@ export function DesktopSidebar() {
           {(['dark', 'light'] as ThemeMode[]).map((m) => {
             const on = mode === m;
             return (
-              <TouchableOpacity
+              <HoverCard
                 key={m}
                 onPress={() => setMode(m)}
                 style={[styles.themeBtn, on && styles.themeBtnOn]}
+                hoverStyle={on ? styles.themeBtnOn : styles.navItemHover}
                 accessibilityRole="button"
                 accessibilityLabel={m === 'dark' ? 'Tema oscuro' : 'Tema claro'}
               >
@@ -135,14 +138,14 @@ export function DesktopSidebar() {
                 <Text style={[styles.themeBtnText, on && styles.themeBtnTextOn]}>
                   {m === 'dark' ? 'OSCURO' : 'CLARO'}
                 </Text>
-              </TouchableOpacity>
+              </HoverCard>
             );
           })}
         </View>
       )}
 
       {/* ── Tarjeta de usuario (abajo) ── */}
-      <TouchableOpacity
+      <HoverCard
         style={styles.userCard}
         onPress={() => router.push('/(tabs)/progreso' as never)}
         accessibilityRole="button"
@@ -158,7 +161,7 @@ export function DesktopSidebar() {
           <Text style={styles.userTier}>{tier}</Text>
         </View>
         <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
-      </TouchableOpacity>
+      </HoverCard>
 
     </View>
   );
@@ -229,8 +232,12 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: 'rgba(255,200,4,0.07)',
-    borderColor: 'rgba(255,200,4,0.18)',
+    backgroundColor: palette.goldGlow,
+    borderColor: palette.lineGoldSubtle,
+  },
+  // Hover suave para nav/toggles (sin lift — es navegación, no una card)
+  navItemHover: {
+    backgroundColor: palette.charcoal,
   },
   activeBar: {
     position: 'absolute',
@@ -257,9 +264,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     padding: 14,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,200,4,0.06)',
+    backgroundColor: palette.goldGlow,
     borderWidth: 1,
-    borderColor: 'rgba(255,200,4,0.18)',
+    borderColor: palette.lineGoldSubtle,
   },
   streakRow: {
     flexDirection: 'row',
