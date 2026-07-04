@@ -60,3 +60,12 @@ supabase/.temp/
 # Algunos paths exceden el límite de Windows; no se versionan.
 .agents/
 skills-lock.json
+
+# Impeccable — config.json/design.json/live/config.json SÍ se versionan (contexto
+# de marca compartido); esto es solo estado efímero de sesión local.
+.impeccable/hook.cache.json
+.impeccable/live/sessions/
+.impeccable/config.local.json
+# Nombres de archivo con timestamp exceden el límite de path de Windows (mismo
+# problema que .agents/ arriba) — snapshots de /impeccable critique, no versionar.
+.impeccable/critique/

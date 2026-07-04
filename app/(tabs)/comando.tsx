@@ -16,6 +16,7 @@ import { AnimatedNumber } from '@/components/AnimatedNumber';
 
 import {
   AppHeader,
+  GoldAccentCard,
   GoldDivider,
   HoverCard,
   MetricCard,
@@ -339,17 +340,16 @@ export default function DashboardScreen() {
 
   // Mando de hoy — una sola decisión, ancla forward del día (hero desktop)
   const mandoStripBlock = (
-    <HoverCard
+    <GoldAccentCard
       onPress={() => router.push('/(tabs)/norte')}
       accessibilityRole="button"
-      accessibilityLabel="Tu mando de hoy"
-      style={styles.mandoStrip}>
+      accessibilityLabel="Tu mando de hoy">
       <Text style={styles.mandoLabel}>TU MANDO DE HOY</Text>
       <Text style={styles.mandoText}>{mandoDeHoy}</Text>
       <Text style={styles.mandoCaption}>
         Tu única decisión no-negociable de hoy — sale de tu Norte y tu lectura del check-in.
       </Text>
-    </HoverCard>
+    </GoldAccentCard>
   );
 
   const anomalyBlock = intelligence.anomaly_detected && intelligence.anomaly_type && (
@@ -630,7 +630,7 @@ export default function DashboardScreen() {
   }, [todayCheckIn, checkIn?.stress, checkIn?.energy, protocolDay]);
 
   const normanQuickPanel = (
-    <View style={styles.normanQP}>
+    <GoldAccentCard style={styles.normanQP}>
       {/* Header */}
       <View style={styles.normanQPHeader}>
         <View style={styles.normanQPAvatar}>
@@ -683,7 +683,7 @@ export default function DashboardScreen() {
           </Pressable>
         </View>
       )}
-    </View>
+    </GoldAccentCard>
   );
 
   // ── Live Session Card ────────────────────────────────────────────────────────
@@ -781,13 +781,12 @@ export default function DashboardScreen() {
   // ── Bienvenida contextual de mentoría (semana actual + CTA) ──────────────────
   const mentoriaBlock = (
     <HoverCard
-      style={styles.mentoriaCard}
+      style={styles.mentoriaRow}
       onPress={() => router.push('/mentoria' as never)}
       accessibilityRole="button"
       accessibilityLabel="Abrir mi mentoría"
     >
-      <View style={styles.mentoriaStripe} />
-      <View style={styles.mentoriaBody}>
+      <GoldAccentCard style={styles.mentoriaCard}>
         <View style={styles.mentoriaHead}>
           <MaterialIcons name="route" size={15} color={palette.goldText} />
           <Text style={styles.mentoriaEyebrow}>
@@ -798,7 +797,7 @@ export default function DashboardScreen() {
         <Text style={styles.mentoriaFocus} numberOfLines={2}>
           {currentWeek(protocolDay).focus}
         </Text>
-      </View>
+      </GoldAccentCard>
       <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
     </HoverCard>
   );
@@ -903,7 +902,9 @@ export default function DashboardScreen() {
           <Text style={mob.normanChipText}>CONSULTAR</Text>
         </View>
       </View>
-      <Text style={mob.normanInsight} numberOfLines={4}>{normanInsight}</Text>
+      <GoldAccentCard style={mob.normanInsightWrap}>
+        <Text style={mob.normanInsight} numberOfLines={4}>{normanInsight}</Text>
+      </GoldAccentCard>
     </Pressable>
   );
 
@@ -1060,10 +1061,7 @@ export default function DashboardScreen() {
               {anomalyBlock}
               {nbaBlock}
               <GoldDivider label="HOY EN TU PROTOCOLO" />
-              {protocolBlock}
               {mNextLessonBlock}
-              <GoldDivider label="MENTORÍA" />
-              {mentoriaBlock}
             </Animated.View>
 
             <Animated.View
@@ -1072,6 +1070,8 @@ export default function DashboardScreen() {
               <View style={[styles.deskRailInner, deskRailSticky]}>
                 <GoldDivider label="NORMAN · MENTOR IA" />
                 {normanQuickPanel}
+                <GoldDivider label="MENTORÍA" />
+                {mentoriaBlock}
                 <GoldDivider label="SESIÓN EN VIVO" />
                 {liveSessionBlock}
                 <GoldDivider label="COMUNIDAD" />
@@ -1247,13 +1247,6 @@ const styles = StyleSheet.create({
 
   // ── Norman Quick Panel ──────────────────────────────────────────────────────
   normanQP: {
-    backgroundColor: palette.charcoal,
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: radii.md,
-    borderLeftWidth: 3,
-    borderLeftColor: palette.gold,
-    padding: spacing.lg,
     gap: spacing.md,
   },
   normanQPHeader: {
@@ -1389,15 +1382,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Mando de hoy (hero forward) ─────────────────────────────────────────────
-  mandoStrip: {
-    borderLeftWidth: 3,
-    borderLeftColor: palette.gold,
-    backgroundColor: 'rgba(179,141,60,0.07)',
-    borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    gap: 6,
-  },
   mandoLabel: {
     fontFamily: Fonts.display,
     fontWeight: '700',
@@ -1754,25 +1738,17 @@ const styles = StyleSheet.create({
   },
 
   // Mentoría contextual card
+  mentoriaRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           spacing.md,
+  },
   mentoriaCard: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             spacing.md,
-    backgroundColor: palette.graphite,
-    borderColor:     palette.lineGoldSubtle,
-    borderRadius:    radii.md,
-    borderWidth:     1,
-    paddingVertical: spacing.md,
-    paddingRight:    spacing.md,
-    overflow:        'hidden',
-    minHeight:       72,
+    flex:      1,
+    gap:       3,
+    minHeight: 72,
+    justifyContent: 'center',
   },
-  mentoriaStripe: {
-    width:           3,
-    alignSelf:       'stretch',
-    backgroundColor: palette.gold,
-  },
-  mentoriaBody: { flex: 1, gap: 3, paddingLeft: spacing.md },
   mentoriaHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   mentoriaEyebrow: {
     fontFamily:    Fonts.mono,
@@ -2125,14 +2101,15 @@ const mob = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  normanInsightWrap: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
   normanInsight: {
     ...typography.body,
     color: palette.ash,
     fontSize: 13,
     lineHeight: 20,
-    borderLeftWidth: 2,
-    borderLeftColor: palette.lineGold,
-    paddingLeft: spacing.md,
     fontStyle: 'italic',
   },
 

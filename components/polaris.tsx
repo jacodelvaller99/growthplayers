@@ -82,8 +82,35 @@ export function PremiumCard({ children, style, ...props }: ViewProps) {
 }
 
 // ─── Gold Accent Card (left border stripe) ───────────────────────────────────
+// El único patrón de "franja dorada" sancionado por DESIGN.md — onPress opcional
+// lo vuelve interactivo (hover/focus/press vía HoverCard) sin romper los usos
+// estáticos existentes (mentoria/norte/checkin/admin), que no pasan onPress.
 
-export function GoldAccentCard({ children, style, ...props }: ViewProps) {
+export function GoldAccentCard({
+  children,
+  style,
+  onPress,
+  hoverStyle,
+  ...props
+}: ViewProps & {
+  onPress?: PressableProps['onPress'];
+  hoverStyle?: StyleProp<ViewStyle>;
+  accessibilityRole?: PressableProps['accessibilityRole'];
+  accessibilityLabel?: PressableProps['accessibilityLabel'];
+}) {
+  if (onPress) {
+    return (
+      <HoverCard
+        onPress={onPress}
+        hoverStyle={hoverStyle}
+        style={[styles.goldAccentCard, style]}
+        accessibilityRole={props.accessibilityRole}
+        accessibilityLabel={props.accessibilityLabel}>
+        <View style={styles.goldAccentStripe} />
+        <View style={styles.goldAccentContent}>{children}</View>
+      </HoverCard>
+    );
+  }
   return (
     <View style={[styles.goldAccentCard, style]} {...props}>
       <View style={styles.goldAccentStripe} />

@@ -36,6 +36,8 @@ jest.mock('@/components/polaris', () => {
   return {
     AppHeader: Wrap,
     EditorialPanel: Wrap,
+    GoldAccentCard: ({ children, onPress }: { children?: React.ReactNode; onPress?: () => void }) =>
+      R.createElement(RN.View, { onPress }, children),
     GoldDivider: () => R.createElement(RN.View),
     HoverCard: ({ children, onPress }: { children?: React.ReactNode; onPress?: () => void }) =>
       R.createElement(RN.View, { onPress }, children),

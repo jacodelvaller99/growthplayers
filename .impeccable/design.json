@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-04T00:00:00.000Z",
+  "title": "Design System: Polaris Growth Institute",
+  "extensions": {
+    "colorMeta": {
+      "gold": {
+        "role": "primary",
+        "displayName": "Philippine Yellow",
+        "canonical": "#FFC804",
+        "tonalRamp": ["#4D3B00", "#806100", "#B38700", "#E0AB00", "#FFC804", "#FFD53D", "#FFE380", "#FFF2C2"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#111111",
+        "tonalRamp": ["#050505", "#0A0A0A", "#111111", "#181818", "#222222", "#3A3A3A", "#666666", "#AAAAAA"]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Ivory",
+        "canonical": "#EBEBEB",
+        "tonalRamp": ["#444444", "#666666", "#888888", "#AAAAAA", "#CCCCCC", "#EBEBEB", "#F0EBE0", "#FFFFFF"]
+      },
+      "success": { "role": "status", "displayName": "Sage Success", "canonical": "#52A878" },
+      "danger": { "role": "status", "displayName": "Muted Alert Red", "canonical": "#C0392B" },
+      "warning": { "role": "status", "displayName": "Amber Warning", "canonical": "#D4A017" },
+      "info": { "role": "status", "displayName": "Steel Blue Info", "canonical": "#3D8FC0" },
+      "wellness-purple": { "role": "accent", "displayName": "Wellness Violet", "canonical": "#7C5CBF" }
+    },
+    "typographyMeta": {
+      "hero": { "displayName": "Hero", "purpose": "Splash screens, fullscreen player moments. The rarest, loudest voice." },
+      "title": { "displayName": "Title", "purpose": "Screen header bars." },
+      "section": { "displayName": "Section", "purpose": "Card headings, section labels — the most common display-font usage." },
+      "label": { "displayName": "Label", "purpose": "Micro labels, pills, tags." },
+      "body": { "displayName": "Body", "purpose": "The only sentence-case text in the system; comfortable-reading paragraphs." },
+      "mono": { "displayName": "Mono", "purpose": "Data readouts, timestamps, metrics." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 2px 8px rgba(0,0,0,0.40)", "purpose": "Rare case where a resting card needs to lift; most cards use zero shadow." },
+      { "name": "card-elevated", "value": "0 8px 24px rgba(0,0,0,0.60)", "purpose": "Modals, drawers, sheets — genuine overlays only." },
+      { "name": "gold-glow", "value": "0 0 20px rgba(255,200,4,0.15)", "purpose": "Ambient glow to make the gold accent feel like it emits light, not a drop shadow." }
+    ],
+    "motion": [
+      { "name": "spring-press", "value": "damping: 15, stiffness: 300, mass: 0.8", "purpose": "Press-in feedback on primary interactive elements — tactile, not a flat opacity fade." },
+      { "name": "spring-entry", "value": "damping: 20, stiffness: 200, mass: 1.0", "purpose": "Entrance animations (FadeInDown springify) for cards and zones." },
+      { "name": "hover-transition", "value": "160ms, transform/border-color/background-color", "purpose": "Web-only hover lift + border tint on HoverCard." },
+      { "name": "ring-fill", "value": "900ms ease", "purpose": "Sovereign Score ring stroke-dasharray animation." },
+      { "name": "count-up", "value": "1200ms", "purpose": "Score number count-up animation." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "< 768px" },
+      { "name": "tablet", "value": "768px – 1199px" },
+      { "name": "desktop", "value": ">= 1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid gold CTA — the one primary action per screen.",
+      "html": "<button class=\"ds-btn-primary\">HACER CHECK-IN</button>",
+      "css": ".ds-btn-primary { background: #FFC804; color: #0A0A0A; border: none; border-radius: 8px; min-height: 52px; padding: 0 24px; font-family: 'GrandisExtended', 'Poppins', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: transform 160ms; } .ds-btn-primary:hover { transform: translateY(-1px); } .ds-btn-primary:active { transform: scale(0.95); } .ds-btn-primary:focus-visible { outline: 2px solid #FFC804; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.4; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Transparent, bordered — one step quieter than primary.",
+      "html": "<button class=\"ds-btn-secondary\">VER DETALLE</button>",
+      "css": ".ds-btn-secondary { background: transparent; color: #EBEBEB; border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; min-height: 48px; padding: 0 24px; font-family: 'GrandisExtended', 'Poppins', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; transition: border-color 160ms, background-color 160ms; } .ds-btn-secondary:hover { background: #181818; border-color: rgba(255,255,255,0.13); } .ds-btn-secondary:focus-visible { outline: 2px solid #FFC804; outline-offset: 2px; }"
+    },
+    {
+      "name": "Premium Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default flat card — no shadow at rest, depth from surface color only.",
+      "html": "<div class=\"ds-card\"><span class=\"ds-card-label\">RACHA</span><span class=\"ds-card-value\">53</span></div>",
+      "css": ".ds-card { background: #111111; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; } .ds-card-label { font-family: 'GrandisExtended', 'Poppins', sans-serif; font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase; color: #888888; } .ds-card-value { font-family: 'GrandisExtended', 'Poppins', sans-serif; font-size: 32px; color: #FFC804; }"
+    },
+    {
+      "name": "Gold Accent Card",
+      "kind": "card",
+      "refersTo": "card-gold-accent",
+      "description": "The one sanctioned side-stripe exception — a consistent brand signature (Norman's chat messages, editorial highlights), not a repeated decorative accent.",
+      "html": "<div class=\"ds-card-accent\"><div class=\"ds-card-accent-stripe\"></div><div class=\"ds-card-accent-body\">Dijiste que dormirías 7 horas. Tu reloj marca 5.2 esta semana.</div></div>",
+      "css": ".ds-card-accent { display: flex; background: #111111; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; overflow: hidden; } .ds-card-accent-stripe { width: 2px; background: #FFC804; flex-shrink: 0; } .ds-card-accent-body { padding: 16px; color: #EBEBEB; font-family: 'Inter', sans-serif; font-size: 14px; line-height: 22px; }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "Pill-shaped state indicator — tone communicates state, always paired with a text label.",
+      "html": "<span class=\"ds-pill ds-pill-gold\">SOBERANO</span>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 9999px; font-family: 'GrandisExtended', 'Poppins', sans-serif; font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase; } .ds-pill-gold { background: rgba(255,200,4,0.12); color: #FFC804; } .ds-pill-muted { background: rgba(255,255,255,0.07); color: #AAAAAA; } .ds-pill-success { background: rgba(82,168,120,0.15); color: #52A878; }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "hover-card",
+      "description": "Desktop sidebar navigation row — hover lift + gold focus ring via the shared HoverCard primitive.",
+      "html": "<a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><span class=\"ds-nav-bar\"></span>INICIO</a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 11px 12px; border-radius: 10px; border: 1px solid transparent; color: #444444; font-family: 'GrandisExtended', 'Poppins', sans-serif; font-size: 11px; letter-spacing: 1.5px; text-decoration: none; position: relative; transition: transform 160ms, border-color 160ms, background-color 160ms; } .ds-nav-item:hover { background: #222222; transform: translateY(-2px); } .ds-nav-item:focus-visible { outline: 2px solid #FFC804; outline-offset: 2px; } .ds-nav-item-active { background: rgba(255,200,4,0.08); border-color: rgba(255,200,4,0.15); color: #FFC804; } .ds-nav-bar { position: absolute; left: -16px; width: 3px; height: 20px; background: #FFC804; border-radius: 999px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Precision Instrument",
+    "overview": "Polaris is a cockpit, not a feed. Every screen behaves like an instrument panel for a 90-day high-performance protocol: a near-black canvas that recedes, a single gold needle that moves only when something earns it, and typography that reads like an operator's manual, not a lifestyle app. The system explicitly rejects the vocabulary of consumer wellness apps — no confetti, no badge-as-toy gamification, no mascots, no gradient hero metrics, no identical SaaS card grids. Gold is rationed: it marks the one primary action, the one key number, the one thing that changed.",
+    "keyCharacteristics": [
+      "Near-black canvas, graphite cards, one gold accent used as a fill, never as ambient decoration.",
+      "GrandisExtended (uppercase) for anything that names or labels; Inter for anything meant to be read at length.",
+      "Flat by default — elevation exists only for things that float above the canvas.",
+      "Desktop composes its own layout instead of stretching the mobile column."
+    ],
+    "rules": [
+      { "name": "The Fill-vs-Text Gold Rule", "body": "gold is for fills only; gold-text is a separate, themeable token for gold-colored text/icons. Never cross the two.", "section": "colors" },
+      { "name": "The One Voice Rule", "body": "Gold appears on a small minority of any given screen — one primary CTA, one score, one active nav item.", "section": "colors" },
+      { "name": "The All-Caps Display Rule", "body": "Every GrandisExtended usage is uppercase, no exceptions.", "section": "typography" },
+      { "name": "The Floating-Only Rule", "body": "Shadows are reserved for genuine overlays (modals, toasts); resting cards never cast a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use palette.* tokens for every color; raw hex in a component is a tracked regression.",
+      "Do keep gold to fills only; use the separate gold-text token for gold-colored text or icons.",
+      "Do use spring-physics press feedback instead of instant opacity snaps.",
+      "Do respect prefers-reduced-motion for every animation.",
+      "Do keep body text at Inter, 14px minimum, 4.5:1 contrast (WCAG AA)."
+    ],
+    "donts": [
+      "Don't use border-left/border-right as a decorative colored stripe anywhere except the one sanctioned Gold Accent Card.",
+      "Don't use gradient text for any metric or heading.",
+      "Don't build gamified streak/badge UI in the Duolingo mold.",
+      "Don't default to identical card grids as the answer to layout.",
+      "Don't add a shadow to anything in normal document flow.",
+      "Don't stack a second eyebrow convention on top of the existing uppercase section labels.",
+      "Don't stretch the mobile single-column layout to fill desktop width."
+    ]
+  }
+}
