@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
+import { MEDITATION_CATEGORY_MUSIC, MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -155,8 +155,8 @@ function MeditationPlayer({
     startTimeRef.current = Date.now();
     haptic('medium');
 
-    // Start audio
-    const audio = createMeditationAudio(session.ambientType);
+    // Start audio (cama musical Suno por categoría si existe; si no, ruido procedural)
+    const audio = createMeditationAudio(session.ambientType, MEDITATION_CATEGORY_MUSIC[session.category]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (audioRef as any).current = audio;
     audio?.start();
@@ -164,7 +164,7 @@ function MeditationPlayer({
 
     // Wire to global wellness store so mini player appears
     storeStart({ type: 'meditation', sessionName: session.title, targetSeconds: totalSeconds });
-  }, [totalSeconds, session.ambientType, session.title, storeStart]);
+  }, [totalSeconds, session.ambientType, session.category, session.title, storeStart]);
 
   // Countdown timer
   useEffect(() => {

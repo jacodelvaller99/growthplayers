@@ -28,6 +28,11 @@ export interface GuidedPhase {
   duration: number; // seconds
 }
 
+// Cama musical instrumental (Suno) por categoría, subida a Storage en el
+// bucket público "wellness-audio/meditation/<archivo>.mp3". Cuando falta una
+// entrada, el reproductor degrada al ruido ambiental procedural (lib/binaural.ts).
+export const MEDITATION_CATEGORY_MUSIC: Partial<Record<MeditationCategory, string>> = {};
+
 export interface MeditationSession {
   id: string;
   title: string;

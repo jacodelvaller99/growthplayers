@@ -74,6 +74,26 @@ function createAmbienceSource(ctx: AudioContext, type: AmbienceType): AudioBuffe
   return createNoiseSource(ctx, noiseType);
 }
 
+// ─── Cama musical (Suno) — cache por URL para no re-descargar/decodificar ────
+// entre sesiones de la misma categoría.
+
+const musicBufferCache = new Map<string, Promise<AudioBuffer>>();
+
+function loadMusicBuffer(ctx: AudioContext, url: string): Promise<AudioBuffer> {
+  let pending = musicBufferCache.get(url);
+  if (!pending) {
+    pending = fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`wellness-audio fetch failed: ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => ctx.decodeAudioData(buf));
+    musicBufferCache.set(url, pending);
+    pending.catch(() => musicBufferCache.delete(url)); // no cachear fallos
+  }
+  return pending;
+}
+
 // ─── Meditation ambient audio ─────────────────────────────────────────────────
 
 export interface MeditationAudioHandle {
@@ -84,8 +104,14 @@ export interface MeditationAudioHandle {
   bell: () => void;
 }
 
+/**
+ * `musicUrl` opcional: cama musical instrumental (Suno) por categoría. Si se
+ * pasa y carga bien, reemplaza el ruido procedural; si falta o falla el
+ * fetch/decode, degrada silenciosamente al ruido de siempre — cero regresión.
+ */
 export function createMeditationAudio(
   noiseType: 'brown' | 'pink' | 'white' = 'brown',
+  musicUrl?: string,
 ): MeditationAudioHandle | null {
   const AudioCtxCtor = getAudioCtx();
   if (!AudioCtxCtor) return null;
@@ -94,21 +120,48 @@ export function createMeditationAudio(
   let ctx: AudioContext | null = null;
   let gainNode: GainNode | null = null;
   let noiseSource: AudioBufferSourceNode | null = null;
+  let stopped = false;
+
+  function playNoise(activeCtx: AudioContext, activeGain: GainNode) {
+    noiseSource = createNoiseSource(activeCtx, noiseType);
+    noiseSource.connect(activeGain);
+    noiseSource.start();
+  }
 
   function start() {
     ctx = new SafeAudioCtx();
+    stopped = false;
 
     gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(0, ctx.currentTime);
     gainNode.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2); // fade in
     gainNode.connect(ctx.destination);
 
-    noiseSource = createNoiseSource(ctx, noiseType);
-    noiseSource.connect(gainNode);
-    noiseSource.start();
+    if (musicUrl) {
+      const activeCtx = ctx;
+      const activeGain = gainNode;
+      loadMusicBuffer(activeCtx, musicUrl)
+        .then((buffer) => {
+          if (stopped || ctx !== activeCtx) return; // stop() ya corrió
+          const source = activeCtx.createBufferSource();
+          source.buffer = buffer;
+          source.loop = true;
+          source.connect(activeGain);
+          source.start();
+          noiseSource = source;
+        })
+        .catch(() => {
+          if (stopped || ctx !== activeCtx) return;
+          playNoise(activeCtx, activeGain); // degrada a ruido procedural
+        });
+      return;
+    }
+
+    playNoise(ctx, gainNode);
   }
 
   function stop() {
+    stopped = true;
     if (!ctx || !gainNode) return;
     gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5); // fade out
     setTimeout(() => {
