@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { usePathname, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { palette, Fonts } from '@/constants/theme';
 import { HoverCard } from '@/components/polaris';
@@ -96,72 +96,84 @@ export function DesktopSidebar() {
         </View>
       </View>
 
-      {/* ── Navegación agrupada ── */}
-      <View style={styles.navScroll}>
-        {NAV_DOMAINS.map((group) => (
-          <View key={group.title}>
-            <Text style={styles.navGroupLabel}>{group.title}</Text>
-            <View style={styles.navList}>{group.items.map(renderItem)}</View>
-          </View>
-        ))}
-
-        {/* ── Streak card (gradiente oro) — datos reales ── */}
-        <View style={styles.streakCard}>
-          <View style={styles.streakRow}>
-            <MaterialIcons name="local-fire-department" size={20} color={palette.goldText} />
-            <Text style={styles.streakNum}>{streak}</Text>
-            <Text style={styles.streakUnit}>DÍAS</Text>
-          </View>
-          <Text style={styles.streakMeta}>RACHA · DÍA {protocolDay} DE PROTOCOLO</Text>
-        </View>
-      </View>
-
-      {/* ── Toggle de tema OSCURO/CLARO (solo web) ── */}
-      {canToggle && (
-        <View style={styles.themeToggle}>
-          {(['dark', 'light'] as ThemeMode[]).map((m) => {
-            const on = mode === m;
-            return (
-              <HoverCard
-                key={m}
-                onPress={() => setMode(m)}
-                style={[styles.themeBtn, on && styles.themeBtnOn]}
-                hoverStyle={on ? styles.themeBtnOn : styles.navItemHover}
-                accessibilityRole="button"
-                accessibilityLabel={m === 'dark' ? 'Tema oscuro' : 'Tema claro'}
-              >
-                <MaterialIcons
-                  name={m === 'dark' ? 'dark-mode' : 'light-mode'}
-                  size={14}
-                  color={on ? palette.ink : palette.smoke}
-                />
-                <Text style={[styles.themeBtnText, on && styles.themeBtnTextOn]}>
-                  {m === 'dark' ? 'OSCURO' : 'CLARO'}
-                </Text>
-              </HoverCard>
-            );
-          })}
-        </View>
-      )}
-
-      {/* ── Tarjeta de usuario (abajo) ── */}
-      <HoverCard
-        style={styles.userCard}
-        onPress={() => router.push('/(tabs)/progreso' as never)}
-        accessibilityRole="button"
-        accessibilityLabel="Ver perfil"
+      {/* ── Navegación agrupada + tema + usuario — TODO scrollable: si el
+          contenido no cabe en la altura del viewport (ventanas bajas,
+          zoom, muchos dominios), antes quedaba recortado sin forma de
+          llegar a la tarjeta de usuario. Ahora siempre es alcanzable. ── */}
+      <ScrollView
+        style={styles.navScroll}
+        contentContainerStyle={styles.navScrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>{initial}</Text>
+        <View>
+          {NAV_DOMAINS.map((group) => (
+            <View key={group.title}>
+              <Text style={styles.navGroupLabel}>{group.title}</Text>
+              <View style={styles.navList}>{group.items.map(renderItem)}</View>
+            </View>
+          ))}
+
+          {/* ── Streak card (gradiente oro) — datos reales ── */}
+          <View style={styles.streakCard}>
+            <View style={styles.streakRow}>
+              <MaterialIcons name="local-fire-department" size={20} color={palette.goldText} />
+              <Text style={styles.streakNum}>{streak}</Text>
+              <Text style={styles.streakUnit}>DÍAS</Text>
+            </View>
+            <Text style={styles.streakMeta}>RACHA · DÍA {protocolDay} DE PROTOCOLO</Text>
+          </View>
         </View>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName} numberOfLines={1}>
-            {state.profile.name ?? 'Operador'}
-          </Text>
-          <Text style={styles.userTier}>{tier}</Text>
+
+        <View>
+          {/* ── Toggle de tema OSCURO/CLARO (solo web) ── */}
+          {canToggle && (
+            <View style={styles.themeToggle}>
+              {(['dark', 'light'] as ThemeMode[]).map((m) => {
+                const on = mode === m;
+                return (
+                  <HoverCard
+                    key={m}
+                    onPress={() => setMode(m)}
+                    style={[styles.themeBtn, on && styles.themeBtnOn]}
+                    hoverStyle={on ? styles.themeBtnOn : styles.navItemHover}
+                    accessibilityRole="button"
+                    accessibilityLabel={m === 'dark' ? 'Tema oscuro' : 'Tema claro'}
+                  >
+                    <MaterialIcons
+                      name={m === 'dark' ? 'dark-mode' : 'light-mode'}
+                      size={14}
+                      color={on ? palette.ink : palette.smoke}
+                    />
+                    <Text style={[styles.themeBtnText, on && styles.themeBtnTextOn]}>
+                      {m === 'dark' ? 'OSCURO' : 'CLARO'}
+                    </Text>
+                  </HoverCard>
+                );
+              })}
+            </View>
+          )}
+
+          {/* ── Tarjeta de usuario (abajo) ── */}
+          <HoverCard
+            style={styles.userCard}
+            onPress={() => router.push('/(tabs)/progreso' as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Ver perfil"
+          >
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {state.profile.name ?? 'Operador'}
+              </Text>
+              <Text style={styles.userTier}>{tier}</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
+          </HoverCard>
         </View>
-        <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
-      </HoverCard>
+      </ScrollView>
 
     </View>
   );
@@ -170,6 +182,7 @@ export function DesktopSidebar() {
 const styles = StyleSheet.create({
   sidebar: {
     width: 240,
+    height: '100%',
     backgroundColor: palette.graphite,
     borderRightWidth: 1,
     borderRightColor: palette.lineSoft,
@@ -206,8 +219,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Nav
+  // Nav — ScrollView: mantiene tema+usuario alcanzables aunque el contenido
+  // (dominios + racha) no quepa en la altura disponible.
   navScroll: { flex: 1 },
+  navScrollContent: { flexGrow: 1, justifyContent: 'space-between' },
   navGroupLabel: {
     fontFamily: Fonts.mono,
     fontSize: 9.5,
