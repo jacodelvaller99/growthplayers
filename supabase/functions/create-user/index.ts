@@ -10,7 +10,9 @@
  * podría crear cuentas.)
  *
  * Body: { email, password, name? }  ·  Devuelve: { ok, userId } | { error }
- * El trigger `handle_new_user()` crea la fila `user_profiles`; reforzamos el name.
+ * No existe ningún trigger `handle_new_user()` en esta base (verificado en
+ * producción: 0 filas en pg_trigger) — la fila `user_profiles` se inserta aquí
+ * directamente, no se asume que algo más la cree.
  */
 import { adminSupabase, json, corsHeaders } from '../_shared/supabase.ts';
 
@@ -62,10 +64,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const newId = created.user.id;
-    // El trigger handle_new_user ya creó user_profiles desde el metadata; reforzamos
-    // el name por si el trigger no estuviera presente en algún entorno.
-    if (name) {
-      await adminSupabase.from('user_profiles').update({ name }).eq('user_id', newId);
+    const { error: profileErr2 } = await adminSupabase
+      .from('user_profiles')
+      .insert({ user_id: newId, name: name || null, email });
+    if (profileErr2) {
+      console.error('[create-user] user_profiles insert falló', profileErr2.message);
+      return json({ error: `Usuario creado pero falló el perfil: ${profileErr2.message}` }, 500);
     }
 
     console.log(`[create-user] admin ${caller.user.id} creó ${newId}`);
