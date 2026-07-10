@@ -31,7 +31,42 @@ export interface GuidedPhase {
 // Cama musical instrumental (Suno) por categoría, subida a Storage en el
 // bucket público "wellness-audio/meditation/<archivo>.mp3". Cuando falta una
 // entrada, el reproductor degrada al ruido ambiental procedural (lib/binaural.ts).
-export const MEDITATION_CATEGORY_MUSIC: Partial<Record<MeditationCategory, string>> = {};
+const WELLNESS_AUDIO_BASE =
+  'https://bizbbtiyftfjufxinwsu.supabase.co/storage/v1/object/public/wellness-audio';
+
+export const MEDITATION_CATEGORY_MUSIC: Partial<Record<MeditationCategory, string>> = {
+  'mañana':    `${WELLNESS_AUDIO_BASE}/meditation/manana.mp3`,
+  'noche':     `${WELLNESS_AUDIO_BASE}/meditation/noche.mp3`,
+  'enfoque':   `${WELLNESS_AUDIO_BASE}/meditation/enfoque.mp3`,
+  'estrés':    `${WELLNESS_AUDIO_BASE}/meditation/estres.mp3`,
+  'identidad': `${WELLNESS_AUDIO_BASE}/meditation/identidad.mp3`,
+  'decisión':  `${WELLNESS_AUDIO_BASE}/meditation/decision.mp3`,
+  'energía':   `${WELLNESS_AUDIO_BASE}/meditation/energia.mp3`,
+};
+
+// Cama musical (Suno) por banda binaural — atmósfera bajo los osciladores.
+// La banda se resuelve por beatHz para cubrir también los presets del mezclador.
+export const BINAURAL_BAND_MUSIC: Record<'delta' | 'theta' | 'alpha' | 'beta' | 'gamma', string> = {
+  delta: `${WELLNESS_AUDIO_BASE}/binaural/delta.mp3`,
+  theta: `${WELLNESS_AUDIO_BASE}/binaural/theta.mp3`,
+  alpha: `${WELLNESS_AUDIO_BASE}/binaural/alpha.mp3`,
+  beta:  `${WELLNESS_AUDIO_BASE}/binaural/beta.mp3`,
+  gamma: `${WELLNESS_AUDIO_BASE}/binaural/gamma.mp3`,
+};
+
+export function binauralMusicForBeat(beatHz: number): string {
+  if (beatHz < 4) return BINAURAL_BAND_MUSIC.delta;
+  if (beatHz < 8) return BINAURAL_BAND_MUSIC.theta;
+  if (beatHz < 13) return BINAURAL_BAND_MUSIC.alpha;
+  if (beatHz < 30) return BINAURAL_BAND_MUSIC.beta;
+  return BINAURAL_BAND_MUSIC.gamma;
+}
+
+// Pistas de sueño (Suno) — el play de Sueño deja de ser un timer en silencio.
+export const SLEEP_MUSIC: Record<'descenso' | 'nidra', string> = {
+  descenso: `${WELLNESS_AUDIO_BASE}/sleep/descenso.mp3`,
+  nidra:    `${WELLNESS_AUDIO_BASE}/sleep/nidra.mp3`,
+};
 
 export interface MeditationSession {
   id: string;

@@ -212,9 +212,16 @@ export interface BinauralAudioHandle {
   setAmbience: (type: AmbienceType) => void;
 }
 
+/**
+ * `musicUrl` opcional: cama musical instrumental (Suno) por banda, mezclada a
+ * bajo volumen BAJO los osciladores (la precisión de Hz la siguen dando los
+ * osciladores; la música es atmósfera). Si falta o falla, no pasa nada — los
+ * osciladores suenan igual que siempre.
+ */
 export function createBinauralAudio(
   carrierHz: number,
   beatHz: number,
+  musicUrl?: string,
 ): BinauralAudioHandle | null {
   const AudioCtxCtor = getAudioCtx();
   if (!AudioCtxCtor) return null;
@@ -223,9 +230,11 @@ export function createBinauralAudio(
   let ctx: AudioContext | null = null;
   let binauralGain: GainNode | null = null;
   let ambienceGain: GainNode | null = null;
+  let musicGain: GainNode | null = null;
   let leftOsc: OscillatorNode | null = null;
   let rightOsc: OscillatorNode | null = null;
   let ambienceSource: AudioBufferSourceNode | null = null;
+  let musicSource: AudioBufferSourceNode | null = null;
   let currentAmbience: AmbienceType = 'none';
 
   function start() {
@@ -265,6 +274,27 @@ export function createBinauralAudio(
     ambienceGain = ctx.createGain();
     ambienceGain.gain.value = 0.15;
     ambienceGain.connect(ctx.destination);
+
+    // ── Cama musical (Suno) ───────────────────────────────────────────────────
+    if (musicUrl) {
+      const activeCtx = ctx;
+      musicGain = activeCtx.createGain();
+      musicGain.gain.setValueAtTime(0, activeCtx.currentTime);
+      musicGain.gain.linearRampToValueAtTime(0.12, activeCtx.currentTime + 3);
+      musicGain.connect(activeCtx.destination);
+      const activeMusicGain = musicGain;
+      loadMusicBuffer(activeCtx, musicUrl)
+        .then((buffer) => {
+          if (ctx !== activeCtx) return; // stop() ya corrió
+          const source = activeCtx.createBufferSource();
+          source.buffer = buffer;
+          source.loop = true;
+          source.connect(activeMusicGain);
+          source.start();
+          musicSource = source;
+        })
+        .catch(() => { /* sin cama musical — los osciladores siguen solos */ });
+    }
   }
 
   function stop() {
@@ -272,12 +302,13 @@ export function createBinauralAudio(
     const fadeTime = 1.5;
     binauralGain?.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeTime);
     ambienceGain?.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeTime);
+    musicGain?.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeTime);
     setTimeout(() => {
       try {
-        leftOsc?.stop(); rightOsc?.stop(); ambienceSource?.stop(); ctx?.close();
+        leftOsc?.stop(); rightOsc?.stop(); ambienceSource?.stop(); musicSource?.stop(); ctx?.close();
       } catch { /* already stopped */ }
       ctx = null; leftOsc = null; rightOsc = null; binauralGain = null;
-      ambienceGain = null; ambienceSource = null;
+      ambienceGain = null; ambienceSource = null; musicGain = null; musicSource = null;
     }, (fadeTime + 0.1) * 1000);
   }
 

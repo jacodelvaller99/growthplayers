@@ -388,6 +388,12 @@ export default function MeditacionScreen() {
         Sesiones guiadas con audio ambiental. Usa auriculares para mejor experiencia.
       </Text>
 
+      {Platform.OS !== 'web' && (
+        <Text style={styles.intro}>
+          El audio de esta práctica está disponible en la versión web por ahora — aquí corre como temporizador guiado.
+        </Text>
+      )}
+
       <SafetyWarning
         body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria."
       />

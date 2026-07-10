@@ -59,6 +59,7 @@ import {
   RepeatedThemesCard,
 } from '@/components/memory';
 import { addAdminNote } from '@/lib/memory';
+import { PlaudImport } from '@/components/PlaudImport';
 // generateAdminBriefing se importa dinámicamente en handleGenerateBriefing —
 // el módulo memorySummarizer arrastra el orquestador IA y solo se usa al click.
 import {
@@ -85,7 +86,20 @@ import {
 // activos en QA demos, no en el load inicial del dossier.
 import type { Scenario } from '@/lib/biometricSimulator';
 import type { AdminUserDetail, AuditLogEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
-import { deactivateMembership, recalculateUserMLAction, sendMessageAsNorman, setUserRole, updateUserProfile, APP_ROLE_LABEL, type AppRole } from '@/lib/admin/actions';
+import {
+  adminAddMentorshipNote,
+  adminDeleteMentorshipSession,
+  adminToggleMentorshipTask,
+  adminUpdateActionPlan,
+  deactivateMembership,
+  recalculateUserMLAction,
+  sendMessageAsNorman,
+  setUserRole,
+  updateUserProfile,
+  APP_ROLE_LABEL,
+  type AppRole,
+} from '@/lib/admin/actions';
+import { parseAIList, PLAN_PROMPT_TAIL } from '@/hooks/use-mentorship';
 import { intel } from '@/lib/supabase';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
@@ -124,6 +138,28 @@ function timeAgo(iso: string) {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// action_plan es jsonb heterogéneo (strings u objetos {title|task|text}) — normalizar
+// a la forma que escribe el hook del usuario antes de cualquier edición admin.
+type NormalizedPlanItem = { text: string; week?: number | null; source?: string; done?: boolean };
+
+function planItemLabel(it: unknown): string {
+  if (typeof it === 'string') return it;
+  const o = it as { title?: string; task?: string; text?: string } | null;
+  return o?.title ?? o?.task ?? o?.text ?? JSON.stringify(it);
+}
+
+function normalizePlan(arr: unknown[], week: number | null): NormalizedPlanItem[] {
+  return arr.map((it) => {
+    const o = (typeof it === 'object' && it ? it : {}) as { week?: number | null; source?: string; done?: boolean };
+    return {
+      text: planItemLabel(it),
+      week: o.week ?? week,
+      source: o.source ?? 'manual',
+      done: Boolean(o.done),
+    };
+  });
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -274,6 +310,16 @@ export default function UserDetailScreen() {
   const [reviewTask, setReviewTask] = useState<MentorTask | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
 
+  // Mentoría operable desde admin (el mentor hace la mentoría POR el cliente)
+  const [mentNoteText, setMentNoteText] = useState('');
+  const [mentNoteWeek, setMentNoteWeek] = useState('1');
+  const [mentNoteBusy, setMentNoteBusy] = useState(false);
+  const [mentTaskBusy, setMentTaskBusy] = useState<string | null>(null);
+  const [planBusy, setPlanBusy] = useState<string | null>(null);
+  const [planItemText, setPlanItemText] = useState('');
+  const [planDraftFor, setPlanDraftFor] = useState<string | null>(null);
+  const [mentError, setMentError] = useState<string | null>(null);
+
   // Biometric Intelligence state
   const [bio, setBio] = useState<BiometricSnapshot>({ series: [], latestInsight: null, connections: [] });
   const [seeding, setSeeding] = useState(false);
@@ -408,6 +454,89 @@ export default function UserDetailScreen() {
       setNoteBusy(false);
     }
   }, [userId, adminId]);
+
+  // ── Mentoría operable desde admin ──────────────────────────────────────────
+  const reloadMentorship = useCallback(async () => {
+    if (!userId) return;
+    setMentorship(await fetchUserMentorship(userId));
+  }, [userId]);
+
+  const handleToggleMentTask = useCallback(async (taskId: string, completed: boolean) => {
+    if (!userId || !adminId || mentTaskBusy) return;
+    setMentTaskBusy(taskId);
+    setMentError(null);
+    try {
+      const res = await adminToggleMentorshipTask({ adminId, userId, taskId, completed });
+      if (!res.success) setMentError(res.error ?? 'No se pudo actualizar la tarea');
+      await reloadMentorship();
+    } finally {
+      setMentTaskBusy(null);
+    }
+  }, [userId, adminId, mentTaskBusy, reloadMentorship]);
+
+  const handleAddMentNote = useCallback(async () => {
+    if (!userId || !adminId || mentNoteBusy) return;
+    const week = Math.max(1, parseInt(mentNoteWeek, 10) || 1);
+    setMentNoteBusy(true);
+    setMentError(null);
+    try {
+      const res = await adminAddMentorshipNote({ adminId, userId, week, text: mentNoteText });
+      if (!res.success) {
+        setMentError(res.error ?? 'No se pudo guardar la nota');
+      } else {
+        setMentNoteText('');
+        await reloadMentorship();
+      }
+    } finally {
+      setMentNoteBusy(false);
+    }
+  }, [userId, adminId, mentNoteBusy, mentNoteWeek, mentNoteText, reloadMentorship]);
+
+  const savePlan = useCallback(async (sessionId: string, actionPlan: NormalizedPlanItem[]) => {
+    if (!userId || !adminId) return;
+    setPlanBusy(sessionId);
+    setMentError(null);
+    try {
+      const res = await adminUpdateActionPlan({ adminId, userId, sessionId, actionPlan });
+      if (!res.success) setMentError(res.error ?? 'No se pudo guardar el plan');
+      await reloadMentorship();
+    } finally {
+      setPlanBusy(null);
+    }
+  }, [userId, adminId, reloadMentorship]);
+
+  const handleGenerateSessionPlan = useCallback(async (sess: { id: string; week: number | null; notes: string | null }) => {
+    if (!userId || !adminId || planBusy) return;
+    if (!sess.notes?.trim()) { setMentError('La sesión no tiene notas de las que derivar un plan.'); return; }
+    setPlanBusy(sess.id);
+    setMentError(null);
+    try {
+      const { streamMentorResponse } = await import('@/lib/mentor');
+      const { makeMinimalContext } = await import('@/lib/memorySummarizer');
+      const ctx = makeMinimalContext(user?.name ?? undefined);
+      const prompt =
+        'A partir de estas NOTAS de la sesión de mentoría del cliente, construye su PLAN DE ACCIÓN para la próxima semana. ' +
+        PLAN_PROMPT_TAIL +
+        '\n\nNOTAS:\n' + sess.notes;
+      let out = '';
+      await streamMentorResponse(ctx, prompt, [], (delta: string) => { out += delta; });
+      const items = parseAIList(out).map((text) => ({ text, week: sess.week, source: 'ia', done: false }));
+      if (!items.length) { setMentError('Norman no devolvió acciones — reintenta.'); return; }
+      const res = await adminUpdateActionPlan({ adminId, userId, sessionId: sess.id, actionPlan: items });
+      if (!res.success) setMentError(res.error ?? 'No se pudo guardar el plan');
+      await reloadMentorship();
+    } finally {
+      setPlanBusy(null);
+    }
+  }, [userId, adminId, planBusy, user?.name, reloadMentorship]);
+
+  const handleDeleteMentSession = useCallback(async (sessionId: string) => {
+    if (!userId || !adminId) return;
+    setMentError(null);
+    const res = await adminDeleteMentorshipSession({ adminId, userId, sessionId });
+    if (!res.success) setMentError(res.error ?? 'No se pudo borrar la sesión');
+    await reloadMentorship();
+  }, [userId, adminId, reloadMentorship]);
 
   const openEditIdentity = () => {
     setEName(user?.name ?? '');
@@ -912,65 +1041,195 @@ export default function UserDetailScreen() {
           <GoldDivider label={`M. MENTORÍA (${mentorship.sessions.length} sesiones · ${mentorship.tasks.filter(t => t.completed).length}/${mentorship.tasks.length} tareas)`} />
         </View>
         <PremiumCard style={s.card}>
-          {/* Tareas */}
+          {mentError && <Text style={s.mentError}>{mentError}</Text>}
+
+          {/* Tareas — el mentor marca por el cliente */}
           <Text style={s.mlLabel}>TAREAS DE LA SEMANA</Text>
           {mentorship.tasks.length === 0 ? (
             <Text style={s.emptyText}>Sin tareas asignadas</Text>
           ) : (
             mentorship.tasks.slice(0, 12).map(t => (
-              <View key={t.id} style={s.taskRow}>
-                <MaterialIcons
-                  name={t.completed ? 'check-circle' : 'radio-button-unchecked'}
-                  size={16}
-                  color={t.completed ? palette.success : palette.smoke}
-                />
+              <Pressable
+                key={t.id}
+                style={s.taskRow}
+                disabled={mentTaskBusy === t.id}
+                onPress={() => handleToggleMentTask(t.id, !t.completed)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: t.completed }}
+                accessibilityLabel={`Marcar tarea ${t.title}`}>
+                {mentTaskBusy === t.id ? (
+                  <ActivityIndicator size={16} color={palette.goldText} />
+                ) : (
+                  <MaterialIcons
+                    name={t.completed ? 'check-circle' : 'radio-button-unchecked'}
+                    size={16}
+                    color={t.completed ? palette.success : palette.smoke}
+                  />
+                )}
                 <Text style={[s.taskTitle, t.completed && s.taskTitleDone]} numberOfLines={2}>
                   {t.title}
                 </Text>
                 {t.week != null && <Text style={s.taskWeek}>S{t.week}</Text>}
-              </View>
+              </Pressable>
             ))
           )}
 
-          {/* Sesiones: notas + plan de acción + fecha */}
+          {/* Composer: el mentor registra la nota de sesión por el cliente */}
+          <Text style={[s.mlLabel, { marginTop: spacing.md }]}>AÑADIR NOTA DE SESIÓN</Text>
+          <View style={s.mentComposerRow}>
+            <Text style={s.mentWeekLabel}>SEMANA</Text>
+            <TextInput
+              value={mentNoteWeek}
+              onChangeText={setMentNoteWeek}
+              keyboardType="number-pad"
+              style={s.mentWeekInput}
+              accessibilityLabel="Semana de la nota"
+            />
+          </View>
+          <TextInput
+            value={mentNoteText}
+            onChangeText={setMentNoteText}
+            placeholder="Qué se trabajó, insights, compromisos…"
+            placeholderTextColor={palette.smoke}
+            style={s.mentNoteInput}
+            multiline
+            textAlignVertical="top"
+          />
+          <Pressable
+            onPress={handleAddMentNote}
+            disabled={mentNoteBusy || !mentNoteText.trim()}
+            style={[s.mentBtn, (mentNoteBusy || !mentNoteText.trim()) && { opacity: 0.4 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Guardar nota de sesión">
+            {mentNoteBusy
+              ? <ActivityIndicator size="small" color={palette.ink} />
+              : <Text style={s.mentBtnText}>GUARDAR NOTA</Text>}
+          </Pressable>
+
+          {/* Sesiones: notas + plan de acción editable */}
           <Text style={[s.mlLabel, { marginTop: spacing.md }]}>NOTAS Y PLAN DE ACCIÓN</Text>
           {mentorship.sessions.length === 0 ? (
             <Text style={s.emptyText}>Sin sesiones registradas</Text>
           ) : (
-            mentorship.sessions.slice(0, 8).map(sess => (
-              <View key={sess.id} style={s.sessionBox}>
-                <View style={s.sessionHeader}>
-                  <Text style={s.sessionWeek}>
-                    {sess.week != null ? `SEMANA ${sess.week}` : 'SESIÓN'}
-                  </Text>
-                  <Text style={s.sessionDate}>
-                    {sess.session_date ? formatDate(sess.session_date) : formatDate(sess.created_at)}
-                  </Text>
-                </View>
-                {sess.notes ? (
-                  <Text style={s.sessionNotes}>{sess.notes}</Text>
-                ) : (
-                  <Text style={s.sessionNotesEmpty}>Sin notas</Text>
-                )}
-                {sess.action_plan.length > 0 && (
-                  <View style={s.planList}>
-                    {sess.action_plan.slice(0, 6).map((item, i) => {
-                      const it = item as any;
-                      const label =
-                        typeof it === 'string'
-                          ? it
-                          : (it?.title ?? it?.task ?? it?.text ?? JSON.stringify(it));
-                      return (
-                        <View key={i} style={s.planRow}>
-                          <MaterialIcons name="arrow-right" size={14} color={palette.goldText} />
-                          <Text style={s.planText}>{label}</Text>
-                        </View>
-                      );
-                    })}
+            mentorship.sessions.slice(0, 8).map(sess => {
+              const plan = normalizePlan(sess.action_plan, sess.week);
+              const busy = planBusy === sess.id;
+              return (
+                <View key={sess.id} style={s.sessionBox}>
+                  <View style={s.sessionHeader}>
+                    <Text style={s.sessionWeek}>
+                      {sess.week != null ? `SEMANA ${sess.week}` : 'SESIÓN'}
+                    </Text>
+                    <View style={s.sessionHeaderRight}>
+                      <Text style={s.sessionDate}>
+                        {sess.session_date ? formatDate(sess.session_date) : formatDate(sess.created_at)}
+                      </Text>
+                      <Pressable
+                        onPress={() => handleDeleteMentSession(sess.id)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Borrar sesión">
+                        <MaterialIcons name="delete-outline" size={16} color={palette.smoke} />
+                      </Pressable>
+                    </View>
                   </View>
-                )}
-              </View>
-            ))
+                  {sess.notes ? (
+                    <Text style={s.sessionNotes}>{sess.notes}</Text>
+                  ) : (
+                    <Text style={s.sessionNotesEmpty}>Sin notas</Text>
+                  )}
+                  {plan.length > 0 && (
+                    <View style={s.planList}>
+                      {plan.map((item, i) => (
+                        <View key={i} style={s.planRow}>
+                          <Pressable
+                            onPress={() => {
+                              const next = plan.map((p, j) => (j === i ? { ...p, done: !p.done } : p));
+                              void savePlan(sess.id, next);
+                            }}
+                            disabled={busy}
+                            hitSlop={6}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: item.done }}
+                            accessibilityLabel={`Marcar acción ${item.text}`}>
+                            <MaterialIcons
+                              name={item.done ? 'check-circle' : 'radio-button-unchecked'}
+                              size={15}
+                              color={item.done ? palette.success : palette.goldText}
+                            />
+                          </Pressable>
+                          <Text style={[s.planText, item.done && s.taskTitleDone]}>{item.text}</Text>
+                          <Pressable
+                            onPress={() => {
+                              const next = plan.filter((_, j) => j !== i);
+                              void savePlan(sess.id, next);
+                            }}
+                            disabled={busy}
+                            hitSlop={6}
+                            accessibilityRole="button"
+                            accessibilityLabel="Quitar acción">
+                            <MaterialIcons name="close" size={14} color={palette.smoke} />
+                          </Pressable>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  {planDraftFor === sess.id ? (
+                    <View style={s.planAddRow}>
+                      <TextInput
+                        value={planItemText}
+                        onChangeText={setPlanItemText}
+                        placeholder="Nueva acción…"
+                        placeholderTextColor={palette.smoke}
+                        style={s.planAddInput}
+                        autoFocus
+                        onSubmitEditing={() => {
+                          if (!planItemText.trim()) return;
+                          void savePlan(sess.id, [...plan, { text: planItemText.trim(), week: sess.week, source: 'manual', done: false }]);
+                          setPlanItemText('');
+                          setPlanDraftFor(null);
+                        }}
+                      />
+                      <Pressable
+                        onPress={() => {
+                          if (!planItemText.trim()) { setPlanDraftFor(null); return; }
+                          void savePlan(sess.id, [...plan, { text: planItemText.trim(), week: sess.week, source: 'manual', done: false }]);
+                          setPlanItemText('');
+                          setPlanDraftFor(null);
+                        }}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel="Agregar acción">
+                        <MaterialIcons name="check" size={18} color={palette.goldText} />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={s.planActionsRow}>
+                      <Pressable
+                        onPress={() => { setPlanItemText(''); setPlanDraftFor(sess.id); }}
+                        disabled={busy}
+                        style={s.planActionBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel="Agregar acción al plan">
+                        <MaterialIcons name="add" size={14} color={palette.goldText} />
+                        <Text style={s.planActionText}>ACCIÓN</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => handleGenerateSessionPlan(sess)}
+                        disabled={busy || !sess.notes?.trim()}
+                        style={[s.planActionBtn, (!sess.notes?.trim()) && { opacity: 0.4 }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Generar plan con Norman">
+                        {busy
+                          ? <ActivityIndicator size={12} color={palette.goldText} />
+                          : <MaterialIcons name="auto-awesome" size={14} color={palette.goldText} />}
+                        <Text style={s.planActionText}>PLAN CON NORMAN</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              );
+            })
           )}
         </PremiumCard>
 
@@ -1012,6 +1271,12 @@ export default function UserDetailScreen() {
         <View onLayout={onSectionLayout('memory')}>
           <GoldDivider label="MEMORIA & BRIEFING" />
         </View>
+        <PlaudImport
+          userId={userId ?? null}
+          userName={user?.name}
+          variant="admin"
+          onProcessed={handleGenerateBriefing}
+        />
         <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} />
         <ProfileSynopsisCard profile={memory.profile} variant="admin" />
         <CommitmentsCard
@@ -1338,6 +1603,36 @@ const s = StyleSheet.create({
   planList: { marginTop: spacing.sm, gap: 4 },
   planRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
   planText: { ...typography.caption, color: palette.ivory, flex: 1, fontSize: 11, lineHeight: 16 },
+
+  // Mentoría operable desde admin
+  mentError: { ...typography.caption, color: palette.danger, fontSize: 11, marginBottom: spacing.xs },
+  mentComposerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
+  mentWeekLabel: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1 },
+  mentWeekInput: {
+    ...typography.mono, color: palette.ivory, fontSize: 12, backgroundColor: palette.charcoal,
+    borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minWidth: 52, textAlign: 'center',
+  },
+  mentNoteInput: {
+    ...typography.body, color: palette.ivory, fontSize: 13, backgroundColor: palette.charcoal,
+    borderRadius: radii.sm, padding: spacing.md, minHeight: 72, marginTop: spacing.xs,
+  },
+  mentBtn: {
+    backgroundColor: palette.gold, borderRadius: radii.sm, paddingVertical: spacing.sm,
+    alignItems: 'center', justifyContent: 'center', minHeight: 40, marginTop: spacing.sm,
+  },
+  mentBtnText: { ...typography.label, color: palette.ink, fontSize: 12, letterSpacing: 1 },
+  sessionHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  planAddRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  planAddInput: {
+    ...typography.caption, color: palette.ivory, fontSize: 12, backgroundColor: palette.charcoal,
+    borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flex: 1, minHeight: 36,
+  },
+  planActionsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },
+  planActionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, borderColor: palette.lineGold, borderWidth: 1,
+    borderRadius: 999, paddingHorizontal: spacing.md, paddingVertical: 6, minHeight: 30,
+  },
+  planActionText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
 
   auditRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   auditAction: { fontFamily: Fonts.sans, fontSize: 12, color: palette.ivory, textTransform: 'capitalize' },

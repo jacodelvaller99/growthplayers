@@ -33,7 +33,6 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { PlaudImport } from '@/components/PlaudImport';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useMentorship, type SessionNote, type ActionItem, type SessionDraft } from '@/hooks/use-mentorship';
@@ -92,7 +91,7 @@ export default function MentoriaScreen() {
   const { isDesktop } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state, protocolDay, userId } = useLifeFlow();
+  const { state, protocolDay } = useLifeFlow();
   const m = useMentorship();
 
   const weekNum = currentWeekNumber(protocolDay);
@@ -419,7 +418,6 @@ export default function MentoriaScreen() {
             <View style={styles.colRight}>
               {planSection}
               {notesSection}
-              <PlaudImport userId={userId ?? null} userName={state.profile.name} />
             </View>
           </View>
         ) : (
@@ -427,7 +425,6 @@ export default function MentoriaScreen() {
             {planSection}
             {timelineSection}
             {notesSection}
-            <PlaudImport userId={userId ?? null} userName={state.profile.name} />
           </>
         )}
       </ScrollView>

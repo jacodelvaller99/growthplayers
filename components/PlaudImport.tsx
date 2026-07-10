@@ -13,11 +13,22 @@ import { PremiumCard } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { makeMinimalContext, summarizeConversation, updateProfileFromSummary } from '@/lib/memorySummarizer';
 
-export function PlaudImport({ userId, userName }: { userId: string | null; userName?: string }) {
+export function PlaudImport({
+  userId,
+  userName,
+  variant,
+  onProcessed,
+}: {
+  userId: string | null;
+  userName?: string;
+  variant?: 'admin';
+  onProcessed?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const isAdmin = variant === 'admin';
 
   async function process() {
     const t = text.trim();
@@ -27,9 +38,10 @@ export function PlaudImport({ userId, userName }: { userId: string | null; userN
     try {
       const ctx = makeMinimalContext(userName);
       const parsed = await summarizeConversation(userId, ctx, [{ role: 'user', text: t }], 'plaud');
-      if (parsed) void updateProfileFromSummary(userId, ctx, parsed);
+      if (parsed) await updateProfileFromSummary(userId, ctx, parsed);
       setText('');
       setDone(true);
+      if (parsed) onProcessed?.();
     } finally {
       setBusy(false);
     }
@@ -43,8 +55,12 @@ export function PlaudImport({ userId, userName }: { userId: string | null; userN
         accessibilityLabel="Importar transcripción de una llamada">
         <MaterialIcons name="upload-file" size={20} color={palette.goldText} />
         <View style={{ flex: 1 }}>
-          <Text style={s.openTitle}>IMPORTAR LLAMADA</Text>
-          <Text style={s.openSub}>Pega una transcripción (Plaud, Zoom…) y Norman la suma a tu memoria</Text>
+          <Text style={s.openTitle}>{isAdmin ? 'IMPORTAR SESIÓN PLAUD' : 'IMPORTAR LLAMADA'}</Text>
+          <Text style={s.openSub}>
+            {isAdmin
+              ? `Pega la transcripción (Plaud, Zoom…) y Norman la suma a la memoria de ${userName || 'este cliente'}`
+              : 'Pega una transcripción (Plaud, Zoom…) y Norman la suma a tu memoria'}
+          </Text>
         </View>
         <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
       </Pressable>
@@ -68,7 +84,11 @@ export function PlaudImport({ userId, userName }: { userId: string | null; userN
         multiline
         textAlignVertical="top"
       />
-      {done && <Text style={s.done}>✓ Procesada y sumada a tu memoria.</Text>}
+      {done && (
+        <Text style={s.done}>
+          {isAdmin ? '✓ Procesada y sumada a la memoria del cliente.' : '✓ Procesada y sumada a tu memoria.'}
+        </Text>
+      )}
       <Pressable
         onPress={process}
         disabled={busy || !text.trim()}

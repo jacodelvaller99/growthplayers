@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { palette, radii, spacing, typography } from '@/constants/theme';
+import { SLEEP_MUSIC } from '@/data/wellness';
+import { useBinauralEngine } from '@/hooks/useBinauralEngine';
 import { useWellnessStore } from '@/store/wellnessStore';
 
 /** Convert "5 min" → 300, "20 min" → 1200, etc. */
@@ -137,18 +139,22 @@ export default function SuenoScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, startSession } = useWellnessStore();
+  const { user } = useWellnessStore();
+  const engine = useBinauralEngine();
   const isPremium = user.subscriptionTier !== 'free';
 
-  function handlePlay(item: SleepItem, catColor: string) {
+  function handlePlay(item: SleepItem, catId: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    startSession({
-      type: 'meditation',
+    // Audio real: pista Suno de sueño + binaural delta suave debajo (2 Hz,
+    // banda de sueño profundo). El engine global maneja timer, mini-player y stop.
+    engine.start({
+      carrierHz: 100,
+      beatHz: 2,
       sessionName: item.title,
-      bgTrack: 'rain',
-      bgVolume: 0.5,
-      waveVolume: 0,
       targetSeconds: parseDurationSecs(item.duration),
+      waveVolume: 0.2,
+      bgVolume: 0,
+      musicUrl: catId === 'nidra' ? SLEEP_MUSIC.nidra : SLEEP_MUSIC.descenso,
     });
     // Navigate back to hub so the mini-player is visible
     router.back();
@@ -207,7 +213,7 @@ export default function SuenoScreen() {
                 onPress={() => {
                   // Bloqueado → llevar a planes (upsell) en vez de tap muerto.
                   if (locked) { router.push('/pricing' as never); return; }
-                  handlePlay(item, cat.color);
+                  handlePlay(item, cat.id);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={`${item.title}, ${item.duration}${locked ? ', premium — ver planes' : ''}`}

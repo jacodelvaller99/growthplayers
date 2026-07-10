@@ -649,6 +649,93 @@ export async function sendMessageAsNorman(params: {
   return { success: true };
 }
 
+// ─── Mentoría por el cliente (el mentor opera; el usuario usa lo mínimo) ──────
+// Requiere la migración 20260710000000_admin_mentorship_write.sql (WITH CHECK
+// admin en ms_own/mt_own); sin ella el INSERT/UPDATE matchea 0 filas por RLS.
+
+export async function adminAddMentorshipNote(params: {
+  adminId: string;
+  userId: string;
+  week: number;
+  text: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const text = params.text.trim();
+  if (!text) return { success: false, error: 'Nota vacía' };
+  const { error } = await supa.from('mentorship_sessions').insert({
+    user_id:      params.userId,
+    week:         params.week,
+    session_date: new Date().toISOString().split('T')[0],
+    notes:        text,
+    action_plan:  [],
+  });
+  if (error) return { success: false, error: error.message };
+  await auditLog(params.adminId, 'mentorship_note_added', 'user', params.userId, {
+    week: params.week,
+    preview: text.substring(0, 100),
+  });
+  return { success: true };
+}
+
+export async function adminUpdateActionPlan(params: {
+  adminId: string;
+  userId: string;
+  sessionId: string;
+  actionPlan: { text: string; week?: number | null; source?: string; done?: boolean }[];
+}): Promise<{ success: boolean; error?: string }> {
+  const { error, count } = await supa
+    .from('mentorship_sessions')
+    .update({ action_plan: params.actionPlan }, { count: 'exact' })
+    .eq('id', params.sessionId)
+    .eq('user_id', params.userId);
+  if (error) return { success: false, error: error.message };
+  if (count === 0) return { success: false, error: 'RLS bloqueó el update (¿migración admin_mentorship_write aplicada?)' };
+  await auditLog(params.adminId, 'mentorship_plan_updated', 'user', params.userId, {
+    session_id: params.sessionId,
+    items: params.actionPlan.length,
+  });
+  return { success: true };
+}
+
+export async function adminToggleMentorshipTask(params: {
+  adminId: string;
+  userId: string;
+  taskId: string;
+  completed: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+  const { error, count } = await supa
+    .from('mentorship_tasks')
+    .update(
+      { completed: params.completed, completed_at: params.completed ? new Date().toISOString() : null },
+      { count: 'exact' },
+    )
+    .eq('id', params.taskId)
+    .eq('user_id', params.userId);
+  if (error) return { success: false, error: error.message };
+  if (count === 0) return { success: false, error: 'RLS bloqueó el update (¿migración admin_mentorship_write aplicada?)' };
+  await auditLog(params.adminId, 'mentorship_task_toggled', 'user', params.userId, {
+    task_id: params.taskId,
+    completed: params.completed,
+  });
+  return { success: true };
+}
+
+export async function adminDeleteMentorshipSession(params: {
+  adminId: string;
+  userId: string;
+  sessionId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supa
+    .from('mentorship_sessions')
+    .delete()
+    .eq('id', params.sessionId)
+    .eq('user_id', params.userId);
+  if (error) return { success: false, error: error.message };
+  await auditLog(params.adminId, 'mentorship_session_deleted', 'user', params.userId, {
+    session_id: params.sessionId,
+  });
+  return { success: true };
+}
+
 // ─── ML Recalculation ─────────────────────────────────────────────────────────
 
 export async function recalculateUserMLAction(params: {

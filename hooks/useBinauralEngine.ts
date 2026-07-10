@@ -32,6 +32,7 @@ export interface BinauralConfig {
   ambience?:     AmbienceType;
   waveVolume?:   number;    // 0–1
   bgVolume?:     number;    // 0–1
+  musicUrl?:     string;    // cama musical Suno (opcional, degrada a nada)
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ export function useBinauralEngine() {
 
     // Attempt Web Audio (web only)
     if (Platform.OS === 'web') {
-      const h = createBinauralAudio(cfg.carrierHz, cfg.beatHz);
+      const h = createBinauralAudio(cfg.carrierHz, cfg.beatHz, cfg.musicUrl);
       if (h) {
         _handle = h;
         h.start();

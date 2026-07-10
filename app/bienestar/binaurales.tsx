@@ -20,6 +20,7 @@ import {
   AMBIENCE_OPTIONS,
   BINAURAL_PRESETS,
   TIMER_OPTIONS,
+  binauralMusicForBeat,
   type AmbienceType,
   type BinauralPreset,
 } from '@/data/wellness';
@@ -242,7 +243,7 @@ function BinauralPlayer({
   }, []);
 
   const startSession = useCallback(() => {
-    const handle = createBinauralAudio(preset.carrierHz, preset.beatHz);
+    const handle = createBinauralAudio(preset.carrierHz, preset.beatHz, binauralMusicForBeat(preset.beatHz));
     if (handle) {
       handle.start();
       handle.setVolume(binauralVol);
@@ -633,6 +634,15 @@ export default function BinauralesScreen() {
           Los beats binaurales requieren audífonos estéreo. El cerebro percibe la diferencia entre el tono izquierdo y el derecho.
         </Text>
       </PremiumCard>
+
+      {Platform.OS !== 'web' && (
+        <PremiumCard style={styles.noticeBanner}>
+          <MaterialIcons name="volume-off" size={20} color={palette.goldText} />
+          <Text style={styles.noticeText}>
+            El audio de esta práctica está disponible en la versión web por ahora — aquí corre como temporizador guiado.
+          </Text>
+        </PremiumCard>
+      )}
 
       <SafetyWarning
         title="SOBRE LOS BINAURALES"

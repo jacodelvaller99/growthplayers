@@ -175,7 +175,7 @@ function normalizePlanItem(raw: unknown, week: number): ActionItem | null {
   return null;
 }
 
-function parseAIList(out: string): string[] {
+export function parseAIList(out: string): string[] {
   return out
     .split('\n')
     .map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim())
@@ -207,7 +207,7 @@ function buildContext(
 
 // ─── Prompts IA ────────────────────────────────────────────────────────────────
 
-const PLAN_PROMPT_TAIL =
+export const PLAN_PROMPT_TAIL =
   'Devuelve entre 3 y 5 acciones concretas, medibles y en imperativo, una por línea, ' +
   'sin numerar ni explicar. Alinéalas con mi Norte y el método Polaris.';
 
