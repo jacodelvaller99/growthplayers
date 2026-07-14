@@ -7,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -17,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showAlert } from '@/lib/confirm';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -120,9 +120,9 @@ export default function CodigosScreen() {
       setLabel('');
       setNotes('');
       load();
-      Alert.alert('✅ Código generado', `Código: ${result.code}\nTipo: ${CODE_TYPE_LABELS[codeType]}`);
+      showAlert('✅ Código generado', `Código: ${result.code}\nTipo: ${CODE_TYPE_LABELS[codeType]}`);
     } else {
-      Alert.alert('Error', result.error ?? 'No se pudo crear el código');
+      showAlert('Error', result.error ?? 'No se pudo crear el código');
     }
   };
 
@@ -130,12 +130,12 @@ export default function CodigosScreen() {
     if (Platform.OS === 'web') {
       try { await navigator.clipboard.writeText(code); } catch { /* ignore */ }
     }
-    Alert.alert('✅ Código', `${code}\n\nCopia este código manualmente.`);
+    showAlert('✅ Código', `${code}\n\nCopia este código manualmente.`);
   };
 
   const handleDeactivate = (code: AccessCode) => {
     if (!adminId) return;
-    Alert.alert('Desactivar código', `¿Desactivar "${code.code}"?`, [
+    showAlert('Desactivar código', `¿Desactivar "${code.code}"?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Desactivar',

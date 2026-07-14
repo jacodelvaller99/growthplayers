@@ -10,7 +10,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -19,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showAlert } from '@/lib/confirm';
 
 import { GoldDivider, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -219,7 +219,7 @@ export default function AdminComunidadScreen() {
       event: 'El evento reportado quedará cancelado para todos los asistentes.',
       space: 'El espacio reportado se archivará (deja de ser visible; su contenido queda para auditoría).',
     };
-    Alert.alert(
+    showAlert(
       TARGET_ACTION_LABEL[item.targetType],
       `${messages[item.targetType]} El reporte quedará como accionado. ¿Continuar?`,
       [

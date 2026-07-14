@@ -11,7 +11,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -20,6 +19,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { showAlert } from '@/lib/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldAccentCard, GoldDivider, PremiumCard, StatusPill, useScreen } from '@/components/polaris';
@@ -551,7 +551,7 @@ export default function UserDetailScreen() {
       const res = await updateUserProfile({ adminId, userId, name: eName, label: eLabel });
       if (!res.success) {
         // Antes se cerraba en silencio aunque fallara → "no me permite guardar".
-        Alert.alert('No se pudo guardar', res.error ?? 'Intenta de nuevo en un momento.');
+        showAlert('No se pudo guardar', res.error ?? 'Intenta de nuevo en un momento.');
         return;
       }
       setEditOpen(false);
@@ -571,7 +571,7 @@ export default function UserDetailScreen() {
 
   const handleSetRole = useCallback((role: AppRole) => {
     if (!userId || !adminId || roleBusy) return;
-    Alert.alert(
+    showAlert(
       'Cambiar nivel de acceso',
       `¿Asignar "${APP_ROLE_LABEL[role]}" a este usuario?`,
       [
@@ -582,7 +582,7 @@ export default function UserDetailScreen() {
             setRoleBusy(true);
             const res = await setUserRole({ adminId, userId, role });
             setRoleBusy(false);
-            if (!res.success) { Alert.alert('No se pudo', res.error ?? 'Error'); return; }
+            if (!res.success) { showAlert('No se pudo', res.error ?? 'Error'); return; }
             await load();
           },
         },
@@ -592,7 +592,7 @@ export default function UserDetailScreen() {
 
   const handleDeactivateMembership = async (membership: UserMembership) => {
     if (!adminId) return;
-    Alert.alert('Desactivar membresía', `¿Desactivar ${membership.product} de este usuario?`, [
+    showAlert('Desactivar membresía', `¿Desactivar ${membership.product} de este usuario?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Desactivar',
@@ -615,7 +615,7 @@ export default function UserDetailScreen() {
       .then(({ ci }) => setCoachCI(ci))
       .catch(() => { /* no-op: la sección degrada a vacío sola */ });
     setRecalcLoading(false);
-    Alert.alert('✅ Recalculado', 'El ML de este usuario fue actualizado.');
+    showAlert('✅ Recalculado', 'El ML de este usuario fue actualizado.');
     load();
   };
 
@@ -623,7 +623,7 @@ export default function UserDetailScreen() {
     if (!adminId || !userId) return;
     await sendMessageAsNorman({ adminId, userId, message });
     setShowNorman(false);
-    Alert.alert('✅ Enviado', 'El mensaje fue enviado al chat del usuario.');
+    showAlert('✅ Enviado', 'El mensaje fue enviado al chat del usuario.');
   };
 
   const handleGenerateWeeklySession = async () => {
@@ -638,8 +638,8 @@ export default function UserDetailScreen() {
         sovereign_score: userAny.sovereign_score ?? 0,
       });
       if (session) { setWeeklySession(session); setShowWeeklySession(true); }
-      else Alert.alert('Sin cambios', 'Ya existe una sesión para esta semana.');
-    } catch { Alert.alert('Error', 'No se pudo generar la sesión.'); }
+      else showAlert('Sin cambios', 'Ya existe una sesión para esta semana.');
+    } catch { showAlert('Error', 'No se pudo generar la sesión.'); }
     setGeneratingSession(false);
   };
 

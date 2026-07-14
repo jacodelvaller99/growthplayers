@@ -7,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { showAlert } from '@/lib/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
@@ -74,18 +74,18 @@ export default function CursosScreen() {
     const result = await grantCourseAccess({ adminId, userId: selectedUser.id, courseId: selectedCourse });
     setSaving(false);
     if (result.success) {
-      Alert.alert('✅', `Acceso a ${COURSE_LABELS[selectedCourse]} otorgado a ${selectedUser.name}`);
+      showAlert('✅', `Acceso a ${COURSE_LABELS[selectedCourse]} otorgado a ${selectedUser.name}`);
       setSelectedUser(null);
       setUserQuery('');
       load();
     } else {
-      Alert.alert('Error', result.error);
+      showAlert('Error', result.error);
     }
   };
 
   const handleRevoke = (ca: UserCourseAccess) => {
     if (!adminId) return;
-    Alert.alert('Revocar acceso', `¿Revocar acceso de este usuario a ${COURSE_LABELS[selectedCourse]}?`, [
+    showAlert('Revocar acceso', `¿Revocar acceso de este usuario a ${COURSE_LABELS[selectedCourse]}?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Revocar', style: 'destructive',

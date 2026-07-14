@@ -9,7 +9,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -21,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showAlert } from '@/lib/confirm';
 
 import { GoldDivider, useScreen } from '@/components/polaris';
 import { TIER_ORDER, getTierColor, getTierLabel } from '@/constants/subscriptions';
@@ -134,7 +134,7 @@ export default function UsuariosScreen() {
   const handleCreate = useCallback(async () => {
     if (!adminId) return;
     if (!cEmail.trim() || !cName.trim() || cPassword.length < 8) {
-      Alert.alert('Campos incompletos', 'Email, nombre y contraseña (mínimo 8 caracteres) son requeridos.');
+      showAlert('Campos incompletos', 'Email, nombre y contraseña (mínimo 8 caracteres) son requeridos.');
       return;
     }
     setCreating(true);
@@ -166,12 +166,12 @@ export default function UsuariosScreen() {
       const ingreso = res.needsConfirm
         ? `Le enviamos un email de confirmación a ${cEmail.trim()}. Debe confirmarlo y luego entrar con la contraseña: ${cPassword}`
         : `Email: ${cEmail.trim()}\nContraseña temporal: ${cPassword}\n\nCompártela con el cliente para su primer ingreso.`;
-      Alert.alert(`Usuario "${cName.trim()}" creado`, ingreso);
+      showAlert(`Usuario "${cName.trim()}" creado`, ingreso);
       setCreateOpen(false);
       resetCreate();
       load();
     } else {
-      Alert.alert('No se pudo crear', res.error ?? 'Error desconocido');
+      showAlert('No se pudo crear', res.error ?? 'Error desconocido');
     }
   }, [adminId, cEmail, cName, cPassword, cTier, load]);
 

@@ -10,7 +10,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -19,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showAlert } from '@/lib/confirm';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -135,10 +135,10 @@ export default function InteligenciaScreen() {
     const result = await recalculateAllMLAction(adminId);
     setRecalcLoading(false);
     if (result.success) {
-      Alert.alert('✅ Recalculando', 'El motor ML está actualizando todos los usuarios (~30s)');
+      showAlert('✅ Recalculando', 'El motor ML está actualizando todos los usuarios (~30s)');
       setTimeout(load, 5000);
     } else {
-      Alert.alert('Error', result.error);
+      showAlert('Error', result.error);
     }
   };
 
