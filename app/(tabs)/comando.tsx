@@ -35,6 +35,7 @@ import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constant
 import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useDashboardPrefs, DASHBOARD_MAX } from '@/hooks/use-dashboard-prefs';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { stripMarkdownLite } from '@/lib/markdownLite';
@@ -153,6 +154,7 @@ export default function DashboardScreen() {
 
   const { isConnected: isWearableConnected } = useWearableConnections();
   const hasWearable = isWearableConnected('whoop') || isWearableConnected('oura');
+  const dashboardPrefs = useDashboardPrefs();
 
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
 
@@ -415,48 +417,146 @@ export default function DashboardScreen() {
     </View>
   );
 
+  // ── Tablero personalizable — el usuario elige sus 4 valores más importantes ──
+  type MetricDef = {
+    label: string;
+    value: string;
+    numericValue?: number;
+    numericSuffix?: string;
+    meta: string;
+    icon: React.ComponentProps<typeof MaterialIcons>['name'];
+  };
+  const metricCatalog: Record<string, MetricDef> = {
+    racha: {
+      label: 'Racha',
+      value: `${Math.max(state.checkIns.length, protocolDay)}`,
+      numericValue: Math.max(state.checkIns.length, protocolDay),
+      meta: 'días de protocolo',
+      icon: 'local-fire-department',
+    },
+    checkins: {
+      label: 'Check-ins',
+      value: `${state.checkIns.length}`,
+      numericValue: state.checkIns.length,
+      meta: todayCheckIn ? 'hoy completo' : 'pendiente hoy',
+      icon: 'fact-check',
+    },
+    modulo: {
+      label: 'Módulo',
+      value: `0${ACTIVE_MODULE.order}`,
+      meta: ACTIVE_MODULE.title.split(/[\s:]/)[0].toLowerCase(),
+      icon: 'view-module',
+    },
+    capacidad: {
+      label: 'Capacidad',
+      value: checkIn ? `${coherenceToday}/10` : '--',
+      numericValue: checkIn ? coherenceToday : undefined,
+      numericSuffix: '/10',
+      meta: 'operativa hoy',
+      icon: 'verified-user',
+    },
+    score: {
+      label: 'Score',
+      value: `${sovereignScore}`,
+      numericValue: sovereignScore,
+      meta: sovereignTier.toLowerCase(),
+      icon: 'military-tech',
+    },
+    bienestar: {
+      label: 'Práctica',
+      value: `${totalWellnessMinutes}`,
+      numericValue: totalWellnessMinutes,
+      meta: 'min de bienestar',
+      icon: 'self-improvement',
+    },
+    sesiones: {
+      label: 'Sesiones',
+      value: `${totalWellnessSessions}`,
+      numericValue: totalWellnessSessions,
+      meta: 'prácticas completadas',
+      icon: 'spa',
+    },
+    lecciones: {
+      label: 'Lecciones',
+      value: `${(state.completedLessons ?? []).length}`,
+      numericValue: (state.completedLessons ?? []).length,
+      meta: 'completadas',
+      icon: 'school',
+    },
+    energia: {
+      label: 'Energía',
+      value: checkIn ? `${checkIn.energy}/10` : '--',
+      numericValue: checkIn?.energy,
+      numericSuffix: '/10',
+      meta: 'lectura de hoy',
+      icon: 'bolt',
+    },
+    sueno: {
+      label: 'Sueño',
+      value: checkIn ? `${checkIn.sleep}/10` : '--',
+      numericValue: checkIn?.sleep,
+      numericSuffix: '/10',
+      meta: 'anoche',
+      icon: 'bedtime',
+    },
+  };
+
   const metricsRow = (
-    <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
-      <MetricCard
-        label="Racha"
-        value={`${Math.max(state.checkIns.length, protocolDay)}`}
-        numericValue={Math.max(state.checkIns.length, protocolDay)}
-        meta="días de protocolo"
-        icon="local-fire-department"
-        entryDelay={0}
-        style={isDesktop ? styles.metricCardDesktop : undefined}
-      />
-      <MetricCard
-        label="Check-ins"
-        value={`${state.checkIns.length}`}
-        numericValue={state.checkIns.length}
-        meta={todayCheckIn ? 'hoy completo' : 'pendiente hoy'}
-        icon="fact-check"
-        entryDelay={60}
-        style={isDesktop ? styles.metricCardDesktop : undefined}
-      />
-      <MetricCard
-        label="Módulo"
-        value={`0${ACTIVE_MODULE.order}`}
-        meta={ACTIVE_MODULE.title.split(/[\s:]/)[0].toLowerCase()}
-        icon="view-module"
-        entryDelay={120}
-        style={isDesktop ? styles.metricCardDesktop : undefined}
-      />
-      <MetricCard
-        label="Capacidad"
-        value={checkIn
-          ? `${Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)}/10`
-          : '--'}
-        numericValue={checkIn
-          ? Math.round((checkIn.energy + checkIn.clarity + checkIn.sleep + (11 - checkIn.stress)) / 4)
-          : undefined}
-        numericSuffix="/10"
-        meta="operativa hoy"
-        icon="verified-user"
-        entryDelay={180}
-        style={isDesktop ? styles.metricCardDesktop : undefined}
-      />
+    <View style={styles.stack}>
+      <View style={styles.tableroHeader}>
+        <Text style={styles.tableroLabel}>TU TABLERO</Text>
+        <Pressable
+          onPress={() => dashboardPrefs.setEditing(!dashboardPrefs.editing)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={dashboardPrefs.editing ? 'Cerrar personalización' : 'Personalizar tablero'}>
+          <MaterialIcons
+            name={dashboardPrefs.editing ? 'check' : 'tune'}
+            size={16}
+            color={dashboardPrefs.editing ? palette.goldText : palette.smoke}
+          />
+        </Pressable>
+      </View>
+      {dashboardPrefs.editing && (
+        <View style={styles.tableroPicker}>
+          <Text style={styles.tableroPickerHint}>Elige hasta {DASHBOARD_MAX} valores — tu tablero, tus reglas.</Text>
+          <View style={styles.tableroChips}>
+            {Object.entries(metricCatalog).map(([id, def]) => {
+              const active = dashboardPrefs.selected.includes(id);
+              return (
+                <Pressable
+                  key={id}
+                  onPress={() => dashboardPrefs.toggle(id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: active }}
+                  accessibilityLabel={`Métrica ${def.label}`}
+                  style={[styles.tableroChip, active && styles.tableroChipActive]}>
+                  <MaterialIcons name={def.icon} size={12} color={active ? palette.goldText : palette.smoke} />
+                  <Text style={[styles.tableroChipText, active && styles.tableroChipTextActive]}>{def.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
+      <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
+        {dashboardPrefs.selected.filter((id) => metricCatalog[id]).map((id, i) => {
+          const def = metricCatalog[id];
+          return (
+            <MetricCard
+              key={id}
+              label={def.label}
+              value={def.value}
+              numericValue={def.numericValue}
+              numericSuffix={def.numericSuffix}
+              meta={def.meta}
+              icon={def.icon}
+              entryDelay={i * 60}
+              style={isDesktop ? styles.metricCardDesktop : undefined}
+            />
+          );
+        })}
+      </View>
     </View>
   );
 
@@ -1518,6 +1618,65 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: palette.ash,
     fontStyle: 'italic',
+  },
+
+  // ── Tablero personalizable ──────────────────────────────────────────────────
+  tableroHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+    paddingHorizontal: 2,
+  },
+  tableroLabel: {
+    color: palette.smoke,
+    fontFamily: Fonts.display,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  tableroPicker: {
+    backgroundColor: palette.graphite,
+    borderColor: palette.lineSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  tableroPickerHint: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 11,
+  },
+  tableroChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  tableroChip: {
+    alignItems: 'center',
+    borderColor: palette.line,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 5,
+    minHeight: 32,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+  },
+  tableroChipActive: {
+    backgroundColor: palette.goldLight,
+    borderColor: palette.gold,
+  },
+  tableroChipText: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 11,
+  },
+  tableroChipTextActive: {
+    color: palette.goldText,
+    fontWeight: '700',
   },
 
   // ── Anomaly alert card ──────────────────────────────────────────────────────
