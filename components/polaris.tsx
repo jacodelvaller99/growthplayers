@@ -236,7 +236,7 @@ export function SectionHeader({ title, meta }: { title: string; meta?: string })
 // ─── Metric Card ─────────────────────────────────────────────────────────────
 
 export function MetricCard({
-  label, value, numericValue, numericSuffix = '', meta, icon, accent, entryDelay = 0, style,
+  label, value, numericValue, numericSuffix = '', meta, icon, accent, entryDelay = 0, style, onPress,
 }: {
   label: string;
   value: string;
@@ -248,13 +248,12 @@ export function MetricCard({
   entryDelay?: number;
   /** Override card container styles — use for desktop flex:1 or custom sizing */
   style?: object;
+  /** Hace la tarjeta navegable (drill-down a la pantalla de la métrica) */
+  onPress?: () => void;
 }) {
   const iconColor = accent ?? palette.gold;
-  return (
-    <Animated.View
-      style={[styles.card, styles.metricCard, style]}
-      entering={FadeInDown.delay(entryDelay).springify().damping(20).stiffness(180)}
-    >
+  const body = (
+    <>
       <View style={styles.metricTop}>
         <MaterialIcons name={icon} color={iconColor} size={16} />
         <Text style={styles.metricLabel}>{label}</Text>
@@ -264,6 +263,24 @@ export function MetricCard({
         : <Text style={styles.metricValue}>{value}</Text>
       }
       {meta ? <Text style={styles.metricMeta}>{meta}</Text> : null}
+    </>
+  );
+  return (
+    <Animated.View
+      style={[styles.card, styles.metricCard, style]}
+      entering={FadeInDown.delay(entryDelay).springify().damping(20).stiffness(180)}
+    >
+      {onPress ? (
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`${label} — abrir detalle`}
+          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}>
+          {body}
+        </Pressable>
+      ) : (
+        body
+      )}
     </Animated.View>
   );
 }

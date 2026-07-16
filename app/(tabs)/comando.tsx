@@ -425,6 +425,7 @@ export default function DashboardScreen() {
     numericSuffix?: string;
     meta: string;
     icon: React.ComponentProps<typeof MaterialIcons>['name'];
+    route?: string;
   };
   const metricCatalog: Record<string, MetricDef> = {
     racha: {
@@ -433,6 +434,7 @@ export default function DashboardScreen() {
       numericValue: Math.max(state.checkIns.length, protocolDay),
       meta: 'días de protocolo',
       icon: 'local-fire-department',
+      route: '/checkin',
     },
     checkins: {
       label: 'Check-ins',
@@ -440,12 +442,14 @@ export default function DashboardScreen() {
       numericValue: state.checkIns.length,
       meta: todayCheckIn ? 'hoy completo' : 'pendiente hoy',
       icon: 'fact-check',
+      route: '/checkin',
     },
     modulo: {
       label: 'Módulo',
       value: `0${ACTIVE_MODULE.order}`,
       meta: ACTIVE_MODULE.title.split(/[\s:]/)[0].toLowerCase(),
       icon: 'view-module',
+      route: `/module/${ACTIVE_MODULE.id}`,
     },
     capacidad: {
       label: 'Capacidad',
@@ -454,6 +458,7 @@ export default function DashboardScreen() {
       numericSuffix: '/10',
       meta: 'operativa hoy',
       icon: 'verified-user',
+      route: '/checkin',
     },
     score: {
       label: 'Score',
@@ -461,6 +466,7 @@ export default function DashboardScreen() {
       numericValue: sovereignScore,
       meta: sovereignTier.toLowerCase(),
       icon: 'military-tech',
+      route: '/(tabs)/progreso',
     },
     bienestar: {
       label: 'Práctica',
@@ -468,6 +474,7 @@ export default function DashboardScreen() {
       numericValue: totalWellnessMinutes,
       meta: 'min de bienestar',
       icon: 'self-improvement',
+      route: '/bienestar',
     },
     sesiones: {
       label: 'Sesiones',
@@ -475,6 +482,7 @@ export default function DashboardScreen() {
       numericValue: totalWellnessSessions,
       meta: 'prácticas completadas',
       icon: 'spa',
+      route: '/bienestar',
     },
     lecciones: {
       label: 'Lecciones',
@@ -482,6 +490,7 @@ export default function DashboardScreen() {
       numericValue: (state.completedLessons ?? []).length,
       meta: 'completadas',
       icon: 'school',
+      route: `/module/${ACTIVE_MODULE.id}`,
     },
     energia: {
       label: 'Energía',
@@ -490,6 +499,7 @@ export default function DashboardScreen() {
       numericSuffix: '/10',
       meta: 'lectura de hoy',
       icon: 'bolt',
+      route: '/checkin',
     },
     sueno: {
       label: 'Sueño',
@@ -498,6 +508,7 @@ export default function DashboardScreen() {
       numericSuffix: '/10',
       meta: 'anoche',
       icon: 'bedtime',
+      route: '/bienestar/sueno',
     },
   };
 
@@ -518,7 +529,7 @@ export default function DashboardScreen() {
         </Pressable>
       </View>
       {dashboardPrefs.editing && (
-        <View style={styles.tableroPicker}>
+        <Animated.View entering={FadeInDown.duration(220)} style={styles.tableroPicker}>
           <Text style={styles.tableroPickerHint}>Elige hasta {DASHBOARD_MAX} valores — tu tablero, tus reglas.</Text>
           <View style={styles.tableroChips}>
             {Object.entries(metricCatalog).map(([id, def]) => {
@@ -537,7 +548,7 @@ export default function DashboardScreen() {
               );
             })}
           </View>
-        </View>
+        </Animated.View>
       )}
       <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
         {dashboardPrefs.selected.filter((id) => metricCatalog[id]).map((id, i) => {
@@ -553,6 +564,7 @@ export default function DashboardScreen() {
               icon={def.icon}
               entryDelay={i * 60}
               style={isDesktop ? styles.metricCardDesktop : undefined}
+              onPress={def.route ? () => router.push(def.route as never) : undefined}
             />
           );
         })}
