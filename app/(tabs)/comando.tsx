@@ -426,6 +426,7 @@ export default function DashboardScreen() {
     meta: string;
     icon: React.ComponentProps<typeof MaterialIcons>['name'];
     route?: string;
+    accent?: string;
   };
   const metricCatalog: Record<string, MetricDef> = {
     racha: {
@@ -459,6 +460,7 @@ export default function DashboardScreen() {
       meta: 'operativa hoy',
       icon: 'verified-user',
       route: '/checkin',
+      accent: checkIn ? undefined : palette.smoke,
     },
     score: {
       label: 'Score',
@@ -500,6 +502,7 @@ export default function DashboardScreen() {
       meta: 'lectura de hoy',
       icon: 'bolt',
       route: '/checkin',
+      accent: checkIn ? undefined : palette.smoke,
     },
     sueno: {
       label: 'Sueño',
@@ -509,6 +512,7 @@ export default function DashboardScreen() {
       meta: 'anoche',
       icon: 'bedtime',
       route: '/bienestar/sueno',
+      accent: checkIn ? undefined : palette.smoke,
     },
   };
 
@@ -564,6 +568,7 @@ export default function DashboardScreen() {
               numericSuffix={def.numericSuffix}
               meta={def.meta}
               icon={def.icon}
+              accent={def.accent}
               entryDelay={i * 60}
               style={isDesktop ? styles.metricCardDesktop : undefined}
               onPress={def.route ? () => router.push(def.route as never) : undefined}
