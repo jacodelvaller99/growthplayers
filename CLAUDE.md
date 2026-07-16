@@ -269,6 +269,8 @@ El motor downstream (`lib/biometric.ts`, Confrontation OS, dashboards admin) es 
 
 ## Key Patterns
 
+**Tablero personalizable (Comando):** el usuario elige hasta 4 métricas de un catálogo de 10 (`metricCatalog` en `app/(tabs)/comando.tsx`). Selección + orden persisten por dispositivo vía `hooks/use-dashboard-prefs.ts` (storage local, clave `dashboard-metrics`; lógica pura `nextSelection` testeada — FIFO al llenar, mínimo 2). Cada métrica hace drill-down a su pantalla (`route` en el catálogo). Para añadir una métrica nueva: una entrada más en `metricCatalog`, cero cambios en el hook.
+
 **Web/native platform splits:** Use `Platform.select()` or `.web.ts` file extensions. The breakpoint hook (`useBreakpoint`) returns `isMobile/isTablet/isDesktop` — desktop is ≥1200px.
 
 **Font loading:** On web, fonts come from CSS `@font-face` in `+html.tsx` (no useFonts needed). On native, `useFonts` from `expo-font` loads the local TTF files. The `isWeb` flag in `_layout.tsx` skips `useFonts` entirely on web to avoid broken binary asset paths in static exports.
