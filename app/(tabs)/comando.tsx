@@ -533,15 +533,17 @@ export default function DashboardScreen() {
           <Text style={styles.tableroPickerHint}>Elige hasta {DASHBOARD_MAX} valores — tu tablero, tus reglas.</Text>
           <View style={styles.tableroChips}>
             {Object.entries(metricCatalog).map(([id, def]) => {
-              const active = dashboardPrefs.selected.includes(id);
+              const pos = dashboardPrefs.selected.indexOf(id);
+              const active = pos >= 0;
               return (
                 <Pressable
                   key={id}
                   onPress={() => dashboardPrefs.toggle(id)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: active }}
-                  accessibilityLabel={`Métrica ${def.label}`}
+                  accessibilityLabel={`Métrica ${def.label}${active ? `, posición ${pos + 1}` : ''}`}
                   style={[styles.tableroChip, active && styles.tableroChipActive]}>
+                  {active && <Text style={styles.tableroChipIndex}>{pos + 1}</Text>}
                   <MaterialIcons name={def.icon} size={12} color={active ? palette.goldText : palette.smoke} />
                   <Text style={[styles.tableroChipText, active && styles.tableroChipTextActive]}>{def.label}</Text>
                 </Pressable>
@@ -1688,6 +1690,12 @@ const styles = StyleSheet.create({
   },
   tableroChipTextActive: {
     color: palette.goldText,
+    fontWeight: '700',
+  },
+  tableroChipIndex: {
+    color: palette.goldText,
+    fontFamily: Fonts.mono,
+    fontSize: 9,
     fontWeight: '700',
   },
 

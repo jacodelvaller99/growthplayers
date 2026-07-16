@@ -12,6 +12,18 @@ export const DASHBOARD_DEFAULTS = ['racha', 'checkins', 'modulo', 'capacidad'] a
 export const DASHBOARD_MAX = 4;
 const KEY = 'dashboard-metrics';
 
+/**
+ * Lógica pura del toggle (testeable): quitar respeta mínimo 2;
+ * agregar con el tablero lleno desplaza la métrica más antigua (FIFO).
+ */
+export function nextSelection(prev: string[], id: string): string[] {
+  if (prev.includes(id)) {
+    if (prev.length <= 2) return prev;
+    return prev.filter((m) => m !== id);
+  }
+  return prev.length >= DASHBOARD_MAX ? [...prev.slice(1), id] : [...prev, id];
+}
+
 export function useDashboardPrefs() {
   const [selected, setSelected] = useState<string[]>([...DASHBOARD_DEFAULTS]);
   const [editing, setEditing] = useState(false);
@@ -24,14 +36,8 @@ export function useDashboardPrefs() {
 
   const toggle = useCallback((id: string) => {
     setSelected((prev) => {
-      let next: string[];
-      if (prev.includes(id)) {
-        if (prev.length <= 2) return prev; // mínimo 2 métricas
-        next = prev.filter((m) => m !== id);
-      } else {
-        next = prev.length >= DASHBOARD_MAX ? [...prev.slice(1), id] : [...prev, id];
-      }
-      void writeLocal(KEY, next);
+      const next = nextSelection(prev, id);
+      if (next !== prev) void writeLocal(KEY, next);
       return next;
     });
   }, []);
