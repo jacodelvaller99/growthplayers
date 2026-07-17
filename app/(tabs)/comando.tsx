@@ -517,7 +517,7 @@ export default function DashboardScreen() {
   };
 
   const metricsRow = (
-    <View style={styles.stack}>
+    <>
       <View style={styles.tableroHeader}>
         <Text style={styles.tableroLabel}>TU TABLERO</Text>
         <Pressable
@@ -576,7 +576,7 @@ export default function DashboardScreen() {
           );
         })}
       </View>
-    </View>
+    </>
   );
 
   const estadoBlock = (
