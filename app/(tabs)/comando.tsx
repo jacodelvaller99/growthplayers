@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -542,7 +543,10 @@ export default function DashboardScreen() {
               return (
                 <Pressable
                   key={id}
-                  onPress={() => dashboardPrefs.toggle(id)}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.selectionAsync();
+                    dashboardPrefs.toggle(id);
+                  }}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: active }}
                   accessibilityLabel={`Métrica ${def.label}${active ? `, posición ${pos + 1}` : ''}`}
