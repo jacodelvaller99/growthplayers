@@ -269,7 +269,7 @@ El motor downstream (`lib/biometric.ts`, Confrontation OS, dashboards admin) es 
 
 ## Key Patterns
 
-**Tablero personalizable (Comando):** el usuario elige hasta 4 métricas de un catálogo de 10 (`metricCatalog` en `app/(tabs)/comando.tsx`). Selección + orden persisten por dispositivo vía `hooks/use-dashboard-prefs.ts` (storage local, clave `dashboard-metrics`; lógica pura `nextSelection` testeada — FIFO al llenar, mínimo 2). Cada métrica hace drill-down a su pantalla (`route` en el catálogo). Para añadir una métrica nueva: una entrada más en `metricCatalog`, cero cambios en el hook.
+**Tablero personalizable (Comando):** el usuario elige hasta 4 métricas de un catálogo de 10 (`metricCatalog` en `app/(tabs)/comando.tsx`). Selección + orden persisten local (respuesta instantánea) y en `profiles.dashboard_metrics` (cross-device; migración `20260716000000_dashboard_metrics.sql` — aplicar en SQL Editor). Si la columna no existe, degrada a solo-local. Lógica pura `nextSelection` testeada (FIFO al llenar, mínimo 2) en `hooks/use-dashboard-prefs.ts`. Cada métrica hace drill-down a su pantalla (`route` en el catálogo). Para añadir una métrica nueva: una entrada más en `metricCatalog`, cero cambios en el hook.
 
 **Web/native platform splits:** Use `Platform.select()` or `.web.ts` file extensions. The breakpoint hook (`useBreakpoint`) returns `isMobile/isTablet/isDesktop` — desktop is ≥1200px.
 

@@ -1,3 +1,6 @@
+jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn() } }));
+jest.mock('@/lib/observability', () => ({ logSilentError: jest.fn() }));
+
 import { nextSelection, DASHBOARD_DEFAULTS, DASHBOARD_MAX } from '@/hooks/use-dashboard-prefs';
 
 describe('nextSelection — lógica del tablero personalizable', () => {

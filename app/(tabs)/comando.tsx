@@ -154,7 +154,7 @@ export default function DashboardScreen() {
 
   const { isConnected: isWearableConnected } = useWearableConnections();
   const hasWearable = isWearableConnected('whoop') || isWearableConnected('oura');
-  const dashboardPrefs = useDashboardPrefs();
+  const dashboardPrefs = useDashboardPrefs(userId);
 
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
 

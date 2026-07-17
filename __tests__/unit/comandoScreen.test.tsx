@@ -97,7 +97,18 @@ jest.mock('@/lib/weekly-session-generator', () => ({
 }));
 jest.mock('@/lib/supabase', () => ({
   db2: { communityPosts: () => ({ select: () => ({ order: () => ({ order: () => ({ limit: () => Promise.resolve({ data: [], error: null }) }) }) }) }) },
-  supabase: { from: () => ({ select: () => ({ eq: () => Promise.resolve({ data: [] }), in: () => Promise.resolve({ data: [] }) }) }) },
+  supabase: {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          then: (r: (v: unknown) => unknown) => Promise.resolve({ data: [] }).then(r),
+        }),
+        in: () => Promise.resolve({ data: [] }),
+      }),
+      update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+    }),
+  },
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
