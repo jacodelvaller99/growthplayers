@@ -639,7 +639,7 @@ export default function BinauralesScreen() {
         <PremiumCard style={styles.noticeBanner}>
           <MaterialIcons name="volume-off" size={20} color={palette.goldText} />
           <Text style={styles.noticeText}>
-            El audio de esta práctica está disponible en la versión web por ahora — aquí corre como temporizador guiado.
+            El tono binaural exacto requiere la versión web — aquí suena la cama musical de la banda mientras corre el temporizador guiado.
           </Text>
         </PremiumCard>
       )}

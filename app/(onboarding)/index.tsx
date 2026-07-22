@@ -154,7 +154,7 @@ export default function OnboardingScreen() {
     setFinishing(true);
     try {
       await completeOnboarding({
-        profile: { name: name.trim() || 'Juan Carlos', role: role.trim() || 'Empresario' },
+        profile: { name: name.trim(), role: role.trim() },
         activeProgramId: 'protocolo-soberano',
         northStar: north,
       });
@@ -347,7 +347,12 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.actions}>
             <SecondaryButton label="ATRAS" onPress={() => setStep(1)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(3)} />
+            <PrimaryButton
+              label="CONTINUAR"
+              icon="arrow-forward"
+              disabled={!name.trim()}
+              onPress={() => setStep(3)}
+            />
           </View>
         </PremiumCard>
       )}

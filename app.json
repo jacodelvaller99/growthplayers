@@ -16,7 +16,8 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Polaris usa el micrófono solo cuando grabas una sesión de mentoría, para transcribirla y generar tus notas. La grabación es opcional y requiere tu consentimiento.",
         "NSHealthShareUsageDescription": "Polaris lee tus métricas de sueño, recuperación, frecuencia cardíaca y actividad desde Apple Salud (incluyendo Apple Watch y cualquier reloj compatible) para personalizar tu protocolo soberano.",
-        "NSHealthUpdateUsageDescription": "Polaris no escribe datos en Apple Salud — solo lee tus métricas para acompañar tu progreso."
+        "NSHealthUpdateUsageDescription": "Polaris no escribe datos en Apple Salud — solo lee tus métricas para acompañar tu progreso.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

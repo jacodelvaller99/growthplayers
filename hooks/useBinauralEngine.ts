@@ -6,7 +6,6 @@
  * Zustand store holds all reactive UI state.
  */
 import { useCallback } from 'react';
-import { Platform } from 'react-native';
 
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 import type { AmbienceType } from '@/data/wellness';
@@ -51,18 +50,16 @@ export function useBinauralEngine() {
     const wv = cfg.waveVolume ?? 0.6;
     const bv = cfg.bgVolume   ?? 0.4;
 
-    // Attempt Web Audio (web only)
-    if (Platform.OS === 'web') {
-      const h = createBinauralAudio(cfg.carrierHz, cfg.beatHz, cfg.musicUrl);
-      if (h) {
-        _handle = h;
-        h.start();
-        h.setVolume(wv);
-        h.setAmbienceVolume(bv);
-        if (cfg.ambience && cfg.ambience !== 'none') h.setAmbience(cfg.ambience);
-      }
+    // Web: Web Audio oscillators + procedural ambience. Native: createBinauralAudio
+    // degrades internally to a looped Suno music-bed via expo-av (see lib/binaural.ts).
+    const h = createBinauralAudio(cfg.carrierHz, cfg.beatHz, cfg.musicUrl);
+    if (h) {
+      _handle = h;
+      h.start();
+      h.setVolume(wv);
+      h.setAmbienceVolume(bv);
+      if (cfg.ambience && cfg.ambience !== 'none') h.setAmbience(cfg.ambience);
     }
-    // Native: no binaural audio (Web Audio unavailable) — timer only
 
     startSession({
       type:          'binaural',

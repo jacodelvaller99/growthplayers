@@ -42,7 +42,8 @@ const SECTIONS: Section[] = [
     body: [
       'La App no está diseñada para emergencias y no monitoriza ni responde a crisis en tiempo real.',
       'Si usted o alguien más experimenta una emergencia médica, una crisis de salud mental, pensamientos de autolesión o suicidio, o cualquier situación de riesgo vital, deje de usar la App y contacte de inmediato a los servicios de emergencia locales o a una línea de crisis / prevención del suicidio de su localidad.',
-      '[COMPLETAR con recursos de emergencia/crisis relevantes para las jurisdicciones de lanzamiento, p. ej. línea local de salud mental.]',
+      'En Colombia: Línea 123 para emergencias médicas o de seguridad. Línea 106 — línea de salud mental y prevención del suicidio, gratuita y disponible las 24 horas en la mayoría de ciudades (marque 106 desde cualquier operador). Línea Púrpura Distrital 018000 112 137 para violencia de género (Bogotá, atiende a nivel nacional por WhatsApp).',
+      'Fuera de Colombia: busque "línea de prevención del suicidio" o "crisis line" junto con el nombre de su país, o contacte al número de emergencias local.',
     ],
   },
   {
