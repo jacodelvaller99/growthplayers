@@ -1,12 +1,12 @@
 # POLÍTICA DE PRIVACIDAD — POLARIS GROWTH INSTITUTE / LIFEFLOW
 
-> **ESTADO: BORRADOR PARA REVISIÓN LEGAL.** Este documento describe el tratamiento de datos personales tal como está **realmente implementado** en el código de la aplicación a fecha de redacción. Los campos entre corchetes `[ ]` son marcadores que deben completarse por la empresa antes de su publicación. Las secciones marcadas con **⚠ BRECHA** señalan puntos donde el comportamiento técnico actual NO cumple aún con lo que esta política promete; deben cerrarse en ingeniería o ajustarse en el texto antes del lanzamiento.
+> **ESTADO: ENTIDAD CONFIRMADA** — datos de la empresa confirmados por el dueño 2026-07-22; el texto vigente vive en `app/legal/privacidad.tsx`. Las secciones marcadas con **⚠ BRECHA** siguen señalando puntos donde el comportamiento técnico debe verificarse contra lo que esta política promete antes del lanzamiento.
 
-**Responsable del tratamiento (Data Controller):** [RAZÓN SOCIAL]
-**Domicilio:** [DIRECCIÓN FISCAL]
-**Contacto de privacidad / Delegado de Protección de Datos:** [EMAIL LEGAL / privacidad@polarisgrowthinstitute.com]
-**Última actualización:** [FECHA]
-**Versión:** 1.0-draft
+**Responsable del tratamiento (Data Controller):** POLARIS GROWTH INSTITUTE CORP
+**Domicilio:** 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS
+**Contacto de privacidad / Delegado de Protección de Datos:** info@polarisgrowthinstitute.com
+**Última actualización:** 22 de julio de 2026
+**Versión:** 1.0-final
 
 ---
 

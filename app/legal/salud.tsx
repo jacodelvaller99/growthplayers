@@ -7,8 +7,7 @@ import { GoldDivider, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 
 // ─── Health disclaimer content ───────────────────────────────────────────────
-// Summarized faithfully from docs/launch/legal/HEALTH_DISCLAIMER_DRAFT.md.
-// [PLACEHOLDERS] are intentionally visible so the team fills them before launch.
+// Texto legal final provisto por el dueño — POLARIS GROWTH INSTITUTE CORP.
 
 interface Section {
   heading: string;
@@ -42,8 +41,16 @@ const SECTIONS: Section[] = [
     body: [
       'La App no está diseñada para emergencias y no monitoriza ni responde a crisis en tiempo real.',
       'Si usted o alguien más experimenta una emergencia médica, una crisis de salud mental, pensamientos de autolesión o suicidio, o cualquier situación de riesgo vital, deje de usar la App y contacte de inmediato a los servicios de emergencia locales o a una línea de crisis / prevención del suicidio de su localidad.',
-      'En Colombia: Línea 123 para emergencias médicas o de seguridad. Línea 106 — línea de salud mental y prevención del suicidio, gratuita y disponible las 24 horas en la mayoría de ciudades (marque 106 desde cualquier operador). Línea Púrpura Distrital 018000 112 137 para violencia de género (Bogotá, atiende a nivel nacional por WhatsApp).',
-      'Fuera de Colombia: busque "línea de prevención del suicidio" o "crisis line" junto con el nombre de su país, o contacte al número de emergencias local.',
+      'Recursos de emergencia y crisis:',
+      '🇺🇸 Estados Unidos: 911 (emergencias) / 988 (Línea de Prevención del Suicidio y Crisis)',
+      '🇲🇽 México: 911 (emergencias) / 800-290-0024 (Línea de la Vida)',
+      '🇨🇴 Colombia: 123 (emergencias) / 106 (Línea de Salud Mental)',
+      '🇦🇷 Argentina: 911 (emergencias) / 135 o 0800-345-1435 (Centro de Asistencia al Suicida)',
+      '🇨🇱 Chile: 131 (emergencias) / *4141 (Salud Responde, línea de salud mental)',
+      '🇵🇪 Perú: 106 (línea de salud mental del MINSA)',
+      '🇪🇸 España: 112 (emergencias) / 024 (Línea de atención a la conducta suicida)',
+      '🇪🇨 Ecuador: 911 (emergencias)',
+      'Si su país no aparece en esta lista, contacte a los servicios de emergencia locales marcando el número de emergencia de su país, o busque "línea de prevención del suicidio" junto con el nombre de su país.',
     ],
   },
   {
@@ -62,13 +69,13 @@ const SECTIONS: Section[] = [
   {
     heading: '7. Su responsabilidad',
     body: [
-      'El uso que haga de la información de la App es bajo su propia responsabilidad y criterio. En la máxima medida permitida por la ley, [RAZÓN SOCIAL] no será responsable de decisiones tomadas o acciones realizadas con base en el contenido de la App, conforme a la limitación de responsabilidad de los Términos y Condiciones.',
+      'El uso que haga de la información de la App es bajo su propia responsabilidad y criterio. En la máxima medida permitida por la ley, POLARIS GROWTH INSTITUTE CORP no será responsable de decisiones tomadas o acciones realizadas con base en el contenido de la App, conforme a la limitación de responsabilidad de los Términos y Condiciones.',
     ],
   },
   {
     heading: '8. Contacto',
     body: [
-      'Dudas sobre este descargo: [EMAIL LEGAL] — [RAZÓN SOCIAL].',
+      'Dudas sobre este descargo: info@polarisgrowthinstitute.com — POLARIS GROWTH INSTITUTE CORP.',
     ],
   },
 ];
@@ -111,9 +118,9 @@ export default function SaludScreen() {
 
       {/* Meta block */}
       <View style={styles.metaCard}>
-        <Text style={styles.metaLine}>Titular: [RAZÓN SOCIAL]</Text>
-        <Text style={styles.metaLine}>Contacto: [EMAIL LEGAL]</Text>
-        <Text style={styles.metaLine}>Última actualización: [FECHA]</Text>
+        <Text style={styles.metaLine}>Titular: POLARIS GROWTH INSTITUTE CORP</Text>
+        <Text style={styles.metaLine}>Contacto: info@polarisgrowthinstitute.com</Text>
+        <Text style={styles.metaLine}>Última actualización: 22 de julio de 2026</Text>
       </View>
 
       {SECTIONS.map((section) => (

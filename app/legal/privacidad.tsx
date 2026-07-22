@@ -7,8 +7,7 @@ import { GoldDivider, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 
 // ─── Privacy policy content ──────────────────────────────────────────────────
-// Summarized faithfully from docs/launch/legal/PRIVACY_POLICY_DRAFT.md.
-// [PLACEHOLDERS] are intentionally visible so the team fills them before launch.
+// Texto legal final provisto por el dueño — POLARIS GROWTH INSTITUTE CORP.
 
 interface Section {
   heading: string;
@@ -21,7 +20,7 @@ const SECTIONS: Section[] = [
     body: [
       'Polaris Growth Institute opera la aplicación LifeFlow / Polaris ("la App"), disponible en iOS, Android y web (PWA), para acompañamiento de alto rendimiento personal. Incluye un programa de 90 días ("Protocolo Soberano"), un mentor de inteligencia artificial llamado "Norman", herramientas de bienestar y seguimiento de métricas biométricas y de hábitos.',
       'Esta política aplica a todas las personas usuarias. Al crear una cuenta y usar la App, usted acepta el tratamiento de sus datos descrito aquí.',
-      'La App está dirigida a personas mayores de edad. No está dirigida a menores de [18] años.',
+      'La App está dirigida a personas mayores de edad. No está dirigida a menores de 18 años.',
     ],
   },
   {
@@ -63,7 +62,7 @@ const SECTIONS: Section[] = [
   {
     heading: '6. Transferencias internacionales',
     body: [
-      'Algunos proveedores pueden procesar datos fuera de [PAÍS / JURISDICCIÓN del usuario], incluidos Estados Unidos. Cuando esto ocurra, nos apoyaremos en los mecanismos de transferencia aplicables (p. ej. cláusulas contractuales tipo) según corresponda.',
+      'Algunos proveedores pueden procesar datos fuera de su país de residencia, incluidos Estados Unidos. Cuando esto ocurra, nos apoyaremos en los mecanismos de transferencia aplicables (p. ej. cláusulas contractuales tipo) según corresponda.',
     ],
   },
   {
@@ -71,14 +70,14 @@ const SECTIONS: Section[] = [
     body: [
       'Según su jurisdicción (p. ej. RGPD/GDPR en la UE, Ley 1581 de 2012 en Colombia, CCPA/CPRA en California), usted puede tener derecho a: acceso, rectificación, supresión ("derecho al olvido"), portabilidad / exportación, oposición y limitación del tratamiento (incluido el perfilado, desactivando ml_consent), y a retirar el consentimiento para datos de salud y desconectar wearables en cualquier momento.',
       'Usted tiene derecho a no ser objeto de decisiones exclusivamente automatizadas con efectos jurídicos significativos. Las inferencias del mentor IA y las recomendaciones de bienestar son orientativas y no producen efectos jurídicos.',
-      'Para ejercer estos derechos, escriba a [EMAIL LEGAL] o use las opciones de la App ("Perfil → Privacidad y Datos"). Responderemos en los plazos legales aplicables.',
+      'Para ejercer estos derechos, escriba a info@polarisgrowthinstitute.com o use las opciones de la App ("Perfil → Privacidad y Datos"). Responderemos en los plazos legales aplicables.',
     ],
   },
   {
     heading: '8. Conservación y eliminación',
     body: [
       'Los datos de cuenta y contenido se conservan mientras su cuenta esté activa. Puede solicitar la eliminación desde la App ("Eliminar cuenta") o por correo; los datos biométricos se eliminan junto con la cuenta.',
-      'Los datos pueden persistir en copias de seguridad cifradas durante un periodo limitado [DEFINIR, p. ej. hasta 30 días] hasta su rotación.',
+      'Los datos pueden persistir en copias de seguridad cifradas durante un periodo limitado hasta 30 días hasta su rotación.',
     ],
   },
   {
@@ -107,7 +106,7 @@ const SECTIONS: Section[] = [
   {
     heading: '11. Menores de edad',
     body: [
-      'La App no está dirigida a menores de [18] años y no recopilamos conscientemente sus datos. Si detectamos una cuenta de un menor, la eliminaremos.',
+      'La App no está dirigida a menores de 18 años y no recopilamos conscientemente sus datos. Si detectamos una cuenta de un menor, la eliminaremos.',
     ],
   },
   {
@@ -119,10 +118,10 @@ const SECTIONS: Section[] = [
   {
     heading: '13. Contacto',
     body: [
-      '[RAZÓN SOCIAL]',
-      'Privacidad / Protección de Datos: [EMAIL LEGAL]',
-      'Dirección: [DIRECCIÓN]',
-      '[Autoridad de control competente — completar según jurisdicción, p. ej. SIC en Colombia / AEPD en España.]',
+      'POLARIS GROWTH INSTITUTE CORP',
+      'Privacidad / Protección de Datos: info@polarisgrowthinstitute.com',
+      'Dirección: 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS',
+      'Si usted reside fuera de Estados Unidos, puede tener derecho a presentar una reclamación ante la autoridad de protección de datos de su país de residencia.',
     ],
   },
 ];
@@ -154,10 +153,10 @@ export default function PrivacidadScreen() {
 
       {/* Meta block */}
       <View style={styles.metaCard}>
-        <Text style={styles.metaLine}>Responsable del tratamiento: [RAZÓN SOCIAL]</Text>
-        <Text style={styles.metaLine}>Domicilio: [DIRECCIÓN FISCAL]</Text>
-        <Text style={styles.metaLine}>Contacto de privacidad: [EMAIL LEGAL]</Text>
-        <Text style={styles.metaLine}>Última actualización: [FECHA]</Text>
+        <Text style={styles.metaLine}>Responsable del tratamiento: POLARIS GROWTH INSTITUTE CORP</Text>
+        <Text style={styles.metaLine}>Domicilio: 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS</Text>
+        <Text style={styles.metaLine}>Contacto de privacidad: info@polarisgrowthinstitute.com</Text>
+        <Text style={styles.metaLine}>Última actualización: 22 de julio de 2026</Text>
       </View>
 
       {SECTIONS.map((section) => (

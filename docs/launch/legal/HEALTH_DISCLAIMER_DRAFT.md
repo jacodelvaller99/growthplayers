@@ -1,9 +1,9 @@
 # DESCARGO DE RESPONSABILIDAD DE SALUD Y BIENESTAR
 
-> **ESTADO: BORRADOR PARA REVISIÓN LEGAL.** Documento dirigido a la persona usuaria. Forma parte integrante de los Términos y Condiciones. Se recomienda mostrarlo (o un resumen con enlace) (a) en el primer uso del mentor "Norman", (b) en las secciones de biometría/wearables, y (c) en las herramientas de salud (ayuno, suplementación, mediciones corporales). Los campos `[ ]` deben completarse.
+> **ESTADO: FINALIZADO** — datos de entidad y recursos de crisis por país confirmados por el dueño 2026-07-22. El texto vigente vive en `app/legal/salud.tsx`; este archivo queda como referencia histórica del borrador.
 
-**Titular:** [RAZÓN SOCIAL] · Contacto: [EMAIL LEGAL]
-**Última actualización:** [FECHA]
+**Titular:** POLARIS GROWTH INSTITUTE CORP · Contacto: info@polarisgrowthinstitute.com
+**Última actualización:** 22 de julio de 2026
 
 ---
 
