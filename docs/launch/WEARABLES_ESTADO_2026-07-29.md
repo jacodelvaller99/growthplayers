@@ -47,6 +47,43 @@ string exacto: si alguien "corrige" un lado y no el otro, se rompe con
 
 ---
 
+## WHOOP — la API v1 estaba muerta (hallazgo del 2026-07-29, tarde)
+
+Al ir a activar WHOOP apareció un segundo bloqueo que ninguna credencial habría
+resuelto: **el código llamaba a `/developer/v1/`, y WHOOP dio de baja la v1 el
+1 de octubre de 2025.** Llevaba ~10 meses muerta. Aunque el `ReferenceError` del
+connect se hubiera arreglado antes, el sync habría devuelto 404 en todo.
+
+**La migración resultó pequeña** — verificado contra la documentación, no asumido:
+
+| Qué | Cambia |
+|---|---|
+| Endpoint de token (`/oauth/oauth2/token`) | ❌ igual |
+| URL de autorización (`/oauth/oauth2/auth`) | ❌ igual |
+| Scopes (`read:recovery read:cycles read:sleep read:workout read:profile`) | ❌ igual |
+| Sobre de respuesta `{records, next_token}` | ❌ igual |
+| Paginación (`limit` máx 25) | ❌ igual — ya usábamos 25 |
+| Path `/developer/v1/` → `/developer/v2/` | ✅ **único cambio** |
+
+Los ids de Sleep y Workout pasaron de `long` a `UUID`, pero no los usamos como
+clave: indexamos por fecha.
+
+### Dos bugs que aparecieron al revisar el mapeo
+
+1. **La duración del sueño de WHOOP nunca se guardó.** El código leía
+   `s.score.total_in_bed_time_milli`, pero ese campo vive bajo
+   `score.stage_summary`. Siempre daba `undefined`. Las demás métricas de etapas
+   ya usaban `stages` correctamente — solo esta se había quedado fuera. No venía
+   de v1→v2: estaba mal desde el principio.
+2. **`active_min` era `average_heart_rate ? undefined : undefined`** — siempre
+   undefined. WHOOP no expone minutos activos en el ciclo. Se quitó.
+
+Y una mejora gratis: WHOOP entrega `score.respiratory_rate` en cada registro de
+sueño, la columna existe en `wearable_daily` y la RPC ya la soporta. Ahora se
+captura.
+
+---
+
 ## Lo que falta (dueño)
 
 Con el bug arreglado, Oura y WHOOP quedan a **tres pasos** de funcionar:

@@ -302,8 +302,14 @@ async function syncOura(userId: string, conn: WearableConnection): Promise<void>
 }
 
 // ─── WHOOP API helpers ────────────────────────────────────────────────────────
+// v2 — la v1 fue dada de baja el 1-oct-2025 y sus webhooks eliminados. Cualquier
+// llamada a /developer/v1/ hoy está muerta, así que WHOOP no habría funcionado ni
+// con las credenciales bien puestas. Verificado contra la doc: el endpoint de
+// token, los scopes y el sobre de respuesta {records, next_token} NO cambian —
+// solo el segmento de versión. Los ids de Sleep pasaron de long a UUID, pero no
+// los usamos como clave (indexamos por fecha).
 async function fetchWhoop(path: string, token: string, params?: Record<string, string>) {
-  const url = new URL(`https://api.prod.whoop.com/developer/v1/${path}`);
+  const url = new URL(`https://api.prod.whoop.com/developer/v2/${path}`);
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
@@ -362,9 +368,17 @@ async function syncWhoop(userId: string, conn: WearableConnection): Promise<void
         provider:          'whoop',
         date:              d,
         sleep_score:       s.score?.sleep_performance_percentage,
-        sleep_duration_min: s.score?.total_in_bed_time_milli
-          ? Math.round(s.score.total_in_bed_time_milli / 60000) : undefined,
+        // BUG PREEXISTENTE (no venía de v1→v2): `total_in_bed_time_milli` vive
+        // bajo `score.stage_summary`, no bajo `score`. Se leía del sitio
+        // equivocado, así que sleep_duration_min SIEMPRE salía undefined y la
+        // duración del sueño de WHOOP nunca se guardó. Las demás métricas de
+        // etapas ya usaban `stages` — solo esta se había quedado fuera.
+        sleep_duration_min: stages.total_in_bed_time_milli
+          ? Math.round(stages.total_in_bed_time_milli / 60000) : undefined,
         sleep_efficiency:  s.score?.sleep_efficiency_percentage,
+        // La columna existe en wearable_daily y la RPC ya la soporta; WHOOP la
+        // entrega en cada registro de sueño y no la estábamos capturando.
+        respiratory_rate:  s.score?.respiratory_rate,
         rem_min:           stages.total_rem_sleep_time_milli
           ? Math.round(stages.total_rem_sleep_time_milli / 60000) : undefined,
         deep_min:          stages.total_slow_wave_sleep_time_milli
@@ -390,7 +404,9 @@ async function syncWhoop(userId: string, conn: WearableConnection): Promise<void
         strain_score:    c.score?.strain,
         calories_active: c.score?.kilojoule
           ? Math.round(c.score.kilojoule / 4.184) : undefined,
-        active_min:      c.score?.average_heart_rate ? undefined : undefined,
+        // `active_min` se quitó: era `average_heart_rate ? undefined : undefined`,
+        // es decir, siempre undefined. WHOOP no expone minutos activos en el
+        // ciclo; fingir que sí solo confundía a quien leyera esto.
       };
     }
   }
