@@ -54,4 +54,22 @@ export const ENV = {
   aggregatorVendor: ((process.env.EXPO_PUBLIC_AGGREGATOR_VENDOR ?? 'terra').toLowerCase()) as
     | 'terra'
     | 'open_wearables',
+
+  /**
+   * Feature flag — tarjeta del agregador universal de wearables. Default FALSE.
+   *
+   * El código del agregador está completo, pero enrutar datos requiere
+   * infraestructura externa (secrets de Terra, o una instancia self-host de Open
+   * Wearables). Mientras eso no exista, la tarjeta se ofrecía como CTA principal
+   * "RECOMENDADO" y siempre terminaba en "Integración en activación" — el usuario
+   * pulsaba la opción más prominente de la pantalla y no pasaba nada.
+   *
+   * Con el flag en false, las vías que SÍ funcionan pasan a primer plano:
+   * OAuth (Oura · WHOOP · Polar) y, en la app nativa, Apple Salud / Health
+   * Connect — que cubren Garmin, Coros, Samsung y Fitbit sin sus APIs cerradas.
+   *
+   * Ponlo en true SOLO cuando el webhook del agregador esté provisionado y
+   * verificado de punta a punta.
+   */
+  aggregatorEnabled: ((process.env.EXPO_PUBLIC_AGGREGATOR_ENABLED ?? '').toLowerCase() === 'true') as boolean,
 } as const;

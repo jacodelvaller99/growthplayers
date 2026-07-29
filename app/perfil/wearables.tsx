@@ -915,8 +915,12 @@ export default function WearablesScreen() {
               />
             );
           }
-          // El agregador universal se destaca como héroe (camino recomendado).
+          // El agregador universal se destaca como héroe, pero SOLO si está
+          // provisionado. Sin infraestructura detrás, esta era la tarjeta más
+          // prominente de la pantalla y su CTA siempre acababa en "Integración
+          // en activación": ofrecer como recomendado lo único que no funciona.
           if (p.id === 'aggregator') {
+            if (!ENV.aggregatorEnabled) return null;
             return (
               <AggregatorHeroCard
                 key={p.id}
@@ -953,9 +957,13 @@ export default function WearablesScreen() {
       {/* Privacy note */}
       <PremiumCard style={styles.privacyCard}>
         <MaterialIcons name="lock" size={15} color={palette.smoke} />
+        {/* Antes decía "se almacenan cifrados" — no era cierto a nivel de columna
+            (P1-7). Se describe la protección que SÍ existe: RLS owner-only + TLS.
+            Si S3 añade cifrado con pgcrypto, este texto puede volver a decirlo. */}
         <Text style={styles.privacyText}>
-          Los tokens OAuth se almacenan cifrados en tu cuenta y nunca se comparten con terceros.
-          Puedes desconectar cualquier dispositivo en cualquier momento.
+          Los tokens OAuth quedan ligados a tu cuenta: solo tú puedes leerlos, viajan
+          siempre por conexión cifrada y nunca se comparten con terceros. Puedes
+          desconectar cualquier dispositivo en cualquier momento y sus datos se borran.
         </Text>
       </PremiumCard>
     </>

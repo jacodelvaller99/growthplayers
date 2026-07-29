@@ -5,7 +5,7 @@
  */
 import { render } from '@testing-library/react-native';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, Text } from 'react-native';
 
 (Platform as { OS: string }).OS = 'web';
 
@@ -31,11 +31,15 @@ jest.mock('@/components/polaris', () => {
     screen: {}, useScreen: () => ({ root: {}, content: {} }),
   };
 });
+// El paywall solo puede leer VERIFIED_TESTIMONIALS. El mock replica el filtro
+// real para poder afirmar que el testimonio sin consentimiento nunca se pinta.
+const ALL_TESTIMONIALS = [
+  { id: 't1', name: '[Pendiente]', role: 'Fundador', verified: false, quote: 'Cambió mi ritmo.', metric: { before: '5h', after: '7h', context: 'sueño' } },
+  { id: 't2', name: 'Ana', role: 'CEO', verified: true, quote: 'Norman me sostuvo.' },
+];
 jest.mock('@/data/testimonials', () => ({
-  TESTIMONIALS: [
-    { id: 't1', name: '[Pendiente]', role: 'Fundador', verified: false, quote: 'Cambió mi ritmo.', metric: { before: '5h', after: '7h', context: 'sueño' } },
-    { id: 't2', name: 'Ana', role: 'CEO', verified: true, quote: 'Norman me sostuvo.' },
-  ],
+  TESTIMONIALS: ALL_TESTIMONIALS,
+  VERIFIED_TESTIMONIALS: ALL_TESTIMONIALS.filter((t) => t.verified),
 }));
 jest.mock('@/lib/webLeads', () => ({
   captureWebLead: jest.fn().mockResolvedValue(true),
@@ -52,5 +56,19 @@ const PaywallScreen = require('@/app/paywall').default;
 describe('PaywallScreen — render smoke', () => {
   it('web (descope + lead) + features + prueba social + legal renderiza sin throw', () => {
     expect(() => render(<PaywallScreen />)).not.toThrow();
+  });
+
+  // Invariante legal: un testimonio sin consentimiento confirmado no puede
+  // aparecer como prueba social — ni con su nombre ni atribuido por rol.
+  it('nunca renderiza un testimonio con verified:false', () => {
+    const tree = render(<PaywallScreen />);
+    const texts = tree.root.findAllByType(Text).flatMap((n) =>
+      Array.isArray(n.props.children) ? n.props.children : [n.props.children],
+    ).filter((c): c is string => typeof c === 'string');
+    const all = texts.join(' ');
+
+    expect(all).toContain('Norman me sostuvo.');   // verified: true → sí sale
+    expect(all).not.toContain('Cambió mi ritmo.'); // verified: false → nunca
+    expect(all).not.toContain('[Pendiente]');
   });
 });

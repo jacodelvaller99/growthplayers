@@ -117,9 +117,15 @@ export default function MentoriaScreen() {
   const beginRecording = () => {
     Alert.alert(
       'Grabar esta sesión',
-      'Vas a grabar el audio de tu sesión de mentoría. Se subirá de forma privada a ' +
-        'tu espacio cifrado, se transcribirá y Norman redactará tus notas y plan de acción. ' +
-        'Solo tú (y tu Navegador) podrán verlo. ¿Autorizas la grabación?',
+      // El texto anterior decía que el audio iba a "tu espacio cifrado" y que
+      // "solo tú y tu Navegador" podrían verlo. Ninguna de las dos era cierta:
+      // el audio se envía a OpenAI (Whisper) para transcribirse. Consentir algo
+      // distinto de lo que ocurre no es consentimiento válido (RGPD).
+      'Vas a grabar el audio de tu sesión de mentoría.\n\n' +
+        'El audio se envía a OpenAI para transcribirse automáticamente; no se almacena ' +
+        'en Polaris. Lo que sí guardamos es la transcripción y las notas que Norman ' +
+        'redacta a partir de ella, visibles solo para ti y tu Navegador.\n\n' +
+        '¿Autorizas la grabación?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Autorizo y grabar', onPress: () => { void m.startRecording(); } },
