@@ -22,6 +22,7 @@ import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
+import { logSilentError } from '@/lib/observability';
 
 function todayLabel() {
   return new Date()
@@ -320,8 +321,12 @@ export default function CheckInScreen() {
       }
       // Revela la recomendación de cierre antes de redirigir (WS-3).
       setSaved(true);
-    } catch {
-      // Si el guardado falla, re-habilita para reintentar (no dejamos el botón muerto).
+    } catch (e) {
+      // Si el guardado falla, re-habilita para reintentar (no dejamos el botón muerto)
+      // y se lo decimos: antes el botón revivía sin explicación y parecía un bug.
+      logSilentError('checkin.submit', e);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast('No se pudo guardar tu check-in. Inténtalo de nuevo.', 'error');
       setSubmitting(false);
     }
   };

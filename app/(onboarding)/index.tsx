@@ -20,6 +20,7 @@ import {
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
+import { logSilentError } from '@/lib/observability';
 import { intel } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
@@ -70,6 +71,7 @@ export default function OnboardingScreen() {
   const [codeMessage, setCodeMessage] = useState('');
   // Guard anti-doble-tap del cierre (completeOnboarding es async → evita doble submit).
   const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
 
   // ── Consent gate (Step 0) ──────────────────────────────────────────────────
   const [consents, setConsents] = useState<Record<ConsentKey, boolean>>({
@@ -105,8 +107,9 @@ export default function OnboardingScreen() {
           ml_consent: mlConsent,
         }).eq('id', userId);
       } catch (e) {
-        // No bloquear el onboarding si la escritura falla (se re-confirma al completar).
-        console.warn('[Onboarding] persist consents:', e);
+        // No bloquear el onboarding si la escritura falla (se re-confirma al completar),
+        // pero SÍ dejar rastro: esto es evidencia de consentimiento RGPD, no ruido.
+        logSilentError('onboarding.persistConsents', e);
       }
     }
     setStep(1); // → intro de valor (skippable)
@@ -152,6 +155,7 @@ export default function OnboardingScreen() {
   const finish = async () => {
     if (finishing) return;
     setFinishing(true);
+    setFinishError(null);
     try {
       await completeOnboarding({
         profile: { name: name.trim(), role: role.trim() },
@@ -159,8 +163,12 @@ export default function OnboardingScreen() {
         northStar: north,
       });
       router.replace('/(tabs)/comando');
-    } catch {
-      // Si falla el cierre, re-habilita para reintentar (no dejamos el botón muerto).
+    } catch (e) {
+      // Si falla el cierre, re-habilita para reintentar (no dejamos el botón muerto)
+      // y lo decimos: es el último paso del onboarding, fallar en silencio aquí
+      // deja al usuario atascado sin saber por qué.
+      logSilentError('onboarding.finish', e);
+      setFinishError('No se pudo iniciar el protocolo. Revisa tu conexión e inténtalo de nuevo.');
       setFinishing(false);
     }
   };
@@ -523,6 +531,14 @@ export default function OnboardingScreen() {
             style={{ alignItems: 'center', marginTop: -spacing.sm }}>
             <Text style={styles.skipText}>Iniciar sin código →</Text>
           </Pressable>
+          {finishError ? (
+            <Text
+              style={[styles.codeMsg, { color: palette.danger }]}
+              accessibilityLiveRegion="polite"
+              accessibilityRole="alert">
+              {finishError}
+            </Text>
+          ) : null}
         </PremiumCard>
       )}
     </ScrollView>
