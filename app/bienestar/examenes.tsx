@@ -5,8 +5,8 @@
  * privado por user_id (bucket RLS). Opcional: toggle de "compartir con mi
  * coach" — si NO está activado, ni siquiera el admin ve estos archivos.
  *
- * Subida es web-first (input type=file). En nativo mostramos un mensaje
- * honesto: se necesita expo-document-picker (handoff pendiente).
+ * Subida en AMBAS plataformas: web usa <input type=file>, nativo usa
+ * expo-document-picker. Los dos caminos terminan en el mismo `uploadExam`.
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
@@ -36,6 +36,7 @@ import {
   listMyExams,
   uploadExam,
   type MedicalExamRecord,
+  type UploadExamInput,
 } from '@/lib/medicalExams';
 
 const supa = supabase as unknown as {
@@ -111,29 +112,70 @@ export default function ExamenesScreen() {
     }
   }, [share, userId]);
 
-  // ── Subida web: input file invisible. Nativo: mensaje honesto. ──────────────
+  // ── Subida ─────────────────────────────────────────────────────────────────
+  // Web usa un <input type=file>; nativo usa expo-document-picker. Ambos acaban
+  // en el mismo uploadExam, que solo necesita {name, type, size, arrayBuffer()}.
+  //
+  // Antes esto era solo-web: una app móvil donde subir tus exámenes médicos
+  // exigía abrir el navegador. Era el peor dead-end del producto, porque es PHI
+  // en el flujo del internista.
+  const applyUpload = useCallback(async (file: UploadExamInput['file']) => {
+    setUploading(true);
+    setUploadMsg(null);
+    const result = await uploadExam({ file });
+    if (result.ok && result.exam) {
+      setExams((prev) => [result.exam!, ...prev]);
+      setUploadMsg('Examen guardado.');
+      setTimeout(() => setUploadMsg(null), 3000);
+    } else {
+      setUploadMsg(result.error ?? 'No se pudo subir.');
+    }
+    setUploading(false);
+  }, []);
+
   const handleWebUpload = useCallback(() => {
     if (typeof document === 'undefined') return;
     const inputEl = document.createElement('input');
     inputEl.type = 'file';
     inputEl.accept = 'application/pdf,image/jpeg,image/png';
-    inputEl.onchange = async () => {
+    inputEl.onchange = () => {
       const file = inputEl.files?.[0];
-      if (!file) return;
-      setUploading(true);
-      setUploadMsg(null);
-      const result = await uploadExam({ file });
-      if (result.ok && result.exam) {
-        setExams((prev) => [result.exam!, ...prev]);
-        setUploadMsg('Examen guardado.');
-        setTimeout(() => setUploadMsg(null), 3000);
-      } else {
-        setUploadMsg(result.error ?? 'No se pudo subir.');
-      }
-      setUploading(false);
+      if (file) void applyUpload(file);
     };
     inputEl.click();
-  }, []);
+  }, [applyUpload]);
+
+  const handleNativeUpload = useCallback(async () => {
+    try {
+      const DocumentPicker = await import('expo-document-picker');
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/jpeg', 'image/png'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (res.canceled) return;
+      const asset = res.assets?.[0];
+      if (!asset) return;
+
+      // uploadExam solo pide arrayBuffer(); el blob del uri local lo da.
+      const blob = await fetch(asset.uri).then((r) => r.blob());
+      await applyUpload({
+        name: asset.name,
+        type: asset.mimeType ?? blob.type,
+        size: asset.size ?? blob.size,
+        arrayBuffer: () => blob.arrayBuffer(),
+      });
+    } catch (e) {
+      logSilentError('examenes.nativeUpload', e);
+      setUploadMsg('No se pudo abrir el selector de archivos.');
+      setUploading(false);
+    }
+  }, [applyUpload]);
+
+  const handleUpload = useCallback(() => {
+    if (Platform.OS === 'web') handleWebUpload();
+    else void handleNativeUpload();
+  }, [handleWebUpload, handleNativeUpload]);
 
   const openExam = useCallback(async (exam: MedicalExamRecord) => {
     const url = await getExamSignedUrl(exam);
@@ -266,33 +308,21 @@ export default function ExamenesScreen() {
       {/* ── Subir nuevo examen ──────────────────────────────────────────────── */}
       <GoldDivider label="SUBIR NUEVO" />
       <PremiumCard style={{ gap: spacing.md }}>
-        {Platform.OS === 'web' ? (
-          <>
-            <Text style={s.shareSub}>Acepta PDF, JPG o PNG hasta 20 MB.</Text>
-            <Pressable
-              onPress={handleWebUpload}
-              disabled={uploading}
-              style={[s.uploadBtn, uploading && { opacity: 0.5 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Subir un examen">
-              {uploading
-                ? <ActivityIndicator size="small" color={palette.ink} />
-                : <>
-                    <MaterialIcons name="upload-file" size={18} color={palette.ink} />
-                    <Text style={s.uploadBtnText}>SELECCIONAR ARCHIVO</Text>
-                  </>}
-            </Pressable>
-            {uploadMsg && <Text style={s.uploadMsg}>{uploadMsg}</Text>}
-          </>
-        ) : (
-          <View style={s.nativeNotice}>
-            <MaterialIcons name="phonelink" size={20} color={palette.goldText} />
-            <Text style={s.shareSub}>
-              La subida desde móvil necesita una actualización pendiente. Por ahora,
-              sube tus exámenes desde el navegador en {`'growthplayers.vercel.app'`}.
-            </Text>
-          </View>
-        )}
+        <Text style={s.shareSub}>Acepta PDF, JPG o PNG hasta 20 MB.</Text>
+        <Pressable
+          onPress={handleUpload}
+          disabled={uploading}
+          style={[s.uploadBtn, uploading && { opacity: 0.5 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Subir un examen">
+          {uploading
+            ? <ActivityIndicator size="small" color={palette.ink} />
+            : <>
+                <MaterialIcons name="upload-file" size={18} color={palette.ink} />
+                <Text style={s.uploadBtnText}>SELECCIONAR ARCHIVO</Text>
+              </>}
+        </Pressable>
+        {uploadMsg && <Text style={s.uploadMsg}>{uploadMsg}</Text>}
       </PremiumCard>
 
       {/* ── Lista ───────────────────────────────────────────────────────────── */}
@@ -400,7 +430,6 @@ const s = StyleSheet.create({
   },
   uploadBtnText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 12, letterSpacing: 1.2 },
   uploadMsg: { ...typography.caption, color: palette.ash, fontSize: 12, textAlign: 'center' },
-  nativeNotice: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
 
   emptyText: { ...typography.caption, color: palette.smoke, fontStyle: 'italic', fontSize: 12 },
 
