@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -136,8 +136,28 @@ export default function ModuleDetailScreen() {
         progress={dynamicProgress}
       />
 
-      {/* ── Lesson List ── */}
+      {/* ── Lesson List ──
+          Algunos módulos (8, 9, Sesiones Semanales) no tienen lecciones sueltas:
+          su contenido vive entero en su classroom de Skool. Antes se renderizaba
+          una lista vacía y, como 0 === 0, el banner de abajo felicitaba por
+          "MÓDULO COMPLETADO" sin que el usuario hubiera abierto nada. */}
       <GoldDivider label="LECCIONES" />
+      {module.lessons.length === 0 ? (
+        <PremiumCard style={styles.skoolOnly}>
+          <MaterialIcons name="school" size={22} color={palette.goldText} />
+          <Text style={styles.skoolOnlyTitle}>CONTENIDO EN EL CLASSROOM</Text>
+          <Text style={styles.skoolOnlyBody}>
+            Este módulo se trabaja completo en el classroom de Polaris, no por lecciones sueltas.
+          </Text>
+          {module.skoolUrl ? (
+            <PrimaryButton
+              label="ABRIR CLASSROOM"
+              icon="open-in-new"
+              onPress={() => { void Linking.openURL(module.skoolUrl as string); }}
+            />
+          ) : null}
+        </PremiumCard>
+      ) : null}
       <View style={styles.lessons}>
         {lessonsWithStatus.map((lesson, index) => {
           const isActive = lesson.status === 'active';
@@ -186,7 +206,7 @@ export default function ModuleDetailScreen() {
         })}
       </View>
 
-      {completedCount === module.lessons.length ? (
+      {module.lessons.length > 0 && completedCount === module.lessons.length ? (
         <View style={styles.completionBanner}>
           <MaterialIcons name="emoji-events" size={20} color={palette.goldText} />
           <View style={styles.completionCopy}>
@@ -294,6 +314,24 @@ const styles = StyleSheet.create({
     backgroundColor: palette.lineSoft,
     height: 32,
     width: 1,
+  },
+
+  // Módulos cuyo contenido vive entero en el classroom de Skool
+  skoolOnly: {
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xl,
+  },
+  skoolOnlyTitle: {
+    ...typography.section,
+    color: palette.ivory,
+    textAlign: 'center',
+  },
+  skoolOnlyBody: {
+    ...typography.body,
+    color: palette.ash,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 
   // Lessons

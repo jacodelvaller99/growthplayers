@@ -836,8 +836,15 @@ export default function LessonScreen() {
 
         {/* ── Video Section (fullwidth banner) ── */}
         <View style={styles.videoBanner}>
-          {(lesson.vimeoId || lesson.skoolUrl) ? (
-            <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} height={232} />
+          {/* Los módulos 5–10 tienen el classroom de Skool a nivel de MÓDULO, no
+              por lección. Sin este fallback caían todos en "Video próximamente"
+              aunque el contenido existiera y estuviera publicado. */}
+          {(lesson.vimeoId || lesson.skoolUrl || mod.skoolUrl) ? (
+            <SkoolVideo
+              url={lesson.skoolUrl ?? mod.skoolUrl}
+              vimeoId={lesson.vimeoId}
+              height={232}
+            />
           ) : (
             <View style={styles.videoComingSoon}>
               <Text style={styles.videoComingSoonIcon}>⏳</Text>
