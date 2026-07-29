@@ -22,6 +22,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { logSilentError } from '@/lib/observability';
 import { supabase } from '@/lib/supabase';
 
 type AuthMode = 'login' | 'register' | 'forgot';
@@ -63,14 +64,29 @@ export default function AuthScreen() {
   };
 
   // ── Login — NO navegación manual; el useEffect de arriba la maneja ──────────
+  // Los tres flujos de auth repetían el mismo envoltorio literal: setLoading,
+  // limpiar error, try, catch de red con el mismo mensaje, finally. Solo el
+  // cuerpo cambiaba. Ahora el envoltorio vive en un sitio — y de paso el error
+  // real deja rastro en vez de morir en un `catch {}` pelado.
+  const runAuthAction = async (context: string, action: () => Promise<void>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      logSilentError(context, e);
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setError('Ingresa tu email y contraseña.');
       return;
     }
-    setLoading(true);
-    setError(null);
-    try {
+    await runAuthAction('auth.login', async () => {
       const { error: err } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
@@ -86,11 +102,7 @@ export default function AuthScreen() {
         }
       }
       // Si no hay error, el onAuthStateChange dispara SIGNED_IN y navega solo
-    } catch {
-      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleRegister = async () => {
@@ -102,9 +114,7 @@ export default function AuthScreen() {
       setError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
-    setLoading(true);
-    setError(null);
-    try {
+    await runAuthAction('auth.register', async () => {
       // Validar + consumir el código de forma ATÓMICA vía RPC SECURITY DEFINER.
       // El cliente ya NO lee ni escribe access_codes directamente (cierra el hueco
       // de enumeración de códigos y el double-spend). La RPC incrementa uses_count
@@ -139,11 +149,7 @@ export default function AuthScreen() {
         return;
       }
       setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu acceso.');
-    } catch {
-      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleForgot = async () => {
@@ -151,9 +157,7 @@ export default function AuthScreen() {
       setError('Ingresa tu email.');
       return;
     }
-    setLoading(true);
-    setError(null);
-    try {
+    await runAuthAction('auth.forgotPassword', async () => {
       // En web, el enlace debe volver a /reset-password para fijar la nueva clave.
       const redirectTo = Platform.OS === 'web' && typeof window !== 'undefined'
         ? `${window.location.origin}/reset-password`
@@ -167,11 +171,7 @@ export default function AuthScreen() {
         return;
       }
       setSuccess('Te enviamos un enlace para restablecer tu contraseña.');
-    } catch {
-      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const submit =

@@ -536,6 +536,18 @@ export default function CheckInScreen() {
     </Pressable>
   );
 
+  // Móvil y desktop compartían este botón copiado literalmente. Se extrae como
+  // el resto de bloques de esta pantalla, para que el label, el ícono y el
+  // estado disabled no puedan divergir entre layouts.
+  const submitButton = (
+    <PrimaryButton
+      label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
+      icon={submitting ? 'hourglass-empty' : 'check'}
+      onPress={submit}
+      disabled={submitting}
+    />
+  );
+
   // Post-guardado — una sola oferta sutil, sin desplegar todo de golpe.
   const savedOffer = (
     <PremiumCard style={styles.savedOffer}>
@@ -616,12 +628,7 @@ export default function CheckInScreen() {
 
               {!saved ? (
                 <>
-                  <PrimaryButton
-            label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
-            icon={submitting ? 'hourglass-empty' : 'check'}
-            onPress={submit}
-            disabled={submitting}
-          />
+                  {submitButton}
                   {needToggle}
                   {showNeed && systemNeedCard}
                   <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
@@ -704,12 +711,7 @@ export default function CheckInScreen() {
       {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
       {!saved ? (
         <>
-          <PrimaryButton
-            label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
-            icon={submitting ? 'hourglass-empty' : 'check'}
-            onPress={submit}
-            disabled={submitting}
-          />
+          {submitButton}
           {needToggle}
           {showNeed && systemNeedCard}
         </>
