@@ -36,11 +36,21 @@ export function isAggregatorProvider(p: WearableProvider): p is 'aggregator' {
 // — reciba el callback. Web/dev-web mantienen el redirect https.
 // ⚠ Handoff: las redirect URIs nativas (polaris://oauth/<provider>/callback)
 // deben registrarse en las consolas de desarrollador de Oura y WHOOP.
+// ⚠ El dominio web DEBE coincidir carácter a carácter con el registrado en la
+// consola del proveedor Y con el que usa `sync-wearables` al intercambiar el
+// código (EXPO_PUBLIC_APP_URL). OAuth compara redirect_uri como string exacto.
+//
+// Ojo: growthplayers.vercel.app responde 307 hacia polarisgrowthinstitute.vercel.app.
+// Hoy el flujo sobrevive porque ambos lados usan la MISMA cadena literal, pero si
+// alguien "arregla" un lado y no el otro, OAuth se rompe con redirect_uri mismatch.
+// Por eso ahora sale de una env var: un solo sitio que cambiar.
+const WEB_ORIGIN = process.env.EXPO_PUBLIC_APP_URL ?? 'https://growthplayers.vercel.app';
+
 const REDIRECT_BASE = Platform.OS !== 'web'
   ? 'polaris://oauth'
   : ENV.isDev
     ? 'exp://localhost:8081'
-    : 'https://growthplayers.vercel.app';
+    : WEB_ORIGIN;
 
 /** Solo los providers OAuth web (apple_health/health_connect leen on-device, no usan OAuth). */
 export type OAuthProvider = 'oura' | 'whoop';

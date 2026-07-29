@@ -66,6 +66,33 @@ interface TimeseriesPoint {
   value: number;
 }
 
+// ─── Escritura de días ────────────────────────────────────────────────────────
+/**
+ * Escribe días vía `merge_wearable_daily` en vez de un upsert plano.
+ *
+ * El upsert plano tenía una pérdida de datos real: mandamos VARIOS días en un
+ * solo array y PostgREST usa la UNIÓN de las claves de todas las filas,
+ * rellenando con NULL las que faltan en cada una. Si `fetchOura` fallaba en un
+ * endpoint (devuelve null, no lanza) o un día no traía una métrica, ese día
+ * llegaba con NULL y BORRABA lo que ya estaba sincronizado. La RPC hace
+ * COALESCE por columna bajo row-lock, así que un fallo transitorio ya no puede
+ * vaciar datos buenos.
+ *
+ * Degrada al upsert previo si la RPC todavía no está en la base: así el deploy
+ * de la función no depende del orden en que se aplique la migración.
+ */
+async function mergeDaily(rows: DailyRecord[]): Promise<void> {
+  if (rows.length === 0) return;
+
+  const { error } = await adminSupabase.rpc('merge_wearable_daily', { p_rows: rows });
+  if (!error) return;
+
+  console.warn('[sync-wearables] merge_wearable_daily no disponible, upsert plano:', error.message);
+  await adminSupabase
+    .from('wearable_daily')
+    .upsert(rows, { onConflict: 'user_id,provider,date' });
+}
+
 // ─── Token refresh ────────────────────────────────────────────────────────────
 async function refreshOuraToken(conn: WearableConnection): Promise<string> {
   const res = await fetch('https://api.ouraring.com/oauth/token', {
@@ -116,9 +143,16 @@ async function getValidToken(conn: WearableConnection): Promise<string> {
     const expiresAt = new Date(conn.token_expires_at).getTime();
     const oneHourMs = 60 * 60 * 1000;
     if (expiresAt < Date.now() + oneHourMs) {
-      return conn.provider === 'oura'
-        ? refreshOuraToken(conn)
-        : refreshWhoopToken(conn);
+      // Dispatch explícito. Antes era un ternario `oura ? … : whoop`, así que
+      // CUALQUIER proveedor que no fuera Oura iba al refresh de WHOOP — con
+      // sus credenciales y su endpoint. Silencioso mientras solo hubiera dos
+      // proveedores; una bomba en cuanto se añadiera un tercero.
+      switch (conn.provider) {
+        case 'oura':  return refreshOuraToken(conn);
+        case 'whoop': return refreshWhoopToken(conn);
+        default:
+          throw new Error(`getValidToken: proveedor sin refresh registrado: ${conn.provider}`);
+      }
     }
   }
   return conn.access_token;
@@ -230,13 +264,9 @@ async function syncOura(userId: string, conn: WearableConnection): Promise<void>
     };
   }
 
-  // Upsert daily records
+  // Merge daily records — ver mergeDaily().
   const dailyRecords = Object.values(byDate);
-  if (dailyRecords.length > 0) {
-    await adminSupabase
-      .from('wearable_daily')
-      .upsert(dailyRecords, { onConflict: 'user_id,provider,date' });
-  }
+  await mergeDaily(dailyRecords);
 
   // Timeseries (heart rate)
   if (hrData?.data && hrData.data.length > 0) {
@@ -375,11 +405,7 @@ async function syncWhoop(userId: string, conn: WearableConnection): Promise<void
   }
 
   const dailyRecords = Object.values(byDate);
-  if (dailyRecords.length > 0) {
-    await adminSupabase
-      .from('wearable_daily')
-      .upsert(dailyRecords, { onConflict: 'user_id,provider,date' });
-  }
+  await mergeDaily(dailyRecords);
 
   // Timeseries from recovery (HRV points not natively available in free tier,
   // but recovery score acts as daily HRV proxy)
@@ -477,8 +503,11 @@ async function connectOura(userId: string, code: string): Promise<void> {
     ? new Date(Date.now() + data.expires_in * 1000).toISOString()
     : null;
 
+  // Antes era el shorthand `user_id,` — pero el parámetro se llama `userId` y
+  // no existe ningún `user_id` en este ámbito, así que esto lanzaba
+  // ReferenceError SIEMPRE: el connect de Oura nunca llegó a guardar nada.
   await adminSupabase.from('wearable_connections').upsert({
-    user_id,
+    user_id:          userId,
     provider:         'oura',
     access_token:     data.access_token,
     refresh_token:    data.refresh_token ?? '',
@@ -511,8 +540,9 @@ async function connectWhoop(userId: string, code: string): Promise<void> {
     ? new Date(Date.now() + data.expires_in * 1000).toISOString()
     : null;
 
+  // Mismo bug que en connectOura: `user_id` no existía en este ámbito.
   await adminSupabase.from('wearable_connections').upsert({
-    user_id,
+    user_id:          userId,
     provider:         'whoop',
     access_token:     data.access_token,
     refresh_token:    data.refresh_token ?? '',
