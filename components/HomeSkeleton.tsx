@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { palette } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 /**
  * HomeSkeleton — zero-latency loading state for the dashboard.
@@ -18,11 +19,18 @@ import { palette } from '@/constants/theme';
  */
 export function HomeSkeleton() {
   const opacity = useSharedValue(0.4);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    // Esta es la PRIMERA pantalla que ve el usuario al abrir la app, y el
+    // shimmer es un bucle infinito. Con reduce-motion queda estático.
+    if (reducedMotion) {
+      opacity.value = 0.65;
+      return;
+    }
     opacity.value = withRepeat(withTiming(0.9, { duration: 700 }), -1, true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reducedMotion]);
 
   const shimmer = useAnimatedStyle(() => ({ opacity: opacity.value }));
 

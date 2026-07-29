@@ -9,6 +9,8 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+
 interface Props {
   /** Target value to animate toward */
   value: number;
@@ -44,14 +46,23 @@ export function AnimatedNumber({
 }: Props) {
   const sv = useSharedValue(0);
   const [display, setDisplay] = useState(0);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    // Con "reducir movimiento" activo el número salta a su valor final: el dato
+    // se entrega igual, sin el conteo. Este componente lo usan varias pantallas,
+    // así que respetarlo aquí cubre todas de una.
+    if (reducedMotion) {
+      sv.value = value;
+      setDisplay(value);
+      return;
+    }
     sv.value = withDelay(
       delay,
       withTiming(value, { duration, easing: Easing.out(Easing.cubic) }),
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, reducedMotion]);
 
   useAnimatedReaction(
     () => Math.round(sv.value),
