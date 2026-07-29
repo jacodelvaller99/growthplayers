@@ -1,6 +1,23 @@
 # POLARIS — VEREDICTO EJECUTIVO DE LANZAMIENTO
 
-> ⚠️ **ADDENDUM — ESTADO AL 2026-06-12 (leer primero).** Este documento retrata el estado
+> ## 📍 ESTADO VIGENTE: 2026-07-29 — `RUNBOOK_DUENO_2026-07-29.md`
+>
+> Este documento y su addendum de junio ya no reflejan la realidad. Lo verificado
+> hoy contra la base de datos y el dominio de producción (no contra el repo):
+>
+> - **Cerrado desde entonces:** placeholders legales, `mentor_messages`,
+>   recuperación de contraseña web, P1-5, P1-6, P1-8.
+> - **Encontrado hoy y no estaba en ningún registro:** `sync-wearables` lanzaba
+>   `ReferenceError` en cada conexión OAuth — los wearables nunca funcionaron,
+>   y no era por falta de credenciales.
+> - **Bloqueantes reales que quedan:** correr el SQL de P1-7, desplegar
+>   `sync-wearables`, y `eas init` (`app.json:97` sigue en ceros).
+>
+> Lo de abajo se conserva como registro histórico de junio.
+
+---
+
+> ⚠️ **ADDENDUM — ESTADO AL 2026-06-12.** Este documento retrata el estado
 > al **2026-06-02**, ANTES de las olas de remediación. Desde entonces:
 >
 > | # Blocker (top-10 original) | Estado 2026-06-12 | Evidencia |
