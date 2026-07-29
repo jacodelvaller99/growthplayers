@@ -70,7 +70,12 @@ export const OAUTH_URLS: Record<OAuthProvider, (state: string) => string> = {
       client_id:     process.env.EXPO_PUBLIC_WHOOP_CLIENT_ID ?? '',
       redirect_uri:  `${REDIRECT_BASE}/oauth/whoop/callback`,
       response_type: 'code',
-      scope:         'read:recovery read:cycles read:sleep read:workout read:profile',
+      // Solo los tres que el sync consulta de verdad: /recovery, /activity/sleep
+      // y /cycle. Antes pedíamos también read:workout y read:profile, que no se
+      // usan en ninguna parte — pedir acceso que no ejerces es mala práctica y
+      // los revisores de privacidad lo marcan. Si algún día leemos workouts,
+      // se añade aquí Y en la consola de WHOOP (los usuarios re-consienten).
+      scope:         'read:recovery read:cycles read:sleep',
       state,
     });
     return `https://api.prod.whoop.com/oauth/oauth2/auth?${params}`;
