@@ -1,5 +1,7 @@
 // ─── Meditation Sessions ──────────────────────────────────────────────────────
 
+import { INMERSION_SESSIONS } from './inmersion';
+
 export type MeditationCategory =
   | 'mañana'
   | 'noche'
@@ -7,7 +9,8 @@ export type MeditationCategory =
   | 'estrés'
   | 'identidad'   // visualización del yo soberano, futuro, identidad declarada
   | 'decisión'    // claridad estratégica antes de decidir, soltar el ruido
-  | 'energía';    // activación, recarga, picos de fatiga
+  | 'energía'     // activación, recarga, picos de fatiga
+  | 'inmersión';  // inducción larga por relajación descendente + conteo
 
 // Metadata de cada categoría — usado por la UI de Meditación para agrupar/filtrar.
 export const MEDITATION_CATEGORY_META: Record<
@@ -21,11 +24,51 @@ export const MEDITATION_CATEGORY_META: Record<
   'identidad': { label: 'IDENTIDAD', description: 'Habita al operador soberano que estás construyendo.' },
   'decisión':  { label: 'DECISIÓN',  description: 'Claridad estratégica para decidir desde criterio.' },
   'energía':   { label: 'ENERGÍA',   description: 'Activa el cuerpo y recarga la mente.' },
+  'inmersión': { label: 'INMERSIÓN', description: 'Inducción guiada larga. Entrena bajar a tu centro y declarar desde ahí.' },
 };
 
 export interface GuidedPhase {
+  /**
+   * Id estable para direccionar el mp3 de voz. OPCIONAL a propósito: las ~40
+   * sesiones que ya existen caen al índice (`${sessionId}-${i}`), así no hay que
+   * tocar 280 líneas. El contenido nuevo SÍ lo declara, porque un id explícito
+   * sobrevive a reordenar las fases y el índice no.
+   */
+  id?: string;
   text: string;
-  duration: number; // seconds
+  duration: number; // segundos que la frase permanece en pantalla
+  /**
+   * Silencio (solo música/ambiente) tras terminar la voz, en segundos. Es lo que
+   * convierte una lista de frases en una práctica: sin pausa, la voz atropella.
+   * Si falta, el reproductor lo deriva de `duration` menos lo que dure el mp3.
+   */
+  pauseAfter?: number;
+  /**
+   * En esta fase la pantalla muestra el Norte declarado por el usuario en vez
+   * del `text`. La voz dice algo genérico ("lee tu declaración") y el contenido
+   * personal lo pone la pantalla — así el audio se genera UNA vez y aun así
+   * cada persona escucha su propia declaración. Sin esto habría que generar un
+   * mp3 por usuario.
+   */
+  showsNorthStar?: boolean;
+}
+
+/**
+ * Voz narrada de Norman — bucket propio, separado de `wellness-audio` (que son
+ * camas musicales de Suno). La URL se DERIVA del id, nunca se hardcodea: con
+ * ~630 segmentos, una lista de URLs a mano se desincroniza el primer día.
+ */
+const NORMAN_VOICE_BASE =
+  'https://bizbbtiyftfjufxinwsu.supabase.co/storage/v1/object/public/norman-voice';
+
+/** Id canónico de una fase. Explícito si lo declara; si no, posicional. */
+export function phaseAudioId(sessionId: string, phase: GuidedPhase, index: number): string {
+  return phase.id ?? `${sessionId}-${index}`;
+}
+
+/** URL del mp3 de voz de una fase. Misma función la usa el generador y la app. */
+export function normanVoiceUrl(sessionId: string, phase: GuidedPhase, index: number): string {
+  return `${NORMAN_VOICE_BASE}/${sessionId}/${phaseAudioId(sessionId, phase, index)}.mp3`;
 }
 
 // Cama musical instrumental (Suno) por categoría, subida a Storage en el
@@ -42,6 +85,7 @@ export const MEDITATION_CATEGORY_MUSIC: Partial<Record<MeditationCategory, strin
   'identidad': `${WELLNESS_AUDIO_BASE}/meditation/identidad.mp3`,
   'decisión':  `${WELLNESS_AUDIO_BASE}/meditation/decision.mp3`,
   'energía':   `${WELLNESS_AUDIO_BASE}/meditation/energia.mp3`,
+  'inmersión': `${WELLNESS_AUDIO_BASE}/meditation/inmersion.mp3`,
 };
 
 // Cama musical (Suno) por banda binaural — atmósfera bajo los osciladores.
@@ -779,6 +823,9 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
       { text: 'Respira lento.\nEstás en calma, de la cabeza a los pies.', duration: 75 },
     ],
   },
+  // La Inmersión vive en archivo propio: es una SERIE (semanas 1–4) que crecerá,
+  // y con voz narrada por fase. Ver data/inmersion.ts.
+  ...INMERSION_SESSIONS,
 ];
 
 // ─── Breathing Techniques ─────────────────────────────────────────────────────
