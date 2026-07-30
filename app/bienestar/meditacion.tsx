@@ -170,6 +170,7 @@ function MeditationPlayer({
       // esté sonando, no un contador — si la voz se retrasa, el texto también.
       const narration = createNarrationPlayer({
         musicUrl: MEDITATION_CATEGORY_MUSIC[session.category],
+        binaural: session.binaural,
         phases: session.phases.map((p, i) => ({
           url: normanVoiceUrl(session.id, p, i),
           duration: p.duration,

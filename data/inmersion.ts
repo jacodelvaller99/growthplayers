@@ -39,6 +39,10 @@ export const INMERSION_SESSIONS: MeditationSession[] = [
       'La inducción base. Aprende a bajar el sistema y a declarar tu Norte desde ahí. Con auriculares y sin interrupciones.',
     ambientType: 'brown',
     narrated: true,
+    // 7 Hz — frontera alpha/theta, el rango que la literatura clásica de
+    // inducción (Jacobson, Schultz) asocia a relajación profunda con alerta
+    // reducida. Carrier 200 Hz sigue la misma convención que BINAURAL_PRESETS.
+    binaural: { carrierHz: 200, beatHz: 7 },
     phases: [
       // ── Preparación ───────────────────────────────────────────────────────
       {

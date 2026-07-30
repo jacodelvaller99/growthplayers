@@ -17,8 +17,17 @@
  * DEGRADACIÓN: si un mp3 de voz no carga, la fase NO se cuelga — cae a un
  * temporizador con su duración declarada y sigue. Una práctica de 17 minutos que
  * se congela en el minuto 4 es peor que una sin voz.
+ *
+ * CAMA BINAURAL (opcional): en vez de un mp3 de Suno, la cama puede ser el
+ * mismo motor de osciladores L/R de precisión que ya usa `binaurales.tsx`
+ * (`createBinauralAudio`). Misma limitación honesta que el resto de la app:
+ * los osciladores son Web Audio — solo suenan reales en web. En nativo,
+ * `createBinauralAudio` ya degrada solo al loop de Suno (`musicUrl` como
+ * fallback) si se pasa, o a silencio si no — no se inventa un binaural falso.
  */
 import { Platform } from 'react-native';
+
+import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 
 export interface NarrationPhase {
   /** URL del mp3 de voz. Si falta, la fase transcurre en silencio con música. */
@@ -40,6 +49,13 @@ export interface NarrationHandle {
 
 interface Options {
   musicUrl?: string;
+  /**
+   * Si se pasa, la cama es un binaural real (osciladores L/R) en vez del mp3
+   * de `musicUrl`. `musicUrl`, si también viene, se usa solo como fallback de
+   * nativo (donde no hay osciladores) — en web se ignora para no mezclar dos
+   * camas a la vez.
+   */
+  binaural?: { carrierHz: number; beatHz: number };
   phases: NarrationPhase[];
   /** Se llama al entrar en cada fase — la pantalla sincroniza el texto con esto. */
   onPhaseChange?: (index: number) => void;
@@ -52,7 +68,7 @@ const MUSIC_DUCKED = 0.10;
 const VOICE_LEVEL = 1.0;
 
 export function createNarrationPlayer(opts: Options): NarrationHandle | null {
-  const { musicUrl, phases, onPhaseChange, onComplete } = opts;
+  const { musicUrl, binaural, phases, onPhaseChange, onComplete } = opts;
   if (phases.length === 0) return null;
 
   let Audio: any;
@@ -65,6 +81,7 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
 
   let stopped = false;
   let musicSound: any = null;
+  let binauralHandle: BinauralAudioHandle | null = null;
   let voiceSound: any = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let musicVolume = MUSIC_IDLE;
@@ -99,7 +116,8 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
 
   function duck(on: boolean) {
     const target = on ? Math.min(musicVolume, MUSIC_DUCKED) : musicVolume;
-    musicSound?.setVolumeAsync(target).catch(() => {});
+    if (binauralHandle) binauralHandle.setVolume(target);
+    else musicSound?.setVolumeAsync(target).catch(() => {});
   }
 
   /** Avanza a la fase `i`. Devuelve sin hacer nada si ya se paró. */
@@ -163,7 +181,13 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
       });
     } catch { /* la política de audio no es bloqueante */ }
 
-    if (musicUrl) {
+    if (binaural) {
+      // `createBinauralAudio` ya trae su propio degrade nativo (loop de
+      // `musicUrl` sin osciladores, o null sin él) — no hay que duplicarlo.
+      binauralHandle = createBinauralAudio(binaural.carrierHz, binaural.beatHz, musicUrl);
+      binauralHandle?.start();
+      binauralHandle?.setVolume(musicVolume);
+    } else if (musicUrl) {
       try {
         const { sound } = await Audio.Sound.createAsync(
           { uri: musicUrl },
@@ -184,6 +208,8 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
     musicSound?.stopAsync().catch(() => {});
     musicSound?.unloadAsync().catch(() => {});
     musicSound = null;
+    binauralHandle?.stop();
+    binauralHandle = null;
   }
 
   function pause() {
@@ -191,18 +217,21 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
     pausedRemaining = Math.max(0, pendingAt - Date.now());
     voiceSound?.pauseAsync().catch(() => {});
     musicSound?.pauseAsync().catch(() => {});
+    void binauralHandle?.suspend();
   }
 
   function resume() {
     if (stopped) return;
     voiceSound?.playAsync().catch(() => {});
     musicSound?.playAsync().catch(() => {});
+    void binauralHandle?.resume();
     if (pendingFn) arm(pendingFn, pausedRemaining);
   }
 
   function setMusicVolume(v: number) {
     musicVolume = Math.max(0, Math.min(1, v));
-    musicSound?.setVolumeAsync(musicVolume).catch(() => {});
+    if (binauralHandle) binauralHandle.setVolume(musicVolume);
+    else musicSound?.setVolumeAsync(musicVolume).catch(() => {});
   }
 
   function setVoiceVolume(v: number) {

@@ -126,6 +126,12 @@ export interface MeditationSession {
    * `createNarrationPlayer` y las fases avanzan cuando la voz termina.
    */
   narrated?: boolean;
+  /**
+   * Cama binaural real (osciladores L/R, `lib/binaural.ts`) en vez del mp3 de
+   * Suno de la categoría. Solo tiene efecto en sesiones `narrated` — ver
+   * `lib/narrationPlayer.ts`.
+   */
+  binaural?: { carrierHz: number; beatHz: number };
 }
 
 export const MEDITATION_SESSIONS: MeditationSession[] = [
