@@ -48,7 +48,10 @@ jest.mock('@/lib/mentorExecutionLogic', () => ({
   pendingAccountability: () => [],
 }));
 jest.mock('@/lib/biometric', () => ({
-  fetchLatestInsight: jest.fn().mockResolvedValue(null),
+  // La pantalla usa `refreshAndFetchInsight` (recalcula desde el wearable y
+  // después lee), no la lectura pura: `computeAndPersistInsight` no tenía
+  // ningún llamador y la tabla se quedaba vacía para usuarios reales.
+  refreshAndFetchInsight: jest.fn().mockResolvedValue(null),
   saveReflection: jest.fn().mockResolvedValue(undefined),
 }));
 

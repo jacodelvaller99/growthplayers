@@ -20,7 +20,7 @@ import { fetchLatestSummaries, fetchMemoryProfile, type MemoryProfile, type Memo
 import { clientSafeProfile } from '@/lib/memoryLogic';
 import { fetchTasks, updateTask, type MentorTask } from '@/lib/mentorExecution';
 import { clientProgress, clientSafeTasks, pendingAccountability, type ClientTaskView } from '@/lib/mentorExecutionLogic';
-import { fetchLatestInsight, saveReflection, type InsightRow, type ReflectionInput } from '@/lib/biometric';
+import { refreshAndFetchInsight, saveReflection, type InsightRow, type ReflectionInput } from '@/lib/biometric';
 
 // Estado de tarea en tono de apoyo (sin "vencida/evitada" duro hacia el cliente).
 const CLIENT_STATUS: Record<string, { label: string; color: string }> = {
@@ -50,7 +50,10 @@ export default function ClienteMemoriaScreen() {
       fetchMemoryProfile(userId),
       fetchLatestSummaries(userId, 8),
       fetchTasks(userId),
-      fetchLatestInsight(userId),
+      // Recalcula desde el wearable ANTES de leer: `computeAndPersistInsight`
+      // no tenia ningun llamador, asi que con datos reales esta tabla se
+      // quedaba vacia y esta tarjeta no mostraba nada nunca.
+      refreshAndFetchInsight(userId),
     ]);
     setProfile(clientSafeProfile(p));
     setSummaries(s);

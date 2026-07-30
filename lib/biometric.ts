@@ -172,6 +172,33 @@ export async function computeAndPersistInsight(userId: string): Promise<Biometri
   return insight;
 }
 
+/**
+ * Recalcula el insight desde el wearable y DESPUÉS lo lee.
+ *
+ * POR QUÉ EXISTE: hasta ahora `computeAndPersistInsight` no tenía un solo
+ * llamador en todo el repo — la cadena `fetchDailySeries → interpretSeries →
+ * upsertInsight` estaba escrita y testeada pero nunca se ejecutaba. Las
+ * pantallas solo LEÍAN `biometric_insights`, así que para un usuario con datos
+ * reales de wearable la tabla se quedaba vacía para siempre y "Tu cuerpo hoy"
+ * no mostraba nada. Los únicos insights que existían venían del seeder
+ * sintético de demo.
+ *
+ * Este es el "runs client-side on-read" que la documentación ya daba por
+ * hecho. El upsert va por `onConflict: user_id,metric_date`, así que
+ * recalcular en cada carga es idempotente para el día en curso.
+ *
+ * DEGRADA: si el cálculo falla (sin wearable conectado, sin serie, tabla
+ * ausente) devuelve lo que hubiera guardado antes en vez de romper la pantalla.
+ */
+export async function refreshAndFetchInsight(userId: string): Promise<InsightRow | null> {
+  try {
+    await computeAndPersistInsight(userId);
+  } catch {
+    // El recálculo es best-effort: la lectura de abajo sigue siendo válida.
+  }
+  return fetchLatestInsight(userId);
+}
+
 // ─── Reflexiones de bienestar → journal + Memory OS ─────────────────────────────────
 function moodTone(mood?: number | null): string {
   if (typeof mood !== 'number') return '';
@@ -252,7 +279,28 @@ export async function fetchBiometricSnapshot(userId: string): Promise<BiometricS
     fetchInsights(userId, 1),
     fetchConnections(userId),
   ]);
-  return { series, latestInsight: insights[0] ?? null, connections };
+
+  // Se interpreta con la serie que YA se trajo arriba — cero lecturas extra.
+  //
+  // POR QUÉ: `computeAndPersistInsight` no tenía ningún llamador, así que
+  // `biometric_insights` solo se llenaba con el seeder de demo. Todo lo que
+  // cuelga de este snapshot leía una tabla vacía para usuarios reales: el
+  // dossier del coach, el bundle de Coach Intelligence y —lo más caro— los
+  // detectores STATE del Confrontation OS, que nunca podían dispararse.
+  //
+  // El upsert es idempotente por (user_id, metric_date) y best-effort: si
+  // falla, se devuelve el insight almacenado como antes.
+  const fresh = interpretSeries(series);
+  if (fresh) {
+    try { await upsertInsight(userId, fresh); } catch { /* best-effort */ }
+  }
+
+  return {
+    series,
+    // El recién calculado manda; el almacenado es el respaldo.
+    latestInsight: fresh ? { ...(insights[0] ?? {}), ...fresh } as InsightRow : (insights[0] ?? null),
+    connections,
+  };
 }
 
 // ─── Dashboard cross-client (admin) — último insight por usuario, ordenado por severidad ──
