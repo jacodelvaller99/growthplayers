@@ -655,7 +655,7 @@ export default function DashboardScreen() {
           <MaterialIcons name="spa" size={28} color={palette.purple} />
         </View>
         <View style={styles.wellnessBody}>
-          <Text style={styles.wellnessTitle}>MÓDULO BIENESTAR</Text>
+          <Text style={styles.wellnessTitle}>LIFEFLOW</Text>
           <Text style={styles.wellnessSub}>Meditación · Respiración · Binaurales</Text>
         </View>
       </View>
@@ -678,7 +678,7 @@ export default function DashboardScreen() {
         </View>
       )}
       <PrimaryButton
-        label="ABRIR BIENESTAR"
+        label="ABRIR LIFEFLOW"
         icon="spa"
         onPress={() => router.push('/bienestar' as never)}
       />
@@ -1175,7 +1175,7 @@ export default function DashboardScreen() {
                 value={`${progress}% · Día ${protocolDay} de 90`}
                 progress={progress}
               />
-              <GoldDivider label="BIENESTAR" />
+              <GoldDivider label="LIFEFLOW" />
               {wellnessBlock}
             </Animated.View>
 
@@ -1247,7 +1247,7 @@ export default function DashboardScreen() {
           <GoldDivider label="ESTADO DEL DÍA" />
           {estadoBlock}
           {metricsRow}
-          <GoldDivider label="BIENESTAR" />
+          <GoldDivider label="LIFEFLOW" />
           {wellnessBlock}
           <GoldDivider label="SESIÓN EN VIVO" />
           {liveSessionBlock}

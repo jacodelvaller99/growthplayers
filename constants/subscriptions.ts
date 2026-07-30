@@ -44,7 +44,7 @@ export const SUBSCRIPTION_TIERS = {
   premium_plus: {
     id: 'premium_plus',
     name: 'Premium Plus',
-    description: 'Polaris + Polaris completo',
+    description: 'LifeFlow + Polaris completo',
     color: '#C0A060',
     features: [
       'Todo lo de Premium',
