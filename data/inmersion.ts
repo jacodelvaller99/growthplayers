@@ -38,6 +38,7 @@ export const INMERSION_SESSIONS: MeditationSession[] = [
     description:
       'La inducción base. Aprende a bajar el sistema y a declarar tu Norte desde ahí. Con auriculares y sin interrupciones.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       // ── Preparación ───────────────────────────────────────────────────────
       {

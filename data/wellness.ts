@@ -120,6 +120,12 @@ export interface MeditationSession {
   description: string;
   ambientType: 'brown' | 'pink' | 'white';
   phases: GuidedPhase[];
+  /**
+   * La voz de Norman narra cada fase desde un mp3 propio. Cambia el motor de
+   * audio: en vez del temporizador que rota texto sobre ruido procedural, manda
+   * `createNarrationPlayer` y las fases avanzan cuando la voz termina.
+   */
+  narrated?: boolean;
 }
 
 export const MEDITATION_SESSIONS: MeditationSession[] = [

@@ -16,8 +16,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { MEDITATION_CATEGORY_MUSIC, MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
+import {
+  MEDITATION_CATEGORY_MUSIC,
+  MEDITATION_SESSIONS,
+  normanVoiceUrl,
+  type MeditationSession,
+} from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
+import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
@@ -129,6 +135,7 @@ function MeditationPlayer({
   const [phaseIdx, setPhaseIdx] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const audioRef = useRef<ReturnType<typeof createMeditationAudio>>(null);
+  const narrationRef = useRef<NarrationHandle | null>(null);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -155,16 +162,35 @@ function MeditationPlayer({
     startTimeRef.current = Date.now();
     haptic('medium');
 
-    // Start audio (cama musical Suno por categoría si existe; si no, ruido procedural)
-    const audio = createMeditationAudio(session.ambientType, MEDITATION_CATEGORY_MUSIC[session.category]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (audioRef as any).current = audio;
-    audio?.start();
-    audio?.bell();
+    if (session.narrated) {
+      // Sesión narrada: manda la voz. El texto en pantalla lo dicta el mp3 que
+      // esté sonando, no un contador — si la voz se retrasa, el texto también.
+      const narration = createNarrationPlayer({
+        musicUrl: MEDITATION_CATEGORY_MUSIC[session.category],
+        phases: session.phases.map((p, i) => ({
+          url: normanVoiceUrl(session.id, p, i),
+          duration: p.duration,
+          pauseAfter: p.pauseAfter ?? 0,
+        })),
+        onPhaseChange: (i) => {
+          setPhaseIdx(i);
+          setCurrentPhaseText(session.phases[i].text);
+        },
+      });
+      narrationRef.current = narration;
+      narration?.start();
+    } else {
+      // Cama musical Suno por categoría si existe; si no, ruido procedural.
+      const audio = createMeditationAudio(session.ambientType, MEDITATION_CATEGORY_MUSIC[session.category]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (audioRef as any).current = audio;
+      audio?.start();
+      audio?.bell();
+    }
 
     // Wire to global wellness store so mini player appears
     storeStart({ type: 'meditation', sessionName: session.title, targetSeconds: totalSeconds });
-  }, [totalSeconds, session.ambientType, session.category, session.title, storeStart]);
+  }, [totalSeconds, session, storeStart]);
 
   // Countdown timer
   useEffect(() => {
@@ -179,6 +205,7 @@ function MeditationPlayer({
           storeStop();
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (audioRef as any).current?.bell();
+          narrationRef.current?.stop();
           setTimeout(() => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (audioRef as any).current?.stop();
@@ -196,7 +223,10 @@ function MeditationPlayer({
 
   // Phase rotation
   useEffect(() => {
-    if (!running || !session.phases.length) return;
+    // En una sesión narrada manda la voz, no el reloj: el texto lo cambia
+    // `onPhaseChange`. Si además girara este temporizador, el texto adelantaría
+    // al audio y el usuario leería una cosa mientras oye otra.
+    if (!running || !session.phases.length || session.narrated) return;
     let idx = phaseIdx;
     let elapsed = 0;
     const phaseDurations = session.phases.map((p) => p.duration);
@@ -221,6 +251,8 @@ function MeditationPlayer({
     if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (audioRef as any).current?.stop();
+    narrationRef.current?.stop();
+    narrationRef.current = null;
     storeStop();
     setRunning(false);
     setPaused(false);
@@ -232,6 +264,7 @@ function MeditationPlayer({
   const handlePause = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
+    narrationRef.current?.pause();
     setRunning(false);
     setPaused(true);
     storePause();
@@ -239,6 +272,7 @@ function MeditationPlayer({
   }, [storePause]);
 
   const handleResume = useCallback(() => {
+    narrationRef.current?.resume();
     setRunning(true);
     setPaused(false);
     storeResume();
