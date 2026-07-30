@@ -41,7 +41,7 @@ const VOICE_SETTINGS = {
   stability: 0.5,
   similarity_boost: 0.95,
   style: 0.05,
-  speed: 1.09,
+  speed: 1.06,
   use_speaker_boost: true,
 };
 const MODEL_ID = 'eleven_multilingual_v2';
