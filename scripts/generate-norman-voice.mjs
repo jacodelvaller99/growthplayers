@@ -221,7 +221,7 @@ async function main() {
   }
 
   console.log(`\nmp3 en ${OUT_DIR}`);
-  console.log(`Súbelos al bucket público 'norman-voice' respetando <session_id>/<phase_id>.mp3`);
+  console.log(`Súbelos al bucket público 'wellness-audio' respetando <session_id>/<phase_id>.mp3`);
 }
 
 main().catch((err) => {

@@ -190,6 +190,9 @@ para las sesiones nuevas: la suma de fases debe cuadrar exacto con
 - **Pad musical de la categoría `compasión`**: `wellness-audio/meditation/compasion.mp3`
   no existe. Sin él la práctica degrada al ruido procedural — funciona, pero no
   suena como las demás. Handoff opcional (Suno).
-- **Voz**: los 29 mp3 de las 4 sesiones nuevas están generados en `.voice-out/`
-  y pendientes de subir al bucket `norman-voice`, igual que el resto del
-  catálogo.
+- ~~**Voz**: los 29 mp3 de las 4 sesiones nuevas pendientes de subir.~~
+  **Resuelto 2026-07-30.** Los 576 mp3 del catálogo completo están en el bucket
+  público `wellness-audio`, con la ruta `<id-de-sesión>/<id-de-fase>.mp3`.
+  Verificado uno a uno: 576/576 responden 200 con el peso exacto del archivo
+  local. (Se subieron a `wellness-audio` y no al `norman-voice` que preveía el
+  plan; se apuntó el código allí en vez de mover un bucket entero.)

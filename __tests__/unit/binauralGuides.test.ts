@@ -58,12 +58,12 @@ describe('guías binaurales — forma de los segmentos', () => {
 describe('direccionamiento del audio de las guías', () => {
   it('la URL usa el prefijo `binaural-<banda>` que construye la pantalla', () => {
     const url = normanVoiceUrl('binaural-delta', {}, 0);
-    expect(url).toContain('/norman-voice/binaural-delta/binaural-delta-0.mp3');
+    expect(url).toContain('/wellness-audio/binaural-delta/binaural-delta-0.mp3');
   });
 
-  it('apunta al bucket de voz, no al de camas musicales', () => {
+  it('apunta al prefijo de voz, no al de camas musicales', () => {
     const url = normanVoiceUrl('binaural-theta', {}, 2);
-    expect(url).toContain('/norman-voice/');
-    expect(url).not.toContain('/wellness-audio/');
+    expect(url).toContain('/wellness-audio/binaural-theta/');
+    expect(url).not.toContain('/wellness-audio/meditation/');
   });
 });

@@ -164,7 +164,10 @@ Respiración fisiológica (doble inhalación), Nadi Shodhana (alterna), 2:1 (exh
 - Se generan en lote desde un script (Node) que recorre `data/wellness.ts` y las sleep stories.
 
 ### 6.3 Almacenamiento y entrega
-- Subir los `.mp3` a **Supabase Storage** (bucket `norman-voice/`).
+- Subir los `.mp3` a **Supabase Storage**. El plan decía bucket `norman-voice`;
+  en la práctica (2026-07-30) se subieron a **`wellness-audio`**, el mismo de las
+  camas musicales, y el código apunta ahí. No hay colisión: la música cuelga de
+  `meditation/…` y la voz de `<id-de-sesión>/…`.
 - La app descarga/streamea por `id` de sesión y fase.
 - Cache local para offline (las prácticas funcionan sin red).
 

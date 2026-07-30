@@ -84,8 +84,8 @@ describe('sleepSegmentsToPhases', () => {
     });
   });
 
-  it('la URL apunta al bucket de voz con el id posicional de la sesión', () => {
-    expect(phases[0].url).toContain(`/norman-voice/${session.id}/${session.id}-0.mp3`);
-    expect(phases[0].url).not.toContain('/wellness-audio/');
+  it('la URL apunta al prefijo de voz con el id posicional, no al de música', () => {
+    expect(phases[0].url).toContain(`/wellness-audio/${session.id}/${session.id}-0.mp3`);
+    expect(phases[0].url).not.toContain('/wellness-audio/meditation/');
   });
 });

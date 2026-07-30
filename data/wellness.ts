@@ -57,12 +57,19 @@ export interface GuidedPhase {
 }
 
 /**
- * Voz narrada de Norman — bucket propio, separado de `wellness-audio` (que son
- * camas musicales de Suno). La URL se DERIVA del id, nunca se hardcodea: con
- * ~630 segmentos, una lista de URLs a mano se desincroniza el primer día.
+ * Voz narrada de Norman. La URL se DERIVA del id, nunca se hardcodea: con ~630
+ * segmentos, una lista de URLs a mano se desincroniza el primer día.
+ *
+ * Vive en `wellness-audio`, el MISMO bucket que las camas musicales de Suno.
+ * El plan era un bucket propio `norman-voice`, pero los 576 mp3 se subieron
+ * aquí y mover un bucket entero para respetar un plan no aporta nada: no hay
+ * colisión posible porque la música cuelga de `meditation/…` y la voz de
+ * `<id-de-sesión>/…`. Los dos son públicos y de solo lectura.
+ *
+ * Verificado 2026-07-30: los 576 responden 200 con el peso exacto del local.
  */
 const NORMAN_VOICE_BASE =
-  'https://bizbbtiyftfjufxinwsu.supabase.co/storage/v1/object/public/norman-voice';
+  'https://bizbbtiyftfjufxinwsu.supabase.co/storage/v1/object/public/wellness-audio';
 
 /**
  * Id canónico de una fase. Explícito si lo declara; si no, posicional.

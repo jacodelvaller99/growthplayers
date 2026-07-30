@@ -71,8 +71,11 @@ describe('meditationPhasesToNarration', () => {
     }
   });
 
-  it('la URL apunta al bucket de voz con el id de la sesión', () => {
-    expect(phases[0].url).toContain(`/norman-voice/${session.id}/`);
-    expect(phases[0].url).not.toContain('/wellness-audio/');
+  // Voz y camas musicales comparten el bucket `wellness-audio`; lo que las
+  // separa es el prefijo. La música cuelga de `meditation/…` y la voz del id
+  // de la sesión, así que el invariante real es que la voz NO caiga ahí.
+  it('la URL apunta al prefijo de voz con el id de la sesión, no al de música', () => {
+    expect(phases[0].url).toContain(`/wellness-audio/${session.id}/`);
+    expect(phases[0].url).not.toContain('/wellness-audio/meditation/');
   });
 });

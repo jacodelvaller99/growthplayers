@@ -84,9 +84,9 @@ describe('direccionamiento del audio de voz', () => {
     expect(phaseAudioId('calma-profunda', phase, 2)).toBe('calma-profunda-2');
   });
 
-  it('la URL apunta al bucket de voz, no al de música', () => {
+  it('la URL apunta al prefijo de voz, no al de música', () => {
     const url = normanVoiceUrl('inmersion-s1', { id: 'a', text: 'x', duration: 1 }, 0);
-    expect(url).toContain('/norman-voice/');
-    expect(url).not.toContain('/wellness-audio/');
+    expect(url).toContain('/wellness-audio/inmersion-s1/');
+    expect(url).not.toContain('/wellness-audio/meditation/');
   });
 });
