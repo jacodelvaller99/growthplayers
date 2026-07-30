@@ -1,6 +1,7 @@
 // ─── Meditation Sessions ──────────────────────────────────────────────────────
 
 import { INMERSION_SESSIONS } from './inmersion.ts';
+import type { EvidenceKey } from './wellnessEvidence';
 
 export type MeditationCategory =
   | 'mañana'
@@ -10,6 +11,7 @@ export type MeditationCategory =
   | 'identidad'   // visualización del yo soberano, futuro, identidad declarada
   | 'decisión'    // claridad estratégica antes de decidir, soltar el ruido
   | 'energía'     // activación, recarga, picos de fatiga
+  | 'compasión'   // loving-kindness / autocompasión — la familia que faltaba
   | 'inmersión';  // inducción larga por relajación descendente + conteo
 
 // Metadata de cada categoría — usado por la UI de Meditación para agrupar/filtrar.
@@ -24,6 +26,7 @@ export const MEDITATION_CATEGORY_META: Record<
   'identidad': { label: 'IDENTIDAD', description: 'Habita al operador soberano que estás construyendo.' },
   'decisión':  { label: 'DECISIÓN',  description: 'Claridad estratégica para decidir desde criterio.' },
   'energía':   { label: 'ENERGÍA',   description: 'Activa el cuerpo y recarga la mente.' },
+  'compasión': { label: 'COMPASIÓN', description: 'Entrena la relación contigo y con los demás. Exigirte no está peleado con tratarte bien.' },
   'inmersión': { label: 'INMERSIÓN', description: 'Inducción guiada larga. Entrena bajar a tu centro y declarar desde ahí.' },
 };
 
@@ -159,6 +162,16 @@ export interface MeditationSession {
    * `lib/narrationPlayer.ts`.
    */
   binaural?: { carrierHz: number; beatHz: number };
+  /**
+   * Respaldo científico de la técnica que usa esta sesión. OPCIONAL y vacío en
+   * la mayoría a propósito: solo se cita lo que tiene evidencia real, porque un
+   * catálogo donde todas las tarjetas llevan sello no distingue nada. Ver
+   * `data/wellnessEvidence.ts` y `docs/launch/EVIDENCIA_BIENESTAR.md`.
+   *
+   * Cita la TÉCNICA, no esta grabación concreta: ningún estudio evaluó los
+   * audios de Norman.
+   */
+  evidence?: EvidenceKey;
 }
 
 /**
@@ -189,6 +202,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Activa tu mente con presencia y claridad para el día.',
     ambientType: 'pink',
     narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'Cierra los ojos.\nSiente el contacto con tu asiento.', duration: 30 },
       { text: 'Observa tu respiración\nsin modificarla.', duration: 45 },
@@ -206,6 +220,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Una práctica para bajar el estado de alerta y recuperar la calma interna.',
     ambientType: 'brown',
     narrated: true,
+    evidence: 'SLOW_BREATHING',
     phases: [
       { text: 'Cierra los ojos.\nSuelta la tensión de tu mandíbula.', duration: 30 },
       { text: 'Inhala profundo por 4 segundos.\nExhala por 6.', duration: 60 },
@@ -225,6 +240,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Lleva tu atención a un punto único y mantén la concentración.',
     ambientType: 'pink',
     narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'Postura alerta.\nColumna recta, mentón paralelo al suelo.', duration: 30 },
       { text: 'Lleva toda tu atención\na un punto frente a ti.', duration: 60 },
@@ -262,6 +278,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Técnica de respiración para ayudar a calmar el sistema nervioso.',
     ambientType: 'white',
     narrated: true,
+    evidence: 'SLOW_BREATHING',
     phases: [
       { text: 'Posición cómoda.\nLengua en el paladar superior.', duration: 20 },
       { text: 'Exhala completamente\npor la boca.', duration: 15 },
@@ -610,6 +627,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Disuelve la niebla mental del despertar y entra al día viendo claro.',
     ambientType: 'pink',
     narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'La mente al despertar\nes niebla. Vamos a despejarla.', duration: 45 },
       { text: 'Inhala por la nariz, lento.\nExhala soltando el sueño pesado.', duration: 55 },
@@ -781,6 +799,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Recupera el foco cuando la mente ya se dispersó.',
     ambientType: 'white',
     narrated: true,
+    evidence: 'SLOW_BREATHING',
     phases: [
       { text: 'Tu atención se fugó.\nNo te juzgues. Recupérala.', duration: 30 },
       { text: 'Cierra los ojos.\nSuelta la pantalla que te tenía.', duration: 45 },
@@ -855,6 +874,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Una ancla para momentos de tensión alta; te ayuda a recuperar la calma.',
     ambientType: 'brown',
     narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'La ansiedad llegó.\nNo la combatas. Obsérvala.', duration: 40 },
       { text: 'Apoya los pies en el suelo.\nSiente el peso de tu cuerpo.', duration: 50 },
@@ -892,6 +912,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Crea el espacio entre el estímulo y tu respuesta para no reaccionar en caliente.',
     ambientType: 'brown',
     narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'Algo te activó.\nAntes de responder, frena.', duration: 40 },
       { text: 'Inhala profundo.\nEntre el golpe y tu reacción hay un espacio.', duration: 60 },
@@ -910,6 +931,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     description: 'Recorre y descarga la tensión física acumulada de pies a cabeza.',
     ambientType: 'brown',
     narrated: true,
+    evidence: 'PMR_ANXIETY',
     phases: [
       { text: 'Recuéstate o siéntate.\nEl trabajo de hoy se quedó en el cuerpo.', duration: 48 },
       { text: 'Lleva la atención a tus pies.\nTénsalos y suéltalos.', duration: 74 },
@@ -921,6 +943,101 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
       { text: 'Respira lento.\nEstás en calma, de la cabeza a los pies.', duration: 79 },
     ],
   },
+  // ─── Prácticas añadidas por evidencia (2026-07-30) ─────────────────────────
+  // No se añadieron por hueco de catálogo sino porque la investigación Q1
+  // encontró que faltaban justo las mejor respaldadas. Ver
+  // docs/launch/EVIDENCIA_BIENESTAR.md.
+
+  {
+    // La práctica breve con MEJOR evidencia que existe: en el ensayo de
+    // Stanford superó a la meditación mindfulness con 5 min/día. Estaba en la
+    // app solo como temporizador mudo (`fisiologica` en BREATHING_TECHNIQUES),
+    // nunca como sesión guiada.
+    id: 'suspiro-fisiologico',
+    title: 'Suspiro Fisiológico',
+    durationMinutes: 5,
+    category: 'estrés',
+    description: 'Dos inhalaciones y una exhalación larga. La práctica de cinco minutos con más respaldo que existe.',
+    ambientType: 'brown',
+    narrated: true,
+    evidence: 'CYCLIC_SIGHING',
+    phases: [
+      { text: 'Siéntate o recuéstate.\nEsto dura cinco minutos y no necesitas nada más.', duration: 30 },
+      { text: 'Inhala por la nariz hasta llenar.\nY sin soltar, roba una segunda inhalación corta encima.', duration: 45 },
+      { text: 'Ahora suelta todo por la boca, largo y lento.\nHasta el final.', duration: 45 },
+      { text: 'Otra vez.\nLarga por la nariz, una corta encima, y todo fuera por la boca.', duration: 60 },
+      { text: 'Sigue tú.\nLa segunda inhalación es la que abre los alveolos que quedaron colapsados.', duration: 60 },
+      { text: 'No cuentes. No lo hagas perfecto.\nSolo que la salida sea más larga que la entrada.', duration: 60 },
+    ],
+  },
+  {
+    // El body scan de MBSR — el programa que no fue inferior a escitalopram.
+    // Existía en el catálogo SOLO dentro de Sueño (`sos-2`), donde el objetivo
+    // es dormirse. Como práctica diurna, que es como se estudió, no estaba.
+    id: 'body-scan-diurno',
+    title: 'Recorrido Corporal',
+    durationMinutes: 10,
+    category: 'estrés',
+    description: 'El recorrido de atención por el cuerpo del programa MBSR. Despierto, no para dormir.',
+    ambientType: 'brown',
+    narrated: true,
+    evidence: 'MBSR_ANXIETY',
+    phases: [
+      { text: 'Siéntate con la espalda recta.\nEsto no es para dormirte: es para estar despierto en el cuerpo.', duration: 40 },
+      { text: 'Lleva la atención a los pies.\nNo los muevas. Solo nota qué se siente ahí ahora mismo.', duration: 70 },
+      { text: 'Sube a las piernas.\nSi no sientes nada, eso también es un dato. No fuerces la sensación.', duration: 70 },
+      { text: 'El abdomen. La espalda baja.\nDeja que la respiración pase por ahí sin dirigirla.', duration: 70 },
+      { text: 'El pecho. Los hombros.\nSi encuentras tensión, no la arregles todavía. Solo obsérvala.', duration: 70 },
+      { text: 'Los brazos, hasta las manos.\nNota la temperatura, el peso, el contacto con lo que tocan.', duration: 70 },
+      { text: 'El cuello. La mandíbula. La frente.\nAquí es donde casi todo el mundo guarda el día.', duration: 70 },
+      { text: 'Ahora el cuerpo entero, a la vez.\nComo una sola pieza, no como partes.', duration: 70 },
+      { text: 'Esto es entrenamiento de atención, no de relajación.\nSi te relajaste, bien. Si no, también funcionó.', duration: 70 },
+    ],
+  },
+  {
+    // Autocompasión: la mitad de la familia LKM con mejor efecto medido.
+    // De 41 sesiones no había NINGUNA de compasión.
+    id: 'compasion-hacia-ti',
+    title: 'Compasión Hacia Ti',
+    durationMinutes: 7,
+    category: 'compasión',
+    description: 'Tratarte como tratarías a alguien que te importa. No es blandura: es dejar de pelear contigo.',
+    ambientType: 'pink',
+    narrated: true,
+    evidence: 'LKM_POSITIVE_AFFECT',
+    phases: [
+      { text: 'Siéntate cómodo y cierra los ojos.\nEsta práctica incomoda al principio. Es normal.', duration: 45 },
+      { text: 'Trae algo que estés cargando ahora.\nNo el peor problema. Uno real.', duration: 60 },
+      { text: 'Reconócelo sin adornarlo:\nesto duele, o esto pesa, o esto me tiene cansado.', duration: 65 },
+      { text: 'Esto que sientes no te pasa solo a ti.\nMucha gente está sintiendo algo parecido en este momento.', duration: 65 },
+      { text: 'Ponte una mano en el pecho.\nDile lo que le dirías a alguien que quieres y está en tu lugar.', duration: 70 },
+      { text: 'Que pueda estar en paz.\nQue pueda tratarme con la misma exigencia y con más respeto.', duration: 65 },
+      { text: 'Exigirte no está peleado con esto.\nEl operador que se destruye por dentro no dura.', duration: 50 },
+    ],
+  },
+  {
+    // La extensión clásica de metta: de uno mismo a alguien cercano y después
+    // a alguien difícil. Es la parte con efecto medido sobre actitudes
+    // interpersonales negativas.
+    id: 'compasion-hacia-otro',
+    title: 'Compasión Hacia Otro',
+    durationMinutes: 7,
+    category: 'compasión',
+    description: 'De alguien fácil a alguien difícil. La práctica que afloja los resentimientos que te cuestan energía.',
+    ambientType: 'pink',
+    narrated: true,
+    evidence: 'LKM_POSITIVE_AFFECT',
+    phases: [
+      { text: 'Cierra los ojos.\nRespira un par de veces sin contar nada.', duration: 45 },
+      { text: 'Trae a alguien que te importa y que la está pasando bien.\nAlguien fácil de querer.', duration: 60 },
+      { text: 'Deséale en silencio:\nque esté en paz, que le vaya bien, que esté sano.', duration: 65 },
+      { text: 'Ahora alguien neutro.\nEl portero, alguien del equipo con quien hablas poco.', duration: 60 },
+      { text: 'Lo mismo para esa persona.\nTambién carga cosas que tú no ves.', duration: 60 },
+      { text: 'Ahora alguien con quien tienes fricción.\nNo el peor. Uno con el que puedas.', duration: 70 },
+      { text: 'No tienes que perdonarlo ni darle la razón.\nSolo deja de gastar energía deseándole mal.', duration: 60 },
+    ],
+  },
+
   // La Inmersión vive en archivo propio: es una SERIE (semanas 1–4) que crecerá,
   // y con voz narrada por fase. Ver data/inmersion.ts.
   ...INMERSION_SESSIONS,

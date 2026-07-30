@@ -677,7 +677,7 @@ export default function BinauralesScreen() {
 
       <SafetyWarning
         title="SOBRE LOS BINAURALES"
-        body="Los efectos de los ritmos binaurales en foco, calma o energía están investigados pero no son concluyentes; la respuesta es individual. Es un complemento de bienestar, no un tratamiento médico ni un sustituto de atención profesional. No los uses mientras conduces u operas maquinaria, y consulta a tu médico si tienes epilepsia o fotosensibilidad."
+        body="Los efectos de los ritmos binaurales en foco, calma o energía están investigados pero no son concluyentes; la respuesta es individual. Es un complemento de bienestar, no un tratamiento médico ni un sustituto de atención profesional. No los uses mientras conduces u operas maquinaria, y consulta a tu médico si tienes epilepsia o fotosensibilidad. Si durante la sesión aumenta la angustia o sientes desconexión de tu cuerpo o del entorno, detenla."
       />
 
       {/* Mode toggle */}

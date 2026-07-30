@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
+import { EvidenceBadge } from '@/components/EvidenceBadge';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import {
   MEDITATION_CATEGORY_MUSIC,
@@ -43,6 +44,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   identidad: palette.ash,
   decisión:  palette.ash,
   energía:   palette.ash,
+  compasión: palette.ash,
 };
 
 const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
@@ -53,6 +55,7 @@ const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['
   identidad: 'fingerprint',
   decisión:  'alt-route',
   energía:   'bolt',
+  compasión: 'volunteer-activism',
 };
 
 // ─── Circular timer ───────────────────────────────────────────────────────────
@@ -319,6 +322,12 @@ function MeditationPlayer({
       <Text style={player.sessionTitle}>{session.title}</Text>
       <Text style={player.sessionDesc}>{session.description}</Text>
 
+      {!running && !done && session.evidence ? (
+        <View style={player.evidenceSlot}>
+          <EvidenceBadge evidence={session.evidence} variant="full" />
+        </View>
+      ) : null}
+
       {/* Timer circle */}
       <View style={player.circleContainer}>
         <CircleTimer progress={progress} size={220} />
@@ -456,7 +465,7 @@ export default function MeditacionScreen() {
       </Text>
 
       <SafetyWarning
-        body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria."
+        body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria. Si durante la práctica aumenta la angustia, sientes desconexión de tu cuerpo o del entorno, o aparece miedo intenso, detén la sesión y abre los ojos: parar es la respuesta correcta, no algo que haya que atravesar."
       />
 
       {/* Contexto biométrico del día (honesto, no en vivo) */}
@@ -490,6 +499,9 @@ export default function MeditacionScreen() {
                       </Text>
                     </View>
                     <Text style={styles.duration}>{session.durationMinutes} min</Text>
+                    {/* Solo aparece si la sesion declara evidencia. La ausencia
+                        del sello ES la informacion: no hay estado "sin respaldo". */}
+                    <EvidenceBadge evidence={session.evidence} />
                   </View>
                 </View>
                 {done
@@ -595,6 +607,10 @@ const player = StyleSheet.create({
     fontSize: 22,
     textAlign: 'center',
     marginBottom: spacing.sm,
+  },
+  evidenceSlot: {
+    marginTop: spacing.md,
+    marginHorizontal: spacing.lg,
   },
   sessionDesc: {
     ...typography.body,
