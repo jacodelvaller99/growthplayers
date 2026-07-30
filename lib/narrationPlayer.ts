@@ -25,8 +25,6 @@
  * `createBinauralAudio` ya degrada solo al loop de Suno (`musicUrl` como
  * fallback) si se pasa, o a silencio si no — no se inventa un binaural falso.
  */
-import { Platform } from 'react-native';
-
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 
 export interface NarrationPhase {
@@ -248,16 +246,4 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
   }
 
   return { start, stop, pause, resume, setMusicVolume, setVoiceVolume };
-}
-
-/** `true` si esta plataforma puede reproducir narración con expo-av. */
-export function narrationSupported(): boolean {
-  // expo-av reproduce en web vía HTML5 Audio, así que no se excluye ninguna
-  // plataforma; solo se comprueba que el módulo esté presente.
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return Boolean(require('expo-av')?.Audio) || Platform.OS === 'web';
-  } catch {
-    return false;
-  }
 }

@@ -225,9 +225,18 @@ export default function ExamenesScreen() {
         <Text style={s.title}>EXÁMENES MÉDICOS</Text>
         <View style={{ width: 36 }} />
       </View>
+      {/*
+        NO prometer que el internista "lee" los archivos: no los abre nunca.
+        `fetchPatientContext` (lib/internist.ts) arma el contexto con perfil +
+        `medical_lab_values` + wearable_daily, y jamás consulta `medical_exams`.
+        Además `medical_lab_values` está vacía para todo el mundo: su único
+        escritor, `recordLabValue`, no tiene llamador porque la captura de
+        marcadores no está construida. Decir "los lee" era falso dos veces.
+      */}
       <Text style={s.intro}>
         Tus exámenes viven en almacenamiento privado. Solo tú los ves por defecto.
-        El internista educativo los lee para contextualizar su respuesta.
+        Se guardan para que los consultes y los compartas si quieres: el internista
+        no abre los archivos. Si quieres que te explique un valor, escríbeselo en el chat.
       </Text>
 
       {/* ── Orden de Exámenes recomendada ───────────────────────────────────── */}
