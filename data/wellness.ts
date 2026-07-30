@@ -75,17 +75,20 @@ export function phaseAudioId(sessionId: string, phase: { id?: string }, index: n
 /**
  * Segundos que tarda Norman en leer un texto, estimados por longitud.
  *
- * Constante medida sobre los 23 mp3 reales de La Inmersión generados a
- * velocidad 1.06: ~14 caracteres por segundo en español. Se redondea hacia
- * arriba y lleva piso, porque quedarse corto es peor que pasarse — si el
- * temporizador de respaldo vence antes de que la voz acabe, corta a Norman a
- * media frase.
+ * MEDIDO, no supuesto: sobre los 517 mp3 reales del catálogo generados a
+ * velocidad 1.06 la media es 16.9 caracteres/segundo, pero la cola lenta baja
+ * a 11.1 (percentil 1) y a 10.3 en el peor caso. Se usa el EXTREMO LENTO, no
+ * la media, porque los dos errores no cuestan lo mismo:
+ *   · pasarse  → un poco más de silencio, que en una meditación no molesta
+ *   · quedarse corto → el temporizador vence con Norman a media frase
+ * Una primera versión usaba 14 (≈ percentil 10) y dejaba fuera al 4% de los
+ * segmentos más lentos.
  *
  * Vive aquí y no en `data/sleep.ts` porque ese archivo YA importa de éste:
  * al revés cerraría un ciclo de imports.
  */
 export function estimateVoiceSeconds(text: string): number {
-  const CHARS_PER_SECOND = 14;
+  const CHARS_PER_SECOND = 11;
   const FLOOR_SECONDS = 3;
   return Math.max(FLOOR_SECONDS, Math.ceil(text.length / CHARS_PER_SECOND));
 }

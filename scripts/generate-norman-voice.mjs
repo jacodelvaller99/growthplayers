@@ -73,7 +73,11 @@ function allNarratedSessions() {
     phases: s.segments.map((seg, i) => ({
       audioId: `${s.id}-${i}`,
       text: seg.text,
-      budget: Math.max(3, Math.ceil(seg.text.length / 14)),
+      // El hueco real es la fase COMPLETA (voz + su pausa), no solo la voz:
+      // el player avanza cuando la voz termina, y lo que sigue es silencio.
+      // Comparar contra la voz sola marcaba como "no cabe" segmentos que en
+      // ejecución tienen 30 segundos de margen por delante.
+      budget: Math.max(3, Math.ceil(seg.text.length / 11)) + seg.pauseAfter,
     })),
   }));
 
