@@ -100,7 +100,7 @@ function main() {
   const hasPad = fs.existsSync(SUNO_PAD);
   const padWav = path.join(OUT_DIR, 'pad.wav');
   if (hasPad) {
-    ff(['-stream_loop', '-1', '-i', SUNO_PAD, '-t', String(totalDeclared), '-af', 'volume=0.35', '-ar', String(SR), '-ac', '2', padWav]);
+    ff(['-stream_loop', '-1', '-i', SUNO_PAD, '-t', String(totalDeclared), '-af', 'volume=0.9', '-ar', String(SR), '-ac', '2', padWav]);
     console.log(`Pad de Suno: ${SUNO_PAD}`);
   } else {
     console.log(`Sin pad de Suno en "${SUNO_PAD}" — sigue solo con binaural (más seco).`);
@@ -113,7 +113,7 @@ function main() {
   ff([
     '-f', 'lavfi', '-i', `sine=frequency=${carrierHz}:sample_rate=${SR}:duration=${totalDeclared}`,
     '-f', 'lavfi', '-i', `sine=frequency=${carrierHz + beatHz}:sample_rate=${SR}:duration=${totalDeclared}`,
-    '-filter_complex', '[0:a]volume=0.09[l];[1:a]volume=0.09[r];[l][r]join=inputs=2:channel_layout=stereo[a]',
+    '-filter_complex', '[0:a]volume=0.28[l];[1:a]volume=0.28[r];[l][r]join=inputs=2:channel_layout=stereo[a]',
     '-map', '[a]', binauralWav,
   ]);
   console.log(`Binaural: carrier ${carrierHz} Hz / beat ${beatHz} Hz`);
@@ -125,12 +125,17 @@ function main() {
   ff([
     '-i', binauralWav, '-i', voiceStereo, ...bedInputs,
     '-filter_complex',
+    // normalize=0: sin esto `amix` divide el volumen entre el número de
+    // entradas automáticamente — es la razón por la que todo sonaba bajo
+    // antes. Con normalize=0 se respetan los volúmenes de arriba, y el
+    // `alimiter` al final evita que sumados se corten (clipping).
     '[1:a]asplit=2[sc][voiceout];' +
+    '[voiceout]volume=2.2[voiceloud];' +
     '[0:a][sc]sidechaincompress=threshold=0.015:ratio=10:attack=150:release=900[ducked];' +
     (hasPad
-      ? `[ducked]${bedLabel}amix=inputs=2:duration=first:dropout_transition=0:weights=1 1[bed];[bed][voiceout]amix=inputs=2:duration=first:dropout_transition=0:weights=1 1.4[mixed]`
-      : '[ducked][voiceout]amix=inputs=2:duration=first:dropout_transition=0:weights=1 1.4[mixed]') +
-    ';[mixed]afade=t=in:st=0:d=2.5,afade=t=out:st=' + (totalDeclared - 3) + ':d=3[out]',
+      ? `[ducked]${bedLabel}amix=inputs=2:duration=first:dropout_transition=0:normalize=0:weights=1 1[bed];[bed][voiceloud]amix=inputs=2:duration=first:dropout_transition=0:normalize=0:weights=1 1[mixed]`
+      : '[ducked][voiceloud]amix=inputs=2:duration=first:dropout_transition=0:normalize=0:weights=1 1[mixed]') +
+    ';[mixed]alimiter=limit=0.97,afade=t=in:st=0:d=2.5,afade=t=out:st=' + (totalDeclared - 3) + ':d=3[out]',
     '-map', '[out]', '-t', String(totalDeclared), '-b:a', '192k', finalFile,
   ]);
 
