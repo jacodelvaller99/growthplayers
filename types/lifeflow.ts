@@ -76,7 +76,7 @@ export interface LessonTask {
   responses?: Record<string, string>;
 }
 
-export type WellnessType = 'meditation' | 'breathing' | 'binaural' | 'asmr' | 'sleep';
+export type WellnessType = 'meditation' | 'breathing' | 'binaural' | 'asmr' | 'sleep' | 'movement';
 
 export interface WellnessSession {
   id: string;

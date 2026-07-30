@@ -19,6 +19,7 @@ export type EventType =
   | 'binaural_complete'
   | 'breathing_complete'
   | 'meditation_complete'
+  | 'movement_complete'
   | 'chat_sent'
   | 'chat_response_received'
   | 'checkin_submit'

@@ -73,3 +73,7 @@ skills-lock.json
 
 # mp3 de voz generados con ElevenLabs (se suben al bucket, no al repo)
 .voice-out/
+
+# Ruido del Chromium headless (Playwright / preview): lo escribe en la raíz del
+# repo al arrancar, y no dice nada de este proyecto.
+debug.log
