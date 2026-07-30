@@ -26,8 +26,10 @@ const LEVEL_LABEL: Record<MovementPractice['level'], string> = {
   avanzado:     'AVANZADO',
 };
 
-// ─── Player — mismo patrón de fases que meditacion.tsx, pero TERMINA en la
-// última fase en vez de ciclar (bug conocido de meditacion.tsx:207) ───────────
+// ─── Player — mismo patrón de fases que meditacion.tsx, con una diferencia
+// deliberada: aquí la última fase CIERRA la sesión. En meditación el texto
+// cicla, y ahí está bien porque manda un reloj total que es quien termina; el
+// movimiento no tiene ese reloj, así que si ciclara no acabaría nunca. ────────
 function MovementPlayer({
   practice,
   onComplete,
