@@ -142,6 +142,10 @@ function MeditationPlayer({
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Una sesión narrada puede terminar su guion antes de que el reloj visual
+  // llegue a cero (el guion es voz+pausas reales, el reloj es un contador
+  // fijo) — sin este guard, `finishSession` correría dos veces.
+  const finishedRef = useRef(false);
 
   // Idle pulse
   useEffect(() => {
@@ -158,11 +162,36 @@ function MeditationPlayer({
     }
   }, [running, pulseAnim]);
 
+  /**
+   * Cierra la sesión — llamada tanto por el reloj visual (llega a cero) como
+   * por el guion narrado (termina su última fase). Sin este punto único, una
+   * sesión narrada cuya voz+pausas terminan antes que el reloj se quedaba
+   * congelada en silencio hasta que el contador alcanzara cero por su cuenta.
+   */
+  const finishSession = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    if (timerRef.current) clearInterval(timerRef.current);
+    setRunning(false);
+    setDone(true);
+    haptic('success');
+    storeStop();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (audioRef as any).current?.bell();
+    narrationRef.current?.stop();
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (audioRef as any).current?.stop();
+    }, 3500);
+    onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
+  }, [onComplete, storeStop]);
+
   const startSession = useCallback(() => {
     setRunning(true);
     setPaused(false);
     setRemaining(totalSeconds);
     startTimeRef.current = Date.now();
+    finishedRef.current = false;
     haptic('medium');
 
     if (session.narrated) {
@@ -180,6 +209,7 @@ function MeditationPlayer({
           setPhaseIdx(i);
           setCurrentPhaseText(session.phases[i].text);
         },
+        onComplete: finishSession,
       });
       narrationRef.current = narration;
       narration?.start();
@@ -194,7 +224,7 @@ function MeditationPlayer({
 
     // Wire to global wellness store so mini player appears
     storeStart({ type: 'meditation', sessionName: session.title, targetSeconds: totalSeconds });
-  }, [totalSeconds, session, storeStart]);
+  }, [totalSeconds, session, storeStart, finishSession]);
 
   // Countdown timer
   useEffect(() => {
@@ -202,19 +232,7 @@ function MeditationPlayer({
     timerRef.current = setInterval(() => {
       setRemaining((prev) => {
         if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          setRunning(false);
-          setDone(true);
-          haptic('success');
-          storeStop();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (audioRef as any).current?.bell();
-          narrationRef.current?.stop();
-          setTimeout(() => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (audioRef as any).current?.stop();
-          }, 3500);
-          onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
+          finishSession();
           return 0;
         }
         const elapsed = totalSeconds - (prev - 1);
@@ -223,7 +241,7 @@ function MeditationPlayer({
       });
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [running, onComplete, storeStop, storeElapsed, totalSeconds]);
+  }, [running, finishSession, storeElapsed, totalSeconds]);
 
   // Phase rotation
   useEffect(() => {
