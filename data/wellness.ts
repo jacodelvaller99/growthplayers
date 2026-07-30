@@ -61,13 +61,19 @@ export interface GuidedPhase {
 const NORMAN_VOICE_BASE =
   'https://bizbbtiyftfjufxinwsu.supabase.co/storage/v1/object/public/norman-voice';
 
-/** Id canónico de una fase. Explícito si lo declara; si no, posicional. */
-export function phaseAudioId(sessionId: string, phase: GuidedPhase, index: number): string {
+/**
+ * Id canónico de una fase. Explícito si lo declara; si no, posicional.
+ *
+ * El parámetro pide solo `{ id? }` y no un `GuidedPhase` entero porque es lo
+ * único que lee — así los segmentos de Sueño (`SleepSegment`, que no declara
+ * `duration`) usan el mismo direccionamiento sin duplicar la función.
+ */
+export function phaseAudioId(sessionId: string, phase: { id?: string }, index: number): string {
   return phase.id ?? `${sessionId}-${index}`;
 }
 
 /** URL del mp3 de voz de una fase. Misma función la usa el generador y la app. */
-export function normanVoiceUrl(sessionId: string, phase: GuidedPhase, index: number): string {
+export function normanVoiceUrl(sessionId: string, phase: { id?: string }, index: number): string {
   return `${NORMAN_VOICE_BASE}/${sessionId}/${phaseAudioId(sessionId, phase, index)}.mp3`;
 }
 

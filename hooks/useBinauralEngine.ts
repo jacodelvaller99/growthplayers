@@ -8,11 +8,13 @@
 import { useCallback } from 'react';
 
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
+import { createNarrationPlayer, type NarrationHandle, type NarrationPhase } from '@/lib/narrationPlayer';
 import type { AmbienceType } from '@/data/wellness';
 import { useWellnessStore } from '@/store/wellnessStore';
 
 // ─── Module-level audio singleton ────────────────────────────────────────────
 let _handle: BinauralAudioHandle | null = null;
+let _narration: NarrationHandle | null = null;
 let _timer: ReturnType<typeof setInterval> | null = null;
 let _startMs = 0;
 
@@ -21,6 +23,8 @@ export function stopBinauralGlobal(): void {
   if (_timer) { clearInterval(_timer); _timer = null; }
   _handle?.stop();
   _handle = null;
+  _narration?.stop();
+  _narration = null;
 }
 
 export interface BinauralConfig {
@@ -32,6 +36,13 @@ export interface BinauralConfig {
   waveVolume?:   number;    // 0–1
   bgVolume?:     number;    // 0–1
   musicUrl?:     string;    // cama musical Suno (opcional, degrada a nada)
+  /**
+   * Voz de Norman guiando la sesión encima de la cama. Las fases traen ya
+   * resuelta su URL (`normanVoiceUrl`) y su duración — el engine no sabe de
+   * catálogos, solo reproduce. Si falta, la sesión suena como siempre: cama
+   * y binaural sin voz.
+   */
+  narration?:    NarrationPhase[];
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -59,6 +70,18 @@ export function useBinauralEngine() {
       h.setVolume(wv);
       h.setAmbienceVolume(bv);
       if (cfg.ambience && cfg.ambience !== 'none') h.setAmbience(cfg.ambience);
+    }
+
+    // Voz de Norman por encima. El player de narración NO gestiona la cama
+    // aquí (ya la lleva `_handle` con su propio timer y mini-player): solo
+    // reproduce la voz y avisa por `onDuck` cuándo bajar el binaural, para
+    // que la voz no compita con el tono.
+    if (cfg.narration?.length) {
+      const n = createNarrationPlayer({
+        phases: cfg.narration,
+        onDuck: (ducked) => _handle?.setVolume(ducked ? wv * 0.35 : wv),
+      });
+      if (n) { _narration = n; n.start(); }
     }
 
     startSession({

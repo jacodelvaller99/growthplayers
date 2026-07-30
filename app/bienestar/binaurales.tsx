@@ -27,6 +27,9 @@ import {
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
+import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
+import { getBinauralGuide } from '@/data/binauralGuides';
+import { normanVoiceUrl } from '@/data/wellness';
 import { analytics } from '@/lib/analytics';
 
 // ─── Haptic helper ────────────────────────────────────────────────────────────
@@ -229,6 +232,7 @@ function BinauralPlayer({
   const [ambience, setAmbience] = useState<AmbienceType>('none');
 
   const audioRef    = useRef<BinauralAudioHandle | null>(null);
+  const narrationRef = useRef<NarrationHandle | null>(null);
   const startTimeRef = useRef(0);
   const pausedAtRef  = useRef(0);   // Date.now() when paused
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -238,6 +242,7 @@ function BinauralPlayer({
   useEffect(() => {
     return () => {
       audioRef.current?.stop();
+      narrationRef.current?.stop();
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
@@ -251,6 +256,24 @@ function BinauralPlayer({
       if (ambience !== 'none') handle.setAmbience(ambience);
       audioRef.current = handle;
     }
+    // Guia de entrada: Norman abre la sesion (postura, auriculares, que
+    // esperar de esta banda) y se calla. El tono sigue sonando despues -- el
+    // arrastre lo hace el binaural en silencio, no la voz.
+    const guide = getBinauralGuide(preset.id);
+    if (guide) {
+      const n = createNarrationPlayer({
+        phases: guide.segments.map((seg, i) => ({
+          url: normanVoiceUrl(`binaural-${guide.id}`, {}, i),
+          duration: seg.duration,
+          pauseAfter: seg.pauseAfter,
+        })),
+        // La cama la lleva `audioRef` con su propio timer, asi que el player
+        // de narracion solo avisa cuando agachar el tono para no tapar la voz.
+        onDuck: (ducked) => audioRef.current?.setVolume(ducked ? binauralVol * 0.35 : binauralVol),
+      });
+      if (n) { narrationRef.current = n; n.start(); }
+    }
+
     startTimeRef.current = Date.now();
     setRunning(true);
     setPaused(false);
@@ -277,6 +300,8 @@ function BinauralPlayer({
         clearInterval(timerRef.current!);
         audioRef.current?.stop();
         audioRef.current = null;
+        narrationRef.current?.stop();
+        narrationRef.current = null;
         setRunning(false);
         setDone(true);
         haptic('success');
@@ -290,6 +315,8 @@ function BinauralPlayer({
     if (timerRef.current) clearInterval(timerRef.current);
     audioRef.current?.stop();
     audioRef.current = null;
+    narrationRef.current?.stop();
+    narrationRef.current = null;
     setRunning(false);
     setPaused(false);
     setElapsed(0);
@@ -300,6 +327,7 @@ function BinauralPlayer({
   const pauseSession = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     audioRef.current?.suspend();
+    narrationRef.current?.pause();
     pausedAtRef.current = Date.now();
     setRunning(false);
     setPaused(true);
@@ -312,6 +340,7 @@ function BinauralPlayer({
     const pausedMs = Date.now() - pausedAtRef.current;
     startTimeRef.current += pausedMs;
     audioRef.current?.resume();
+    narrationRef.current?.resume();
     setRunning(true);
     setPaused(false);
     storeResume();
@@ -325,6 +354,8 @@ function BinauralPlayer({
         clearInterval(timerRef.current!);
         audioRef.current?.stop();
         audioRef.current = null;
+        narrationRef.current?.stop();
+        narrationRef.current = null;
         setRunning(false);
         setDone(true);
         haptic('success');

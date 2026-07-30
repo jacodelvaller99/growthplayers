@@ -30,9 +30,64 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { INMERSION_SESSIONS } from '../data/inmersion.ts';
+// Los guiones de Sueño se importan de sus SUB-archivos, no de `data/sleep.ts`:
+// ese barrel importa `normanVoiceUrl` de './wellness' sin extensión, y el
+// borrado de tipos de node no resuelve rutas extensionless de valores. Los
+// sub-archivos solo tienen `import type`, que sí se borra entero.
+import { SOS_SESSIONS } from '../data/sleep/sos.ts';
+import { STORY_SESSIONS } from '../data/sleep/stories.ts';
+import { NIDRA_SESSIONS } from '../data/sleep/nidra.ts';
+import { RELAX_SESSIONS } from '../data/sleep/relax.ts';
+import { BINAURAL_GUIDES } from '../data/binauralGuides.ts';
 
 const OUT_DIR = path.resolve('.voice-out');
 const FORCE = process.argv.includes('--force');
+/** `--only=<prefijo>` limita la generación (ej. `--only=nidra`). */
+const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7);
+
+/**
+ * Todo lo que Norman narra, en una sola forma: `{ id, phases[] }` donde cada
+ * fase trae texto y el hueco de tiempo en que tiene que caber.
+ *
+ * Meditación declara `duration` explícito por fase. Sueño solo declara
+ * `pauseAfter`, así que el hueco de voz se estima igual que en la app
+ * (`estimateVoiceSeconds`, 14 caracteres/segundo) — misma constante en los dos
+ * lados o el informe de "cabe / no cabe" mentiría.
+ */
+function allNarratedSessions() {
+  const meditacion = INMERSION_SESSIONS.map((s) => ({
+    id: s.id,
+    phases: s.phases.map((p, i) => ({
+      audioId: p.id ?? `${s.id}-${i}`,
+      text: p.text,
+      budget: p.duration - (p.pauseAfter ?? 0),
+    })),
+  }));
+
+  const sueno = [...SOS_SESSIONS, ...STORY_SESSIONS, ...NIDRA_SESSIONS, ...RELAX_SESSIONS].map((s) => ({
+    id: s.id,
+    phases: s.segments.map((seg, i) => ({
+      audioId: `${s.id}-${i}`,
+      text: seg.text,
+      budget: Math.max(3, Math.ceil(seg.text.length / 14)),
+    })),
+  }));
+
+  // Guías de entrada de los contadores binaurales. El prefijo `binaural-` es
+  // el que construye `binaurales.tsx` con `normanVoiceUrl` — si cambia aquí,
+  // la app pide un mp3 que no existe y la guía suena en silencio.
+  const binaural = BINAURAL_GUIDES.map((g) => ({
+    id: `binaural-${g.id}`,
+    phases: g.segments.map((seg, i) => ({
+      audioId: `binaural-${g.id}-${i}`,
+      text: seg.text,
+      budget: seg.duration - seg.pauseAfter,
+    })),
+  }));
+
+  const all = [...meditacion, ...sueno, ...binaural];
+  return ONLY ? all.filter((s) => s.id.startsWith(ONLY)) : all;
+}
 
 // Los ajustes que el dueño validó escuchando muestras en el panel de
 // ElevenLabs. No los toques sin volver a escuchar: 'speed' y 'stability'
@@ -104,18 +159,20 @@ async function main() {
   let generated = 0;
   let skipped = 0;
 
-  for (const session of INMERSION_SESSIONS) {
+  const sessions = allNarratedSessions();
+  console.log(`${sessions.length} sesiones · ${sessions.reduce((n, s) => n + s.phases.length, 0)} segmentos\n`);
+
+  for (const session of sessions) {
     const dir = path.join(OUT_DIR, session.id);
     fs.mkdirSync(dir, { recursive: true });
 
-    for (const [i, phase] of session.phases.entries()) {
-      const id = phase.id ?? `${session.id}-${i}`;
-      const file = path.join(dir, `${id}.mp3`);
+    for (const phase of session.phases) {
+      const file = path.join(dir, `${phase.audioId}.mp3`);
 
       if (fs.existsSync(file) && !FORCE) {
         skipped += 1;
       } else {
-        process.stdout.write(`  ${session.id}/${id} … `);
+        process.stdout.write(`  ${session.id}/${phase.audioId} … `);
         const audio = await synthesize(apiKey, voiceId, phase.text);
         fs.writeFileSync(file, audio);
         generated += 1;
@@ -123,10 +180,12 @@ async function main() {
       }
 
       const real = mp3Seconds(file);
-      // El hueco útil es la duración de la fase menos el silencio previsto:
-      // ahí es donde la voz tiene que caber.
-      const budget = phase.duration - (phase.pauseAfter ?? 0);
-      rows.push({ id, real, budget, fits: real === null || real <= budget });
+      rows.push({
+        id: `${session.id}/${phase.audioId}`,
+        real,
+        budget: phase.budget,
+        fits: real === null || real <= phase.budget,
+      });
     }
   }
 
@@ -137,14 +196,16 @@ async function main() {
     console.log('Sin ffprobe instalado: no se pudo verificar que la voz quepa en su hueco.');
   } else {
     const tight = measured.filter((r) => !r.fits);
-    for (const r of measured) {
-      const mark = r.fits ? ' ' : '!';
-      console.log(`${mark} ${r.id.padEnd(20)} voz ${r.real.toFixed(1)}s / hueco ${r.budget}s`);
+    // Solo se listan las que NO caben: con 200+ segmentos, imprimir cada OK
+    // entierra justo la línea que hay que leer.
+    console.log(`${measured.length - tight.length}/${measured.length} caben en su hueco.`);
+    for (const r of tight) {
+      console.log(`! ${r.id.padEnd(24)} voz ${r.real.toFixed(1)}s / hueco ${r.budget}s`);
     }
     if (tight.length) {
       console.log(
         `\n${tight.length} fase(s) con la voz MÁS LARGA que su hueco. La siguiente ` +
-        'frase las pisaría: acorta el texto o sube su `duration` en data/inmersion.ts ' +
+        'frase las pisaría: acorta el texto o sube su `duration`/`pauseAfter` en el catálogo ' +
         '(y ajusta otra fase para que la suma siga cuadrando con durationMinutes).',
       );
       process.exitCode = 1;

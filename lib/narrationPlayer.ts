@@ -60,6 +60,13 @@ interface Options {
   /** Se llama al entrar en cada fase — la pantalla sincroniza el texto con esto. */
   onPhaseChange?: (index: number) => void;
   onComplete?: () => void;
+  /**
+   * Para cuando la cama NO la gestiona este player sino otro módulo — el caso
+   * de Sueño, donde `useBinauralEngine` ya tiene su propio handle corriendo
+   * con su timer y su mini-player. Sin esto, la voz de Norman sonaría encima
+   * del binaural a volumen plano: o lo tapa o compite con él.
+   */
+  onDuck?: (ducked: boolean) => void;
 }
 
 /** Volumen de la cama en silencio y mientras Norman habla. */
@@ -68,7 +75,7 @@ const MUSIC_DUCKED = 0.10;
 const VOICE_LEVEL = 1.0;
 
 export function createNarrationPlayer(opts: Options): NarrationHandle | null {
-  const { musicUrl, binaural, phases, onPhaseChange, onComplete } = opts;
+  const { musicUrl, binaural, phases, onPhaseChange, onComplete, onDuck } = opts;
   if (phases.length === 0) return null;
 
   let Audio: any;
@@ -118,6 +125,7 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
     const target = on ? Math.min(musicVolume, MUSIC_DUCKED) : musicVolume;
     if (binauralHandle) binauralHandle.setVolume(target);
     else musicSound?.setVolumeAsync(target).catch(() => {});
+    onDuck?.(on);
   }
 
   /** Avanza a la fase `i`. Devuelve sin hacer nada si ya se paró. */
