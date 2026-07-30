@@ -112,10 +112,13 @@ function CircleTimer({ progress, size = 200 }: { progress: number; size?: number
 
 function MeditationPlayer({
   session,
+  northStar,
   onComplete,
   onExit,
 }: {
   session: MeditationSession;
+  /** El Norte del usuario, para las fases que marcan `showsNorthStar`. */
+  northStar?: string;
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
@@ -313,6 +316,17 @@ function MeditationPlayer({
           <Text style={[player.guideText, { color: catColor }]}>
             {done ? '✦ Sesión completada ✦' : currentPhaseText}
           </Text>
+
+          {/* Lo que hace esto de Polaris y no una meditación genérica: en la
+              fase de declaración la voz dice algo neutro y la pantalla muestra
+              el Norte que escribió ESTE usuario. Un solo mp3 sirve para todos
+              y aun así cada quien lee lo suyo. */}
+          {!done && northStar && session.phases[phaseIdx]?.showsNorthStar && (
+            <>
+              <GoldDivider />
+              <Text style={player.northStarText}>{northStar}</Text>
+            </>
+          )}
         </PremiumCard>
       )}
 
@@ -398,6 +412,7 @@ export default function MeditacionScreen() {
     return (
       <MeditationPlayer
         session={active}
+        northStar={state.northStar?.identity || state.northStar?.purpose}
         onComplete={(secs) => handleComplete(active, secs)}
         onExit={() => setActive(null)}
       />
@@ -600,6 +615,14 @@ const player = StyleSheet.create({
     textAlign: 'center',
     fontSize: 15,
     lineHeight: 24,
+  },
+  northStarText: {
+    fontFamily: Fonts.displayMedium,
+    fontWeight: '600',
+    color: palette.goldText,
+    textAlign: 'center',
+    fontSize: 17,
+    lineHeight: 27,
   },
   controls: {
     marginTop: spacing.xl,
