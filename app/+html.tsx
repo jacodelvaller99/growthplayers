@@ -19,12 +19,12 @@ export default function Root({ children }: PropsWithChildren) {
         {/* ── iOS PWA ──────────────────────────────────────────── */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Polaris" />
+        <meta name="apple-mobile-web-app-title" content="Polaris OS" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
 
         {/* ── Description / OG ─────────────────────────────────── */}
         <meta name="description" content="Transformación personal con el Método Polaris" />
-        <meta property="og:title" content="Polaris Growth Institute" />
+        <meta property="og:title" content="Polaris OS" />
         <meta property="og:description" content="Transformación personal con el Método Polaris" />
         <meta property="og:image" content="/icon-512.png" />
         <meta property="og:type" content="website" />

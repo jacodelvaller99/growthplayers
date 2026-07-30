@@ -18,7 +18,7 @@ const SECTIONS: Section[] = [
   {
     heading: '1. Quiénes somos y alcance',
     body: [
-      'Polaris Growth Institute opera la aplicación LifeFlow / Polaris ("la App"), disponible en iOS, Android y web (PWA), para acompañamiento de alto rendimiento personal. Incluye un programa de 90 días ("Protocolo Soberano"), un mentor de inteligencia artificial llamado "Norman", herramientas de bienestar y seguimiento de métricas biométricas y de hábitos.',
+      'Polaris Growth Institute opera la aplicación Polaris OS ("la App"), disponible en iOS, Android y web (PWA), para acompañamiento de alto rendimiento personal. Incluye un programa de 90 días ("Protocolo Soberano"), un mentor de inteligencia artificial llamado "Norman", herramientas de bienestar y seguimiento de métricas biométricas y de hábitos.',
       'Esta política aplica a todas las personas usuarias. Al crear una cuenta y usar la App, usted acepta el tratamiento de sus datos descrito aquí.',
       'La App está dirigida a personas mayores de edad. No está dirigida a menores de 18 años.',
     ],
@@ -148,7 +148,7 @@ export default function PrivacidadScreen() {
 
       <Text style={styles.eyebrow}>POLÍTICA DE PRIVACIDAD</Text>
       <Text style={styles.lead}>
-        Cómo Polaris Growth Institute recolecta, usa y protege sus datos personales en la App LifeFlow / Polaris.
+        Cómo Polaris Growth Institute recolecta, usa y protege sus datos personales en la App Polaris OS.
       </Text>
 
       {/* Meta block */}

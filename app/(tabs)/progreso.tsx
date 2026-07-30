@@ -1116,7 +1116,7 @@ export default function ProgresoScreen() {
 
           {/* Version footer */}
           <Text style={styles.versionText}>
-            Polaris Growth Institute v{appVersion}
+            Polaris OS v{appVersion}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1702,7 +1702,7 @@ export default function ProgresoScreen() {
 
       {/* ── Version footer ── */}
       <Text style={styles.versionText}>
-        Polaris Growth Institute v{appVersion}
+        Polaris OS v{appVersion}
       </Text>
     </ScrollView>
     </KeyboardAvoidingView>

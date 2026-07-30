@@ -30,6 +30,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { INMERSION_SESSIONS } from '../data/inmersion.ts';
+// Las 40 meditaciones del catalogo general. Se importa la CONSTANTE cruda del
+// mismo archivo que ve la app: una segunda lista de frases se desincronizaria
+// el primer dia que alguien edite un guion.
+import { MEDITATION_SESSIONS } from '../data/wellness.ts';
 // Los guiones de Sueño se importan de sus SUB-archivos, no de `data/sleep.ts`:
 // ese barrel importa `normanVoiceUrl` de './wellness' sin extensión, y el
 // borrado de tipos de node no resuelve rutas extensionless de valores. Los
@@ -55,7 +59,7 @@ const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7);
  * lados o el informe de "cabe / no cabe" mentiría.
  */
 function allNarratedSessions() {
-  const meditacion = INMERSION_SESSIONS.map((s) => ({
+  const meditacion = MEDITATION_SESSIONS.map((s) => ({
     id: s.id,
     phases: s.phases.map((p, i) => ({
       audioId: p.id ?? `${s.id}-${i}`,

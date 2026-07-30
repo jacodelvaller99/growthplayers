@@ -413,7 +413,7 @@ export default function PerfilSoberanoScreen() {
 
       {/* ── Tagline ── */}
       <Text style={styles.tagline}>
-        Polaris Growth Institute · Protocolo Soberano
+        Polaris OS · Protocolo Soberano
       </Text>
     </ScrollView>
   );

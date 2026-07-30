@@ -26,13 +26,24 @@ export const ENV = {
   aiProxyUrl: (process.env.EXPO_PUBLIC_AI_PROXY_URL ?? '') as string,
 
   /**
-   * Feature flag — Confrontation OS (motor "DIJO vs HIZO"). Default false:
-   * cohorte gradual primero. Cuando se active, Norman puede abrir confrontando
-   * con dato (severity high+) si el cliente firmó el consent específico
-   * `confrontation_with_data` en onboarding. La capa IO en lib/confrontation.ts
-   * verifica este flag antes de hacer cualquier query.
+   * Feature flag — Confrontation OS (motor "DIJO vs HIZO").
+   *
+   * Default TRUE desde 2026-07-30 (antes false, para rollout por cohorte). El
+   * interruptor que de verdad protege al cliente nunca fue este flag global,
+   * sino los cuatro gates POR USUARIO que `buildConfrontations` aplica y que
+   * no se pueden saltar desde aquí:
+   *   · `ml_consent` activo
+   *   · `consents.confrontation_with_data` firmado en onboarding
+   *   · `pause_state` inactivo
+   *   · sin bloqueadores de crisis/duelo en el perfil
+   * Un usuario que no marcó la casilla de confrontación no recibe nada aunque
+   * el flag esté encendido, así que dejarlo apagado solo servía para que la
+   * función no existiera para NADIE — incluidos los que sí la pidieron.
+   *
+   * Se conserva como interruptor de emergencia: `=false` lo apaga entero sin
+   * desplegar código.
    */
-  confrontationOsEnabled: ((process.env.EXPO_PUBLIC_CONFRONTATION_OS_ENABLED ?? '').toLowerCase() === 'true') as boolean,
+  confrontationOsEnabled: ((process.env.EXPO_PUBLIC_CONFRONTATION_OS_ENABLED ?? 'true').toLowerCase() === 'true') as boolean,
 
   /**
    * Feature flag — El Círculo (red social interna: espacios, eventos con RSVP,

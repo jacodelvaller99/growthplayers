@@ -19,7 +19,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import {
   MEDITATION_CATEGORY_MUSIC,
   MEDITATION_SESSIONS,
-  normanVoiceUrl,
+  meditationPhasesToNarration,
   type MeditationSession,
 } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
@@ -200,11 +200,10 @@ function MeditationPlayer({
       const narration = createNarrationPlayer({
         musicUrl: MEDITATION_CATEGORY_MUSIC[session.category],
         binaural: session.binaural,
-        phases: session.phases.map((p, i) => ({
-          url: normanVoiceUrl(session.id, p, i),
-          duration: p.duration,
-          pauseAfter: p.pauseAfter ?? 0,
-        })),
+        // El helper deriva la pausa de cada fase (duración menos lo que dura
+        // la voz). Con `pauseAfter: 0` el player avanzaba en cuanto acababa el
+        // mp3 y una meditación de 6 minutos se consumía en dos.
+        phases: meditationPhasesToNarration(session),
         onPhaseChange: (i) => {
           setPhaseIdx(i);
           setCurrentPhaseText(session.phases[i].text);

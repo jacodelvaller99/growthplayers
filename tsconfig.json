@@ -2,6 +2,12 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // Permite `import ... from './x.ts'`. Es valido porque este proyecto solo
+    // typechequea (`tsc --noEmit`) y Metro resuelve extensiones explicitas.
+    // Lo necesita el generador de voz: importa los catalogos REALES con el
+    // borrado de tipos de node, y sin extension no los resuelve. La alternativa
+    // era mantener una segunda copia de los guiones, que se desincroniza.
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": [
         "./*"

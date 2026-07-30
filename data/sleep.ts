@@ -20,7 +20,7 @@ export interface SleepSession {
   segments: SleepSegment[];
 }
 
-import { normanVoiceUrl } from './wellness';
+import { estimateVoiceSeconds, normanVoiceUrl } from './wellness';
 import { SOS_SESSIONS } from './sleep/sos';
 import { STORY_SESSIONS } from './sleep/stories';
 import { NIDRA_SESSIONS } from './sleep/nidra';
@@ -38,24 +38,11 @@ export function getSleepScript(id: string): SleepSession | undefined {
   return SLEEP_SESSIONS.find((s) => s.id === id);
 }
 
-/**
- * Segundos que tarda Norman en leer un texto, estimados por longitud.
- *
- * POR QUÉ EXISTE: `SleepSegment` solo declara `pauseAfter` (el silencio que
- * sigue), no cuánto dura la voz. El player de narración necesita una duración
- * total por fase como plan B: si el mp3 no dispara `didJustFinish` (red lenta,
- * archivo corrupto), la sesión avanza igual en vez de congelarse.
- *
- * La constante sale de medir los 23 mp3 reales de La Inmersión generados a
- * velocidad 1.06: ~14 caracteres por segundo en español. Se redondea hacia
- * arriba y se le da un piso, porque quedarse corto es peor que pasarse — si
- * el timer vence antes de que la voz termine, corta a Norman a media frase.
- */
-export function estimateVoiceSeconds(text: string): number {
-  const CHARS_PER_SECOND = 14;
-  const FLOOR_SECONDS = 3;
-  return Math.max(FLOOR_SECONDS, Math.ceil(text.length / CHARS_PER_SECOND));
-}
+// `estimateVoiceSeconds` vive en ./wellness y se re-exporta aquí por
+// comodidad de los consumidores de Sueño. Una sola definición para Sueño y
+// Meditación: si divergieran, el reparto de pausas de cada práctica se
+// calcularía con constantes distintas y sonarían a ritmos distintos.
+export { estimateVoiceSeconds } from './wellness';
 
 /**
  * Convierte los segmentos de un guión de sueño en fases listas para
