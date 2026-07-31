@@ -490,3 +490,76 @@ export function computeCoachIntelligence(bundle: CoachBundle): CoachIntelligence
     narrative,
   };
 }
+
+// ─── Vista cliente ────────────────────────────────────────────────────────────
+
+export interface ClientNarrative {
+  /** Cómo viene la semana, en estado crudo (para estilar, no para mostrar). */
+  momentum: MomentumState;
+  /** Titular en SEGUNDA persona. Le habla al usuario, no sobre él. */
+  headline: string;
+  /** Por qué importa hoy. Sin cifras de riesgo, sin jerga de coaching. */
+  why: string;
+}
+
+/**
+ * Lo único de la inteligencia de coaching que puede ver el propio usuario.
+ *
+ * POR QUÉ NO ES UN PASSTHROUGH: `next_action.what_to_say` y `why_now` están
+ * escritos en TERCERA persona y dirigidos al coach ("Lleva 5 días sin
+ * escribir", "Pregúntale qué pasó con su semana"), y en la rama de biometría
+ * `why_now` llega a incrustar `coach_safe_summary` — que es explícitamente
+ * material de mentor. Reenviarlos al cliente sería a la vez una fuga y un
+ * texto que se lee como vigilancia. Por eso aquí se REDACTA de nuevo a partir
+ * de `kind` + `momentum.state`, las dos únicas señales sin contenido sensible.
+ *
+ * Whitelist estricta, igual que `clientSafeProfile` (memoryLogic.ts:260) y
+ * `clientSafeTasks` (mentorExecutionLogic.ts:371). NUNCA salen de aquí:
+ * `churn_risk`, `composite_score`, `drivers`, `narrative`, `relational`,
+ * `what_to_say` ni `why_now`.
+ */
+export function clientSafeNarrative(ci: CoachIntelligence): ClientNarrative {
+  const momentum = ci.momentum.state;
+
+  // El `kind` manda sobre el momentum: si el cuerpo pide descanso, celebrar el
+  // ascenso sería empujar a alguien que justo necesita frenar.
+  switch (ci.next_action.kind) {
+    case 'rest_signal':
+      return {
+        momentum,
+        headline: 'Tu cuerpo está pidiendo bajar carga.',
+        why: 'Hoy no toca empujar. Mueve tu tarea más exigente un par de días y protege el descanso — eso también es ejecutar.',
+      };
+    case 'celebrate':
+      return {
+        momentum,
+        headline: 'Esta semana vas hacia arriba.',
+        why: 'Lo que estás haciendo está funcionando. Vale la pena que nombres qué cambió: lo que se nombra se puede repetir.',
+      };
+    case 'confront':
+      return {
+        momentum,
+        headline: 'Hay algo que dijiste y quedó abierto.',
+        why: 'No es un reproche: un compromiso sin cerrar consume atención en segundo plano. Ciérralo o cámbialo, pero sácalo del limbo.',
+      };
+    case 'reconnect':
+      return {
+        momentum,
+        headline: 'Llevas un tiempo fuera del sistema.',
+        why: 'Volver no exige ponerte al día con nada. Un check-in de hoy vale más que reconstruir la semana que pasó.',
+      };
+    case 'support':
+      return {
+        momentum,
+        headline: 'Tienes más frentes abiertos de los que caben.',
+        why: 'La sobrecarga se parece a la falta de disciplina, pero no lo es. Elige uno y suelta el resto sin culpa.',
+      };
+    case 'investigate':
+    default:
+      return {
+        momentum,
+        headline: momentum === 'rising' ? 'Vas sostenido.' : 'Semana en curso.',
+        why: 'Sin señales fuertes en ningún sentido. Es buen momento para avanzar en lo que ya tenías planeado.',
+      };
+  }
+}

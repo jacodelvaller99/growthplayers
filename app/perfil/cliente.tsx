@@ -18,6 +18,8 @@ import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { fetchLatestSummaries, fetchMemoryProfile, type MemoryProfile, type MemorySummaryRow } from '@/lib/memory';
 import { clientSafeProfile } from '@/lib/memoryLogic';
+import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
+import { clientSafeNarrative, type ClientNarrative } from '@/lib/coachIntelligenceLogic';
 import { fetchTasks, updateTask, type MentorTask } from '@/lib/mentorExecution';
 import { clientProgress, clientSafeTasks, pendingAccountability, type ClientTaskView } from '@/lib/mentorExecutionLogic';
 import { refreshAndFetchInsight, saveReflection, type InsightRow, type ReflectionInput } from '@/lib/biometric';
@@ -41,12 +43,13 @@ export default function ClienteMemoriaScreen() {
   const [summaries, setSummaries] = useState<MemorySummaryRow[]>([]);
   const [tasks, setTasks] = useState<MentorTask[]>([]);
   const [insight, setInsight] = useState<InsightRow | null>(null);
+  const [narrative, setNarrative] = useState<ClientNarrative | null>(null);
   const [reflBusy, setReflBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
-    const [p, s, t, ins] = await Promise.all([
+    const [p, s, t, ins, ci] = await Promise.all([
       fetchMemoryProfile(userId),
       fetchLatestSummaries(userId, 8),
       fetchTasks(userId),
@@ -54,11 +57,18 @@ export default function ClienteMemoriaScreen() {
       // no tenia ningun llamador, asi que con datos reales esta tabla se
       // quedaba vacia y esta tarjeta no mostraba nada nunca.
       refreshAndFetchInsight(userId),
+      // El motor de inteligencia de coaching, girado hacia el usuario. Sus
+      // fuentes admin-only (scores, cola de intervención) simplemente vuelven
+      // vacías por RLS y el cómputo degrada — por eso se puede llamar desde
+      // aquí sin abrir nada. `clientSafeNarrative` es el filtro obligatorio:
+      // el objeto crudo lleva churn, drivers y el guion del coach.
+      fetchCoachIntelligence(userId).catch(() => null),
     ]);
     setProfile(clientSafeProfile(p));
     setSummaries(s);
     setTasks(t);
     setInsight(ins);
+    setNarrative(ci ? clientSafeNarrative(ci.ci) : null);
     setLoading(false);
   }, [userId]);
   useEffect(() => { load(); }, [load]);
@@ -129,6 +139,14 @@ export default function ClienteMemoriaScreen() {
               onDone={markAccountabilityDone}
               onSkip={skipAccountability}
             />
+          )}
+
+          {narrative && (
+            <GoldAccentCard style={s.narrativeCard}>
+              <Text style={s.label}>CÓMO VIENE TU SEMANA</Text>
+              <Text style={s.narrativeHead}>{narrative.headline}</Text>
+              <Text style={s.narrativeWhy}>{narrative.why}</Text>
+            </GoldAccentCard>
           )}
 
           <ProfileSynopsisCard profile={profile} variant="client" />
@@ -260,6 +278,9 @@ const s = StyleSheet.create({
   intro: { ...typography.body, color: palette.ash, marginBottom: spacing.lg },
   card: { gap: spacing.sm, marginBottom: spacing.md },
   label: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
+  narrativeCard: { gap: spacing.sm, marginBottom: spacing.lg },
+  narrativeHead: { ...typography.section, color: palette.ivory, fontSize: 14 },
+  narrativeWhy: { ...typography.body, color: palette.ash },
   winRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   winText: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 19, flex: 1 },
   nextTitle: { ...typography.body, color: palette.ivory, fontSize: 15, lineHeight: 21 },
