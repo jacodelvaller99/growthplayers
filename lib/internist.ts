@@ -300,17 +300,16 @@ export async function streamInternistResponse(
     }
   };
 
-  const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+  // Los cuatro eslabones van por el ai-proxy (las claves son secrets del
+  // servidor: un EXPO_PUBLIC_* se inlinea en el bundle y queda a la vista en
+  // devtools). Sin proxy no existe ninguno — misma condición para todos.
+  const viaProxy = Boolean(ENV.aiProxyUrl);
 
   const chain: Array<[string, boolean, () => Promise<string>]> = [
-    // 1. Claude (vía ai-proxy si está activo).
-    ['anthropic', Boolean(ENV.aiProxyUrl), () => streamAnthropic(messages, sink, internal.signal)],
-    // 2. NVIDIA (web requiere ai-proxy por CORS).
-    ['nvidia', Boolean(ENV.aiProxyUrl || (ENV.nvidiaApiKey && !isWeb)), () => streamNvidia(messages, sink, internal.signal)],
-    // 3. Groq.
-    ['groq', Boolean(ENV.groqApiKey || ENV.aiProxyUrl), () => streamGroq(messages, sink, internal.signal)],
-    // 4. OpenAI (descarta si la "clave openai" es en realidad de Groq).
-    ['openai', Boolean((ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) || ENV.aiProxyUrl), () => streamOpenAI(messages, sink, internal.signal)],
+    ['anthropic', viaProxy, () => streamAnthropic(messages, sink, internal.signal)],
+    ['nvidia', viaProxy, () => streamNvidia(messages, sink, internal.signal)],
+    ['groq', viaProxy, () => streamGroq(messages, sink, internal.signal)],
+    ['openai', viaProxy, () => streamOpenAI(messages, sink, internal.signal)],
   ];
 
   for (const [name, enabled, run] of chain) {
@@ -322,7 +321,7 @@ export async function streamInternistResponse(
   // (quiet luxury); la causa real va a observabilidad para que el equipo la vea.
   logSilentError(
     'internist.noProvider',
-    new Error('Sin proveedor de IA: configura el ai-proxy (secret + EXPO_PUBLIC_AI_PROXY_URL) o una clave de proveedor.'),
+    new Error('Sin proveedor de IA: configura el ai-proxy (secrets del servidor + EXPO_PUBLIC_AI_PROXY_URL).'),
   );
   const msg =
     'El internista educativo no está disponible en este momento. Vuelve a intentarlo en un rato. ' +

@@ -14,7 +14,7 @@ import { ACTIVE_MODULE } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { supabase, db } from '@/lib/supabase';
 import { ENV } from '@/app/config/env';
-import { calcProtocolDay } from '@/lib/utils';
+import { calcProtocolDay, computeStreak } from '@/lib/utils';
 import { enqueueWrite, initOfflineFlush } from '@/lib/offlineQueue';
 import { checkCriticalSchema } from '@/lib/schemaHealth';
 import { resolveEntitlement } from '@/lib/subscription';
@@ -705,7 +705,10 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
 
       // Also update profile with latest score
       try {
-        const streak = next.checkIns.length; // simplified; mentor.tsx computes accurate streak
+        // Racha real. Era `next.checkIns.length` (total histórico), y este es el
+        // valor que el admin lee como proxy de "activo últimos 7 días"
+        // (lib/admin/queries.ts) — con el conteo total nunca volvía a 0.
+        const streak = computeStreak(next.checkIns, now);
         await db.profiles().upsert({
           user_id:         uid,
           sovereign_score: newScore,

@@ -145,7 +145,8 @@ const styles = StyleSheet.create({
   fieldLabel: { ...typography.label, color: palette.smoke, fontSize: 11, letterSpacing: 1 },
   title: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 20, color: palette.ivory, letterSpacing: 1.5, marginTop: spacing.sm },
   sub: { ...typography.body, color: palette.ash, textAlign: 'center', maxWidth: 320 },
-  error: { ...typography.caption, color: palette.danger, fontSize: 13, marginVertical: spacing.xs },
+  // dangerText, no danger: texto a 13pt necesita 4.5:1 (danger da 3.47:1 en oscuro).
+  error: { ...typography.caption, color: palette.dangerText, fontSize: 13, marginVertical: spacing.xs },
   doneBox: { alignItems: 'center', gap: spacing.md, marginTop: spacing.xl, paddingHorizontal: spacing.lg },
   doneText: { ...typography.body, color: palette.ivory, textAlign: 'center' },
   waitText: { ...typography.body, color: palette.ash, textAlign: 'center', lineHeight: 21 },

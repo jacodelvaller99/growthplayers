@@ -96,30 +96,18 @@ export async function streamAdminCopilot(
     { role: 'user', content: userMessage },
   ];
 
-  // 1. Claude (solo vía ai-proxy).
+  // Claude → NVIDIA → Groq → OpenAI, todos vía ai-proxy: las claves son secrets
+  // del servidor (un EXPO_PUBLIC_* se inlinea en el bundle y se lee en
+  // devtools). Sin proxy no existe ningún eslabón.
   if (ENV.aiProxyUrl) {
-    try { return await streamAnthropic(messages, onChunk, signal); }
-    catch (err) { if (isAbort(err)) throw err; /* sigue */ }
-  }
-  // 2. NVIDIA (server-side; web sin proxy no soporta CORS).
-  const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
-  if (ENV.aiProxyUrl || (ENV.nvidiaApiKey && !isWeb)) {
-    try { return await streamNvidia(messages, onChunk, signal); }
-    catch (err) { if (isAbort(err)) throw err; }
-  }
-  // 3. Groq.
-  if (ENV.groqApiKey || ENV.aiProxyUrl) {
-    try { return await streamGroq(messages, onChunk, signal); }
-    catch (err) { if (isAbort(err)) throw err; }
-  }
-  // 4. OpenAI (skip si la clave es de Groq mal configurada).
-  if ((ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) || ENV.aiProxyUrl) {
-    try { return await streamOpenAI(messages, onChunk, signal); }
-    catch (err) { if (isAbort(err)) throw err; }
+    for (const stream of [streamAnthropic, streamNvidia, streamGroq, streamOpenAI]) {
+      try { return await stream(messages, onChunk, signal); }
+      catch (err) { if (isAbort(err)) throw err; /* sigue */ }
+    }
   }
 
   // Sin proveedor: degradación honesta.
-  const msg = 'No hay un proveedor de IA configurado para el copiloto. Activa el ai-proxy (EXPO_PUBLIC_AI_PROXY_URL) o una clave de IA.';
+  const msg = 'No hay un proveedor de IA configurado para el copiloto. Activa el ai-proxy (EXPO_PUBLIC_AI_PROXY_URL).';
   onChunk(msg);
   return msg;
 }

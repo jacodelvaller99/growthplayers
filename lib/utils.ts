@@ -17,6 +17,43 @@ export function calcProtocolDay(fromIso: string): number {
   return Math.min(diffDays(fromIso), 90);
 }
 
+/**
+ * Racha real: días calendario CONSECUTIVOS hacia atrás desde `today` con
+ * check-in registrado. Un hueco corta — si el último check-in fue anteayer,
+ * la racha es 0.
+ *
+ * POR QUÉ vive aquí: las pantallas mostraban `Math.max(checkIns.length,
+ * protocolDay)`, que crece SOLO con el calendario (los check-ins remotos vienen
+ * capados a 30 y protocolDay llega a 90, así que desde el día 31 devolvía
+ * siempre días de calendario). Alguien que abandonó el día 3 veía "Racha 47"
+ * con icono de llama. Este producto confronta al usuario con sus datos; si el
+ * dato miente, no hay confrontación posible.
+ *
+ * CLAVE DE DÍA = los 10 primeros chars, en UTC. `state.checkIns` mezcla dos
+ * formatos — el ISO completo que escribe el cliente (`now.toISOString()`) y el
+ * DATE plano de Supabase (`todayDateStr()`, también derivado de `toISOString`)
+ * — y AMBOS son claves UTC. Recorrer en hora local desalinearía el cursor de
+ * los datos: un check-in de las 20:00 en Bogotá (UTC-5) se guarda ya con la
+ * fecha UTC del día siguiente, y la racha lo daría por no hecho.
+ *
+ * El paso son 24 h exactas sobre el timestamp (no `setDate`), para que un
+ * cambio de horario de verano no salte ni repita un día UTC.
+ *
+ * `today` es parámetro (default `new Date()`) para poder testear sin fake timers.
+ */
+export function computeStreak(checkIns: { date: string }[], today: Date = new Date()): number {
+  if (!checkIns?.length) return 0;
+  const days = new Set(checkIns.map((c) => c.date.slice(0, 10)));
+  let streak = 0;
+  let cursor = today.getTime();
+  // Termina en el primer día sin check-in; el Set es finito, no hay bucle infinito.
+  while (days.has(new Date(cursor).toISOString().slice(0, 10))) {
+    streak++;
+    cursor -= 86_400_000;
+  }
+  return streak;
+}
+
 // ─── Sovereign Score v2 ───────────────────────────────────────────────────────
 
 export interface SovereignScoreInput {

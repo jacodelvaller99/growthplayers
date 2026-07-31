@@ -22,10 +22,11 @@ Legend — **Status**: 🔴 confirmed defect in code · 🟠 high-risk, needs ru
 ## BLOCKER-02 — AI provider API keys shipped in the web bundle
 
 - **Flow:** M17 (security).
-- **Status:** 🔴 confirmed.
-- **Evidence:** `app/config/env.ts:10-16` reads `EXPO_PUBLIC_NVIDIA_API_KEY`, `EXPO_PUBLIC_GROQ_API_KEY`, `EXPO_PUBLIC_OPENAI_API_KEY`. `EXPO_PUBLIC_*` vars are inlined at build time. They are used directly in client fetches (`lib/groq.ts:33` `Authorization: Bearer ${ENV.groqApiKey}`).
-- **Failure mode:** Anyone who opens DevTools on the deployed web app (Vercel) can read the raw Groq/OpenAI keys from the JS bundle and drain your quota / run up cost. This is a credential-exposure incident waiting to happen at launch.
-- **Fix before launch:** proxy AI calls through a Supabase Edge Function (server-side key), as is already done for `sync-wearables`/`delete-account`. At minimum, restrict keys by referrer/usage caps and rotate immediately after any public deploy.
+- **Status:** ✅ **CERRADO EN CÓDIGO (2026-07-31)** — queda un handoff operativo, ahora bloqueante.
+- **Evidence (histórica):** `app/config/env.ts` leía `EXPO_PUBLIC_NVIDIA_API_KEY`, `EXPO_PUBLIC_GROQ_API_KEY`, `EXPO_PUBLIC_OPENAI_API_KEY`. Las `EXPO_PUBLIC_*` se inlinean en build y se usaban en fetches de cliente (`lib/groq.ts` `Authorization: Bearer ...ENV.groqApiKey`).
+- **Failure mode:** cualquiera con DevTools en la PWA desplegada leía las claves del bundle y consumía la cuota / generaba coste contra la cuenta del dueño.
+- **Qué se hizo:** las tres variables se **eliminaron** de `app/config/env.ts` y de los cuatro proveedores. Se replicó el patrón de `lib/anthropic.ts`: sin `ENV.aiProxyUrl` el eslabón sencillamente no existe — no queda camino client-side que reactivar. Se quitó además el fallback proxy→directo, que reintroducía la exposición justo cuando el proxy fallaba.
+- **⚠ Handoff que AHORA ES BLOQUEANTE:** sin `EXPO_PUBLIC_AI_PROXY_URL` la app cae en **simulación pre-programada**, no en IA real — antes las claves client-side tapaban ese hueco. Hace falta: (1) los secrets `ANTHROPIC_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY`/`OPENAI_API_KEY` en Supabase, (2) `EXPO_PUBLIC_AI_PROXY_URL` en Vercel y EAS, (3) **ROTAR las tres claves viejas** — siguen vivas en cualquier bundle publicado antes de esta fecha.
 
 ---
 

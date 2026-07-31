@@ -36,7 +36,7 @@ import {
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
 
 // ─── Score tier helpers ───────────────────────────────────────────────────────
 
@@ -109,7 +109,9 @@ export default function PerfilSoberanoScreen() {
     clarity:          averages.clarity ?? 0,
     stress:           averages.stress ?? 5,
     sleep:            averages.sleep ?? 0,
-    streak:           state.checkIns.length,
+    // Racha real: el bonus de racha del score premia días CONSECUTIVOS, no el
+    // total histórico de check-ins (que nunca decrece).
+    streak:           computeStreak(state.checkIns),
     completedLessons: (state.completedLessons ?? []).length,
     completedTasks:   Object.keys(state.completedTasks ?? {}).length,
     wellnessMeditation,

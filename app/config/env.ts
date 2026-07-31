@@ -6,22 +6,22 @@ export const ENV = {
   /** true en desarrollo (Metro / Expo Go), false en build de producción */
   isDev: __DEV__ as boolean,
 
-  /** NVIDIA NIM API key – usada para meta/llama-3.3-70b-instruct */
-  nvidiaApiKey: (process.env.EXPO_PUBLIC_NVIDIA_API_KEY ?? '') as string,
-
-  /** Groq API key – qwen/qwen3-32b con reasoning (segundo en la cadena) */
-  groqApiKey: (process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '') as string,
-
-  /** OpenAI API key – fallback final si NVIDIA y Groq fallan */
-  openaiApiKey: (process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '') as string,
+  // Aquí vivían `nvidiaApiKey` / `groqApiKey` / `openaiApiKey`, leídas de
+  // EXPO_PUBLIC_*. Eliminadas: todo lo que lleva ese prefijo se INLINEA en el
+  // bundle, así que la clave viajaba en texto plano al navegador de cada
+  // usuario — abrir devtools bastaba para copiarla y facturar contra la cuenta
+  // del dueño. Las claves de IA son ahora secrets de la edge function
+  // `ai-proxy`; el único interruptor client-side es `aiProxyUrl`.
 
   /** RevenueCat SDK key (iOS o Android según plataforma) */
   revenueCatApiKey: (process.env.EXPO_PUBLIC_REVENUECAT_KEY ?? '') as string,
 
   /**
-   * URL del ai-proxy (Edge Function) — si está seteada, el chat del mentor y la
-   * transcripción Whisper van por el servidor (las claves de IA dejan de usarse
-   * en el cliente). Ej: https://<ref>.supabase.co/functions/v1/ai-proxy
+   * URL del ai-proxy (Edge Function). Es el ÚNICO camino a la IA: el chat del
+   * mentor, el internista, el copiloto admin y la transcripción Whisper pasan
+   * por el servidor, donde viven las claves. Sin esta variable no hay ningún
+   * proveedor disponible — deliberado, no un fallback roto.
+   * Ej: https://<ref>.supabase.co/functions/v1/ai-proxy
    */
   aiProxyUrl: (process.env.EXPO_PUBLIC_AI_PROXY_URL ?? '') as string,
 

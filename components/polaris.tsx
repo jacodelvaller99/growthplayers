@@ -561,6 +561,9 @@ export function ScaleSelector({
             key={item}
             accessibilityLabel={`${label} ${item}`}
             accessibilityRole="button"
+            // Eran 10 botones sin decir cuál está elegido: el lector de pantalla
+            // leía "Energía 1 … Energía 10" sin marcar el valor actual.
+            accessibilityState={{ selected: item === value }}
             onPress={() => {
               Haptics.selectionAsync();
               onChange(item);
@@ -628,6 +631,11 @@ export function PrimaryButton({ label, icon, onPress, disabled }: { label: strin
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
+        // `disabled` solo bajaba la opacidad: el lector de pantalla anunciaba como
+        // accionable un CTA que no lo era, y el Pressable seguía disparando eventos.
+        // El guard de handlePress no basta — la promesa tiene que llegar al árbol.
+        disabled={disabled}
+        accessibilityState={{ disabled: !!disabled }}
         onPress={handlePress}
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
@@ -674,7 +682,7 @@ export function DangerButton({ label, icon, onPress }: { label: string; icon?: I
       onPress={onPress}
       style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}>
       <Text style={styles.dangerButtonText}>{label}</Text>
-      {icon ? <MaterialIcons name={icon} color={palette.danger} size={18} /> : null}
+      {icon ? <MaterialIcons name={icon} color={palette.dangerText} size={18} /> : null}
     </Pressable>
   );
 }
@@ -1203,8 +1211,15 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: 2,
   },
+  // Con flex:1 puro los 10 pasos se repartían el ancho disponible: 26.7px por paso
+  // a 375px de pantalla y 21.2px a 320px — muy por debajo de los 44pt de la regla
+  // del proyecto. Son 4 selectores × 10 pasos = 40 objetivos que el usuario toca a
+  // diario, y un toque errado ensucia el dato que alimenta a Norman.
+  // minWidth pone el suelo y flexWrap deja que baje de fila en vez de encogerse;
+  // en escritorio (≥476px de contenido) los 10 siguen cabiendo en una sola fila.
   scaleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 4,
   },
   scaleStep: {
@@ -1215,6 +1230,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     justifyContent: 'center',
+    minWidth: 44,
   },
   scaleStepActive: {
     backgroundColor: palette.gold,
@@ -1285,7 +1301,7 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: {
     ...typography.section,
-    color: palette.danger,
+    color: palette.dangerText,   // etiqueta a 11pt: necesita 4.5:1, no 3:1
     fontSize: 11,
   },
 

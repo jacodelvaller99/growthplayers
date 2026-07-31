@@ -7,6 +7,7 @@ import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { PolarisLogo } from '@/components/PolarisLogo';
+import { computeStreak } from '@/lib/utils';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -54,7 +55,9 @@ export function DesktopSidebar() {
   const { state, protocolDay } = useLifeFlow();
   const { mode, setMode, canToggle } = useAppTheme();
 
-  const streak   = Math.max(state.checkIns.length, protocolDay);
+  // Racha real (días consecutivos con check-in). El `Math.max(..., protocolDay)`
+  // anterior crecía con el calendario aunque el usuario no registrara nada.
+  const streak   = computeStreak(state.checkIns);
   const initial  = (state.profile.name ?? 'U')[0].toUpperCase();
   const tier     = TIER_LABEL[state.subscriptionTier] ?? 'OPERADOR';
 

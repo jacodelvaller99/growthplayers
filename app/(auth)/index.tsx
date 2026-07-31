@@ -286,8 +286,9 @@ export default function AuthScreen() {
         {/* ── Feedback ── */}
         {!!error && (
           <View style={styles.feedbackBox} accessibilityRole="alert" accessibilityLiveRegion="assertive">
-            <MaterialIcons name="error-outline" size={16} color={palette.danger} />
-            <Text style={[styles.feedbackText, { color: palette.danger }]}>{error}</Text>
+            {/* dangerText, no danger: el mensaje es texto a 13pt y necesita 4.5:1. */}
+            <MaterialIcons name="error-outline" size={16} color={palette.dangerText} />
+            <Text style={[styles.feedbackText, { color: palette.dangerText }]}>{error}</Text>
           </View>
         )}
         {!!success && (
@@ -312,7 +313,11 @@ export default function AuthScreen() {
 
         {/* ── Secondary links ── */}
         {mode === 'login' && (
-          <Pressable onPress={() => reset('forgot')} style={styles.linkWrap}>
+          <Pressable
+            onPress={() => reset('forgot')}
+            accessibilityRole="button"
+            accessibilityLabel="¿Olvidaste tu contraseña? Recuperar acceso"
+            style={styles.linkWrap}>
             <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
           </Pressable>
         )}

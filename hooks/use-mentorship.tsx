@@ -25,6 +25,7 @@ import { makeMinimalContext, updateProfileFromSummary } from '@/lib/memorySummar
 import { createTasksFromActionPlan } from '@/lib/mentorExecution';
 import { requestNotificationPermissions, scheduleAccountabilityFollowup } from '@/services/notifications';
 import { supabase } from '@/lib/supabase';
+import { computeStreak } from '@/lib/utils';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { currentWeekNumber } from '@/data/mentorship';
 
@@ -193,7 +194,9 @@ function buildContext(
     userName: state.profile.name ?? 'Operador',
     role: state.profile.role ?? 'Empresario',
     totalDays: protocolDay,
-    streak: Math.max(state.checkIns.length, protocolDay),
+    // Racha real: Norman le dice este número al cliente. Con el `Math.max`
+    // anterior confrontaba con un dato inflado por el calendario.
+    streak: computeStreak(state.checkIns),
     sovereignScore: 0,
     tier: state.subscriptionTier,
     activeModuleTitle: '',

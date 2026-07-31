@@ -12,11 +12,10 @@
 jest.mock('@/app/config/env', () => ({
   ENV: {
     isDev: false,
-    nvidiaApiKey: 'nv-test',
-    groqApiKey: 'gq-test',
-    openaiApiKey: 'sk-test',
     revenueCatApiKey: '',
-    aiProxyUrl: 'https://proxy.test', // con proxy → los 4 eslabones habilitados
+    // El proxy es el ÚNICO camino a la IA (las claves son secrets del
+    // servidor). Con proxy → los 4 eslabones habilitados.
+    aiProxyUrl: 'https://proxy.test',
   },
 }));
 jest.mock('@/lib/anthropic', () => ({ streamAnthropic: jest.fn() }));

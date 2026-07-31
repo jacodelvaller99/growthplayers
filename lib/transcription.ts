@@ -1,17 +1,13 @@
 // ─── Transcripción de audio — OpenAI Whisper ─────────────────────────────────
 // Pipeline de mentoría: audio de sesión → transcripción → Norman redacta notas.
 //
-// Dos caminos:
-//   1. ai-proxy (EXPO_PUBLIC_AI_PROXY_URL seteada) — la key vive en el servidor
-//      (supabase/functions/ai-proxy, ruta /transcribe). Preferido.
-//   2. Directo (transicional) — usa EXPO_PUBLIC_OPENAI_API_KEY en el cliente,
-//      misma línea client-side del resto de la capa IA.
+// UN solo camino: el ai-proxy (supabase/functions/ai-proxy, ruta /transcribe),
+// donde vive la clave de OpenAI. El camino directo que existía leía
+// EXPO_PUBLIC_OPENAI_API_KEY, y todo lo EXPO_PUBLIC_* se inlinea en el bundle:
+// la clave acababa en el navegador del usuario, copiable desde devtools.
 
 import { Platform } from 'react-native';
 import { ENV } from '@/app/config/env';
-
-const OPENAI_TRANSCRIPTIONS = 'https://api.openai.com/v1/audio/transcriptions';
-const MODEL = 'whisper-1';
 
 /** Fuente de audio aceptada: un URI `file://` / `blob:` (RN) o un Blob (web). */
 export type AudioSource = string | Blob;
@@ -56,7 +52,7 @@ function guessMime(name: string): string {
  * `Blob` (web). En nativo, React Native permite adjuntar `{ uri, name, type }`
  * directamente al FormData sin leer el archivo a memoria.
  *
- * @throws Error si no hay API key o si la API responde con error.
+ * @throws Error si el ai-proxy no está configurado o responde con error.
  */
 export async function transcribeAudio(
   source: AudioSource,
@@ -82,50 +78,20 @@ export async function transcribeAudio(
   throw lastErr;
 }
 
-/** Un único intento de transcripción (proxy o directo). FormData fresco por intento. */
+/** Un único intento de transcripción (siempre vía proxy). FormData fresco por intento. */
 async function attemptTranscribe(
   source: AudioSource,
   fileName: string,
   options: TranscribeOptions,
 ): Promise<string> {
-  // ── Camino proxy (clave server-side) ──────────────────────────────────────
-  if (ENV.aiProxyUrl) {
-    const { proxyTranscribeFetch } = await import('./aiProxy');
-    const form = new FormData();
-    if (options.language) form.append('language', options.language);
-    await appendAudio(form, source, fileName);
-    return proxyTranscribeFetch(form, options.signal);
+  if (!ENV.aiProxyUrl) {
+    throw new Error('La transcripción requiere ai-proxy (EXPO_PUBLIC_AI_PROXY_URL no configurada).');
   }
-
-  // ── Camino directo (transicional, requiere clave en el cliente) ───────────
-  if (!ENV.openaiApiKey) {
-    throw new Error('OpenAI API key ausente — no se puede transcribir.');
-  }
-
+  const { proxyTranscribeFetch } = await import('./aiProxy');
   const form = new FormData();
-  form.append('model', MODEL);
-  form.append('response_format', 'text');
   if (options.language) form.append('language', options.language);
   await appendAudio(form, source, fileName);
-
-  const response = await fetch(OPENAI_TRANSCRIPTIONS, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${ENV.openaiApiKey}`,
-      // No fijar Content-Type: el runtime añade el boundary del multipart.
-    },
-    body: form,
-    signal: options.signal,
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`Whisper API ${response.status}: ${body}`);
-  }
-
-  // response_format=text → cuerpo es texto plano.
-  const text = await response.text();
-  return text.trim();
+  return proxyTranscribeFetch(form, options.signal);
 }
 
 /** Error con name 'AbortError' (DOMException no siempre existe en Hermes). */
@@ -142,7 +108,8 @@ function abortError(): Error {
 function isNonRetryable(err: unknown): boolean {
   if ((err as Error)?.name === 'AbortError') return true;
   const msg = (err as Error)?.message ?? '';
-  if (/API key ausente/.test(msg)) return true;
+  // Falta de configuración (sin proxy) — reintentar 3 veces no la arregla.
+  if (/requiere ai-proxy/.test(msg)) return true;
   const m = msg.match(/(\d{3})/);
   if (m) {
     const code = parseInt(m[1], 10);

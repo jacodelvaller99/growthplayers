@@ -80,7 +80,9 @@ npx expo export --platform web   # outputs dist/ — must complete without error
 **Config freeze verification (manual, high-value — these have bitten this project's config):**
 - [ ] `app.json` → `extra.eas.projectId` is a **real UUID**, not the `0000…` placeholder. If still placeholder, run `eas init` first.
 - [ ] `.env.local` (local) and **Vercel env vars** (web) point to the **production** Supabase URL `https://bizbbtiyftfjufxinwsu.supabase.co` — not `your-project.supabase.co`. (If URL is a placeholder, the app silently `signInAnonymously()` as a dev bypass — see `hooks/use-lifeflow.tsx:362`. That must NOT happen in prod.)
-- [ ] At least one AI key (`EXPO_PUBLIC_GROQ_API_KEY` / `NVIDIA` / `OPENAI`) is set in the web (Vercel) and EAS build env. With none, mentor falls back to canned dev simulation (`lib/mentor.ts:645` / `:688`) — functional but not real AI.
+- [ ] **`EXPO_PUBLIC_AI_PROXY_URL` está seteada** en Vercel y en el env de build de EAS. Es la **única** vía de IA: las claves `EXPO_PUBLIC_{NVIDIA,GROQ,OPENAI}_API_KEY` ya no existen (eliminadas el 2026-07-31 por exponerse en el bundle). Sin esta variable el mentor cae en **simulación pre-programada** — funciona, pero no es IA real.
+- [ ] Los 4 secrets de proveedor están en **Supabase** (no en env de cliente): `ANTHROPIC_API_KEY`, `NVIDIA_API_KEY`, `GROQ_API_KEY`, `OPENAI_API_KEY`. Verificar: `supabase secrets list`.
+- [ ] **Claves viejas ROTADAS.** Las tres `EXPO_PUBLIC_*` siguen vivas en cualquier bundle publicado antes del 2026-07-31.
 - [ ] Supabase Edge secrets are set in the **Supabase** project (not in client env): `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` (embeddings), Oura/WHOOP client id+secret if wearables are in scope. Verify: `supabase secrets list`.
 - [ ] All migrations applied to prod (`supabase db push` is current). pg_cron + pg_net extensions enabled, and `app.supabase_url` / `app.service_role_key` DB settings configured (cron jobs read them — `20260502000001_cron_jobs.sql`).
 

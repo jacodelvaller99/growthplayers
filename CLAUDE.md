@@ -58,13 +58,24 @@ supabase functions deploy ml-dashboard
 ```
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
-EXPO_PUBLIC_NVIDIA_API_KEY=        # Primary AI (NVIDIA NIM)
-EXPO_PUBLIC_GROQ_API_KEY=          # Secondary AI (Groq)
-EXPO_PUBLIC_OPENAI_API_KEY=        # Fallback AI + Whisper (transcripción de sesiones de mentoría)
+EXPO_PUBLIC_AI_PROXY_URL=          # ⚠ REQUERIDA — sin ella NO hay IA (ver abajo)
 EXPO_PUBLIC_REVENUECAT_KEY=        # Subscriptions
 ```
 
 All are `EXPO_PUBLIC_*` (inlined at build time, client-side only). Defined in `app/config/env.ts`.
+
+> **Ya NO existen `EXPO_PUBLIC_{NVIDIA,GROQ,OPENAI}_API_KEY`.** Eran claves de
+> pago inlineadas en el bundle: cualquiera abría devtools en la PWA y facturaba
+> contra la cuenta del dueño. Se eliminaron de `app/config/env.ts` y de los
+> cuatro proveedores; el patrón es ahora el de `lib/anthropic.ts` — sin
+> `aiProxyUrl` el eslabón simplemente no existe, no hay camino client-side.
+>
+> **Consecuencia de release:** sin `EXPO_PUBLIC_AI_PROXY_URL` en Vercel/EAS la
+> app entra en **simulación pre-programada**, no en IA real. Antes las claves
+> client-side tapaban ese agujero. El handoff pasa de "recomendado" a
+> **bloqueante**: secrets `ANTHROPIC_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY`/
+> `OPENAI_API_KEY` en Supabase + la env var en Vercel, y **rotar las tres claves
+> viejas** — siguen vivas en los bundles ya desplegados.
 
 > **Install note:** always use `npm install --legacy-peer-deps` (required by peer dep conflicts in react-native-purchases + expo 54).
 
@@ -117,9 +128,14 @@ Streaming chat with a **4-level fallback chain**:
 1. **Claude Sonnet 4.6** (`claude-sonnet-4-6`) — PRIMARY. Solo vía ai-proxy (la clave
    `ANTHROPIC_API_KEY` es secret del servidor; NO existe camino client-side — deliberado).
    Sin `EXPO_PUBLIC_AI_PROXY_URL`, este eslabón se salta.
-2. **NVIDIA NIM** (`deepseek-ai/deepseek-v4-pro`) — native; web only via ai-proxy
+2. **NVIDIA NIM** (`deepseek-ai/deepseek-v4-pro`)
 3. **Groq** (`llama-3.3-70b-versatile`)
 4. **OpenAI** (`gpt-4o-mini`) — final fallback
+
+**Los CUATRO eslabones pasan por ai-proxy.** Ya no hay camino client-side para
+ninguno: sin `aiProxyUrl` la cadena entera se salta y `streamMentorResponse`
+cae a la simulación local. Es deliberado — una clave de pago en el bundle es
+dinero de otro.
 
 **ai-proxy (server-side keys):** `supabase/functions/ai-proxy` (deployed) proxies chat (SSE passthrough) + Whisper with JWT auth and server-held provider keys. The client opts in via `EXPO_PUBLIC_AI_PROXY_URL`; without it, the direct client-key path runs unchanged (transitional). Activation requires the `NVIDIA_API_KEY`/`GROQ_API_KEY`/`OPENAI_API_KEY` secrets in the Supabase dashboard + the env var in Vercel, then rotate the old client keys.
 
@@ -129,7 +145,7 @@ Each provider has its own module — `lib/nvidia.ts`, `lib/groq.ts`, `lib/openai
 
 **Explicit modes:** `MentorContext.mode?: MentorMode` (`'diagnosis' | 'decision' | 'accountability' | 'reflection'`) lets the operator choose how Norman accompanies. `modePromptBlock(mode)` (pure, tested) injects a focus block into `buildSystemPrompt` (default = adaptive). Mode never overrides the SEGURIDAD/crisis routing. UI: chip selector above the input in `app/(tabs)/mentor.tsx`.
 
-**Voice transcription — `lib/transcription.ts`:** records a mentorship session (audio) and POSTs it to OpenAI Whisper (`whisper-1`); the transcript is then fed back through `streamMentorResponse` so Norman drafts structured session notes + a 3–5 item action plan, persisted to `mentorship_sessions` (see Mentorship below). Uses `EXPO_PUBLIC_OPENAI_API_KEY` client-side today — moving it server-side is on the roadmap.
+**Voice transcription — `lib/transcription.ts`:** records a mentorship session (audio) and POSTs it to OpenAI Whisper (`whisper-1`); the transcript is then fed back through `streamMentorResponse` so Norman drafts structured session notes + a 3–5 item action plan, persisted to `mentorship_sessions` (see Mentorship below). Va por `ai-proxy` (Whisper server-side); sin `EXPO_PUBLIC_AI_PROXY_URL` la transcripción no está disponible y `use-mentorship` abre el editor de notas manuales — la sesión nunca se pierde.
 
 > **AI disclosure & safety:** Norman discloses it is AI and routes crisis/self-harm topics to professional help — keep these guardrails when editing the mentor prompt.
 

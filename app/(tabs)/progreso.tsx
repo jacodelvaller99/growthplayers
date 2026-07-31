@@ -33,7 +33,7 @@ import { arcForDay } from '@/lib/narrativeLogic';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
-import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
 import {
   requestNotificationPermissions,
   scheduleCheckinReminder,
@@ -525,13 +525,16 @@ export default function ProgresoScreen() {
     return streak;
   }, [wellnessSessions]);
 
+  // Racha real de check-ins (días consecutivos hacia atrás desde hoy).
+  const checkinStreak = useMemo(() => computeStreak(state.checkIns), [state.checkIns]);
+
   // Sovereign Score v2 — includes wellness bonus
   const score = calcSovereignScore({
     energy:            averages.energy ?? 0,
     clarity:           averages.clarity ?? 0,
     stress:            averages.stress ?? 5,
     sleep:             averages.sleep ?? 0,
-    streak:            state.checkIns.length,
+    streak:            checkinStreak,
     completedLessons:  (state.completedLessons ?? []).length,
     completedTasks:    Object.keys(state.completedTasks ?? {}).length,
     wellnessMeditation,
@@ -593,22 +596,6 @@ export default function ProgresoScreen() {
       coherenceTrend: pctTrend(week.map((c) => Math.round((c.energy + c.clarity) / 2))),
       hasWeek: week.length >= 2,
     };
-  }, [state.checkIns]);
-
-  // Real check-in streak (consecutive days back from today with a check-in)
-  const checkinStreak = useMemo(() => {
-    if (!state.checkIns.length) return 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const set = new Set(state.checkIns.map((c) => c.date.slice(0, 10)));
-    let s = 0;
-    const day = new Date(today);
-    while (s < 365) {
-      if (!set.has(day.toISOString().slice(0, 10))) break;
-      s++;
-      day.setDate(day.getDate() - 1);
-    }
-    return s;
   }, [state.checkIns]);
 
   // Achievements
@@ -854,8 +841,8 @@ export default function ProgresoScreen() {
               <View style={styles.grid}>
                 <MetricCard
                   label="Racha"
-                  value={`${Math.max(state.checkIns.length, protocolDay)}`}
-                  meta="dias activos"
+                  value={`${checkinStreak}`}
+                  meta="dias seguidos"
                   icon="local-fire-department"
                 />
                 <MetricCard
@@ -1239,8 +1226,8 @@ export default function ProgresoScreen() {
           <View style={styles.grid}>
             <MetricCard
               label="Racha"
-              value={`${Math.max(state.checkIns.length, protocolDay)}`}
-              meta="dias activos"
+              value={`${checkinStreak}`}
+              meta="dias seguidos"
               icon="local-fire-department"
             />
             <MetricCard

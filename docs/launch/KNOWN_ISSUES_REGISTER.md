@@ -89,11 +89,12 @@ reverificado uno a uno**. Trátalos como hipótesis, no como estado actual.
 
 ---
 
-### #3 — AI provider keys inlined into the client/web bundle — **S0 (security)**
-- **Where:** `app/config/env.ts:10-16` (`EXPO_PUBLIC_NVIDIA/GROQ/OPENAI_API_KEY`); used directly in `lib/groq.ts:33` (`Authorization: Bearer ${ENV.groqApiKey}`), same for nvidia/openai.
-- **Problem:** `EXPO_PUBLIC_*` is inlined at build time and readable in the deployed JS bundle.
-- **Impact:** Anyone can extract the keys from the Vercel web build and drain quota / incur cost.
-- **Fix:** proxy AI through a Supabase Edge Function (server-side key), like `sync-wearables`/`delete-account`.
+### #3 — AI provider keys inlined into the client/web bundle — **S0 (security)** — ✅ CERRADO 2026-07-31
+- **Where (histórico):** `app/config/env.ts` (`EXPO_PUBLIC_NVIDIA/GROQ/OPENAI_API_KEY`); usadas directamente en `lib/groq.ts`, idem nvidia/openai.
+- **Problem:** `EXPO_PUBLIC_*` se inlinea en build y queda legible en el bundle desplegado.
+- **Impact:** cualquiera extraía las claves del build de Vercel y consumía cuota / generaba coste.
+- **Resuelto:** las tres variables eliminadas de `env.ts` y de los cuatro proveedores; patrón de `lib/anthropic.ts` — sin `aiProxyUrl` el eslabón no existe. Eliminado también el fallback proxy→directo.
+- **⚠ Queda handoff BLOQUEANTE:** setear `EXPO_PUBLIC_AI_PROXY_URL` + los 4 secrets en Supabase, y **rotar las claves viejas** (siguen vivas en bundles ya desplegados). Sin la env var la app usa simulación pre-programada en vez de IA real.
 
 ---
 

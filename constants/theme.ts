@@ -58,8 +58,15 @@ export const palette = {
   // ── Semantic ─────────────────────────────────────────────────────────────────
   success:        '#52A878',
   successMuted:   'rgba(82, 168, 120, 0.15)',
+  // danger = CONSTANTE. Es el token de RELLENO/borde/icono: umbral 3:1 que #C0392B
+  // ya cumple, y hay call sites que concatenan opacidad (`palette.danger + '55'`),
+  // lo que un `var(--c-danger)` rompería silenciosamente. No lo tematices.
   danger:         '#C0392B',
   dangerMuted:    'rgba(192, 57, 43, 0.15)',
+  // danger AS TEXT — themeable, mismo patrón que goldText. #C0392B sobre la tarjeta
+  // oscura (#111111) da 3.47:1 y falla AA (4.5:1) en TODO mensaje de error; el tono
+  // del tema oscuro sube a 5.18:1. En claro pasa de sobra, así que ahí no cambia.
+  dangerText:     cv('--c-danger-text', '#E5564A'),
   warning:        '#D4A017',
   info:           '#3D8FC0',
 

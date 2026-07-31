@@ -33,7 +33,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
-import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { ArcHeader } from '@/components/narrative';
 import { arcForDay } from '@/lib/narrativeLogic';
@@ -222,6 +222,10 @@ export default function DashboardScreen() {
     width: `${engagementWidth.value}%` as unknown as number,
   }));
 
+  // Racha real = días consecutivos con check-in. Antes era
+  // `Math.max(checkIns.length, protocolDay)`, que solo mide calendario.
+  const checkinStreak = useMemo(() => computeStreak(state.checkIns), [state.checkIns]);
+
   // ── Sovereign Score (real) + tier + weekly delta ─────────────────────────────
   const averages = useMemo(() => {
     const ci = state.checkIns;
@@ -250,14 +254,14 @@ export default function DashboardScreen() {
         clarity:          averages.clarity,
         stress:           averages.stress,
         sleep:            averages.sleep,
-        streak:           state.checkIns.length,
+        streak:           checkinStreak,
         completedLessons: (state.completedLessons ?? []).length,
         completedTasks:   Object.keys(state.completedTasks ?? {}).length,
         wellnessMeditation: wellnessByType.meditation,
         wellnessBreathing:  wellnessByType.breathing,
         wellnessBinaural:   wellnessByType.binaural,
       }),
-    [averages, state.checkIns.length, state.completedLessons, state.completedTasks, wellnessByType],
+    [averages, checkinStreak, state.completedLessons, state.completedTasks, wellnessByType],
   );
   const sovereignTier = calcSovereignTier(sovereignScore);
 
@@ -439,9 +443,9 @@ export default function DashboardScreen() {
   const metricCatalog: Record<string, MetricDef> = {
     racha: {
       label: 'Racha',
-      value: `${Math.max(state.checkIns.length, protocolDay)}`,
-      numericValue: Math.max(state.checkIns.length, protocolDay),
-      meta: 'días de protocolo',
+      value: `${checkinStreak}`,
+      numericValue: checkinStreak,
+      meta: checkinStreak === 1 ? 'día seguido con check-in' : 'días seguidos con check-in',
       icon: 'local-fire-department',
       route: '/checkin',
     },
@@ -959,7 +963,14 @@ export default function DashboardScreen() {
       <ScoreRing value={sovereignScore} max={1000} size={132} stroke={8} sub={`/ ${sovereignTier}`} />
       <View style={{ flex: 1 }}>
         <Text style={mob.eyebrow}>SCORE SOBERANO</Text>
-        <Text style={mob.scoreDesc}>Capacidad operativa compuesta de los últimos 14 días.</Text>
+        {/* El copy decía "últimos 14 días" y era falso: `averages` promedia TODO
+            el historial y 800 de los 1000 puntos son contadores vitalicios
+            (lecciones, tareas, bonus) — el score no puede bajar. Se corrige el
+            texto, no la fórmula: cambiarla movería el score de todos los
+            usuarios y rompería el ranking admin. */}
+        <Text style={mob.scoreDesc}>
+          Acumulado de todo tu historial: promedio de tus check-ins + lecciones y tareas completadas. No baja — el movimiento reciente lo marca el delta.
+        </Text>
         <View style={mob.deltaWrap}>
           <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
         </View>

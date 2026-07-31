@@ -25,6 +25,7 @@ import { ConsequenceCard } from '@/components/narrative';
 import { analytics } from '@/lib/analytics';
 import { deltaSince } from '@/lib/narrativeLogic';
 import { logSilentError } from '@/lib/observability';
+import { computeStreak } from '@/lib/utils';
 
 function todayLabel() {
   return new Date()
@@ -255,20 +256,8 @@ export default function CheckInScreen() {
   const { todayCheckIn, saveCheckIn, saveWellnessSession, state } = useLifeFlow();
   const { showToast } = useToast();
 
-  // Streak data for protection warning
-  const streak = (() => {
-    const sorted = [...state.checkIns].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-    const today = new Date(); today.setHours(0,0,0,0);
-    let s = 0; let cursor = new Date(today);
-    for (const ci of sorted) {
-      const d = new Date(ci.date); d.setHours(0,0,0,0);
-      if (d.getTime() === cursor.getTime()) { s++; cursor.setDate(cursor.getDate() - 1); }
-      else if (d.getTime() < cursor.getTime()) break;
-    }
-    return s;
-  })();
+  // Racha real para el aviso de protección (días consecutivos, no días de calendario).
+  const streak = computeStreak(state.checkIns);
   const [energy, setEnergy] = useState(todayCheckIn?.energy ?? 7);
   const [clarity, setClarity] = useState(todayCheckIn?.clarity ?? 7);
   const [stress, setStress] = useState(todayCheckIn?.stress ?? 4);
