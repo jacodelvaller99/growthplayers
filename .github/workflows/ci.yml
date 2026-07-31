@@ -23,6 +23,11 @@ jobs:
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
+      # Los fixes cuya reversion seria silenciosa: jest no alcanza migraciones
+      # SQL, edge functions de Deno ni copy de UI, que es donde han vivido los
+      # bugs mas caros de este repo.
+      - name: Witness (fixes siguen cableados)
+        run: npm run witness
       - name: Tests
         run: npm test -- --ci
 

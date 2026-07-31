@@ -1,0 +1,115 @@
+{
+  "_doc": "Inventario de fixes cuya REVERSIÓN SERÍA SILENCIOSA. Cada entrada declara un `marker`: un fragmento literal que debe existir en `file` mientras el fix viva. Si alguien lo revierte, el marcador desaparece y `npm run witness` falla nombrando el id. Formato compatible con el toolkit witness de ruflo-core (verify.mjs / regen.mjs) por si algún día se quiere el histórico temporal firmado.",
+  "_criterio": "El marcador va en el PUNTO DE LLAMADA, no en la definición. Este repo no pierde funciones — pierde el cable que las conecta. `detectForbiddenLanguage` existía y estaba testeada; lo que faltaba era el llamador.",
+  "_por_que_no_bastan_los_tests": "Las 99 suites de jest cubren la lógica TypeScript. NO alcanzan migraciones SQL, edge functions de Deno, copy de UI ni config de pg_cron — que es justo donde han vivido los bugs más caros: el ReferenceError de wearables, el trigger inexistente, la cola de moderación de solo lectura.",
+  "fixes": [
+    {
+      "id": "F-INTERNIST-GUARD",
+      "desc": "El guardarraíl médico está CABLEADO sobre el stream, no solo definido. detectForbiddenLanguage vivía con cero llamadores: si el modelo recetaba un fármaco, se pintaba, se persistía y volvía al prompt como precedente aceptable.",
+      "file": "lib/internist.ts",
+      "marker": "detectForbiddenLanguage(collected)"
+    },
+    {
+      "id": "F-INTERNIST-NORETRY",
+      "desc": "Una violación NO reintenta con el siguiente proveedor. Sin esto el abort se lee como fallo normal y la cadena de fallback dispara 4 llamadas de API pintando 4 fragmentos prohibidos por una sola infracción.",
+      "file": "lib/internist.ts",
+      "marker": "if (violation) return blocked();"
+    },
+    {
+      "id": "F-MENTOR-CRISIS",
+      "desc": "Protocolo de crisis dentro del system prompt de Norman, con recursos reales de Colombia. Se pierde con cualquier reescritura del prompt y nada falla: el modelo simplemente vuelve a confrontar a alguien en crisis.",
+      "file": "lib/mentor.ts",
+      "marker": "línea de salud mental 106"
+    },
+    {
+      "id": "F-WEARABLE-TOKENS",
+      "desc": "P1-7: revoke de los privilegios directos sobre wearable_connections. Sin él, cualquier admin lee access_token y refresh_token en claro de TODOS los usuarios.",
+      "file": "supabase/migrations/20260729000000_p1_7_wearable_token_privs.sql",
+      "marker": "revoke select, insert, update on public.wearable_connections from authenticated"
+    },
+    {
+      "id": "F-OAUTH-CONNECT",
+      "desc": "connectOura/connectWhoop usan el parámetro real `userId`. El shorthand `user_id,` sobre un parámetro llamado userId lanzaba ReferenceError en CADA conexión OAuth — los wearables nunca funcionaron en producción y hacía parecer muerto al motor biométrico entero.",
+      "file": "supabase/functions/sync-wearables/index.ts",
+      "marker": "user_id:        userId,"
+    },
+    {
+      "id": "F-TOKEN-SWITCH",
+      "desc": "getValidToken usa switch con caso explícito. El ternario anterior mandaba cualquier proveedor no-Oura al refresh de WHOOP.",
+      "file": "supabase/functions/sync-wearables/index.ts",
+      "marker": "getValidToken: proveedor sin refresh registrado:"
+    },
+    {
+      "id": "F-MERGE-DAILY",
+      "desc": "Los upserts diarios pasan por la RPC merge_wearable_daily. El upsert plano mandaba varios días en un array y PostgREST rellenaba con NULL las claves ausentes, BORRANDO datos ya sincronizados.",
+      "file": "supabase/functions/sync-wearables/index.ts",
+      "marker": "merge_wearable_daily"
+    },
+    {
+      "id": "F-BIO-INTERPRET",
+      "desc": "computeAndPersistInsight llama a interpretSeries. La función no tenía un solo llamador en todo el repo mientras cuatro consumidores leían una tabla que nadie llenaba.",
+      "file": "lib/biometric.ts",
+      "marker": "const insight = interpretSeries(series);"
+    },
+    {
+      "id": "F-BIO-REFRESH",
+      "desc": "El segundo cable del mismo fix: refreshAndFetchInsight recalcula ANTES de leer. Sin él la tarjeta 'Tu cuerpo hoy' queda en blanco para usuarios con wearable real.",
+      "file": "lib/biometric.ts",
+      "marker": "await computeAndPersistInsight(userId);"
+    },
+    {
+      "id": "F-CLIENT-SAFE-NARR",
+      "desc": "La vista de cliente pasa por clientSafeNarrative. Sustituirlo por un passthrough expondría churn_risk, drivers y what_to_say — texto en tercera persona escrito para el coach — al propio usuario. Fuga real, cero errores.",
+      "file": "app/perfil/cliente.tsx",
+      "marker": "clientSafeNarrative(ci.ci)"
+    },
+    {
+      "id": "F-MODERATION-RLS",
+      "desc": "Policy UPDATE sobre community_reports. Sin ella la cola de moderación es de solo lectura y la UI optimista miente — requisito App Store 1.2.",
+      "file": "supabase/migrations/20260703000000_fix_moderation_rls.sql",
+      "marker": "CREATE POLICY reports_admin_update ON public.community_reports"
+    },
+    {
+      "id": "F-SUBSCRIPTION-EXPIRY",
+      "desc": "resolveEntitlement exige expiresAt > now. Sin esto un tier de pago vencido sigue dando premium: pérdida de ingresos, silenciosa.",
+      "file": "lib/subscription.ts",
+      "marker": "rcActive"
+    },
+    {
+      "id": "F-SECURESTORE-KEY",
+      "desc": "Saneado de la clave de SecureStore. Revertirlo rompe TODA lectura/escritura nativa — y como en web no falla, pasa CI y code review sin ruido.",
+      "file": "storage/local.ts",
+      "marker": "replace(/[^A-Za-z0-9._-]/g"
+    },
+    {
+      "id": "F-CREATE-USER-INSERT",
+      "desc": "La edge function inserta el perfil explícitamente en vez de confiar en un trigger handle_new_user que NO existe en producción.",
+      "file": "supabase/functions/create-user/index.ts",
+      "marker": "user_profiles"
+    },
+    {
+      "id": "F-EXAMENES-HONESTY",
+      "desc": "Copy honesta: la pantalla admite que el internista no abre los archivos. Un 'mejorando el copy' revierte la honestidad en cinco segundos y vuelve la promesa falsa.",
+      "file": "app/bienestar/examenes.tsx",
+      "marker": "no abre los archivos"
+    },
+    {
+      "id": "F-PWA-IOS",
+      "desc": "El banner de instalación cubre CUALQUIER navegador en iOS. Filtrar por Safari dejaba a Chrome-en-iPhone sin ningún aviso, en silencio.",
+      "file": "components/PWAInstallBanner.tsx",
+      "marker": "/iPhone|iPad|iPod/.test(window.navigator.userAgent)"
+    },
+    {
+      "id": "F-ICON-TRUECOLOR",
+      "desc": "Los iconos se generan truecolor. Con paleta, el degradado dorado del logo bandea visiblemente en el icono más grande (adaptive de Android, og:image).",
+      "file": "scripts/generate-icons.mjs",
+      "marker": "palette: false"
+    },
+    {
+      "id": "F-ARC-COMANDO",
+      "desc": "El arco narrativo abre Comando. La voz existía pero vivía enterrada en la cuarta posición de la pestaña Progreso, invisible desde el home.",
+      "file": "app/(tabs)/comando.tsx",
+      "marker": "arcForDay(protocolDay)"
+    }
+  ]
+}
