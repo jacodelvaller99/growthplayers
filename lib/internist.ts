@@ -26,6 +26,7 @@ import { streamOpenAI } from './openai';
 import {
   assembleEducationalContext,
   classifyLabValue,
+  detectForbiddenLanguage,
   detectRedFlags,
   hasUrgentRedFlag,
   type ClassifiedLab,
@@ -176,13 +177,28 @@ export function buildInternistPrompt(
 
 // ─── Orquestación con fallback ─────────────────────────────────────────────────
 
+/**
+ * Lo que ve el usuario cuando el modelo se desvía a diagnóstico o dosis.
+ *
+ * Se le dice que la respuesta se cortó, en vez de dejar la burbuja a medias: ya
+ * vio el fragmento, y un corte mudo parece un fallo técnico en vez de una
+ * decisión. La invitación a reformular convierte un falso positivo en un
+ * inconveniente y no en un callejón sin salida.
+ */
+const FORBIDDEN_CORRECTION = [
+  'Corté esa respuesta a mitad: se estaba desviando hacia diagnóstico o dosis, y eso no me corresponde.',
+  '',
+  'Puedo explicarte qué significan tus valores y qué evidencia hay detrás, pero la interpretación',
+  'clínica y cualquier tratamiento son de tu médico tratante. ¿Quieres que lo reformule por ese lado?',
+].join('\n');
+
 export async function streamInternistResponse(
   patient: PatientContext,
   userMessage: string,
   history: InternistTurn[],
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
-): Promise<{ text: string; redFlags: DetectedRedFlag[] }> {
+): Promise<{ text: string; redFlags: DetectedRedFlag[]; forbidden?: string[] }> {
   const redFlags = detectRedFlags(userMessage);
 
   if (signal?.aborted) return { text: '', redFlags };
@@ -217,29 +233,89 @@ export async function streamInternistResponse(
     { role: 'user', content: userMessage },
   ];
 
-  let collected = '';
-  const sink = (d: string) => { collected += d; onChunk(d); };
+  type Result = { text: string; redFlags: DetectedRedFlag[]; forbidden?: string[] };
 
-  // 1. Claude (vía ai-proxy si está activo).
-  if (ENV.aiProxyUrl) {
-    try { const t = await streamAnthropic(messages, sink, signal); return { text: t, redFlags }; }
-    catch (err) { if (isAbort(err)) throw err; }
+  // Controller propio para poder cortar el stream por CONTENIDO. No se reusa
+  // `createStreamGuard`: su contrato son timeouts y lo comparte el mentor, que
+  // no debe heredar este filtro.
+  const internal = new AbortController();
+  if (signal) {
+    if (signal.aborted) internal.abort();
+    else signal.addEventListener('abort', () => internal.abort(), { once: true });
   }
-  // 2. NVIDIA (web requiere ai-proxy por CORS).
+
+  let collected = '';
+  let violation = false;
+  let forbidden: string[] = [];
+
+  // El sink vigila la salida mientras se emite. El chunk que COMPLETA la frase
+  // prohibida no se pinta; el usuario alcanza a ver como mucho el fragmento
+  // parcial del chunk anterior, y la burbuja final se sustituye entera.
+  const sink = (d: string) => {
+    if (violation) return;
+    collected += d;
+    // ponytail: rescan completo por chunk. Son ~2 KB contra 13 frases; si el
+    // buffer creciera, bastaría con escanear solo la cola.
+    const hits = detectForbiddenLanguage(collected);
+    if (hits.length) {
+      violation = true;
+      forbidden = hits;
+      // Solo las frases, NUNCA el texto: es salida sobre valores de laboratorio.
+      logSilentError('internist.forbiddenLanguage', new Error(hits.join(' · ')));
+      internal.abort();
+      return;
+    }
+    onChunk(d);
+  };
+
+  const blocked = (): Result => ({ text: FORBIDDEN_CORRECTION, redFlags, forbidden });
+
+  /**
+   * Un intento de proveedor. Devuelve el resultado final, o `null` para que la
+   * cadena siga con el siguiente.
+   *
+   * La comprobación de `violation` está aquí y no repetida en cada rama a
+   * propósito: es la parte que no se puede olvidar. Sin ella, una respuesta
+   * prohibida abortaría el proveedor actual, el `catch` lo leería como un fallo
+   * normal y reintentaría con el siguiente — cuatro llamadas de API y cuatro
+   * fragmentos pintados por una sola infracción.
+   */
+  const attempt = async (
+    name: string,
+    enabled: boolean,
+    run: () => Promise<string>,
+  ): Promise<Result | null> => {
+    if (violation) return blocked();
+    if (!enabled) return null;
+    try {
+      const t = await run();
+      return violation ? blocked() : { text: t, redFlags };
+    } catch (err) {
+      if (violation) return blocked();
+      if (isAbort(err)) throw err;
+      // Antes estos catch estaban vacíos: la caída de proveedor en el internista
+      // era invisible incluso en consola.
+      logSilentError(`internist.provider.${name}`, err);
+      return null;
+    }
+  };
+
   const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
-  if (ENV.aiProxyUrl || (ENV.nvidiaApiKey && !isWeb)) {
-    try { const t = await streamNvidia(messages, sink, signal); return { text: t, redFlags }; }
-    catch (err) { if (isAbort(err)) throw err; }
-  }
-  // 3. Groq.
-  if (ENV.groqApiKey || ENV.aiProxyUrl) {
-    try { const t = await streamGroq(messages, sink, signal); return { text: t, redFlags }; }
-    catch (err) { if (isAbort(err)) throw err; }
-  }
-  // 4. OpenAI (descarta si la "clave openai" es en realidad de Groq).
-  if ((ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) || ENV.aiProxyUrl) {
-    try { const t = await streamOpenAI(messages, sink, signal); return { text: t, redFlags }; }
-    catch (err) { if (isAbort(err)) throw err; }
+
+  const chain: Array<[string, boolean, () => Promise<string>]> = [
+    // 1. Claude (vía ai-proxy si está activo).
+    ['anthropic', Boolean(ENV.aiProxyUrl), () => streamAnthropic(messages, sink, internal.signal)],
+    // 2. NVIDIA (web requiere ai-proxy por CORS).
+    ['nvidia', Boolean(ENV.aiProxyUrl || (ENV.nvidiaApiKey && !isWeb)), () => streamNvidia(messages, sink, internal.signal)],
+    // 3. Groq.
+    ['groq', Boolean(ENV.groqApiKey || ENV.aiProxyUrl), () => streamGroq(messages, sink, internal.signal)],
+    // 4. OpenAI (descarta si la "clave openai" es en realidad de Groq).
+    ['openai', Boolean((ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) || ENV.aiProxyUrl), () => streamOpenAI(messages, sink, internal.signal)],
+  ];
+
+  for (const [name, enabled, run] of chain) {
+    const r = await attempt(name, enabled, run);
+    if (r) return r;
   }
 
   // Degradación honesta — sin proveedor. Al PACIENTE no le filtramos jerga técnica
@@ -257,25 +333,43 @@ export async function streamInternistResponse(
 
 // ─── Persistencia de la conversación + red-flags ───────────────────────────────
 
+/**
+ * `forbidden`: frases prohibidas que el modelo intentó emitir y el guardarraíl
+ * cortó. Se guardan como red-flag de auditoría — nunca el texto que las
+ * contenía. Poder contar "cuántas veces intentó recetar este mes" no requiere
+ * conservar salida de un modelo sobre valores de laboratorio en una tabla que
+ * es admin-blind por diseño. Auditoría no es lo mismo que transcripción.
+ *
+ * `content` debe ser el texto CORRECTIVO, no el del modelo: `fetchInternistHistory`
+ * devuelve los últimos turnos al prompt, así que guardar el original se lo
+ * serviría de vuelta como precedente aceptable en el turno siguiente.
+ */
 export async function persistInternistTurn(
   userId: string,
   role: 'user' | 'assistant',
   content: string,
   redFlags?: DetectedRedFlag[],
+  forbidden?: string[],
 ): Promise<void> {
   if (!userId || !content.trim()) return;
+  const flags = [
+    ...(redFlags ?? []).map((f) => ({
+      trigger: f.rule.trigger,
+      severity: f.severity,
+      keyword: f.matchedKeyword,
+    })),
+    ...(forbidden ?? []).map((phrase) => ({
+      trigger: 'forbidden_language',
+      severity: 'blocked',
+      keyword: phrase,
+    })),
+  ];
   try {
     await supa.from('internist_sessions').insert({
       user_id: userId,
       role,
       content,
-      red_flags: redFlags?.length
-        ? redFlags.map((f) => ({
-            trigger: f.rule.trigger,
-            severity: f.severity,
-            keyword: f.matchedKeyword,
-          }))
-        : null,
+      red_flags: flags.length ? flags : null,
     });
   } catch (e) {
     logSilentError('internist.persist', e);

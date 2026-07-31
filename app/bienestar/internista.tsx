@@ -124,6 +124,7 @@ export default function InternistaScreen() {
     abortRef.current = controller;
     let full = '';
     let lastRedFlags: Awaited<ReturnType<typeof streamInternistResponse>>['redFlags'] = [];
+    let forbidden: string[] | undefined;
     try {
       const out = await streamInternistResponse(
         patient,
@@ -132,11 +133,14 @@ export default function InternistaScreen() {
         (d) => { full += d; setStreamText(full); scrollDown(); },
         controller.signal,
       );
+      // Si el guardarraíl cortó, `out.text` es el correctivo y sustituye al
+      // parcial que se alcanzó a pintar — por eso se asigna, no se concatena.
       full = out.text || full;
       lastRedFlags = out.redFlags;
+      forbidden = out.forbidden;
     } catch {/* abort o error: conservamos el parcial */}
     setTurns((prev) => [...prev, { role: 'assistant', text: full || '…' }]);
-    void persistInternistTurn(userId, 'assistant', full, lastRedFlags);
+    void persistInternistTurn(userId, 'assistant', full, lastRedFlags, forbidden);
     setStreaming(false);
     setStreamText('');
     abortRef.current = null;
