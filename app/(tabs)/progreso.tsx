@@ -29,6 +29,7 @@ import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { arcForDay } from '@/lib/narrativeLogic';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -664,19 +665,9 @@ export default function ProgresoScreen() {
 
     const lines: string[] = [];
 
-    if (protocolDay <= 3) {
-      lines.push(`Llevas ${protocolDay} día${protocolDay === 1 ? '' : 's'} en el protocolo. Esto acaba de comenzar — la mayoría abandona en los primeros 7 días. Tú no eres la mayoría.`);
-    } else if (protocolDay <= 7) {
-      lines.push(`${protocolDay} días. Estás cruzando la primera zona de filtro. Cada check-in es una declaración de quién eres — no de lo que sientes.`);
-    } else if (protocolDay <= 14) {
-      lines.push(`Día ${protocolDay}. Superaste el punto donde la mayoría desaparece. El hábito ya está grabándose en tu sistema nervioso.`);
-    } else if (protocolDay <= 30) {
-      lines.push(`${protocolDay} días. Los estudios sobre formación de hábitos sugieren que, alrededor de esta etapa, una conducta empieza a volverse automática. Ya cruzaste ese umbral.`);
-    } else if (protocolDay <= 60) {
-      lines.push(`Día ${protocolDay} de 90. Estás en el arco de profundidad — donde los cambios dejan de ser visibles y empiezan a ser estructurales.`);
-    } else {
-      lines.push(`Día ${protocolDay} de 90. Eso no es disciplina — es quién eres ahora. El protocolo ya vive en ti.`);
-    }
+    // La línea del arco sale de lib/narrativeLogic: la misma voz que ahora
+    // abre Comando. Estaba escrita aquí y solo aquí, invisible desde el home.
+    lines.push(arcForDay(protocolDay).line);
 
     if (state.northStar.identity && protocolDay >= 7) {
       lines.push(`Tu identidad declarada: "${state.northStar.identity.slice(0, 100)}". Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);

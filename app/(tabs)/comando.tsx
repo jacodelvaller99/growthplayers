@@ -35,6 +35,8 @@ import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { ArcHeader } from '@/components/narrative';
+import { arcForDay } from '@/lib/narrativeLogic';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useDashboardPrefs, DASHBOARD_MAX } from '@/hooks/use-dashboard-prefs';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
@@ -152,6 +154,10 @@ export default function DashboardScreen() {
   const { user: wellnessUser } = useWellnessStore();
   const { intelligence, engagementTier } = useUserIntelligence(userId);
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
+  // SETUP del arco: dónde está el usuario en la historia de 90 días.
+  // La voz vive en lib/narrativeLogic para que Comando, Progreso y Check-in
+  // hablen igual sin copiar strings.
+  const arc = arcForDay(protocolDay);
   const checkIn = todayCheckIn ?? latestCheckIn;
 
   const { isConnected: isWearableConnected } = useWearableConnections();
@@ -1150,6 +1156,10 @@ export default function DashboardScreen() {
            DESKTOP LAYOUT — "Cockpit Polaris": hero + command grid 3/5/3
            ══════════════════════════════════════════════════════════ */
         <>
+          {/* SETUP — el mismo arco que en móvil. El hero ya trae "DÍA N" en su
+              eyebrow, pero no la línea narrativa: es la única voz de la app y
+              vivía enterrada en la pestaña Progreso. */}
+          <ArcHeader arc={arc} />
           {northAnchorStrip}
 
           {/* ZONA 1 — hero cinematográfico full-width */}
@@ -1224,6 +1234,13 @@ export default function DashboardScreen() {
         <>
           {/* Núcleo del diseño */}
           {mHeader}
+          {/* SETUP — día y acto. El móvil no tenía NINGÚN marcador de posición
+              en el protocolo: el "Día N de 90" solo existía en la rama desktop. */}
+          <ArcHeader arc={arc} />
+          {/* TENSIÓN — la única decisión de hoy. mandoStripBlock estaba escrito
+              pero solo se montaba dentro de deskHero, así que el teléfono
+              —donde se abre a diario— perdía la única pieza direccional. */}
+          {mandoStripBlock}
           {mScoreCard}
           {mCheckinCard}
 

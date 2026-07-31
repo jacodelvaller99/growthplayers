@@ -21,7 +21,9 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { ConsequenceCard } from '@/components/narrative';
 import { analytics } from '@/lib/analytics';
+import { deltaSince } from '@/lib/narrativeLogic';
 import { logSilentError } from '@/lib/observability';
 
 function todayLabel() {
@@ -406,21 +408,23 @@ export default function CheckInScreen() {
     <MicroRitual preTension={preTensionBand} onLog={logBreathing} />
   );
 
+  // El delta contra el registro anterior. Es la ÚNICA información que aparece
+  // por haber guardado: la coherencia de hoy ya se veía en vivo mientras movías
+  // los sliders (:284), así que sin esto el acto de guardar no revela nada y la
+  // pantalla se siente como un formulario, no como una lectura.
+  const previousCheckIn = state.checkIns.find((c) => c.id !== todayCheckIn?.id) ?? null;
+  const deltaLine = deltaSince({ energy, clarity, stress, sleep }, previousCheckIn);
+
   const recommendationCard = (
-    <PremiumCard style={styles.recoCard}>
-      <View style={styles.recoHeader}>
-        <View style={styles.recoIconWrap}>
-          <MaterialIcons name={recommendation.icon} size={22} color={palette.goldText} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.recoTag}>RECOMENDACIÓN DEL SISTEMA · {recommendation.tag}</Text>
-          <Text style={styles.recoTitle}>{recommendation.title}</Text>
-        </View>
-      </View>
-      <Text style={styles.recoBody}>{recommendation.body}</Text>
+    <ConsequenceCard
+      icon={recommendation.icon}
+      tag={`LECTURA DEL SISTEMA · ${recommendation.tag}`}
+      title={recommendation.title}
+      body={recommendation.body}
+      delta={deltaLine}>
       <PrimaryButton label={recommendation.cta} icon="arrow-forward" onPress={followRecommendation} />
       <SecondaryButton label="VOLVER AL COMANDO" icon="dashboard" onPress={goToCommando} />
-    </PremiumCard>
+    </ConsequenceCard>
   );
 
   // ── Shared JSX blocks ──────────────────────────────────────────────────────
@@ -548,25 +552,34 @@ export default function CheckInScreen() {
     />
   );
 
-  // Post-guardado — una sola oferta sutil, sin desplegar todo de golpe.
+  // Post-guardado — la CONSECUENCIA primero, siempre.
+  //
+  // Antes esto era solo "Check-in guardado." + una oferta de respirar, y la
+  // recomendación real vivía dentro de `regulaBlock`, detrás de aceptar el
+  // ritual. Quien pulsaba "VOLVER AL COMANDO" —el camino de menor fricción—
+  // se llevaba una línea de acuse y nada más: registraba su estado y no
+  // recibía ninguna lectura a cambio. Ese era, literalmente, el "¿pero para
+  // qué?". La respiración sigue ofreciéndose, pero como siguiente paso, no
+  // como peaje para ver tu propia lectura.
   const savedOffer = (
-    <PremiumCard style={styles.savedOffer}>
+    <>
       <View style={styles.savedRow}>
         <MaterialIcons name="check-circle" size={18} color={palette.success} />
         <Text style={styles.savedText}>Check-in guardado.</Text>
       </View>
-      <Text style={styles.savedSub}>¿Dos minutos para regular tu sistema antes de seguir?</Text>
-      <PrimaryButton label="SÍ, RESPIRAR 2 MIN" icon="self-improvement" onPress={() => setShowRegula(true)} />
-      <SecondaryButton label="VOLVER AL COMANDO" icon="dashboard" onPress={goToCommando} />
-    </PremiumCard>
-  );
-
-  // Bloque completo de regulación (ritual + recomendación) — solo si lo pide.
-  const regulaBlock = (
-    <>
-      {ritualBlock}
-      <GoldDivider label="O SIGUE TU MOVIMIENTO" />
       {recommendationCard}
+      {showRegula ? (
+        ritualBlock
+      ) : (
+        <PremiumCard style={styles.savedOffer}>
+          <Text style={styles.savedSub}>¿Dos minutos para regular tu sistema antes de seguir?</Text>
+          <SecondaryButton
+            label="RESPIRAR 2 MIN"
+            icon="self-improvement"
+            onPress={() => setShowRegula(true)}
+          />
+        </PremiumCard>
+      )}
     </>
   );
 
@@ -633,10 +646,8 @@ export default function CheckInScreen() {
                   {showNeed && systemNeedCard}
                   <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
                 </>
-              ) : !showRegula ? (
-                savedOffer
               ) : (
-                regulaBlock
+                savedOffer
               )}
             </View>
           </View>
@@ -715,10 +726,8 @@ export default function CheckInScreen() {
           {needToggle}
           {showNeed && systemNeedCard}
         </>
-      ) : !showRegula ? (
-        savedOffer
       ) : (
-        regulaBlock
+        savedOffer
       )}
     </ScrollView>
     </KeyboardAvoidingView>
