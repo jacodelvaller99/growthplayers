@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { TESTIMONIALS } from '@/data/testimonials';
+import { VERIFIED_TESTIMONIALS } from '@/data/testimonials';
 import { captureWebLead, isValidEmail } from '@/lib/webLeads';
 import {
   getOfferings,
@@ -161,40 +161,40 @@ export default function PaywallScreen() {
         ))}
       </View>
 
-      {/* Prueba de transformación — case studies (antes → después + contexto). */}
-      <View style={styles.proofSection}>
-        <Text style={styles.proofEyebrow}>PRUEBA DE TRANSFORMACIÓN</Text>
-        {TESTIMONIALS.slice(0, 3).map((t) => {
-          // Nunca mostramos el name placeholder ("[Pendiente]") al usuario: hasta
-          // que el dueño confirme identidad+consentimiento (verified), atribuimos
-          // por rol — honesto, no inventado.
-          const attribution = t.verified
-            ? `${t.name}${t.role ? ` · ${t.role}` : ''}`
-            : (t.role ?? 'Operador Polaris');
-          return (
-          <PremiumCard key={t.id} style={styles.socialProof}>
-            {t.metric && (
-              <View style={styles.metricRow}>
-                <View style={styles.metricCol}>
-                  <Text style={styles.metricLabel}>ANTES</Text>
-                  <Text style={styles.metricBefore}>{t.metric.before}</Text>
+      {/* Prueba de transformación — SOLO testimonios con consentimiento confirmado.
+          Atribuir por rol un testimonio no verificado lo hacía leer como prueba
+          real; eso es riesgo legal y de rechazo. Mientras no haya ninguno
+          verificado, la sección no se renderiza: la estructura del protocolo
+          (arriba) es prueba verificable; un testimonio sin consentimiento no. */}
+      {VERIFIED_TESTIMONIALS.length > 0 && (
+        <View style={styles.proofSection}>
+          <Text style={styles.proofEyebrow}>PRUEBA DE TRANSFORMACIÓN</Text>
+          {VERIFIED_TESTIMONIALS.slice(0, 3).map((t) => (
+            <PremiumCard key={t.id} style={styles.socialProof}>
+              {t.metric && (
+                <View style={styles.metricRow}>
+                  <View style={styles.metricCol}>
+                    <Text style={styles.metricLabel}>ANTES</Text>
+                    <Text style={styles.metricBefore}>{t.metric.before}</Text>
+                  </View>
+                  <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
+                  <View style={styles.metricCol}>
+                    <Text style={styles.metricLabel}>DESPUÉS</Text>
+                    <Text style={styles.metricAfter}>{t.metric.after}</Text>
+                  </View>
+                  {t.metric.context && (
+                    <Text style={styles.metricContext}>{t.metric.context}</Text>
+                  )}
                 </View>
-                <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
-                <View style={styles.metricCol}>
-                  <Text style={styles.metricLabel}>DESPUÉS</Text>
-                  <Text style={styles.metricAfter}>{t.metric.after}</Text>
-                </View>
-                {t.metric.context && (
-                  <Text style={styles.metricContext}>{t.metric.context}</Text>
-                )}
-              </View>
-            )}
-            <Text style={styles.socialProofText}>“{t.quote}”</Text>
-            <Text style={styles.socialProofAttr}>— {attribution}</Text>
-          </PremiumCard>
-          );
-        })}
-      </View>
+              )}
+              <Text style={styles.socialProofText}>“{t.quote}”</Text>
+              <Text style={styles.socialProofAttr}>
+                — {t.name}{t.role ? ` · ${t.role}` : ''}
+              </Text>
+            </PremiumCard>
+          ))}
+        </View>
+      )}
 
       {/* Guarantee emocional honesta — sin prometer un resultado garantizado. */}
       <Text style={styles.emotionalGuarantee}>

@@ -26,13 +26,24 @@ export const ENV = {
   aiProxyUrl: (process.env.EXPO_PUBLIC_AI_PROXY_URL ?? '') as string,
 
   /**
-   * Feature flag — Confrontation OS (motor "DIJO vs HIZO"). Default false:
-   * cohorte gradual primero. Cuando se active, Norman puede abrir confrontando
-   * con dato (severity high+) si el cliente firmó el consent específico
-   * `confrontation_with_data` en onboarding. La capa IO en lib/confrontation.ts
-   * verifica este flag antes de hacer cualquier query.
+   * Feature flag — Confrontation OS (motor "DIJO vs HIZO").
+   *
+   * Default TRUE desde 2026-07-30 (antes false, para rollout por cohorte). El
+   * interruptor que de verdad protege al cliente nunca fue este flag global,
+   * sino los cuatro gates POR USUARIO que `buildConfrontations` aplica y que
+   * no se pueden saltar desde aquí:
+   *   · `ml_consent` activo
+   *   · `consents.confrontation_with_data` firmado en onboarding
+   *   · `pause_state` inactivo
+   *   · sin bloqueadores de crisis/duelo en el perfil
+   * Un usuario que no marcó la casilla de confrontación no recibe nada aunque
+   * el flag esté encendido, así que dejarlo apagado solo servía para que la
+   * función no existiera para NADIE — incluidos los que sí la pidieron.
+   *
+   * Se conserva como interruptor de emergencia: `=false` lo apaga entero sin
+   * desplegar código.
    */
-  confrontationOsEnabled: ((process.env.EXPO_PUBLIC_CONFRONTATION_OS_ENABLED ?? '').toLowerCase() === 'true') as boolean,
+  confrontationOsEnabled: ((process.env.EXPO_PUBLIC_CONFRONTATION_OS_ENABLED ?? 'true').toLowerCase() === 'true') as boolean,
 
   /**
    * Feature flag — El Círculo (red social interna: espacios, eventos con RSVP,
@@ -54,4 +65,22 @@ export const ENV = {
   aggregatorVendor: ((process.env.EXPO_PUBLIC_AGGREGATOR_VENDOR ?? 'terra').toLowerCase()) as
     | 'terra'
     | 'open_wearables',
+
+  /**
+   * Feature flag — tarjeta del agregador universal de wearables. Default FALSE.
+   *
+   * El código del agregador está completo, pero enrutar datos requiere
+   * infraestructura externa (secrets de Terra, o una instancia self-host de Open
+   * Wearables). Mientras eso no exista, la tarjeta se ofrecía como CTA principal
+   * "RECOMENDADO" y siempre terminaba en "Integración en activación" — el usuario
+   * pulsaba la opción más prominente de la pantalla y no pasaba nada.
+   *
+   * Con el flag en false, las vías que SÍ funcionan pasan a primer plano:
+   * OAuth (Oura · WHOOP · Polar) y, en la app nativa, Apple Salud / Health
+   * Connect — que cubren Garmin, Coros, Samsung y Fitbit sin sus APIs cerradas.
+   *
+   * Ponlo en true SOLO cuando el webhook del agregador esté provisionado y
+   * verificado de punta a punta.
+   */
+  aggregatorEnabled: ((process.env.EXPO_PUBLIC_AGGREGATOR_ENABLED ?? '').toLowerCase() === 'true') as boolean,
 } as const;

@@ -62,15 +62,24 @@ const PROVIDER_NAME: Record<WearableProvider, string> = {
 
 // Marcas cloud que cubre Open Wearables vía OAuth (modo self-host). El connect es
 // POR proveedor (aún no hay widget multi-marca hosteado), así que la UI ofrece elegir.
-const OW_PROVIDERS: { id: string; label: string }[] = [
-  { id: 'garmin',     label: 'Garmin' },
-  { id: 'oura',       label: 'Oura' },
-  { id: 'whoop',      label: 'WHOOP' },
+//
+// `gated` marca las que NO son self-service: su API exige aprobación comercial o
+// contrato firmado con el fabricante (verificado 2026-07): Garmin tiene el developer
+// program SUSPENDIDO y exige entidad legal; Suunto pide acuerdo firmado y no admite
+// uso personal; Ultrahuman requiere cuenta Ring Air. Se listan al final y avisadas,
+// porque solo funcionan si el dueño ya obtuvo esas credenciales — hacer clic sin
+// ellas devuelve error del backend. Fitbit queda FUERA: su Web API se apaga el
+// 2026-09-30 (migración forzada a Google Health con re-consentimiento de todos los
+// usuarios) — no vale la pena que un cliente conecte algo que muere en semanas.
+// Withings tampoco aparece: Open Wearables no lo cubre en su matriz oficial.
+const OW_PROVIDERS: { id: string; label: string; gated?: boolean }[] = [
   { id: 'polar',      label: 'Polar' },
-  { id: 'suunto',     label: 'Suunto' },
-  { id: 'fitbit',     label: 'Fitbit' },
+  { id: 'whoop',      label: 'WHOOP' },
+  { id: 'oura',       label: 'Oura' },
   { id: 'strava',     label: 'Strava' },
-  { id: 'ultrahuman', label: 'Ultrahuman' },
+  { id: 'garmin',     label: 'Garmin',     gated: true },
+  { id: 'suunto',     label: 'Suunto',     gated: true },
+  { id: 'ultrahuman', label: 'Ultrahuman', gated: true },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -455,9 +464,15 @@ const discStyles = StyleSheet.create({
 });
 
 // ─── Hero Card (agregador universal — "Cualquier reloj") ──────────────────────
-// El agregador (Terra) es el camino recomendado: una sola conexión, cualquier
-// marca, funciona en navegador. Por eso se destaca como héroe arriba del resto.
-const HERO_BRANDS = ['Garmin', 'Polar', 'Coros', 'Apple', 'Oura', 'Fitbit', 'Withings', 'Samsung'];
+// El agregador es el camino recomendado: una conexión, funciona en navegador.
+//
+// La cobertura REAL depende del vendor, así que los chips no mienten:
+//   · Terra (cloud, de pago al escalar): +500 dispositivos vía un solo widget.
+//   · Open Wearables (self-host, MIT): solo las marcas cuyo developer program
+//     conseguimos — ver OW_PROVIDERS. Garmin/Suunto están tras aprobación
+//     comercial, así que NO se prometen aquí arriba.
+const HERO_BRANDS_TERRA = ['Garmin', 'Polar', 'Coros', 'Apple', 'Oura', 'Fitbit', 'Withings', 'Samsung'];
+const HERO_BRANDS_OW = OW_PROVIDERS.filter((p) => !p.gated).map((p) => p.label);
 
 function AggregatorHeroCard({
   provider, onConnect, isConnecting,
@@ -466,6 +481,7 @@ function AggregatorHeroCard({
   onConnect: () => void;
   isConnecting: boolean;
 }) {
+  const isSelfHost = ENV.aggregatorVendor === 'open_wearables';
   return (
     <PremiumCard style={heroStyles.card}>
       <View style={heroStyles.ribbon}>
@@ -486,17 +502,27 @@ function AggregatorHeroCard({
 
       <Text style={heroStyles.description}>{provider.description}</Text>
 
-      {/* Cobertura de marcas */}
+      {/* Cobertura de marcas — real por vendor, sin prometer de más. */}
       <View style={heroStyles.brandRow}>
-        {HERO_BRANDS.map((b) => (
+        {(isSelfHost ? HERO_BRANDS_OW : HERO_BRANDS_TERRA).map((b) => (
           <View key={b} style={heroStyles.brandChip}>
             <Text style={heroStyles.brandText}>{b}</Text>
           </View>
         ))}
-        <View style={[heroStyles.brandChip, heroStyles.brandChipMore]}>
-          <Text style={[heroStyles.brandText, heroStyles.brandTextMore]}>+500 dispositivos</Text>
-        </View>
+        {!isSelfHost && (
+          <View style={[heroStyles.brandChip, heroStyles.brandChipMore]}>
+            <Text style={[heroStyles.brandText, heroStyles.brandTextMore]}>+500 dispositivos</Text>
+          </View>
+        )}
       </View>
+
+      {/* En self-host, Apple Salud / Health Connect (tarjetas de abajo) son la vía
+          para Garmin, Coros, Samsung y compañía — sin depender de sus APIs cerradas. */}
+      {isSelfHost && (
+        <Text style={heroStyles.coverageNote}>
+          ¿Otra marca? Conéctala desde Apple Salud o Health Connect en la app móvil.
+        </Text>
+      )}
 
       <Pressable
         style={[heroStyles.connectBtn, isConnecting && { opacity: 0.6 }]}
@@ -550,6 +576,7 @@ const heroStyles = StyleSheet.create({
   brandChipMore: { borderColor: palette.lineGold, backgroundColor: palette.goldGlow },
   brandText: { ...typography.mono, color: palette.ash, fontSize: 10 },
   brandTextMore: { color: palette.goldText },
+  coverageNote: { ...typography.caption, color: palette.smoke, fontSize: 11, lineHeight: 16 },
   connectBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: palette.gold,
@@ -888,8 +915,12 @@ export default function WearablesScreen() {
               />
             );
           }
-          // El agregador universal se destaca como héroe (camino recomendado).
+          // El agregador universal se destaca como héroe, pero SOLO si está
+          // provisionado. Sin infraestructura detrás, esta era la tarjeta más
+          // prominente de la pantalla y su CTA siempre acababa en "Integración
+          // en activación": ofrecer como recomendado lo único que no funciona.
           if (p.id === 'aggregator') {
+            if (!ENV.aggregatorEnabled) return null;
             return (
               <AggregatorHeroCard
                 key={p.id}
@@ -926,9 +957,13 @@ export default function WearablesScreen() {
       {/* Privacy note */}
       <PremiumCard style={styles.privacyCard}>
         <MaterialIcons name="lock" size={15} color={palette.smoke} />
+        {/* Antes decía "se almacenan cifrados" — no era cierto a nivel de columna
+            (P1-7). Se describe la protección que SÍ existe: RLS owner-only + TLS.
+            Si S3 añade cifrado con pgcrypto, este texto puede volver a decirlo. */}
         <Text style={styles.privacyText}>
-          Los tokens OAuth se almacenan cifrados en tu cuenta y nunca se comparten con terceros.
-          Puedes desconectar cualquier dispositivo en cualquier momento.
+          Los tokens OAuth quedan ligados a tu cuenta: solo tú puedes leerlos, viajan
+          siempre por conexión cifrada y nunca se comparten con terceros. Puedes
+          desconectar cualquier dispositivo en cualquier momento y sus datos se borran.
         </Text>
       </PremiumCard>
     </>
@@ -947,14 +982,24 @@ export default function WearablesScreen() {
             {OW_PROVIDERS.map((b) => (
               <Pressable
                 key={b.id}
-                style={styles.owChip}
+                style={[styles.owChip, b.gated && styles.owChipGated]}
                 onPress={() => connectOwBrand(b.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`Conectar ${b.label}`}>
-                <Text style={styles.owChipText}>{b.label}</Text>
+                accessibilityLabel={
+                  b.gated
+                    ? `Conectar ${b.label} — requiere que el fabricante apruebe el acceso`
+                    : `Conectar ${b.label}`
+                }>
+                <Text style={[styles.owChipText, b.gated && styles.owChipTextGated]}>{b.label}</Text>
               </Pressable>
             ))}
           </View>
+          {/* Honestidad: estas marcas exigen aprobación comercial del fabricante,
+              así que pueden no estar disponibles todavía. Mejor decirlo antes del
+              clic que devolver un error opaco después. */}
+          <Text style={styles.owGatedNote}>
+            Garmin, Suunto y Ultrahuman dependen de que el fabricante apruebe el acceso — puede que aún no estén listas.
+          </Text>
           <Pressable style={styles.owCancel} onPress={() => setOwPickerOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
             <Text style={styles.owCancelText}>Cancelar</Text>
           </Pressable>
@@ -1073,6 +1118,12 @@ const styles = StyleSheet.create({
     backgroundColor: palette.goldGlow, justifyContent: 'center',
   },
   owChipText: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 12, letterSpacing: 0.5 },
+  // Marcas tras aprobación del fabricante: mismo tamaño de toque, jerarquía menor
+  // (borde/fondo neutros) para que se lean como "quizá aún no", sin deshabilitarlas
+  // — si el dueño ya consiguió las credenciales, deben poder usarse.
+  owChipGated: { borderColor: palette.line, backgroundColor: palette.graphite },
+  owChipTextGated: { color: palette.smoke },
+  owGatedNote: { ...typography.caption, color: palette.smoke, fontSize: 11, lineHeight: 16, marginTop: spacing.xs },
   owCancel: { alignItems: 'center', paddingVertical: spacing.sm, marginTop: spacing.xs, minHeight: 44, justifyContent: 'center' },
   owCancelText: { ...typography.caption, color: palette.smoke, fontSize: 13 },
 });

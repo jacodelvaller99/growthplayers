@@ -20,6 +20,50 @@ All paths are relative to the worktree root `.../sweet-diffie/lifeflow/`.
 
 ---
 
+## ⚠️ ACTUALIZACIÓN 2026-07-29 — verificado contra prod, no contra el repo
+
+Este registro estaba **desactualizado en ambas direcciones**: daba por abiertos
+problemas ya cerrados, y no recogía uno grave que llevaba meses activo.
+
+**Ya no son bloqueantes (verificado en la base de datos y el dominio reales):**
+
+| # | Decía | Realidad |
+|---|---|---|
+| #0 `mentor_messages` | S0, INSERTs rechazados | ✅ **CERRADO** — el índice ya no es parcial y las 3 policies owner están presentes |
+| #7 recuperación de contraseña web | S1 | ✅ **CERRADO** — `app/(auth)/reset-password.tsx` existe |
+| P1-5 vistas evaden RLS | abierto | ✅ **CERRADO** — `security_invoker=true` en ambas vistas |
+| P1-6 RLS en tablas B2B | abierto | ✅ **MOOT** — esas tablas no existen en producción |
+| P1-8 sin CSP ni cabeceras | abierto | ✅ **CERRADO** — todas responden en vivo |
+| Placeholders legales | bloqueante duro | ✅ **CERRADO** desde el commit `65f9d33` |
+
+**Lo que este registro NO tenía y era lo más grave de todo:**
+
+> **`sync-wearables` lanzaba `ReferenceError` en cada intento de conexión OAuth.**
+> `connectOura` (L481) y `connectWhoop` (L515) usaban el shorthand `user_id,`
+> cuando el parámetro se llama `userId`. El usuario autorizaba en Oura/WHOOP,
+> volvía "bien", y la fila nunca se guardaba. Cero conexiones en producción — y
+> el motor biométrico entero parecía muerto porque no había datos que interpretar.
+> Arreglado; falta desplegar la función.
+
+**Sigue abierto de verdad:**
+
+| Qué | Estado |
+|---|---|
+| P1-7 tokens OAuth legibles por cualquier admin | migración lista, **falta correrla** |
+| Deploy de `sync-wearables` | **falta**; sin él el bug del `user_id` sigue vivo en prod |
+| `eas init` (`app.json:97` en ceros) | dueño |
+| #3 claves IA en el bundle | `EXPO_PUBLIC_AI_PROXY_URL` ya está puesto; falta rotar las viejas |
+| #4 URIs OAuth sin registrar en las consolas | dueño |
+| #5 outbox client-id para inserts no-idempotentes | pendiente |
+
+Detalle y consultas reproducibles: `P1_VERIFICACION_PROD_2026-07-29.md`,
+`WEARABLES_ESTADO_2026-07-29.md`, `RUNBOOK_DUENO_2026-07-29.md`.
+
+Los ítems #6 a #26 de abajo son del snapshot de 2026-06-02 y **no se han
+reverificado uno a uno**. Trátalos como hipótesis, no como estado actual.
+
+---
+
 ### #0 (2026-07-02) — `mentor_messages` rechaza todos los INSERTs en prod: el chat con Norman no persiste — **S0 · fix SQL listo**
 - **Evidencia (sesión real, local contra prod):** `daily_checkins` acepta el insert del día (2026-07-02, energy 7) → red y sesión OK; `mentor_messages` devuelve `[]` para el owner y los 4 mensajes del chat quedaron atascados en `lifeflow:v2:offline_queue_v1` con `onConflict: user_id,client_id`. La columna `client_id` existe (probe SELECT → 200).
 - **Causa raíz (2 capas):** (1) el índice único del outbox (`20260618100000_client_id_outbox.sql`, aplicada — la columna existe) es **parcial** (`where client_id is not null`) y Postgres no acepta índices parciales como árbitro de `ON CONFLICT (user_id, client_id)` sin predicado — PostgREST no lo emite → **42P10 siempre**, así que el reintento del outbox jamás puede entrar; (2) el insert simple de respaldo falló en el momento del envío (401 transitorio del refresh de token — se observó contención del lock de gotrue — o policy INSERT ausente; `20260619000000_db_hardening_p1.sql:111` la define pero su estado aplicado no está confirmado).

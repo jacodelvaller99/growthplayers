@@ -24,6 +24,7 @@ import {
   screen,
   useScreen,
 } from '@/components/polaris';
+import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -546,10 +547,13 @@ export default function ProgresoScreen() {
     return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
   }, [state.checkIns]);
 
-  // Last 7 check-ins for sparklines
+  // Last 7 check-ins for sparklines.
+  // Sin datos NO se rellena con ceros: una línea plana en cero se lee como
+  // "tu energía es cero", no como "aún no hay datos". Se muestra EmptyState.
   const last7 = state.checkIns.slice(-7);
-  const energyValues = last7.length ? last7.map((c) => c.energy) : [0, 0, 0, 0, 0, 0, 0];
-  const clarityValues = last7.length ? last7.map((c) => c.clarity) : [0, 0, 0, 0, 0, 0, 0];
+  const hasCheckIns = last7.length > 0;
+  const energyValues = last7.map((c) => c.energy);
+  const clarityValues = last7.map((c) => c.clarity);
 
   // ── Design analytics: real chronological series from check-ins ──────────────
   // state.checkIns is ordered newest-first; reverse a recent slice to chronological.
@@ -885,9 +889,21 @@ export default function ProgresoScreen() {
 
               <GoldDivider label="BIOMETRÍA PROMEDIO (7D)" />
               <PremiumCard style={styles.sparklineCard}>
-                <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.goldText} />
-                <View style={styles.sparklineDivider} />
-                <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
+                {hasCheckIns ? (
+                  <>
+                    <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.goldText} />
+                    <View style={styles.sparklineDivider} />
+                    <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
+                  </>
+                ) : (
+                  <EmptyState
+                    icon="show-chart"
+                    title="Tu biometría empieza hoy"
+                    body="Haz tu primer check-in y aquí verás cómo se mueven tu energía y tu claridad."
+                    actionLabel="HACER CHECK-IN"
+                    onAction={() => router.push('/checkin')}
+                  />
+                )}
               </PremiumCard>
 
               <GoldDivider label="LOGROS" />
@@ -1100,7 +1116,7 @@ export default function ProgresoScreen() {
 
           {/* Version footer */}
           <Text style={styles.versionText}>
-            Polaris Growth Institute v{appVersion}
+            Polaris OS v{appVersion}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1686,7 +1702,7 @@ export default function ProgresoScreen() {
 
       {/* ── Version footer ── */}
       <Text style={styles.versionText}>
-        Polaris Growth Institute v{appVersion}
+        Polaris OS v{appVersion}
       </Text>
     </ScrollView>
     </KeyboardAvoidingView>

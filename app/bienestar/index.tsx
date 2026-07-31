@@ -124,13 +124,14 @@ type Block = {
   label: string;
   sub: string;
   color: string;
-  type: 'meditation' | 'breathing' | 'binaural' | 'sleep' | 'library' | 'journal';
+  type: 'meditation' | 'breathing' | 'binaural' | 'sleep' | 'library' | 'journal' | 'movement';
 };
 
 // Monochrome — spec: "Sin colores por categoría (todo monocromo excepto el gold CTA)"
 const BLOCKS: Block[] = [
   { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'BINAURALES',  sub: 'enfoque y relajación', color: palette.ash, type: 'binaural'   },
   { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', sub: 'regula tu sistema',    color: palette.ash, type: 'breathing'  },
+  { route: '/bienestar/movimiento',  icon: 'directions-walk',  label: 'MOVIMIENTO',  sub: 'flows y circuitos',    color: palette.ash, type: 'movement'   },
   { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  sub: 'calma la mente',       color: palette.ash, type: 'meditation' },
   { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       sub: 'descansa mejor',       color: palette.ash, type: 'sleep'      },
   { route: '/bienestar/biblioteca',  icon: 'local-library',    label: 'BIBLIOTECA',  sub: 'audios y lecturas',    color: palette.ash, type: 'library'    },

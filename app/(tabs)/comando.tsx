@@ -40,6 +40,7 @@ import { useDashboardPrefs, DASHBOARD_MAX } from '@/hooks/use-dashboard-prefs';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { stripMarkdownLite } from '@/lib/markdownLite';
+import { logSilentError } from '@/lib/observability';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { useWearableConnections } from '@/lib/wearables';
 import { LIVE_SESSION, getNextSession, formatSessionDate } from '@/data/live-sessions';
@@ -163,7 +164,7 @@ export default function DashboardScreen() {
     if (userId && state.profile) {
       generateWeeklySessionIfNeeded(userId, protocolDay, state.profile)
         .then(s => { if (s?.ai_message) setWeeklySession(s); })
-        .catch(() => {});
+        .catch((e) => logSilentError('comando.weeklySession', e));
     }
   }, [userId]);
 
@@ -654,7 +655,7 @@ export default function DashboardScreen() {
           <MaterialIcons name="spa" size={28} color={palette.purple} />
         </View>
         <View style={styles.wellnessBody}>
-          <Text style={styles.wellnessTitle}>MÓDULO BIENESTAR</Text>
+          <Text style={styles.wellnessTitle}>LIFEFLOW</Text>
           <Text style={styles.wellnessSub}>Meditación · Respiración · Binaurales</Text>
         </View>
       </View>
@@ -677,7 +678,7 @@ export default function DashboardScreen() {
         </View>
       )}
       <PrimaryButton
-        label="ABRIR BIENESTAR"
+        label="ABRIR LIFEFLOW"
         icon="spa"
         onPress={() => router.push('/bienestar' as never)}
       />
@@ -1174,7 +1175,7 @@ export default function DashboardScreen() {
                 value={`${progress}% · Día ${protocolDay} de 90`}
                 progress={progress}
               />
-              <GoldDivider label="BIENESTAR" />
+              <GoldDivider label="LIFEFLOW" />
               {wellnessBlock}
             </Animated.View>
 
@@ -1246,7 +1247,7 @@ export default function DashboardScreen() {
           <GoldDivider label="ESTADO DEL DÍA" />
           {estadoBlock}
           {metricsRow}
-          <GoldDivider label="BIENESTAR" />
+          <GoldDivider label="LIFEFLOW" />
           {wellnessBlock}
           <GoldDivider label="SESIÓN EN VIVO" />
           {liveSessionBlock}
@@ -2435,7 +2436,7 @@ function CommunityPreview() {
               .select('blocked_id')
               .eq('blocker_id', userId);
             blocked = new Set<string>((blocks ?? []).map((b: any) => b.blocked_id as string));
-          } catch { /* sin bloqueos */ }
+          } catch (e) { logSilentError('comando.previewBlocks', e); }
         }
 
         const { data, error } = await db2.communityPosts()
@@ -2443,7 +2444,12 @@ function CommunityPreview() {
           .order('is_pinned', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(6);
-        if (error || !data) { if (!cancelled) setLoaded(true); return; }
+        if (error || !data) {
+          // Fallo y vacío se veían igual: sin rastro no se podía diagnosticar.
+          if (error) logSilentError('comando.communityPreviews', error);
+          if (!cancelled) setLoaded(true);
+          return;
+        }
 
         const visible = (data as any[]).filter((p) => !blocked.has(p.user_id)).slice(0, 2);
         const ids = [...new Set<string>(visible.map((p) => p.user_id).filter(Boolean))];
@@ -2455,7 +2461,7 @@ function CommunityPreview() {
               .select('user_id, name')
               .in('user_id', ids);
             (profiles ?? []).forEach((p: any) => { if (p.name) nameMap[p.user_id] = p.name; });
-          } catch { /* nombres por defecto */ }
+          } catch (e) { logSilentError('comando.previewNames', e); }
         }
 
         if (!cancelled) {
@@ -2466,7 +2472,8 @@ function CommunityPreview() {
           })));
           setLoaded(true);
         }
-      } catch {
+      } catch (e) {
+        logSilentError('comando.communityPreviews', e);
         if (!cancelled) setLoaded(true);
       }
     })();

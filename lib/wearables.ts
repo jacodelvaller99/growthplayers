@@ -36,11 +36,21 @@ export function isAggregatorProvider(p: WearableProvider): p is 'aggregator' {
 // — reciba el callback. Web/dev-web mantienen el redirect https.
 // ⚠ Handoff: las redirect URIs nativas (polaris://oauth/<provider>/callback)
 // deben registrarse en las consolas de desarrollador de Oura y WHOOP.
+// ⚠ El dominio web DEBE coincidir carácter a carácter con el registrado en la
+// consola del proveedor Y con el que usa `sync-wearables` al intercambiar el
+// código (EXPO_PUBLIC_APP_URL). OAuth compara redirect_uri como string exacto.
+//
+// Ojo: growthplayers.vercel.app responde 307 hacia polarisgrowthinstitute.vercel.app.
+// Hoy el flujo sobrevive porque ambos lados usan la MISMA cadena literal, pero si
+// alguien "arregla" un lado y no el otro, OAuth se rompe con redirect_uri mismatch.
+// Por eso ahora sale de una env var: un solo sitio que cambiar.
+const WEB_ORIGIN = process.env.EXPO_PUBLIC_APP_URL ?? 'https://growthplayers.vercel.app';
+
 const REDIRECT_BASE = Platform.OS !== 'web'
   ? 'polaris://oauth'
   : ENV.isDev
     ? 'exp://localhost:8081'
-    : 'https://growthplayers.vercel.app';
+    : WEB_ORIGIN;
 
 /** Solo los providers OAuth web (apple_health/health_connect leen on-device, no usan OAuth). */
 export type OAuthProvider = 'oura' | 'whoop';
@@ -60,7 +70,12 @@ export const OAUTH_URLS: Record<OAuthProvider, (state: string) => string> = {
       client_id:     process.env.EXPO_PUBLIC_WHOOP_CLIENT_ID ?? '',
       redirect_uri:  `${REDIRECT_BASE}/oauth/whoop/callback`,
       response_type: 'code',
-      scope:         'read:recovery read:cycles read:sleep read:workout read:profile',
+      // Solo los tres que el sync consulta de verdad: /recovery, /activity/sleep
+      // y /cycle. Antes pedíamos también read:workout y read:profile, que no se
+      // usan en ninguna parte — pedir acceso que no ejerces es mala práctica y
+      // los revisores de privacidad lo marcan. Si algún día leemos workouts,
+      // se añade aquí Y en la consola de WHOOP (los usuarios re-consienten).
+      scope:         'read:recovery read:cycles read:sleep',
       state,
     });
     return `https://api.prod.whoop.com/oauth/oauth2/auth?${params}`;

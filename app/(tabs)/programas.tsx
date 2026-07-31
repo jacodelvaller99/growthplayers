@@ -21,16 +21,21 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 // A module is unlocked when either:
 //  - It is the first active module (static status 'active')
 //  - All lessons of the previous module have been completed
-function isModuleUnlocked(
+export function isModuleUnlocked(
   modules: typeof POLARIS_MODULES,
   moduleIndex: number,
   completedLessons: string[],
 ): boolean {
+  // exportada para test — ver __tests__/unit/programasScreen.test.tsx
   const mod = modules[moduleIndex];
   if (mod.status === 'coming_soon') return false;
   if (moduleIndex === 0) return true;
   const prev = modules[moduleIndex - 1];
-  if (prev.status === 'coming_soon' || prev.lessons.length === 0) return false;
+  if (prev.status === 'coming_soon') return false;
+  // Un módulo SIN lecciones (los que enlazan directo a su classroom de Skool)
+  // no tiene nada que completar, así que no puede bloquear al siguiente —
+  // antes dejaba el resto de la ruta cerrado para siempre.
+  // `every` sobre un array vacío ya devuelve true; no hace falta caso especial.
   return prev.lessons.every((l) => completedLessons.includes(l.id));
 }
 

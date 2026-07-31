@@ -71,3 +71,16 @@ export const TESTIMONIALS: Testimonial[] = [
     verified: false,
   },
 ];
+
+/**
+ * LO ÚNICO que la UI puede mostrar como prueba social.
+ *
+ * El filtro vive aquí y no en la pantalla a propósito: un testimonio sin
+ * consentimiento confirmado es riesgo legal y de rechazo en App Store, así que
+ * no puede depender de que cada pantalla se acuerde de filtrarlo. Hoy devuelve
+ * un array vacío — es correcto: no hay ninguno verificado todavía.
+ *
+ * Para activarlos: confirma identidad + consentimiento por escrito del cliente
+ * y pon `verified: true` en su entrada. Aparecerá solo.
+ */
+export const VERIFIED_TESTIMONIALS: Testimonial[] = TESTIMONIALS.filter((t) => t.verified);

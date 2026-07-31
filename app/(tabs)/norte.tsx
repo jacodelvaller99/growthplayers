@@ -18,6 +18,7 @@ import {
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { logSilentError } from '@/lib/observability';
 
 export default function NorteScreen() {
   const sc = useScreen();
@@ -36,6 +37,7 @@ export default function NorteScreen() {
   const [saved, setSaved] = useState(false);
   // Guard anti-doble-tap: updateNorthStar es async → deshabilita durante la escritura.
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Norte completeness — 4 fields, each contributes 25%
   const norteScore = [
@@ -48,6 +50,7 @@ export default function NorteScreen() {
   const save = async () => {
     if (saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await updateNorthStar({
         purpose,
@@ -60,6 +63,11 @@ export default function NorteScreen() {
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      // Sin esto el rechazo quedaba sin manejar y el botón se re-habilitaba
+      // como si hubiera guardado — el usuario perdía su Norte en silencio.
+      logSilentError('norte.save', e);
+      setSaveError('No se pudo guardar tu Norte. Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -223,6 +231,14 @@ export default function NorteScreen() {
                     Declarado. El protocolo ahora opera hacia este norte.
                   </Text>
                 ) : null}
+                {saveError ? (
+                  <Text
+                    style={styles.saveError}
+                    accessibilityLiveRegion="polite"
+                    accessibilityRole="alert">
+                    {saveError}
+                  </Text>
+                ) : null}
               </PremiumCard>
             </View>
           </View>
@@ -353,6 +369,14 @@ export default function NorteScreen() {
         onPress={save}
         disabled={saving}
       />
+      {saveError ? (
+        <Text
+          style={styles.saveError}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert">
+          {saveError}
+        </Text>
+      ) : null}
     </ScrollView>
 
     {/* ── Toast: NORTE FIJADO EN EL SISTEMA ── */}
@@ -564,6 +588,14 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  saveError: {
+    color: palette.danger,
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: spacing.sm,
   },
 
   // Non-negotiables

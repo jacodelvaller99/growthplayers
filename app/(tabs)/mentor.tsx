@@ -28,6 +28,7 @@ import {
   screen,
   useScreen,
 } from '@/components/polaris';
+import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useToast } from '@/context/ToastContext';
@@ -827,7 +828,11 @@ export default function MentorScreen() {
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
               {threads.length === 0 ? (
-                <Text style={styles.threadsEmpty}>Sin conversaciones guardadas aún</Text>
+                <EmptyState
+                  icon="chat-bubble-outline"
+                  title="Sin conversaciones guardadas"
+                  body="Cuando hables con Norman, tus conversaciones quedarán aquí para retomarlas cuando quieras."
+                />
               ) : (
                 threads.map(t => (
                   <Pressable
@@ -958,13 +963,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   threadsClose: { padding: 4 },
-  threadsEmpty: {
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    color: palette.smoke,
-    textAlign: 'center',
-    paddingVertical: spacing.xl,
-  },
   threadRow: {
     flexDirection: 'row',
     alignItems: 'center',

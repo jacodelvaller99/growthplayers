@@ -65,17 +65,29 @@ async function fetchMessageStats(userId: string, nowMs: number): Promise<Message
   const empty: MessageStats = { user_turns_7d: 0, user_turns_prev: 0, days_since_last_message: Infinity };
   try {
     const since14 = isoDaysAgo(14, nowMs);
-    const { data, error } = await anyClient
-      .from('mentor_messages')
-      .select('role, created_at')
-      .eq('user_id', userId)
-      .eq('role', 'user')
-      .gte('created_at', since14)
-      .order('created_at', { ascending: false })
-      .limit(500);
-    if (error) { logSilentError('coach.messageStats', error); return empty; }
+    // mentor_messages es la fuente principal, pero el bug histórico de persistencia
+    // (índice parcial 42P10) dejó la tabla vacía para sesiones viejas. Los resúmenes
+    // de mentor_conversations sí se guardaron siempre → se usan como señal de
+    // actividad adicional para no reportar "N días sin escribir" a un usuario activo.
+    const [msgsRes, convRes] = await Promise.all([
+      anyClient
+        .from('mentor_messages')
+        .select('role, created_at')
+        .eq('user_id', userId)
+        .eq('role', 'user')
+        .gte('created_at', since14)
+        .order('created_at', { ascending: false })
+        .limit(500),
+      anyClient
+        .from('mentor_conversations')
+        .select('created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1),
+    ]);
+    if (msgsRes.error) { logSilentError('coach.messageStats', msgsRes.error); return empty; }
 
-    const rows = (data ?? []) as Array<{ created_at: string }>;
+    const rows = (msgsRes.data ?? []) as Array<{ created_at: string }>;
     const since7Ms = nowMs - 7 * MS_PER_DAY;
     const since14Ms = nowMs - 14 * MS_PER_DAY;
     let turns7 = 0;
@@ -88,6 +100,8 @@ async function fetchMessageStats(userId: string, nowMs: number): Promise<Message
       if (t >= since7Ms) turns7 += 1;
       else if (t >= since14Ms) turnsPrev += 1;
     }
+    const lastConvMs = Date.parse((convRes.data?.[0] as { created_at?: string } | undefined)?.created_at ?? '');
+    if (!Number.isNaN(lastConvMs) && lastConvMs > lastMs) lastMs = lastConvMs;
     const daysSince = lastMs > 0 ? Math.floor((nowMs - lastMs) / MS_PER_DAY) : Infinity;
     return { user_turns_7d: turns7, user_turns_prev: turnsPrev, days_since_last_message: daysSince };
   } catch (e) {

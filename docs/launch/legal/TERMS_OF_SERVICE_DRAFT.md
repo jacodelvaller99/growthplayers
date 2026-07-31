@@ -1,12 +1,12 @@
 # TÉRMINOS Y CONDICIONES DE USO — POLARIS GROWTH INSTITUTE / LIFEFLOW
 
-> **ESTADO: BORRADOR PARA REVISIÓN LEGAL.** Los campos entre corchetes `[ ]` deben completarse por la empresa. Este borrador está alineado con la funcionalidad real de la App (mentor IA, wearables, suscripciones vía RevenueCat/tiendas, contenido de comunidad).
+> **ESTADO: FINALIZADO** — datos de entidad confirmados por el dueño 2026-07-22. El texto vigente vive en `app/legal/terminos.tsx`; este archivo queda como referencia histórica del borrador.
 
-**Titular del servicio:** [RAZÓN SOCIAL]
-**Domicilio:** [DIRECCIÓN FISCAL]
-**Contacto legal:** [EMAIL LEGAL]
-**Última actualización:** [FECHA]
-**Versión:** 1.0-draft
+**Titular del servicio:** POLARIS GROWTH INSTITUTE CORP
+**Domicilio:** 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS
+**Contacto legal:** info@polarisgrowthinstitute.com
+**Última actualización:** 22 de julio de 2026
+**Versión:** 1.0-final
 
 Al crear una cuenta o usar la aplicación **LifeFlow / Polaris** ("la App"), usted acepta estos Términos y Condiciones ("Términos"). Si no está de acuerdo, no use la App.
 

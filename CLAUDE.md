@@ -238,6 +238,46 @@ Beyond the audio practices: **habits** (morning/evening routines with check + po
 - **Offline write queue** — `lib/offlineQueue.ts` enqueues non-critical writes and retries on reconnect.
 - **ml_consent es opt-in explícito (RGPD)** — `profiles.ml_consent` DEFAULT `false` (migración `…_ml_consent_opt_in.sql`); el onboarding tiene un checkbox **opcional separado** que NO bloquea el gate. `analytics.track()` ya es no-op sin consentimiento/userId.
 
+### Cierre de acabado — 10 sesiones (2026-07-29)
+
+Estado del registro: **`docs/launch/RUNBOOK_DUENO_2026-07-29.md` manda.** Los docs
+de junio (`00_EXECUTIVE_LAUNCH_VERDICT`, `OWNER_HANDOFF_PACKET`) están marcados
+como supersedidos porque daban por abiertos problemas ya cerrados.
+
+- **`sync-wearables` lanzaba `ReferenceError` en cada connect.** `connectOura` y
+  `connectWhoop` usaban el shorthand `user_id,` con el parámetro llamado `userId`.
+  Los wearables **nunca funcionaron** en producción; no era falta de credenciales.
+  Arreglado + `getValidToken` pasa de ternario a switch (cualquier proveedor no-Oura
+  iba al refresh de WHOOP) + los upserts planos pasan por `merge_wearable_daily`
+  (mandaban varios días en un array y PostgREST rellenaba con NULL las claves que
+  faltaban, **borrando** datos ya sincronizados).
+- **Fallos silenciosos del loop central:** `norte.tsx` guardaba sin `catch`;
+  `checkin`/`onboarding` tenían catch vacío; `progreso.tsx` rellenaba las
+  sparklines con ceros (un usuario nuevo veía siete días de línea plana en cero).
+  Todos con mensaje al usuario + `logSilentError`.
+- **`EmptyState`/`ErrorState` estaban escritos y con CERO usos** en todo el repo.
+  Ahora se usan en el golden path.
+- **Honestidad:** el paywall renderizaba testimonios `verified:false` atribuidos
+  por rol; el filtro vive ahora en la capa de datos (`VERIFIED_TESTIMONIALS`), no
+  en la pantalla, con test que fija el invariante. Se corrigieron dos claims
+  falsos: "tokens cifrados" (son texto plano) y el consentimiento de grabación,
+  que decía que el audio iba a "tu espacio cifrado" cuando va a OpenAI.
+- **Módulos 5–10 desbloqueados** vía el `skoolUrl` del módulo padre; el guard
+  `prev.lessons.length === 0` habría dejado cerrado para siempre todo lo posterior
+  a un módulo sin lecciones.
+- **Subida de exámenes médicos (PHI) ya funciona en móvil** — `expo-document-picker`
+  con import dinámico, así que no entra al bundle web.
+- **`useReducedMotion`** (`hooks/use-reduced-motion.ts`) — solo `welcome.tsx`
+  respetaba la preferencia. Cableado en `AnimatedNumber`, `SkeletonBar` y
+  `HomeSkeleton` (los dos únicos bucles infinitos). La respiración guiada se deja:
+  ahí el movimiento es el ejercicio.
+- **Nuevo flag `EXPO_PUBLIC_AGGREGATOR_ENABLED`** (default `false`): la tarjeta
+  del agregador era el CTA "RECOMENDADO" y sin infraestructura siempre acababa en
+  "Integración en activación".
+
+**Pendiente de correr (no es código):** el SQL de P1-7, la migración
+`20260729010000`, `supabase functions deploy sync-wearables`, y `eas init`.
+
 ### Launch hardening — fiabilidad (2026-06-17)
 
 - **AI stream guard** — `createStreamGuard` (en `lib/nvidia.ts`, reusado por groq/openai/anthropic): timeout total 45s + **watchdog de inactividad 8s**; un proveedor que se estanca hace failover (avanza la cadena) en vez de colgar; cancelación de usuario devuelve el parcial. La UI de mentor ya tenía botón Detener + timeout total (WAVE 3).
@@ -294,7 +334,7 @@ El motor downstream (`lib/biometric.ts`, Confrontation OS, dashboards admin) es 
 IA EDUCATIVA en `app/bienestar/internista.tsx` (Cluster B) — NO es Norman, NO diagnostica. Explica marcadores, fisiología y evidencia de lifestyle medicine citando guías reales (USPSTF, NIH/MedlinePlus, Mayo Clinic, ACLM, Cochrane, Endocrine Society, ADA, ATA, AHA/ACC, KDIGO). Ante cualquier red-flag (dolor torácico, salud mental en crisis, valores críticos de lab, embarazo+medicación, TCA), **deja de educar y deriva** — la lógica pura emite la respuesta de derivación antes de llamar al modelo, así la seguridad no depende del LLM.
 
 - **Base de conocimiento** (`data/internistKnowledge.ts`, datos como constantes): `LAB_MARKERS` con 15 marcadores comunes (glucosa, HbA1c, LDL/HDL/TG, TSH, vit D, B12, ferritina, creatinina, ALT, hs-CRP, testosterona, hemoglobina, potasio) — cada uno con rango low/high, umbrales críticos, qué mide, significado educativo low/high y cita de la guía. `LIFESTYLE_FACTS` con 13 entradas evidenciadas (sueño 7–9h, ejercicio 150min/sem, dieta mediterránea PREDIMED, fuerza 2–3×/sem, creatina, vit D solo si déficit, manejo estrés, ayuno intermitente, HRV, RHR, wearables, omega-3, magnesio) con grado `established|probable|uncertain` + cita. `RED_FLAGS` con 12 reglas (urgent/soon/routine).
-- **Lógica pura** (`lib/internistLogic.ts`, 31 tests): `classifyLabValue` (banda `critical_low|low|normal|high|critical_high|unknown` + nota educativa citable), `detectRedFlags` (keyword match con exclude para descartar pasado), `assembleEducationalContext` (empaqueta labs+lifestyle+red-flags para inyectar al prompt), `detectForbiddenLanguage` (sanitizador pasivo del output: "tienes diabetes", "te receto", etc.).
+- **Lógica pura** (`lib/internistLogic.ts`, 31 tests): `classifyLabValue` (banda `critical_low|low|normal|high|critical_high|unknown` + nota educativa citable), `detectRedFlags` (keyword match con exclude para descartar pasado), `assembleEducationalContext` (empaqueta labs+lifestyle+red-flags para inyectar al prompt), `detectForbiddenLanguage` (guardarraíl de salida: "tienes diabetes", "te receto", etc.). **Está cableado sobre el stream** (`streamInternistResponse`): el chunk que completa la frase no se pinta, se aborta sin reintentar con el siguiente proveedor, y el turno se persiste con el texto correctivo — nunca con el del modelo. Falla cerrado a propósito.
 - **IA + IO** (`lib/internist.ts`): `buildInternistPrompt` (system prompt completo con identidad de internista educativo, 6 reglas inviolables, flujo esperado, contexto del paciente, bloques de evidencia citable, disclaimer de cierre obligatorio). `streamInternistResponse` reusa la cadena de fallback endurecida (anthropic→nvidia→groq→openai vía ai-proxy) — **si hay red-flag urgent, responde con derivación sin llamar al modelo** (seguridad determinística). `persistInternistTurn` guarda turnos con snapshot de red-flags detectados. `fetchPatientContext` ensambla perfil + labs históricos + último snapshot biométrico.
 - **PHI** (`lib/medicalExams.ts` + migración `20260620000000_internist_phi.sql`): bucket Storage privado `medical-exams/<user_id>/<exam_id>.<ext>` (path enforced por RLS de Storage). Tablas `medical_exams` (metadatos), `medical_lab_values` (marcadores parseados), `internist_sessions` (conversación) — todas RLS owner-only. Admin solo ve metadatos Y SOLO SI `profiles.consents.share_exams_with_coach = true` (gate en SQL, no en cliente). `internist_sessions` es admin-blind por diseño — la conversación con el internista NUNCA llega al coach. Subida es web-first (`<input type="file">` HTML5); nativo muestra notice (handoff: `expo-document-picker`). Archivos servidos por signed URL de 5 min — nunca pública.
 - **UI** (`app/bienestar/internista.tsx`): consent gate inicial (persistido en SecureStore/localStorage clave `internist:consent:v1`), barra de disclaimer permanente, chat con quick-prompts, link a "Tus exámenes médicos". `app/bienestar/examenes.tsx`: subida + lista + borrado + toggle "compartir con coach" (escribe a `profiles.consents.share_exams_with_coach`).

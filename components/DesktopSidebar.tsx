@@ -37,7 +37,7 @@ const NAV_DOMAINS: NavGroup[] = [
     { label: 'MENTOR', icon: 'chat-bubble-outline', route: '/(tabs)/mentor', match: 'mentor' },
   ] },
   { title: 'RECUPERACIÓN', items: [
-    { label: 'BIENESTAR', icon: 'spa', route: '/bienestar', match: 'bienestar' },
+    { label: 'LIFEFLOW', icon: 'spa', route: '/bienestar', match: 'bienestar' },
   ] },
 ];
 

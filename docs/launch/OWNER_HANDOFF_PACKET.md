@@ -1,12 +1,21 @@
 # OWNER HANDOFF PACKET — de PRODUCTION CANDIDATE a SHIPPED
 
-> 2026-06-16. Todo el código está listo y validado (`tsc 0 · lint 0 · 134 tests · export web OK`).
-> Lo que falta para salir **no es código** — son 5 handoffs que dependen de tus datos/cuentas.
-> Cada uno trae el dato/comando/URI **exacto** + cómo verificar que quedó cerrado.
+> ## 🚨 SUPERSEDIDO — usa `RUNBOOK_DUENO_2026-07-29.md`
+>
+> Este documento es de 2026-06-16 y **su sección 1 es falsa**: dice que los
+> placeholders legales son el "único bloqueante de WEB SHIP". Ya no lo son —
+> se rellenaron con los datos reales de la entidad en el commit `65f9d33`
+> (`grep -rn "\[" app/legal/*.tsx` → 0 resultados).
+>
+> Tampoco recoge el hallazgo más grave: `sync-wearables` lanzaba `ReferenceError`
+> en cada conexión OAuth, así que los wearables nunca funcionaron.
+>
+> Las secciones 2–5 siguen siendo correctas en lo esencial, pero el runbook
+> nuevo las ordena por impacto y añade lo que falta. **Empieza por ahí.**
 
 ---
 
-## 1) LEGAL — único bloqueante de WEB SHIP
+## 1) LEGAL — ~~único bloqueante de WEB SHIP~~ ✅ CERRADO (commit `65f9d33`)
 Los placeholders se renderizan **visibles en producción hoy** (verificado en `/legal/privacidad` y
 `/legal/salud`). Apple/Google rechazan con entidad legal o recursos de crisis en placeholder.
 

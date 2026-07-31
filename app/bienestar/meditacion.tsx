@@ -15,9 +15,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
+import { EvidenceBadge } from '@/components/EvidenceBadge';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { MEDITATION_CATEGORY_MUSIC, MEDITATION_SESSIONS, type MeditationSession } from '@/data/wellness';
+import {
+  MEDITATION_CATEGORY_MUSIC,
+  MEDITATION_SESSIONS,
+  meditationPhasesToNarration,
+  type MeditationSession,
+} from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
+import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
@@ -37,6 +44,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   identidad: palette.ash,
   decisión:  palette.ash,
   energía:   palette.ash,
+  compasión: palette.ash,
 };
 
 const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
@@ -47,6 +55,7 @@ const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['
   identidad: 'fingerprint',
   decisión:  'alt-route',
   energía:   'bolt',
+  compasión: 'volunteer-activism',
 };
 
 // ─── Circular timer ───────────────────────────────────────────────────────────
@@ -106,10 +115,13 @@ function CircleTimer({ progress, size = 200 }: { progress: number; size?: number
 
 function MeditationPlayer({
   session,
+  northStar,
   onComplete,
   onExit,
 }: {
   session: MeditationSession;
+  /** El Norte del usuario, para las fases que marcan `showsNorthStar`. */
+  northStar?: string;
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
@@ -129,9 +141,14 @@ function MeditationPlayer({
   const [phaseIdx, setPhaseIdx] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const audioRef = useRef<ReturnType<typeof createMeditationAudio>>(null);
+  const narrationRef = useRef<NarrationHandle | null>(null);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Una sesión narrada puede terminar su guion antes de que el reloj visual
+  // llegue a cero (el guion es voz+pausas reales, el reloj es un contador
+  // fijo) — sin este guard, `finishSession` correría dos veces.
+  const finishedRef = useRef(false);
 
   // Idle pulse
   useEffect(() => {
@@ -148,23 +165,68 @@ function MeditationPlayer({
     }
   }, [running, pulseAnim]);
 
+  /**
+   * Cierra la sesión — llamada tanto por el reloj visual (llega a cero) como
+   * por el guion narrado (termina su última fase). Sin este punto único, una
+   * sesión narrada cuya voz+pausas terminan antes que el reloj se quedaba
+   * congelada en silencio hasta que el contador alcanzara cero por su cuenta.
+   */
+  const finishSession = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    if (timerRef.current) clearInterval(timerRef.current);
+    setRunning(false);
+    setDone(true);
+    haptic('success');
+    storeStop();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (audioRef as any).current?.bell();
+    narrationRef.current?.stop();
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (audioRef as any).current?.stop();
+    }, 3500);
+    onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
+  }, [onComplete, storeStop]);
+
   const startSession = useCallback(() => {
     setRunning(true);
     setPaused(false);
     setRemaining(totalSeconds);
     startTimeRef.current = Date.now();
+    finishedRef.current = false;
     haptic('medium');
 
-    // Start audio (cama musical Suno por categoría si existe; si no, ruido procedural)
-    const audio = createMeditationAudio(session.ambientType, MEDITATION_CATEGORY_MUSIC[session.category]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (audioRef as any).current = audio;
-    audio?.start();
-    audio?.bell();
+    if (session.narrated) {
+      // Sesión narrada: manda la voz. El texto en pantalla lo dicta el mp3 que
+      // esté sonando, no un contador — si la voz se retrasa, el texto también.
+      const narration = createNarrationPlayer({
+        musicUrl: MEDITATION_CATEGORY_MUSIC[session.category],
+        binaural: session.binaural,
+        // El helper deriva la pausa de cada fase (duración menos lo que dura
+        // la voz). Con `pauseAfter: 0` el player avanzaba en cuanto acababa el
+        // mp3 y una meditación de 6 minutos se consumía en dos.
+        phases: meditationPhasesToNarration(session),
+        onPhaseChange: (i) => {
+          setPhaseIdx(i);
+          setCurrentPhaseText(session.phases[i].text);
+        },
+        onComplete: finishSession,
+      });
+      narrationRef.current = narration;
+      narration?.start();
+    } else {
+      // Cama musical Suno por categoría si existe; si no, ruido procedural.
+      const audio = createMeditationAudio(session.ambientType, MEDITATION_CATEGORY_MUSIC[session.category]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (audioRef as any).current = audio;
+      audio?.start();
+      audio?.bell();
+    }
 
     // Wire to global wellness store so mini player appears
     storeStart({ type: 'meditation', sessionName: session.title, targetSeconds: totalSeconds });
-  }, [totalSeconds, session.ambientType, session.category, session.title, storeStart]);
+  }, [totalSeconds, session, storeStart, finishSession]);
 
   // Countdown timer
   useEffect(() => {
@@ -172,18 +234,7 @@ function MeditationPlayer({
     timerRef.current = setInterval(() => {
       setRemaining((prev) => {
         if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          setRunning(false);
-          setDone(true);
-          haptic('success');
-          storeStop();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (audioRef as any).current?.bell();
-          setTimeout(() => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (audioRef as any).current?.stop();
-          }, 3500);
-          onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
+          finishSession();
           return 0;
         }
         const elapsed = totalSeconds - (prev - 1);
@@ -192,11 +243,14 @@ function MeditationPlayer({
       });
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [running, onComplete, storeStop, storeElapsed, totalSeconds]);
+  }, [running, finishSession, storeElapsed, totalSeconds]);
 
   // Phase rotation
   useEffect(() => {
-    if (!running || !session.phases.length) return;
+    // En una sesión narrada manda la voz, no el reloj: el texto lo cambia
+    // `onPhaseChange`. Si además girara este temporizador, el texto adelantaría
+    // al audio y el usuario leería una cosa mientras oye otra.
+    if (!running || !session.phases.length || session.narrated) return;
     let idx = phaseIdx;
     let elapsed = 0;
     const phaseDurations = session.phases.map((p) => p.duration);
@@ -221,6 +275,8 @@ function MeditationPlayer({
     if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (audioRef as any).current?.stop();
+    narrationRef.current?.stop();
+    narrationRef.current = null;
     storeStop();
     setRunning(false);
     setPaused(false);
@@ -232,6 +288,7 @@ function MeditationPlayer({
   const handlePause = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
+    narrationRef.current?.pause();
     setRunning(false);
     setPaused(true);
     storePause();
@@ -239,6 +296,7 @@ function MeditationPlayer({
   }, [storePause]);
 
   const handleResume = useCallback(() => {
+    narrationRef.current?.resume();
     setRunning(true);
     setPaused(false);
     storeResume();
@@ -264,6 +322,12 @@ function MeditationPlayer({
       <Text style={player.sessionTitle}>{session.title}</Text>
       <Text style={player.sessionDesc}>{session.description}</Text>
 
+      {!running && !done && session.evidence ? (
+        <View style={player.evidenceSlot}>
+          <EvidenceBadge evidence={session.evidence} variant="full" />
+        </View>
+      ) : null}
+
       {/* Timer circle */}
       <View style={player.circleContainer}>
         <CircleTimer progress={progress} size={220} />
@@ -279,6 +343,17 @@ function MeditationPlayer({
           <Text style={[player.guideText, { color: catColor }]}>
             {done ? '✦ Sesión completada ✦' : currentPhaseText}
           </Text>
+
+          {/* Lo que hace esto de Polaris y no una meditación genérica: en la
+              fase de declaración la voz dice algo neutro y la pantalla muestra
+              el Norte que escribió ESTE usuario. Un solo mp3 sirve para todos
+              y aun así cada quien lee lo suyo. */}
+          {!done && northStar && session.phases[phaseIdx]?.showsNorthStar && (
+            <>
+              <GoldDivider />
+              <Text style={player.northStarText}>{northStar}</Text>
+            </>
+          )}
         </PremiumCard>
       )}
 
@@ -364,6 +439,7 @@ export default function MeditacionScreen() {
     return (
       <MeditationPlayer
         session={active}
+        northStar={state.northStar?.identity || state.northStar?.purpose}
         onComplete={(secs) => handleComplete(active, secs)}
         onExit={() => setActive(null)}
       />
@@ -388,14 +464,8 @@ export default function MeditacionScreen() {
         Sesiones guiadas con audio ambiental. Usa auriculares para mejor experiencia.
       </Text>
 
-      {Platform.OS !== 'web' && (
-        <Text style={styles.intro}>
-          El audio de esta práctica está disponible en la versión web por ahora — aquí corre como temporizador guiado.
-        </Text>
-      )}
-
       <SafetyWarning
-        body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria."
+        body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria. Si durante la práctica aumenta la angustia, sientes desconexión de tu cuerpo o del entorno, o aparece miedo intenso, detén la sesión y abre los ojos: parar es la respuesta correcta, no algo que haya que atravesar."
       />
 
       {/* Contexto biométrico del día (honesto, no en vivo) */}
@@ -429,6 +499,9 @@ export default function MeditacionScreen() {
                       </Text>
                     </View>
                     <Text style={styles.duration}>{session.durationMinutes} min</Text>
+                    {/* Solo aparece si la sesion declara evidencia. La ausencia
+                        del sello ES la informacion: no hay estado "sin respaldo". */}
+                    <EvidenceBadge evidence={session.evidence} />
                   </View>
                 </View>
                 {done
@@ -535,6 +608,10 @@ const player = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
+  evidenceSlot: {
+    marginTop: spacing.md,
+    marginHorizontal: spacing.lg,
+  },
   sessionDesc: {
     ...typography.body,
     color: palette.smoke,
@@ -572,6 +649,14 @@ const player = StyleSheet.create({
     textAlign: 'center',
     fontSize: 15,
     lineHeight: 24,
+  },
+  northStarText: {
+    fontFamily: Fonts.displayMedium,
+    fontWeight: '600',
+    color: palette.goldText,
+    textAlign: 'center',
+    fontSize: 17,
+    lineHeight: 27,
   },
   controls: {
     marginTop: spacing.xl,

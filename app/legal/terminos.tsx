@@ -7,8 +7,7 @@ import { GoldDivider, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 
 // ─── Terms of service content ────────────────────────────────────────────────
-// Summarized faithfully from docs/launch/legal/TERMS_OF_SERVICE_DRAFT.md.
-// [PLACEHOLDERS] are intentionally visible so the team fills them before launch.
+// Texto legal final provisto por el dueño — POLARIS GROWTH INSTITUTE CORP.
 
 interface Section {
   heading: string;
@@ -26,7 +25,7 @@ const SECTIONS: Section[] = [
   {
     heading: '2. Elegibilidad y cuenta',
     body: [
-      'Debe ser mayor de [18] años y tener capacidad legal para contratar.',
+      'Debe ser mayor de 18 años y tener capacidad legal para contratar.',
       'Usted es responsable de la veracidad de los datos que proporciona y de mantener la confidencialidad de sus credenciales. Toda actividad realizada desde su cuenta se le atribuye.',
       'Algunas funciones pueden requerir un código de acceso o invitación. El uso indebido o la distribución no autorizada de códigos puede conllevar la suspensión.',
     ],
@@ -91,7 +90,7 @@ const SECTIONS: Section[] = [
   {
     heading: '10. Propiedad intelectual',
     body: [
-      'La App, su marca, el Método Polaris, los módulos, lecciones, textos, diseño, la voz y persona del mentor, y demás materiales son propiedad de [RAZÓN SOCIAL] o de sus licenciantes, y están protegidos por derechos de propiedad intelectual.',
+      'La App, su marca, el Método Polaris, los módulos, lecciones, textos, diseño, la voz y persona del mentor, y demás materiales son propiedad de POLARIS GROWTH INSTITUTE CORP o de sus licenciantes, y están protegidos por derechos de propiedad intelectual.',
       'Estos Términos no le transfieren ningún derecho de propiedad sobre la App ni el contenido, salvo la licencia limitada de la sección 3. Las marcas y contenidos de terceros pertenecen a sus respectivos titulares.',
     ],
   },
@@ -117,21 +116,21 @@ const SECTIONS: Section[] = [
   {
     heading: '14. Limitación de responsabilidad',
     body: [
-      'En la máxima medida permitida por la ley, [RAZÓN SOCIAL] y sus directivos, empleados y proveedores no serán responsables por daños indirectos, incidentales, especiales, consecuentes o punitivos, ni por pérdida de datos o beneficios, derivados del uso o la imposibilidad de uso de la App, del mentor IA, de la inexactitud de datos biométricos de terceros, o de decisiones que usted tome basándose en el contenido.',
-      'En la medida permitida, nuestra responsabilidad agregada se limitará al importe que usted haya pagado en los [12] meses anteriores al hecho que origina la reclamación, o a [IMPORTE, p. ej. USD 100], lo que sea menor. Nada excluye responsabilidades que no puedan excluirse legalmente.',
+      'En la máxima medida permitida por la ley, POLARIS GROWTH INSTITUTE CORP. y sus directivos, empleados y proveedores no serán responsables por daños indirectos, incidentales, especiales, consecuentes o punitivos, ni por pérdida de datos o beneficios, derivados del uso o la imposibilidad de uso de la App, del mentor IA, de la inexactitud de datos biométricos de terceros, o de decisiones que usted tome basándose en el contenido.',
+      'En la medida permitida, nuestra responsabilidad agregada se limitará al importe que usted haya pagado en los 12 meses anteriores al hecho que origina la reclamación, o a USD 100, lo que sea menor. Nada excluye responsabilidades que no puedan excluirse legalmente.',
     ],
   },
   {
     heading: '15. Indemnidad',
     body: [
-      'Usted acepta mantener indemne a [RAZÓN SOCIAL] frente a reclamaciones de terceros derivadas de su uso indebido de la App, su contenido publicado o su incumplimiento de estos Términos, en la medida permitida por la ley.',
+      'Usted acepta mantener indemne a POLARIS GROWTH INSTITUTE CORP frente a reclamaciones de terceros derivadas de su uso indebido de la App, su contenido publicado o su incumplimiento de estos Términos, en la medida permitida por la ley.',
     ],
   },
   {
     heading: '16. Ley aplicable y disputas',
     body: [
-      'Estos Términos se rigen por las leyes de [JURISDICCIÓN / PAÍS], sin atención a sus normas de conflicto de leyes.',
-      'Las disputas se someterán a los tribunales competentes de [CIUDAD, PAÍS] o, si así se acuerda, a arbitraje administrado por [INSTITUCIÓN ARBITRAL] en [SEDE], en idioma [español]. Ciertas cláusulas pueden ser inaplicables frente a consumidores según el derecho imperativo de cada jurisdicción.',
+      'Estos Términos se rigen por las leyes de Florida, USA, sin atención a sus normas de conflicto de leyes.',
+      'Las disputas se someterán a los tribunales competentes de Florida, USA o, si así se acuerda, a arbitraje administrado por la American Arbitration Association (AAA), a través de su división internacional ICDR (International Centre for Dispute Resolution), en Miami, Florida, en idioma español. Ciertas cláusulas pueden ser inaplicables frente a los consumidores según el derecho imperativo de cada jurisdicción.',
     ],
   },
   {
@@ -144,9 +143,9 @@ const SECTIONS: Section[] = [
   {
     heading: '18. Contacto',
     body: [
-      '[RAZÓN SOCIAL]',
-      'Legal: [EMAIL LEGAL]',
-      'Dirección: [DIRECCIÓN]',
+      'POLARIS GROWTH INSTITUTE CORP.',
+      'Legal: info@polarisgrowthinstitute.com',
+      'Dirección: 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS',
     ],
   },
 ];
@@ -178,10 +177,10 @@ export default function TerminosScreen() {
 
       {/* Meta block */}
       <View style={styles.metaCard}>
-        <Text style={styles.metaLine}>Titular del servicio: [RAZÓN SOCIAL]</Text>
-        <Text style={styles.metaLine}>Domicilio: [DIRECCIÓN FISCAL]</Text>
-        <Text style={styles.metaLine}>Contacto legal: [EMAIL LEGAL]</Text>
-        <Text style={styles.metaLine}>Última actualización: [FECHA]</Text>
+        <Text style={styles.metaLine}>Titular del servicio: POLARIS GROWTH INSTITUTE CORP</Text>
+        <Text style={styles.metaLine}>Domicilio: 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS</Text>
+        <Text style={styles.metaLine}>Contacto legal: info@polarisgrowthinstitute.com</Text>
+        <Text style={styles.metaLine}>Última actualización: 22 de julio de 2026</Text>
       </View>
 
       {SECTIONS.map((section) => (

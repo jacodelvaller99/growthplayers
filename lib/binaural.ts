@@ -9,6 +9,7 @@
  */
 
 import type { AmbienceType } from '@/data/wellness';
+import { createNativeLoopPlayer } from '@/lib/nativeAudio';
 
 type AudioCtxCtor = typeof AudioContext;
 
@@ -105,6 +106,23 @@ export interface MeditationAudioHandle {
 }
 
 /**
+ * Native (iOS/Android): sin Web Audio API no hay ruido procedural ni bell,
+ * pero si hay cama musical Suno la reproducimos en loop con expo-av — deja de
+ * ser una sesión muda. Sin musicUrl (o sin red/expo-av) → null, timer-only
+ * como antes (sin regresión).
+ */
+function createNativeMeditationAudio(musicUrl?: string): MeditationAudioHandle | null {
+  const player = createNativeLoopPlayer(musicUrl);
+  if (!player) return null;
+  return {
+    start: player.start,
+    stop: player.stop,
+    setVolume: player.setVolume,
+    bell: () => {}, // tono de campana es un efecto Web Audio puntual, no crítico en nativo
+  };
+}
+
+/**
  * `musicUrl` opcional: cama musical instrumental (Suno) por categoría. Si se
  * pasa y carga bien, reemplaza el ruido procedural; si falta o falla el
  * fetch/decode, degrada silenciosamente al ruido de siempre — cero regresión.
@@ -114,7 +132,7 @@ export function createMeditationAudio(
   musicUrl?: string,
 ): MeditationAudioHandle | null {
   const AudioCtxCtor = getAudioCtx();
-  if (!AudioCtxCtor) return null;
+  if (!AudioCtxCtor) return createNativeMeditationAudio(musicUrl);
   const SafeAudioCtx = AudioCtxCtor;
 
   let ctx: AudioContext | null = null;
@@ -218,13 +236,33 @@ export interface BinauralAudioHandle {
  * osciladores; la música es atmósfera). Si falta o falla, no pasa nada — los
  * osciladores suenan igual que siempre.
  */
+/**
+ * Native (iOS/Android): los osciladores de precisión Hz son Web Audio-only —
+ * en nativo no hay forma de replicar el beat binaural exacto. Lo que sí
+ * podemos dar es la cama musical Suno de la banda correspondiente en vez de
+ * silencio total. Sin musicUrl → null, timer-only como antes.
+ */
+function createNativeBinauralAudio(musicUrl?: string): BinauralAudioHandle | null {
+  const player = createNativeLoopPlayer(musicUrl);
+  if (!player) return null;
+  return {
+    start: player.start,
+    stop: player.stop,
+    setVolume: player.setVolume,
+    suspend: async () => {},
+    resume: async () => {},
+    setAmbienceVolume: () => {}, // el ambiente procedural es Web Audio-only
+    setAmbience: () => {},
+  };
+}
+
 export function createBinauralAudio(
   carrierHz: number,
   beatHz: number,
   musicUrl?: string,
 ): BinauralAudioHandle | null {
   const AudioCtxCtor = getAudioCtx();
-  if (!AudioCtxCtor) return null;
+  if (!AudioCtxCtor) return createNativeBinauralAudio(musicUrl);
   const SafeAudioCtx2 = AudioCtxCtor;
 
   let ctx: AudioContext | null = null;

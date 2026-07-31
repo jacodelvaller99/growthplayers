@@ -22,6 +22,7 @@ import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
+import { logSilentError } from '@/lib/observability';
 
 function todayLabel() {
   return new Date()
@@ -320,8 +321,12 @@ export default function CheckInScreen() {
       }
       // Revela la recomendación de cierre antes de redirigir (WS-3).
       setSaved(true);
-    } catch {
-      // Si el guardado falla, re-habilita para reintentar (no dejamos el botón muerto).
+    } catch (e) {
+      // Si el guardado falla, re-habilita para reintentar (no dejamos el botón muerto)
+      // y se lo decimos: antes el botón revivía sin explicación y parecía un bug.
+      logSilentError('checkin.submit', e);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast('No se pudo guardar tu check-in. Inténtalo de nuevo.', 'error');
       setSubmitting(false);
     }
   };
@@ -531,6 +536,18 @@ export default function CheckInScreen() {
     </Pressable>
   );
 
+  // Móvil y desktop compartían este botón copiado literalmente. Se extrae como
+  // el resto de bloques de esta pantalla, para que el label, el ícono y el
+  // estado disabled no puedan divergir entre layouts.
+  const submitButton = (
+    <PrimaryButton
+      label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
+      icon={submitting ? 'hourglass-empty' : 'check'}
+      onPress={submit}
+      disabled={submitting}
+    />
+  );
+
   // Post-guardado — una sola oferta sutil, sin desplegar todo de golpe.
   const savedOffer = (
     <PremiumCard style={styles.savedOffer}>
@@ -611,12 +628,7 @@ export default function CheckInScreen() {
 
               {!saved ? (
                 <>
-                  <PrimaryButton
-            label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
-            icon={submitting ? 'hourglass-empty' : 'check'}
-            onPress={submit}
-            disabled={submitting}
-          />
+                  {submitButton}
                   {needToggle}
                   {showNeed && systemNeedCard}
                   <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
@@ -699,12 +711,7 @@ export default function CheckInScreen() {
       {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
       {!saved ? (
         <>
-          <PrimaryButton
-            label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
-            icon={submitting ? 'hourglass-empty' : 'check'}
-            onPress={submit}
-            disabled={submitting}
-          />
+          {submitButton}
           {needToggle}
           {showNeed && systemNeedCard}
         </>

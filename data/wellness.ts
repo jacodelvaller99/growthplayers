@@ -1,5 +1,8 @@
 // ─── Meditation Sessions ──────────────────────────────────────────────────────
 
+import { INMERSION_SESSIONS } from './inmersion.ts';
+import type { EvidenceKey } from './wellnessEvidence';
+
 export type MeditationCategory =
   | 'mañana'
   | 'noche'
@@ -7,7 +10,9 @@ export type MeditationCategory =
   | 'estrés'
   | 'identidad'   // visualización del yo soberano, futuro, identidad declarada
   | 'decisión'    // claridad estratégica antes de decidir, soltar el ruido
-  | 'energía';    // activación, recarga, picos de fatiga
+  | 'energía'     // activación, recarga, picos de fatiga
+  | 'compasión'   // loving-kindness / autocompasión — la familia que faltaba
+  | 'inmersión';  // inducción larga por relajación descendente + conteo
 
 // Metadata de cada categoría — usado por la UI de Meditación para agrupar/filtrar.
 export const MEDITATION_CATEGORY_META: Record<
@@ -21,11 +26,86 @@ export const MEDITATION_CATEGORY_META: Record<
   'identidad': { label: 'IDENTIDAD', description: 'Habita al operador soberano que estás construyendo.' },
   'decisión':  { label: 'DECISIÓN',  description: 'Claridad estratégica para decidir desde criterio.' },
   'energía':   { label: 'ENERGÍA',   description: 'Activa el cuerpo y recarga la mente.' },
+  'compasión': { label: 'COMPASIÓN', description: 'Entrena la relación contigo y con los demás. Exigirte no está peleado con tratarte bien.' },
+  'inmersión': { label: 'INMERSIÓN', description: 'Inducción guiada larga. Entrena bajar a tu centro y declarar desde ahí.' },
 };
 
 export interface GuidedPhase {
+  /**
+   * Id estable para direccionar el mp3 de voz. OPCIONAL a propósito: las ~40
+   * sesiones que ya existen caen al índice (`${sessionId}-${i}`), así no hay que
+   * tocar 280 líneas. El contenido nuevo SÍ lo declara, porque un id explícito
+   * sobrevive a reordenar las fases y el índice no.
+   */
+  id?: string;
   text: string;
-  duration: number; // seconds
+  duration: number; // segundos que la frase permanece en pantalla
+  /**
+   * Silencio (solo música/ambiente) tras terminar la voz, en segundos. Es lo que
+   * convierte una lista de frases en una práctica: sin pausa, la voz atropella.
+   * Si falta, el reproductor lo deriva de `duration` menos lo que dure el mp3.
+   */
+  pauseAfter?: number;
+  /**
+   * En esta fase la pantalla muestra el Norte declarado por el usuario en vez
+   * del `text`. La voz dice algo genérico ("lee tu declaración") y el contenido
+   * personal lo pone la pantalla — así el audio se genera UNA vez y aun así
+   * cada persona escucha su propia declaración. Sin esto habría que generar un
+   * mp3 por usuario.
+   */
+  showsNorthStar?: boolean;
+}
+
+/**
+ * Voz narrada de Norman. La URL se DERIVA del id, nunca se hardcodea: con ~630
+ * segmentos, una lista de URLs a mano se desincroniza el primer día.
+ *
+ * Vive en `wellness-audio`, el MISMO bucket que las camas musicales de Suno.
+ * El plan era un bucket propio `norman-voice`, pero los 576 mp3 se subieron
+ * aquí y mover un bucket entero para respetar un plan no aporta nada: no hay
+ * colisión posible porque la música cuelga de `meditation/…` y la voz de
+ * `<id-de-sesión>/…`. Los dos son públicos y de solo lectura.
+ *
+ * Verificado 2026-07-30: los 576 responden 200 con el peso exacto del local.
+ */
+const NORMAN_VOICE_BASE =
+  'https://bizbbtiyftfjufxinwsu.supabase.co/storage/v1/object/public/wellness-audio';
+
+/**
+ * Id canónico de una fase. Explícito si lo declara; si no, posicional.
+ *
+ * El parámetro pide solo `{ id? }` y no un `GuidedPhase` entero porque es lo
+ * único que lee — así los segmentos de Sueño (`SleepSegment`, que no declara
+ * `duration`) usan el mismo direccionamiento sin duplicar la función.
+ */
+export function phaseAudioId(sessionId: string, phase: { id?: string }, index: number): string {
+  return phase.id ?? `${sessionId}-${index}`;
+}
+
+/**
+ * Segundos que tarda Norman en leer un texto, estimados por longitud.
+ *
+ * MEDIDO, no supuesto: sobre los 517 mp3 reales del catálogo generados a
+ * velocidad 1.06 la media es 16.9 caracteres/segundo, pero la cola lenta baja
+ * a 11.1 (percentil 1) y a 10.3 en el peor caso. Se usa el EXTREMO LENTO, no
+ * la media, porque los dos errores no cuestan lo mismo:
+ *   · pasarse  → un poco más de silencio, que en una meditación no molesta
+ *   · quedarse corto → el temporizador vence con Norman a media frase
+ * Una primera versión usaba 14 (≈ percentil 10) y dejaba fuera al 4% de los
+ * segmentos más lentos.
+ *
+ * Vive aquí y no en `data/sleep.ts` porque ese archivo YA importa de éste:
+ * al revés cerraría un ciclo de imports.
+ */
+export function estimateVoiceSeconds(text: string): number {
+  const CHARS_PER_SECOND = 11;
+  const FLOOR_SECONDS = 3;
+  return Math.max(FLOOR_SECONDS, Math.ceil(text.length / CHARS_PER_SECOND));
+}
+
+/** URL del mp3 de voz de una fase. Misma función la usa el generador y la app. */
+export function normanVoiceUrl(sessionId: string, phase: { id?: string }, index: number): string {
+  return `${NORMAN_VOICE_BASE}/${sessionId}/${phaseAudioId(sessionId, phase, index)}.mp3`;
 }
 
 // Cama musical instrumental (Suno) por categoría, subida a Storage en el
@@ -42,6 +122,7 @@ export const MEDITATION_CATEGORY_MUSIC: Partial<Record<MeditationCategory, strin
   'identidad': `${WELLNESS_AUDIO_BASE}/meditation/identidad.mp3`,
   'decisión':  `${WELLNESS_AUDIO_BASE}/meditation/decision.mp3`,
   'energía':   `${WELLNESS_AUDIO_BASE}/meditation/energia.mp3`,
+  'inmersión': `${WELLNESS_AUDIO_BASE}/meditation/inmersion.mp3`,
 };
 
 // Cama musical (Suno) por banda binaural — atmósfera bajo los osciladores.
@@ -76,6 +157,47 @@ export interface MeditationSession {
   description: string;
   ambientType: 'brown' | 'pink' | 'white';
   phases: GuidedPhase[];
+  /**
+   * La voz de Norman narra cada fase desde un mp3 propio. Cambia el motor de
+   * audio: en vez del temporizador que rota texto sobre ruido procedural, manda
+   * `createNarrationPlayer` y las fases avanzan cuando la voz termina.
+   */
+  narrated?: boolean;
+  /**
+   * Cama binaural real (osciladores L/R, `lib/binaural.ts`) en vez del mp3 de
+   * Suno de la categoría. Solo tiene efecto en sesiones `narrated` — ver
+   * `lib/narrationPlayer.ts`.
+   */
+  binaural?: { carrierHz: number; beatHz: number };
+  /**
+   * Respaldo científico de la técnica que usa esta sesión. OPCIONAL y vacío en
+   * la mayoría a propósito: solo se cita lo que tiene evidencia real, porque un
+   * catálogo donde todas las tarjetas llevan sello no distingue nada. Ver
+   * `data/wellnessEvidence.ts` y `docs/launch/EVIDENCIA_BIENESTAR.md`.
+   *
+   * Cita la TÉCNICA, no esta grabación concreta: ningún estudio evaluó los
+   * audios de Norman.
+   */
+  evidence?: EvidenceKey;
+}
+
+/**
+ * Convierte las fases de una meditación en fases para `createNarrationPlayer`.
+ *
+ * LA PIEZA QUE FALTABA: las 40 meditaciones declaran `duration` (cuánto dura la
+ * fase en total) pero no `pauseAfter` (cuánto silencio va tras la voz). Sin
+ * derivarlo, el player avanzaría en cuanto terminara el mp3: una fase de 60
+ * segundos se consumiría en los 8 que dura la frase, y la práctica entera
+ * correría al triple de velocidad.
+ */
+export function meditationPhasesToNarration(session: MeditationSession) {
+  return session.phases.map((p, i) => ({
+    url: normanVoiceUrl(session.id, p, i),
+    duration: p.duration,
+    // Respeta un `pauseAfter` explícito si lo hay; si no, el silencio es todo
+    // lo que sobra de la fase después de hablar.
+    pauseAfter: p.pauseAfter ?? Math.max(0, p.duration - estimateVoiceSeconds(p.text)),
+  }));
 }
 
 export const MEDITATION_SESSIONS: MeditationSession[] = [
@@ -86,6 +208,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'mañana',
     description: 'Activa tu mente con presencia y claridad para el día.',
     ambientType: 'pink',
+    narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'Cierra los ojos.\nSiente el contacto con tu asiento.', duration: 30 },
       { text: 'Observa tu respiración\nsin modificarla.', duration: 45 },
@@ -102,6 +226,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'estrés',
     description: 'Una práctica para bajar el estado de alerta y recuperar la calma interna.',
     ambientType: 'brown',
+    narrated: true,
+    evidence: 'SLOW_BREATHING',
     phases: [
       { text: 'Cierra los ojos.\nSuelta la tensión de tu mandíbula.', duration: 30 },
       { text: 'Inhala profundo por 4 segundos.\nExhala por 6.', duration: 60 },
@@ -120,6 +246,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'enfoque',
     description: 'Lleva tu atención a un punto único y mantén la concentración.',
     ambientType: 'pink',
+    narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'Postura alerta.\nColumna recta, mentón paralelo al suelo.', duration: 30 },
       { text: 'Lleva toda tu atención\na un punto frente a ti.', duration: 60 },
@@ -137,6 +265,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'noche',
     description: 'Procesa el día, suelta la carga y prepara el descanso.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'El día terminó.\nDeja que tu cuerpo lo sepa.', duration: 45 },
       { text: 'Recuerda tres acciones\nque ejecutaste hoy.', duration: 60 },
@@ -155,6 +284,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'estrés',
     description: 'Técnica de respiración para ayudar a calmar el sistema nervioso.',
     ambientType: 'white',
+    narrated: true,
+    evidence: 'SLOW_BREATHING',
     phases: [
       { text: 'Posición cómoda.\nLengua en el paladar superior.', duration: 20 },
       { text: 'Exhala completamente\npor la boca.', duration: 15 },
@@ -173,6 +304,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'identidad',
     description: 'Visualiza al soberano que ya vive dentro de ti y ocupa su lugar.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'Cierra los ojos.\nDeja de actuar para los demás.', duration: 40 },
       { text: 'Respira hondo.\nAquí no hay público, solo tú.', duration: 45 },
@@ -191,15 +323,16 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'identidad',
     description: 'Encuentra a tu versión de 5 años en el futuro y recibe su consejo.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
-      { text: 'Respira despacio.\nSuelta el ruido de hoy.', duration: 45 },
-      { text: 'Avanza cinco años en el tiempo.\nMira sin prisa.', duration: 60 },
-      { text: 'Ahí estás tú.\nMás sólido, más limpio, más claro.', duration: 70 },
-      { text: 'Observa cómo se mueve.\nNada de lo que hoy te frena lo toca.', duration: 75 },
-      { text: 'Pregúntale:\n¿qué decidí para llegar aquí?', duration: 80 },
-      { text: 'Escucha la respuesta.\nNo la juzgues, recíbela.', duration: 75 },
-      { text: 'Esa vida ya empezó.\nLa construyes en el presente.', duration: 60 },
-      { text: 'Abre los ojos.\nDa el primer paso hacia él.', duration: 35 },
+      { text: 'Respira despacio.\nSuelta el ruido de hoy.', duration: 43 },
+      { text: 'Avanza cinco años en el tiempo.\nMira sin prisa.', duration: 58 },
+      { text: 'Ahí estás tú.\nMás sólido, más limpio, más claro.', duration: 67 },
+      { text: 'Observa cómo se mueve.\nNada de lo que hoy te frena lo toca.', duration: 72 },
+      { text: 'Pregúntale:\n¿qué decidí para llegar aquí?', duration: 77 },
+      { text: 'Escucha la respuesta.\nNo la juzgues, recíbela.', duration: 72 },
+      { text: 'Esa vida ya empezó.\nLa construyes en el presente.', duration: 58 },
+      { text: 'Abre los ojos.\nDa el primer paso hacia él.', duration: 33 },
     ],
   },
   {
@@ -209,14 +342,15 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'identidad',
     description: 'Declara en presente quién eres y deja de negociarlo contigo mismo.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
-      { text: 'Siéntate firme.\nEsto no es un deseo, es una declaración.', duration: 40 },
-      { text: 'Lo que repites de ti\nse vuelve quien eres.', duration: 50 },
-      { text: 'Declara en presente:\nsoy alguien que cumple su palabra.', duration: 65 },
-      { text: 'Repítelo por dentro.\nSin condiciones, sin algún día.', duration: 70 },
-      { text: 'Soy disciplinado.\nSoy dueño de mi tiempo.', duration: 65 },
-      { text: 'No lo estás fingiendo.\nLo estás eligiendo.', duration: 50 },
-      { text: 'Abre los ojos.\nVive a la altura de lo dicho.', duration: 30 },
+      { text: 'Siéntate firme.\nEsto no es un deseo, es una declaración.', duration: 39 },
+      { text: 'Lo que repites de ti\nse vuelve quien eres.', duration: 49 },
+      { text: 'Declara en presente:\nsoy alguien que cumple su palabra.', duration: 63 },
+      { text: 'Repítelo por dentro.\nSin condiciones, sin algún día.', duration: 68 },
+      { text: 'Soy disciplinado.\nSoy dueño de mi tiempo.', duration: 63 },
+      { text: 'No lo estás fingiendo.\nLo estás eligiendo.', duration: 49 },
+      { text: 'Abre los ojos.\nVive a la altura de lo dicho.', duration: 29 },
     ],
   },
   {
@@ -226,14 +360,15 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'identidad',
     description: 'Convierte una decisión mental en algo que tu cuerpo ya habita.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
-      { text: 'Respira y enfoca.\nHay una decisión que ya tomaste.', duration: 40 },
-      { text: 'Tráela al frente.\nVela con claridad.', duration: 55 },
-      { text: 'No vive solo en tu cabeza.\nBájala al cuerpo.', duration: 65 },
-      { text: 'Siente cómo cambia tu postura\ncuando ya está decidido.', duration: 70 },
-      { text: 'El que duda titubea.\nEl que decidió, se mueve.', duration: 60 },
-      { text: 'Modo mercader:\nun objetivo, toda la energía.', duration: 50 },
-      { text: 'Abre los ojos.\nActúa como quien ya eligió.', duration: 30 },
+      { text: 'Respira y enfoca.\nHay una decisión que ya tomaste.', duration: 39 },
+      { text: 'Tráela al frente.\nVela con claridad.', duration: 54 },
+      { text: 'No vive solo en tu cabeza.\nBájala al cuerpo.', duration: 63 },
+      { text: 'Siente cómo cambia tu postura\ncuando ya está decidido.', duration: 68 },
+      { text: 'El que duda titubea.\nEl que decidió, se mueve.', duration: 58 },
+      { text: 'Modo mercader:\nun objetivo, toda la energía.', duration: 49 },
+      { text: 'Abre los ojos.\nActúa como quien ya eligió.', duration: 29 },
     ],
   },
   {
@@ -243,14 +378,15 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'identidad',
     description: 'Encarna al operador que decide con criterio en medio del ruido.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
-      { text: 'Baja el ritmo.\nEl operador no reacciona, responde.', duration: 45 },
-      { text: 'Respira lento.\nLa calma también es una habilidad.', duration: 55 },
-      { text: 'Imagina el caos alrededor.\nTú, en el centro, quieto.', duration: 70 },
-      { text: 'Desde aquí ves todo el tablero.\nNada te arrastra.', duration: 75 },
-      { text: 'El criterio nace en calma,\nnunca en el pánico.', duration: 65 },
-      { text: 'Este es tu estado base.\nControlado, despierto, frío.', duration: 60 },
-      { text: 'Abre los ojos.\nOpera desde la calma.', duration: 30 },
+      { text: 'Baja el ritmo.\nEl operador no reacciona, responde.', duration: 48 },
+      { text: 'Respira lento.\nLa calma también es una habilidad.', duration: 58 },
+      { text: 'Imagina el caos alrededor.\nTú, en el centro, quieto.', duration: 73 },
+      { text: 'Desde aquí ves todo el tablero.\nNada te arrastra.', duration: 78 },
+      { text: 'El criterio nace en calma,\nnunca en el pánico.', duration: 68 },
+      { text: 'Este es tu estado base.\nControlado, despierto, frío.', duration: 63 },
+      { text: 'Abre los ojos.\nOpera desde la calma.', duration: 32 },
     ],
   },
   {
@@ -260,14 +396,15 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'identidad',
     description: 'Suelta la versión antigua de ti que ya no sirve a tu misión.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
-      { text: 'Cierra los ojos.\nHay un peso que ya no es tuyo.', duration: 45 },
-      { text: 'Respira.\nMira a quien fuiste sin rencor.', duration: 55 },
-      { text: 'Te trajo hasta aquí.\nPero no llega a donde vas.', duration: 70 },
-      { text: 'Sus miedos, sus excusas,\nsus límites viejos.', duration: 65 },
-      { text: 'Déjalos ir en la exhalación.\nNo los necesitas más.', duration: 75 },
-      { text: 'Lo que sueltas\nlibera espacio para quien llegas a ser.', duration: 60 },
-      { text: 'Abre los ojos.\nAvanza más ligero.', duration: 30 },
+      { text: 'Cierra los ojos.\nHay un peso que ya no es tuyo.', duration: 48 },
+      { text: 'Respira.\nMira a quien fuiste sin rencor.', duration: 58 },
+      { text: 'Te trajo hasta aquí.\nPero no llega a donde vas.', duration: 73 },
+      { text: 'Sus miedos, sus excusas,\nsus límites viejos.', duration: 68 },
+      { text: 'Déjalos ir en la exhalación.\nNo los necesitas más.', duration: 78 },
+      { text: 'Lo que sueltas\nlibera espacio para quien llegas a ser.', duration: 63 },
+      { text: 'Abre los ojos.\nAvanza más ligero.', duration: 32 },
     ],
   },
 
@@ -275,10 +412,11 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
   {
     id: 'claridad-antes-de-decidir',
     title: 'Claridad Antes de Decidir',
-    durationMinutes: 7,
+    durationMinutes: 8,
     category: 'decisión',
     description: 'Limpia la mente y entra a la decisión viendo el tablero completo.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Postura firme.\nNo vas a decidir corriendo.', duration: 30 },
       { text: 'Nombra en silencio\nla decisión que tienes delante.', duration: 60 },
@@ -293,45 +431,48 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
   {
     id: 'soltar-el-ruido',
     title: 'Soltar el Ruido',
-    durationMinutes: 6,
+    durationMinutes: 8,
     category: 'decisión',
     description: 'Baja el volumen de las opiniones ajenas y recupera tu voz.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
-      { text: 'Cierra los ojos.\nEl ruido no es información.', duration: 30 },
-      { text: 'Escucha todas las voces\nque opinan sobre tu decisión.', duration: 60 },
-      { text: 'Una por una,\nbájales el volumen.', duration: 75 },
-      { text: 'La opinión del que no paga el costo\nno entra al cuarto.', duration: 75 },
-      { text: 'Bajo el ruido hay una voz.\nLa tuya. Llevas rato sin oírla.', duration: 75 },
-      { text: 'No negocio con el ruido.\nDecido desde lo que sé que es cierto.', duration: 75 },
-      { text: 'Silencio.\nAhí está tu criterio, intacto.', duration: 60 },
+      { text: 'Cierra los ojos.\nEl ruido no es información.', duration: 34 },
+      { text: 'Escucha todas las voces\nque opinan sobre tu decisión.', duration: 64 },
+      { text: 'Una por una,\nbájales el volumen.', duration: 80 },
+      { text: 'La opinión del que no paga el costo\nno entra al cuarto.', duration: 80 },
+      { text: 'Bajo el ruido hay una voz.\nLa tuya. Llevas rato sin oírla.', duration: 79 },
+      { text: 'No negocio con el ruido.\nDecido desde lo que sé que es cierto.', duration: 79 },
+      { text: 'Silencio.\nAhí está tu criterio, intacto.', duration: 64 },
     ],
   },
   {
     id: 'la-decision-dificil',
     title: 'La Decisión Difícil',
-    durationMinutes: 8,
+    durationMinutes: 10,
     category: 'decisión',
     description: 'Enfrenta de pie la decisión que llevas días evitando.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
-      { text: 'Respira hondo.\nLa que evitas es la que importa.', duration: 45 },
-      { text: 'Trae a la mente esa decisión\nque vienes esquivando.', duration: 60 },
-      { text: 'No es difícil por compleja.\nEs difícil porque algo te va a costar.', duration: 75 },
-      { text: 'Nombra ese costo.\nMíralo de frente, sin adornarlo.', duration: 90 },
-      { text: 'Ahora mira el costo de no decidir.\nEse también se paga, en silencio.', duration: 90 },
-      { text: 'El operador no elige sin dolor.\nElige cuál dolor vale la pena.', duration: 90 },
-      { text: 'El obstáculo es el camino.\nAtravesarlo es la única salida.', duration: 75 },
-      { text: 'Ya sabes qué toca.\nLo demás es valor.', duration: 55 },
+      { text: 'Respira hondo.\nLa que evitas es la que importa.', duration: 47 },
+      { text: 'Trae a la mente esa decisión\nque vienes esquivando.', duration: 62 },
+      { text: 'No es difícil por compleja.\nEs difícil porque algo te va a costar.', duration: 78 },
+      { text: 'Nombra ese costo.\nMíralo de frente, sin adornarlo.', duration: 93 },
+      { text: 'Ahora mira el costo de no decidir.\nEse también se paga, en silencio.', duration: 93 },
+      { text: 'El operador no elige sin dolor.\nElige cuál dolor vale la pena.', duration: 93 },
+      { text: 'El obstáculo es el camino.\nAtravesarlo es la única salida.', duration: 77 },
+      { text: 'Ya sabes qué toca.\nLo demás es valor.', duration: 57 },
     ],
   },
   {
     id: 'criterio-vs-urgencia',
     title: 'Criterio vs Urgencia',
-    durationMinutes: 7,
+    durationMinutes: 8,
     category: 'decisión',
     description: 'Distingue lo que arde de lo que importa antes de mover ficha.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Detente.\nLa urgencia quiere que decidas ya.', duration: 30 },
       { text: 'Siente la prisa en el cuerpo.\nNo la obedezcas. Solo obsérvala.', duration: 60 },
@@ -346,10 +487,11 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
   {
     id: 'el-costo-de-no-decidir',
     title: 'El Costo de No Decidir',
-    durationMinutes: 6,
+    durationMinutes: 8,
     category: 'decisión',
     description: 'Haz visible el precio de la indecisión y recupera el mando.',
     ambientType: 'white',
+    narrated: true,
     phases: [
       { text: 'Quédate quieto.\nNo decidir también es decidir.', duration: 30 },
       { text: 'Trae esa elección\nque llevas semanas en pausa.', duration: 60 },
@@ -370,6 +512,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'energía',
     description: 'Enciende el cuerpo y la mente para arrancar el día con fuerza.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'De pie o sentado, columna recta.\nInhala fuerte por la nariz.', duration: 30 },
       { text: 'Aprieta los puños.\nTensa todo el cuerpo tres segundos.', duration: 40 },
@@ -386,6 +529,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'energía',
     description: 'Reinicia el sistema en mitad de la jornada y vuelve afilado.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Cierra los ojos un momento.\nLa mañana ya cumplió.', duration: 35 },
       { text: 'Inhala por la nariz, profundo.\nExhala soltando la fatiga.', duration: 50 },
@@ -402,6 +546,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'energía',
     description: 'Recupera el foco en el pico de fatiga y rompe la inercia.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'El bajón es físico, no es identidad.\nLo atraviesas.', duration: 30 },
       { text: 'Inhala rápido por la nariz.\nExhala por la boca con fuerza.', duration: 45 },
@@ -417,6 +562,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'energía',
     description: 'Activa el cuerpo y la determinación antes de entrenar.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Postura firme.\nEste cuerpo está a punto de trabajar.', duration: 30 },
       { text: 'Respiraciones cortas y rápidas.\nSube las pulsaciones.', duration: 45 },
@@ -432,6 +578,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'energía',
     description: 'Encuentra la reserva oculta para cerrar el día con potencia.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Queda jornada por delante.\nQueda combustible dentro.', duration: 35 },
       { text: 'Inhala profundo, retén un segundo.\nExhala con decisión.', duration: 50 },
@@ -450,6 +597,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'mañana',
     description: 'Toma el control de la primera hora antes de que el día te lo tome.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Acabas de despertar.\nEsta hora decide el resto del día.', duration: 45 },
       { text: 'Antes de tocar el teléfono,\nrespira tres veces, profundo.', duration: 50 },
@@ -467,6 +615,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'mañana',
     description: 'Fija una sola intención que ordene cada decisión de la jornada.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Siéntate firme.\nUn día sin intención lo dirige el azar.', duration: 45 },
       { text: 'Respira y pregúntate:\n¿quién quiero ser hoy?', duration: 55 },
@@ -484,6 +633,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'mañana',
     description: 'Disuelve la niebla mental del despertar y entra al día viendo claro.',
     ambientType: 'pink',
+    narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'La mente al despertar\nes niebla. Vamos a despejarla.', duration: 45 },
       { text: 'Inhala por la nariz, lento.\nExhala soltando el sueño pesado.', duration: 55 },
@@ -501,6 +652,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'mañana',
     description: 'Arranca desde la abundancia que ya tienes, no desde lo que falta.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Despertaste.\nNo todos tuvieron ese privilegio hoy.', duration: 45 },
       { text: 'Respira y reconoce\nque el cuerpo responde, el aire entra.', duration: 55 },
@@ -518,6 +670,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'mañana',
     description: 'Visualiza las tres batallas del día y entra a librarlas con ventaja.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Postura de comandante.\nEl día es terreno a conquistar.', duration: 45 },
       { text: 'Respira hondo.\nUn general no improvisa el ataque.', duration: 50 },
@@ -537,6 +690,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'noche',
     description: 'Vacía la mente de pendientes para que el sueño no cargue con ellos.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'El día terminó.\nDeja que tu cuerpo lo sepa.', duration: 45 },
       { text: 'Tu mente sigue corriendo.\nNo la pelees. Solo obsérvala.', duration: 60 },
@@ -555,6 +709,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'noche',
     description: 'Perdona, suelta y libera lo que quedó abierto sin cargarlo a la noche.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'Hoy quedaron cosas abiertas.\nAsí funciona el juego.', duration: 50 },
       { text: 'Trae a tu mente eso que no cerró.\nEl error, la tensión, lo no dicho.', duration: 60 },
@@ -573,6 +728,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'noche',
     description: 'Audita tu día con criterio frío: qué ejecutaste, qué corriges mañana.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'El día cerró.\nAhora toca la revisión, sin emoción.', duration: 50 },
       { text: 'Recuerda la acción más importante\nque ejecutaste hoy.', duration: 60 },
@@ -591,6 +747,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'noche',
     description: 'Lleva el cuerpo del estado de mando al estado de reposo profundo.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'Todo el día estuviste en mando.\nAhora bajas la guardia a propósito.', duration: 50 },
       { text: 'Afloja la mandíbula.\nLlevas horas apretándola sin saberlo.', duration: 60 },
@@ -609,6 +766,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'noche',
     description: 'Salda el balance del día con gratitud antes de apagar la jornada.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'Hora de cerrar cuentas.\nEl día se liquida antes de dormir.', duration: 50 },
       { text: 'Repasa lo que recibiste hoy.\nUna oportunidad, un aprendizaje, un apoyo.', duration: 60 },
@@ -629,6 +787,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'enfoque',
     description: 'Calibra tu mente justo antes de entrar al trabajo profundo.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Antes de abrir nada,\nsiéntate. Columna recta.', duration: 30 },
       { text: 'Tres respiraciones lentas.\nBaja las revoluciones.', duration: 45 },
@@ -646,6 +805,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'enfoque',
     description: 'Recupera el foco cuando la mente ya se dispersó.',
     ambientType: 'white',
+    narrated: true,
+    evidence: 'SLOW_BREATHING',
     phases: [
       { text: 'Tu atención se fugó.\nNo te juzgues. Recupérala.', duration: 30 },
       { text: 'Cierra los ojos.\nSuelta la pantalla que te tenía.', duration: 45 },
@@ -663,6 +824,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'enfoque',
     description: 'Reduce el día a la única cosa que mueve la aguja.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Postura firme.\nMentón paralelo al suelo.', duration: 30 },
       { text: 'Tienes mil cosas en la cabeza.\nVamos a tirar 999.', duration: 45 },
@@ -680,6 +842,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'enfoque',
     description: 'Limpia el campo mental de todo lo que no es tu tarea.',
     ambientType: 'white',
+    narrated: true,
     phases: [
       { text: 'Quieto.\nManos sobre las piernas, ojos cerrados.', duration: 30 },
       { text: 'Imagina tu mente como una mesa.\nAhora mismo está saturada.', duration: 45 },
@@ -697,6 +860,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'enfoque',
     description: 'Cruza el umbral hacia el estado donde el trabajo se ejecuta solo.',
     ambientType: 'pink',
+    narrated: true,
     phases: [
       { text: 'Respira hondo.\nVamos a cruzar un umbral.', duration: 30 },
       { text: 'El flow no llega rogando.\nSe entra con disciplina, no con suerte.', duration: 45 },
@@ -716,6 +880,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'estrés',
     description: 'Una ancla para momentos de tensión alta; te ayuda a recuperar la calma.',
     ambientType: 'brown',
+    narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'La ansiedad llegó.\nNo la combatas. Obsérvala.', duration: 40 },
       { text: 'Apoya los pies en el suelo.\nSiente el peso de tu cuerpo.', duration: 50 },
@@ -733,6 +899,7 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'estrés',
     description: 'Despeja la sobrecarga y recupera el mando cuando todo aprieta.',
     ambientType: 'brown',
+    narrated: true,
     phases: [
       { text: 'Todo pesa a la vez.\nDetente diez segundos.', duration: 40 },
       { text: 'Respira hondo.\nLa carga no desaparece, pero tú te ordenas.', duration: 60 },
@@ -751,6 +918,8 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
     category: 'estrés',
     description: 'Crea el espacio entre el estímulo y tu respuesta para no reaccionar en caliente.',
     ambientType: 'brown',
+    narrated: true,
+    evidence: 'MINDFULNESS_GENERAL',
     phases: [
       { text: 'Algo te activó.\nAntes de responder, frena.', duration: 40 },
       { text: 'Inhala profundo.\nEntre el golpe y tu reacción hay un espacio.', duration: 60 },
@@ -764,21 +933,121 @@ export const MEDITATION_SESSIONS: MeditationSession[] = [
   {
     id: 'calma-corporal-total',
     title: 'Calma Corporal Total',
-    durationMinutes: 9,
+    durationMinutes: 10,
     category: 'estrés',
     description: 'Recorre y descarga la tensión física acumulada de pies a cabeza.',
     ambientType: 'brown',
+    narrated: true,
+    evidence: 'PMR_ANXIETY',
     phases: [
-      { text: 'Recuéstate o siéntate.\nEl trabajo de hoy se quedó en el cuerpo.', duration: 45 },
-      { text: 'Lleva la atención a tus pies.\nTénsalos y suéltalos.', duration: 70 },
-      { text: 'Sube a las piernas.\nDeja que pesen contra el suelo.', duration: 70 },
-      { text: 'Afloja el vientre.\nNada que sostener aquí.', duration: 70 },
-      { text: 'Suelta los hombros,\nlos brazos, las manos.', duration: 75 },
-      { text: 'Relaja la mandíbula,\nla lengua, la frente.', duration: 75 },
-      { text: 'Todo el cuerpo descansa.\nLa tensión se vacía.', duration: 90 },
-      { text: 'Respira lento.\nEstás en calma, de la cabeza a los pies.', duration: 75 },
+      { text: 'Recuéstate o siéntate.\nEl trabajo de hoy se quedó en el cuerpo.', duration: 48 },
+      { text: 'Lleva la atención a tus pies.\nTénsalos y suéltalos.', duration: 74 },
+      { text: 'Sube a las piernas.\nDeja que pesen contra el suelo.', duration: 74 },
+      { text: 'Afloja el vientre.\nNada que sostener aquí.', duration: 73 },
+      { text: 'Suelta los hombros,\nlos brazos, las manos.', duration: 79 },
+      { text: 'Relaja la mandíbula,\nla lengua, la frente.', duration: 79 },
+      { text: 'Todo el cuerpo descansa.\nLa tensión se vacía.', duration: 94 },
+      { text: 'Respira lento.\nEstás en calma, de la cabeza a los pies.', duration: 79 },
     ],
   },
+  // ─── Prácticas añadidas por evidencia (2026-07-30) ─────────────────────────
+  // No se añadieron por hueco de catálogo sino porque la investigación Q1
+  // encontró que faltaban justo las mejor respaldadas. Ver
+  // docs/launch/EVIDENCIA_BIENESTAR.md.
+
+  {
+    // La práctica breve con MEJOR evidencia que existe: en el ensayo de
+    // Stanford superó a la meditación mindfulness con 5 min/día. Estaba en la
+    // app solo como temporizador mudo (`fisiologica` en BREATHING_TECHNIQUES),
+    // nunca como sesión guiada.
+    id: 'suspiro-fisiologico',
+    title: 'Suspiro Fisiológico',
+    durationMinutes: 5,
+    category: 'estrés',
+    description: 'Dos inhalaciones y una exhalación larga. La práctica de cinco minutos con más respaldo que existe.',
+    ambientType: 'brown',
+    narrated: true,
+    evidence: 'CYCLIC_SIGHING',
+    phases: [
+      { text: 'Siéntate o recuéstate.\nEsto dura cinco minutos y no necesitas nada más.', duration: 30 },
+      { text: 'Inhala por la nariz hasta llenar.\nY sin soltar, roba una segunda inhalación corta encima.', duration: 45 },
+      { text: 'Ahora suelta todo por la boca, largo y lento.\nHasta el final.', duration: 45 },
+      { text: 'Otra vez.\nLarga por la nariz, una corta encima, y todo fuera por la boca.', duration: 60 },
+      { text: 'Sigue tú.\nLa segunda inhalación es la que abre los alveolos que quedaron colapsados.', duration: 60 },
+      { text: 'No cuentes. No lo hagas perfecto.\nSolo que la salida sea más larga que la entrada.', duration: 60 },
+    ],
+  },
+  {
+    // El body scan de MBSR — el programa que no fue inferior a escitalopram.
+    // Existía en el catálogo SOLO dentro de Sueño (`sos-2`), donde el objetivo
+    // es dormirse. Como práctica diurna, que es como se estudió, no estaba.
+    id: 'body-scan-diurno',
+    title: 'Recorrido Corporal',
+    durationMinutes: 10,
+    category: 'estrés',
+    description: 'El recorrido de atención por el cuerpo del programa MBSR. Despierto, no para dormir.',
+    ambientType: 'brown',
+    narrated: true,
+    evidence: 'MBSR_ANXIETY',
+    phases: [
+      { text: 'Siéntate con la espalda recta.\nEsto no es para dormirte: es para estar despierto en el cuerpo.', duration: 40 },
+      { text: 'Lleva la atención a los pies.\nNo los muevas. Solo nota qué se siente ahí ahora mismo.', duration: 70 },
+      { text: 'Sube a las piernas.\nSi no sientes nada, eso también es un dato. No fuerces la sensación.', duration: 70 },
+      { text: 'El abdomen. La espalda baja.\nDeja que la respiración pase por ahí sin dirigirla.', duration: 70 },
+      { text: 'El pecho. Los hombros.\nSi encuentras tensión, no la arregles todavía. Solo obsérvala.', duration: 70 },
+      { text: 'Los brazos, hasta las manos.\nNota la temperatura, el peso, el contacto con lo que tocan.', duration: 70 },
+      { text: 'El cuello. La mandíbula. La frente.\nAquí es donde casi todo el mundo guarda el día.', duration: 70 },
+      { text: 'Ahora el cuerpo entero, a la vez.\nComo una sola pieza, no como partes.', duration: 70 },
+      { text: 'Esto es entrenamiento de atención, no de relajación.\nSi te relajaste, bien. Si no, también funcionó.', duration: 70 },
+    ],
+  },
+  {
+    // Autocompasión: la mitad de la familia LKM con mejor efecto medido.
+    // De 41 sesiones no había NINGUNA de compasión.
+    id: 'compasion-hacia-ti',
+    title: 'Compasión Hacia Ti',
+    durationMinutes: 7,
+    category: 'compasión',
+    description: 'Tratarte como tratarías a alguien que te importa. No es blandura: es dejar de pelear contigo.',
+    ambientType: 'pink',
+    narrated: true,
+    evidence: 'LKM_POSITIVE_AFFECT',
+    phases: [
+      { text: 'Siéntate cómodo y cierra los ojos.\nEsta práctica incomoda al principio. Es normal.', duration: 45 },
+      { text: 'Trae algo que estés cargando ahora.\nNo el peor problema. Uno real.', duration: 60 },
+      { text: 'Reconócelo sin adornarlo:\nesto duele, o esto pesa, o esto me tiene cansado.', duration: 65 },
+      { text: 'Esto que sientes no te pasa solo a ti.\nMucha gente está sintiendo algo parecido en este momento.', duration: 65 },
+      { text: 'Ponte una mano en el pecho.\nDile lo que le dirías a alguien que quieres y está en tu lugar.', duration: 70 },
+      { text: 'Que pueda estar en paz.\nQue pueda tratarme con la misma exigencia y con más respeto.', duration: 65 },
+      { text: 'Exigirte no está peleado con esto.\nEl operador que se destruye por dentro no dura.', duration: 50 },
+    ],
+  },
+  {
+    // La extensión clásica de metta: de uno mismo a alguien cercano y después
+    // a alguien difícil. Es la parte con efecto medido sobre actitudes
+    // interpersonales negativas.
+    id: 'compasion-hacia-otro',
+    title: 'Compasión Hacia Otro',
+    durationMinutes: 7,
+    category: 'compasión',
+    description: 'De alguien fácil a alguien difícil. La práctica que afloja los resentimientos que te cuestan energía.',
+    ambientType: 'pink',
+    narrated: true,
+    evidence: 'LKM_POSITIVE_AFFECT',
+    phases: [
+      { text: 'Cierra los ojos.\nRespira un par de veces sin contar nada.', duration: 45 },
+      { text: 'Trae a alguien que te importa y que la está pasando bien.\nAlguien fácil de querer.', duration: 60 },
+      { text: 'Deséale en silencio:\nque esté en paz, que le vaya bien, que esté sano.', duration: 65 },
+      { text: 'Ahora alguien neutro.\nEl portero, alguien del equipo con quien hablas poco.', duration: 60 },
+      { text: 'Lo mismo para esa persona.\nTambién carga cosas que tú no ves.', duration: 60 },
+      { text: 'Ahora alguien con quien tienes fricción.\nNo el peor. Uno con el que puedas.', duration: 70 },
+      { text: 'No tienes que perdonarlo ni darle la razón.\nSolo deja de gastar energía deseándole mal.', duration: 60 },
+    ],
+  },
+
+  // La Inmersión vive en archivo propio: es una SERIE (semanas 1–4) que crecerá,
+  // y con voz narrada por fase. Ver data/inmersion.ts.
+  ...INMERSION_SESSIONS,
 ];
 
 // ─── Breathing Techniques ─────────────────────────────────────────────────────

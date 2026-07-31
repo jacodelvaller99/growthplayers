@@ -34,6 +34,7 @@ import { AnimatedNumber } from './AnimatedNumber';
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
 
 import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { parseMarkdownLite } from '@/lib/markdownLite';
 import { calcSovereignTier, type SovereignDelta } from '@/lib/utils';
 import { PolarisLogo } from './PolarisLogo';
@@ -704,10 +705,19 @@ export const SkeletonBar = memo(function SkeletonBar({
   style?: object;
 }) {
   const opacity = useSharedValue(0.35);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    // El pulso es un bucle INFINITO: es justo el tipo de movimiento sostenido
+    // que molesta con sensibilidad vestibular. Con reduce-motion queda estático
+    // a media opacidad, que sigue leyéndose como "cargando".
+    if (reducedMotion) {
+      opacity.value = 0.55;
+      return;
+    }
     opacity.value = withRepeat(withTiming(0.75, { duration: 700 }), -1, true);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion]);
 
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 

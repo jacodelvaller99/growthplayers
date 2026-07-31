@@ -8,6 +8,7 @@ import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polari
 import SafetyWarning from '@/components/SafetyWarning';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { SLEEP_MUSIC } from '@/data/wellness';
+import { getSleepScript, sleepSegmentsToPhases } from '@/data/sleep';
 import { useBinauralEngine } from '@/hooks/useBinauralEngine';
 import { useWellnessStore } from '@/store/wellnessStore';
 
@@ -145,6 +146,15 @@ export default function SuenoScreen() {
 
   function handlePlay(item: SleepItem, catId: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Los guiones narrados de `data/sleep/` (208 segmentos, 9 sesiones) llevaban
+    // escritos desde el inicio y NADIE los reproducía: esta pantalla lanzaba
+    // solo el tono y la cama, así que la voz de Norman nunca sonaba en Sueño.
+    // `getSleepScript` casa por `item.id`; si una tarjeta aún no tiene guión,
+    // la sesión suena como antes (cama + binaural) en vez de romperse.
+    const script = getSleepScript(item.id);
+    const narration = script ? sleepSegmentsToPhases(script) : undefined;
+
     // Audio real: pista Suno de sueño + binaural delta suave debajo (2 Hz,
     // banda de sueño profundo). El engine global maneja timer, mini-player y stop.
     engine.start({
@@ -155,6 +165,7 @@ export default function SuenoScreen() {
       waveVolume: 0.2,
       bgVolume: 0,
       musicUrl: catId === 'nidra' ? SLEEP_MUSIC.nidra : SLEEP_MUSIC.descenso,
+      narration,
     });
     // Navigate back to hub so the mini-player is visible
     router.back();

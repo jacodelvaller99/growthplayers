@@ -162,10 +162,9 @@ export default function HabitosScreen() {
 
   // ── Recordatorio con deep-link (WS-7): agenda/cancela la notificación ────────
   const toggleReminder = async (habit: Habit) => {
-    if (Platform.OS === 'web') {
-      Alert.alert('No disponible', 'Los recordatorios funcionan en la app móvil.');
-      return;
-    }
+    // El botón ya no se renderiza en web (ver más abajo); este guard queda como
+    // red de seguridad por si alguien vuelve a montarlo ahí.
+    if (Platform.OS === 'web') return;
     const existing = reminders[habit.id];
     if (existing) {
       await cancelScheduledNotification(existing);
@@ -337,7 +336,11 @@ export default function HabitosScreen() {
                     <Text style={styles.detailActionText}>Video</Text>
                   </Pressable>
                 )}
-                {(tmpl?.reminderHour !== undefined) && (
+                {/* Los recordatorios son notificaciones locales programadas: solo
+                    existen en nativo. En web el botón se mostraba igual y siempre
+                    respondía "No disponible" — un control que nunca funciona es
+                    peor que no tenerlo. */}
+                {(tmpl?.reminderHour !== undefined) && Platform.OS !== 'web' && (
                   <Pressable
                     style={styles.detailAction}
                     onPress={() => toggleReminder(habit)}
