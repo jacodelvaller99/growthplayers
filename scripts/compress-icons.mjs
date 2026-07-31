@@ -10,10 +10,13 @@ await sharp(SRC)
   .png({ compressionLevel: 9, palette: false })
   .toFile('public/icon-192.png.tmp');
 
-// icon-512: palette PNG 128 colors — ideal for logos (~20KB vs 384KB original)
+// icon-512: truecolor, sin paleta. El logo tiene un degradado dorado real
+// (canal rojo 0-255, verde hasta 227) — 128 colores le metía bandas visibles.
+// Es el icono más grande y el que más se ve (adaptive icon de Android, og:image
+// al compartir), así que la nitidez pesa más que ahorrar los ~15KB de la paleta.
 await sharp(SRC)
   .resize(512, 512, { fit: 'contain', background: { r: 8, g: 8, b: 8, alpha: 1 } })
-  .png({ compressionLevel: 9, palette: true, colors: 128 })
+  .png({ compressionLevel: 9, palette: false })
   .toFile('public/icon-512.png.tmp');
 
 renameSync('public/icon-192.png.tmp', 'public/icon-192.png');

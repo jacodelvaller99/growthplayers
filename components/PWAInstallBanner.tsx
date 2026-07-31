@@ -1,11 +1,14 @@
 /**
- * PWAInstallBanner — "Add to Home Screen" nudge, iOS Safari + Android Chrome.
+ * PWAInstallBanner — "Add to Home Screen" nudge, iOS + Android Chrome.
  *
  * Shows once per device/platform when the app is NOT already installed as a PWA.
  * Persisted via localStorage (separate keys per platform) so it only appears once.
  *
- * iOS detection:
- *   - Platform.OS === 'web', UA includes 'iPhone'/'iPad'/'iPod', Safari (no CriOS/FxiOS)
+ * iOS detection: cualquier navegador en iOS, no solo Safari.
+ *   - Apple obliga a TODO navegador en iOS (Chrome/CriOS, Firefox/FxiOS, Safari)
+ *     a correr sobre WebKit, y el "Agregar a inicio" vive en el mismo share sheet
+ *     del sistema en los tres — las instrucciones son idénticas. Excluir CriOS
+ *     dejaba a los usuarios de Chrome-en-iPhone sin ningún aviso, en silencio.
  *   - window.navigator.standalone === false  (not already installed)
  *   - localStorage 'pwa_banner_dismissed' not set
  *
@@ -52,14 +55,13 @@ function safeSetItem(key: string, value: string): void {
   }
 }
 
-function isIOSSafari(): boolean {
+function isIOS(): boolean {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
-  const ua = window.navigator.userAgent;
-  const isIOS = /iPhone|iPad|iPod/.test(ua);
-  // Chrome on iOS identifies itself with 'CriOS', Firefox with 'FxiOS'
-  // We only want to show this in Safari (no CriOS/FxiOS)
-  const isSafari = !/CriOS|FxiOS|OPiOS/.test(ua);
-  return isIOS && isSafari;
+  // Apple obliga a todo navegador en iOS (Chrome/CriOS, Firefox/FxiOS, Safari) a
+  // correr sobre WebKit — el "Agregar a inicio" vive en el mismo share sheet del
+  // sistema en los tres, así que las instrucciones aplican por igual. Antes esto
+  // exigía Safari puro y dejaba a Chrome-en-iPhone sin ningún aviso, en silencio.
+  return /iPhone|iPad|iPod/.test(window.navigator.userAgent);
 }
 
 function isStandalone(): boolean {
@@ -84,7 +86,7 @@ export default function PWAInstallBanner() {
   const [androidPrompt, setAndroidPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    if (!isIOSSafari()) return;
+    if (!isIOS()) return;
     if (isStandalone()) return;
     if (safeGetItem(STORAGE_KEY)) return;
     setVisible(true);
