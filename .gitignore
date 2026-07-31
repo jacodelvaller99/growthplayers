@@ -77,3 +77,7 @@ skills-lock.json
 # Ruido del Chromium headless (Playwright / preview): lo escribe en la raíz del
 # repo al arrancar, y no dice nada de este proyecto.
 debug.log
+
+# Estado local de ruflo (política activa, stats). Es runtime de la herramienta,
+# no configuración del proyecto: cambia solo y por máquina.
+.claude-flow/
