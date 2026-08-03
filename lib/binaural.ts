@@ -181,14 +181,16 @@ export function createMeditationAudio(
   function stop() {
     stopped = true;
     if (!ctx || !gainNode) return;
-    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5); // fade out
+    // Fade corto a propósito: STOP tiene que sentirse como respuesta
+    // inmediata al botón, no como "no está funcionando" (antes 1.5s).
+    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
     setTimeout(() => {
       try {
         noiseSource?.stop();
         ctx?.close();
       } catch { /* already closed */ }
       ctx = null; gainNode = null; noiseSource = null;
-    }, 1600);
+    }, 300);
   }
 
   function setVolume(v: number) {
@@ -340,7 +342,9 @@ export function createBinauralAudio(
 
   function stop() {
     if (!ctx) return;
-    const fadeTime = 1.5;
+    // Fade corto a propósito: STOP tiene que sentirse como respuesta
+    // inmediata al botón, no como "no está funcionando" (antes 1.5s).
+    const fadeTime = 0.25;
     binauralGain?.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeTime);
     ambienceGain?.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeTime);
     musicGain?.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeTime);
