@@ -25,6 +25,7 @@ import {
   type BinauralPreset,
 } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { registerSessionControls } from '@/hooks/useBinauralEngine';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
@@ -364,6 +365,20 @@ function BinauralPlayer({
       }
     }, 500);
   }, [targetSecs, onComplete, storeResume, storeStop, storeElapsed]);
+
+  /**
+   * Mismo registro que Meditación: el STOP del mini-player llamaba a
+   * `stopBinauralGlobal`, que no ve el handle de esta pantalla — vive en
+   * `audioRef`. El tono seguía sonando con el mini-player ya escondido.
+   */
+  useEffect(() => {
+    if (!running && !paused) return;
+    return registerSessionControls({
+      stop:   stopSession,
+      pause:  pauseSession,
+      resume: resumeSession,
+    });
+  }, [running, paused, stopSession, pauseSession, resumeSession]);
 
   const handleBinauralVol = (v: number) => {
     setBinauralVol(v);

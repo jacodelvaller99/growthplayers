@@ -27,6 +27,63 @@ export function stopBinauralGlobal(): void {
   _narration = null;
 }
 
+// ─── Registro de la sesión de bienestar en curso ──────────────────────────────
+/**
+ * EL PROBLEMA QUE RESUELVE: el mini-player tenía un botón de STOP que no paraba
+ * nada. Llamaba a `stopBinauralGlobal`, que solo ve el singleton de ESTE módulo
+ * — pero Meditación y Binaurales guardan su handle en refs de componente. El
+ * usuario pulsaba stop, el mini-player desaparecía, y el audio seguía sonando
+ * sin ninguna UI para pararlo. El `resume` era igual de falso: cambiaba el
+ * estado del store sin tocar el audio.
+ *
+ * Y al revés: `start()` mataba "cualquier sesión en curso" con la misma función
+ * ciega, así que lanzar Sueño con una meditación sonando dejaba las dos a la vez.
+ *
+ * La cura es que haya UN sitio donde vive "quién manda ahora". Cada pantalla
+ * registra los controles que YA tiene escritos — los mismos que usan sus propios
+ * botones, así el estado local de React no se queda desincronizado con el audio —
+ * y quien quiera parar/pausar desde fuera llama aquí.
+ *
+ * ponytail: un solo slot, no una pila. Solo puede sonar una sesión de bienestar
+ * a la vez, que es justo el invariante que se estaba rompiendo.
+ */
+export interface SessionControls {
+  stop: () => void;
+  pause?: () => void;
+  resume?: () => void;
+}
+
+let _controls: SessionControls | null = null;
+
+/** Registra los controles de la sesión que arranca. Devuelve la baja. */
+export function registerSessionControls(controls: SessionControls): () => void {
+  _controls = controls;
+  return () => { if (_controls === controls) _controls = null; };
+}
+
+/**
+ * Para la sesión en curso, la haya lanzado quien la haya lanzado.
+ * `stopSession()` del store va SIEMPRE: los controles de pantalla ya lo llaman,
+ * pero es idempotente y cubre que no haya nadie registrado.
+ */
+export function stopWellnessSession(): void {
+  const controls = _controls;
+  _controls = null;
+  controls?.stop();
+  stopBinauralGlobal();
+  useWellnessStore.getState().stopSession();
+}
+
+export function pauseWellnessSession(): void {
+  _controls?.pause?.();
+  useWellnessStore.getState().pauseSession();
+}
+
+export function resumeWellnessSession(): void {
+  _controls?.resume?.();
+  useWellnessStore.getState().resumeSession();
+}
+
 export interface BinauralConfig {
   carrierHz:     number;
   beatHz:        number;
@@ -48,15 +105,16 @@ export interface BinauralConfig {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useBinauralEngine() {
   const startSession = useWellnessStore((s) => s.startSession);
-  const stopSession  = useWellnessStore((s) => s.stopSession);
   const setElapsed   = useWellnessStore((s) => s.setElapsed);
   const setVolumes   = useWellnessStore((s) => s.setVolumes);
   const player       = useWellnessStore((s) => s.player);
 
   // ── start ──────────────────────────────────────────────────────────────────
   const start = useCallback((cfg: BinauralConfig) => {
-    // Kill any running session first
-    stopBinauralGlobal();
+    // Mata la sesión en curso SEA DE QUIEN SEA. Antes esto era
+    // `stopBinauralGlobal()`, que solo ve los handles de este módulo: lanzar
+    // Sueño con una meditación sonando dejaba las dos a la vez.
+    stopWellnessSession();
 
     const wv = cfg.waveVolume ?? 0.6;
     const bv = cfg.bgVolume   ?? 0.4;
@@ -84,6 +142,10 @@ export function useBinauralEngine() {
       if (n) { _narration = n; n.start(); }
     }
 
+    // El mini-player para ESTA sesión por aquí, igual que para las de
+    // Meditación y Binaurales. Un solo camino para todas.
+    registerSessionControls({ stop: stopBinauralGlobal });
+
     startSession({
       type:          'binaural',
       sessionName:   cfg.sessionName,
@@ -103,17 +165,15 @@ export function useBinauralEngine() {
 
       // Auto-stop when target reached (targetSeconds > 0)
       if (cfg.targetSeconds > 0 && elapsed >= cfg.targetSeconds) {
-        stopBinauralGlobal();
-        useWellnessStore.getState().stopSession();
+        stopWellnessSession();
       }
     }, 500);
   }, [startSession, setElapsed]);
 
   // ── stop ───────────────────────────────────────────────────────────────────
   const stop = useCallback(() => {
-    stopBinauralGlobal();
-    stopSession();
-  }, [stopSession]);
+    stopWellnessSession();
+  }, []);
 
   // ── set volumes (live) ─────────────────────────────────────────────────────
   const updateVolumes = useCallback((wave: number, bg: number) => {

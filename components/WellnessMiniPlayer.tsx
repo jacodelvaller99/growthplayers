@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useWellnessStore } from '@/store/wellnessStore';
-import { stopBinauralGlobal } from '@/hooks/useBinauralEngine';
+import { resumeWellnessSession, stopWellnessSession } from '@/hooks/useBinauralEngine';
 
 function formatTime(s: number): string {
   const m = Math.floor(s / 60);
@@ -32,9 +32,7 @@ const TYPE_COLOR: Record<string, string> = {
 export function WellnessMiniPlayer() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const player        = useWellnessStore((s) => s.player);
-  const stopSession   = useWellnessStore((s) => s.stopSession);
-  const resumeSession = useWellnessStore((s) => s.resumeSession);
+  const player = useWellnessStore((s) => s.player);
 
   // Hide when no active session (show when playing OR paused)
   if ((!player.isPlaying && !player.isPaused) || !player.type) return null;
@@ -51,10 +49,11 @@ export function WellnessMiniPlayer() {
     ? Math.min(player.elapsedSeconds / player.targetSeconds, 1)
     : 0;
 
-  const handleStop = () => {
-    stopBinauralGlobal();
-    stopSession();
-  };
+  // Para el audio REAL, lo haya lanzado la pantalla que sea. Antes esto llamaba
+  // a `stopBinauralGlobal`, que solo ve los handles del engine: pulsar STOP con
+  // una meditación sonando escondía el mini-player y dejaba el audio corriendo
+  // sin ninguna UI para pararlo.
+  const handleStop = () => stopWellnessSession();
 
   const handleTap = () => {
     // Navigate to the relevant player screen
@@ -99,7 +98,7 @@ export function WellnessMiniPlayer() {
 
         {/* Pause indicator + stop */}
         {player.isPaused && (
-          <Pressable onPress={resumeSession} style={styles.stopBtn} hitSlop={12}>
+          <Pressable onPress={resumeWellnessSession} style={styles.stopBtn} hitSlop={12}>
             <MaterialIcons name="play-arrow" size={18} color={color} />
           </Pressable>
         )}

@@ -25,6 +25,7 @@ import {
 } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
+import { registerSessionControls } from '@/hooks/useBinauralEngine';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
@@ -302,6 +303,34 @@ function MeditationPlayer({
     storeResume();
     haptic('light');
   }, [storeResume]);
+
+  /**
+   * Cleanup al desmontar. Sin esto, salir de la pantalla por cualquier vía que
+   * no fueran sus propios botones (back del sistema, deep link, cambio de tab)
+   * dejaba la voz y la música sonando para siempre. `binaurales.tsx` ya lo
+   * tenía; aquí faltaba.
+   */
+  useEffect(() => () => {
+    narrationRef.current?.stop();
+    audioRef.current?.stop();
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
+  }, []);
+
+  /**
+   * El mini-player tiene que poder parar y pausar ESTA sesión desde cualquier
+   * pantalla. Se registran los mismos handlers que usan los botones de aquí —
+   * no una copia — para que el estado local de React nunca acabe diciendo
+   * "sonando" con el audio ya parado.
+   */
+  useEffect(() => {
+    if (!running && !paused) return;
+    return registerSessionControls({
+      stop:   handleStop,
+      pause:  handlePause,
+      resume: handleResume,
+    });
+  }, [running, paused, handleStop, handlePause, handleResume]);
 
   const progress = (totalSeconds - remaining) / totalSeconds;
   const mins = Math.floor(remaining / 60);
