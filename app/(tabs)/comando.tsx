@@ -34,6 +34,7 @@ import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
+import { selectTurno } from '@/lib/turnoLogic';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { ArcHeader } from '@/components/narrative';
 import { arcForDay } from '@/lib/narrativeLogic';
@@ -191,18 +192,34 @@ export default function DashboardScreen() {
     return null;
   })();
 
-  // Next best action card
-  const nextActionConfig = (() => {
-    if (!intelligence.next_action) return null;
-    const configs: Record<string, { icon: React.ComponentProps<typeof MaterialIcons>['name']; label: string; screen: string }> = {
-      complete_checkin: { icon: 'assignment', label: 'REGISTRAR CHECK-IN', screen: '/checkin' },
-      continue_lesson:  { icon: 'play-arrow', label: 'CONTINUAR LECCIÓN', screen: `/module/${ACTIVE_MODULE.id}` },
-      try_binaural:     { icon: 'headphones', label: 'SESIÓN BINAURAL', screen: '/bienestar' },
-      journal:          { icon: 'edit', label: 'ESCRIBIR EN DIARIO', screen: '/bienestar' },
-      talk_to_mentor:   { icon: 'forum', label: 'CONSULTAR MENTOR', screen: '/(tabs)/mentor' },
-    };
-    return configs[intelligence.next_action] ?? null;
-  })();
+  // ── EL TURNO — la única opinión de la app sobre qué toca ahora ──────────────
+  // Antes esto era `nextActionConfig`, y era SIEMPRE null: indexaba un mapa de
+  // slugs (`complete_checkin`) con lo que `calculate-intelligence` escribe, que
+  // son frases en español ("Haz tu check-in de hoy"). Ninguna frase coincide
+  // con una llave, así que la tarjeta de próxima acción no se renderizó nunca y
+  // el Mando caía a una constante. Ahora ambos leen `selectTurno`, que además
+  // trae el destino real — el texto y la ruta salen del mismo cómputo y no
+  // pueden volver a contradecirse.
+  //
+  // El peldaño de narrativa de coaching entra cuando esta pantalla también
+  // cargue `fetchCoachIntelligence`; hasta entonces la escalera resuelve con
+  // los peldaños 2 y 3, que es exactamente para lo que se diseñó (degrada sin
+  // ML, sin red y sin consentimiento — el ML afina, no habilita).
+  const daysSinceLastCheckIn = useMemo(() => {
+    if (todayCheckIn) return 0;
+    if (!latestCheckIn?.date) return null;
+    const ms = Date.now() - new Date(latestCheckIn.date).getTime();
+    return Math.max(0, Math.floor(ms / 86_400_000));
+  }, [todayCheckIn, latestCheckIn?.date]);
+
+  const turno = useMemo(() => selectTurno({
+    narrative: null,
+    kind: null,
+    todayCheckIn: todayCheckIn
+      ? { energy: todayCheckIn.energy, clarity: todayCheckIn.clarity, stress: todayCheckIn.stress, sleep: todayCheckIn.sleep }
+      : null,
+    daysSinceLastCheckIn,
+  }), [todayCheckIn, daysSinceLastCheckIn]);
 
   // Wellness stats
   const totalWellnessSessions = (state.wellnessSessions ?? []).length;
@@ -291,17 +308,10 @@ export default function DashboardScreen() {
   // ── Mando de hoy — UNA sola decisión no-negociable, anclada arriba ──────────
   // Prioridad: NBA accionable de la IA → recordatorio diario del Norte →
   // propósito del Norte → fallback al check-in. Forward, no pasivo.
-  const mandoDeHoy = useMemo(() => {
-    if (nextActionConfig && intelligence.next_action_urgency !== 'low') {
-      return intelligence.next_action_reason?.trim() || nextActionConfig.label;
-    }
-    if (state.northStar.dailyReminder?.trim()) return state.northStar.dailyReminder.trim();
-    if (state.northStar.purpose?.trim()) return state.northStar.purpose.trim();
-    return todayCheckIn
-      ? 'Convierte tu lectura de hoy en una sola acción de alto impacto.'
-      : 'Calibra tu sistema con el check-in y define tu objetivo único del día.';
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intelligence.next_action, intelligence.next_action_urgency, intelligence.next_action_reason, state.northStar.dailyReminder, state.northStar.purpose, todayCheckIn]);
+  // El Mando es el titular del turno. El Norte deja de competir con él aquí:
+  // ya tiene su propia tira (`northAnchorStrip`) y antes lo desplazaba, así que
+  // el usuario leía su recordatorio en vez de qué hacer ahora.
+  const mandoDeHoy = turno.headline;
 
   // Today's coherence (0–10) — same formula as the check-in screen.
   const coherenceToday = checkIn
@@ -387,21 +397,24 @@ export default function DashboardScreen() {
     </HoverCard>
   );
 
-  const nbaBlock = nextActionConfig && intelligence.next_action_urgency !== 'low' && (
+  // Ya no hay condición: el turno SIEMPRE existe (ese es el invariante de
+  // `selectTurno`, con test que barre el espacio de entradas). Esta tarjeta
+  // pasa de no renderizar nunca a ser la que manda.
+  const nbaBlock = (
     <HoverCard
-      onPress={() => router.push(nextActionConfig.screen as never)}
+      onPress={() => router.push(turno.route as never)}
       accessibilityRole="button"
-      accessibilityLabel={`Próxima acción recomendada: ${nextActionConfig.label}`}
+      accessibilityLabel={`${turno.verb}. ${turno.why}`}
       style={styles.nbaCard}>
       <View style={styles.nbaBadge}>
-        <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.ink} />
+        <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />
       </View>
       <View style={styles.nbaTextBlock}>
-        <Text style={styles.nbaLabel}>PRÓXIMA ACCIÓN RECOMENDADA</Text>
-        <Text style={styles.nbaAction}>{nextActionConfig.label}</Text>
-        {intelligence.next_action_reason && (
-          <Text style={styles.nbaReason}>{intelligence.next_action_reason}</Text>
-        )}
+        <Text style={styles.nbaLabel}>TU TURNO</Text>
+        <Text style={styles.nbaAction}>{turno.verb}</Text>
+        {/* El delta primero: es lo único que el usuario no podía saber solo. */}
+        {turno.delta && <Text style={styles.nbaReason}>{turno.delta}</Text>}
+        <Text style={styles.nbaReason}>{turno.why}</Text>
       </View>
       <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
     </HoverCard>
