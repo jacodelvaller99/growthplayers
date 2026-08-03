@@ -123,6 +123,17 @@ export const MEDITATION_CATEGORY_MUSIC: Partial<Record<MeditationCategory, strin
   'decisión':  `${WELLNESS_AUDIO_BASE}/meditation/decision.mp3`,
   'energía':   `${WELLNESS_AUDIO_BASE}/meditation/energia.mp3`,
   'inmersión': `${WELLNESS_AUDIO_BASE}/meditation/inmersion.mp3`,
+  // Cableada ANTES de que el mp3 exista, a propósito. `compasión` era la única
+  // categoría del catálogo sin entrada aquí: sus dos sesiones son `narrated` y
+  // no declaran `binaural`, así que arrancaban sin cama de ningún tipo — la voz
+  // de Norman completamente seca. Y no lo delataba nada, porque un `undefined`
+  // no genera petición que pueda dar 404.
+  // Mientras el asset no esté subido, la carga de la cama falla y la sesión
+  // suena a voz sola: igual que hoy, sin romperse. El degradado vive en
+  // `lib/narrationPlayer.ts` y está fijado por test. El día que se suba a
+  // Storage se activa sola, sin tocar código. `npm run check:audio` lo reporta
+  // como URL rota hasta entonces, que es justo lo que queremos ver.
+  'compasión': `${WELLNESS_AUDIO_BASE}/meditation/compasion.mp3`,
 };
 
 // Cama musical (Suno) por banda binaural — atmósfera bajo los osciladores.
