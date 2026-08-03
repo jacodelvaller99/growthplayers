@@ -11,13 +11,21 @@ import { Platform } from 'react-native';
 export interface NativeLoopHandle {
   start: () => void;
   stop: () => void;
+  pause: () => void;
+  resume: () => void;
   setVolume: (v: number) => void;
 }
 
 export function createNativeLoopPlayer(url?: string): NativeLoopHandle | null {
   if (Platform.OS === 'web' || !url) return null;
 
-  let sound: { setVolumeAsync: (v: number) => Promise<unknown>; stopAsync: () => Promise<unknown>; unloadAsync: () => Promise<unknown> } | null = null;
+  let sound: {
+    setVolumeAsync: (v: number) => Promise<unknown>;
+    stopAsync: () => Promise<unknown>;
+    unloadAsync: () => Promise<unknown>;
+    pauseAsync: () => Promise<unknown>;
+    playAsync: () => Promise<unknown>;
+  } | null = null;
   let stopped = false;
   let targetVolume = 0.3;
 
@@ -25,6 +33,16 @@ export function createNativeLoopPlayer(url?: string): NativeLoopHandle | null {
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { Audio } = require('expo-av');
+      try {
+        // Sin esto, en iOS con el interruptor de silencio puesto esta cama
+        // suena a nada — mismo problema que ya resuelve narrationPlayer.ts,
+        // sin cablear aquí (esta pista se crea aparte, no pasa por ahí).
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        });
+      } catch { /* la política de audio no es bloqueante */ }
       const { sound: s } = await Audio.Sound.createAsync(
         { uri: url },
         { isLooping: true, volume: 0, shouldPlay: true },
@@ -47,10 +65,18 @@ export function createNativeLoopPlayer(url?: string): NativeLoopHandle | null {
     sound = null;
   }
 
+  function pause() {
+    sound?.pauseAsync().catch(() => {});
+  }
+
+  function resume() {
+    sound?.playAsync().catch(() => {});
+  }
+
   function setVolume(v: number) {
     targetVolume = Math.max(0, Math.min(1, v));
     sound?.setVolumeAsync(targetVolume).catch(() => {});
   }
 
-  return { start, stop, setVolume };
+  return { start, stop, pause, resume, setVolume };
 }

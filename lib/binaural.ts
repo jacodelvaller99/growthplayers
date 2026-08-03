@@ -249,8 +249,11 @@ function createNativeBinauralAudio(musicUrl?: string): BinauralAudioHandle | nul
     start: player.start,
     stop: player.stop,
     setVolume: player.setVolume,
-    suspend: async () => {},
-    resume: async () => {},
+    // Antes eran no-ops: PAUSAR en `binaurales.tsx` cambiaba el estado a
+    // "pausado" en pantalla pero la cama seguía sonando en nativo — teatro.
+    // `createNativeLoopPlayer` ya sabe pausar/reanudar de verdad.
+    suspend: async () => player.pause(),
+    resume: async () => player.resume(),
     setAmbienceVolume: () => {}, // el ambiente procedural es Web Audio-only
     setAmbience: () => {},
   };
