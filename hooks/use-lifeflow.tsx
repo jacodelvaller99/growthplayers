@@ -83,6 +83,42 @@ async function persistMentorMessages(
   }
 }
 
+// ─── Outbox de sesiones de bienestar (mismo patrón, ver migración 20260803000000) ─
+let _wellnessClientIdColMissing = false;
+
+async function persistWellnessSession(
+  uid: string,
+  row: Record<string, unknown>,
+  clientId: string,
+): Promise<void> {
+  const withCid = { ...row, client_id: clientId };
+  const sessions = () => (supabase as unknown as { from: (t: string) => any }).from('wellness_sessions');
+  const enqueue = () => enqueueWrite({ table: 'wellness_sessions', payload: withCid, onConflict: 'user_id,client_id' });
+
+  if (!_wellnessClientIdColMissing) {
+    try {
+      const { error } = await sessions().upsert(withCid, { onConflict: 'user_id,client_id' });
+      if (error) throw error;
+      return; // exactamente-una-vez (columna client_id presente)
+    } catch (e) {
+      if (isMissingClientIdColumn(e)) {
+        _wellnessClientIdColMissing = true; // pre-migración → insert simple desde ahora
+      } else {
+        await enqueue(); // sin red u otro fallo → outbox idempotente
+        return;
+      }
+    }
+  }
+  // Camino pre-migración: insert simple (comportamiento actual, sin client_id).
+  try {
+    const { error } = await sessions().insert(row);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[Supabase] saveWellnessSession (encolado para reintento):', e);
+    await enqueue();
+  }
+}
+
 // ─── Default values ──────────────────────────────────────────────────────────
 // VACÍOS a propósito. Antes venían rellenos ("Juan Carlos — Empresario" + un
 // Norte inventado) y el onboarding sembraba sus inputs desde aquí: el usuario
@@ -901,18 +937,14 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       const uid = uidRef.current;
       if (!uid) return;
 
-      try {
-        await db.wellness().insert({
-          user_id:          uid,
-          type:             session.type,
-          session_name:     session.sessionName,
-          duration_seconds: session.durationSeconds,
-          completed_at:     session.completedAt,
-          metadata:         (session.metadata ?? null) as import('@/types/supabase').Json | null,
-        });
-      } catch (e) {
-        console.warn('[Supabase] saveWellnessSession:', e);
-      }
+      await persistWellnessSession(uid, {
+        user_id:          uid,
+        type:             session.type,
+        session_name:     session.sessionName,
+        duration_seconds: session.durationSeconds,
+        completed_at:     session.completedAt,
+        metadata:         (session.metadata ?? null) as import('@/types/supabase').Json | null,
+      }, id);
 
       // ── Wellness bonus for Score Soberano ─────────────────────────────────────
       const bonusMap: Record<string, number> = {
