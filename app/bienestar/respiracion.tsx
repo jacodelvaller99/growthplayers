@@ -16,9 +16,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
+import { BREATHING_TECHNIQUES, normanVoiceUrl, type BreathingTechnique } from '@/data/wellness';
+import { getBreathingGuide } from '@/data/breathingGuides';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { registerSessionControls } from '@/hooks/useBinauralEngine';
 import { analytics } from '@/lib/analytics';
+import { cueForCount, cueForPhaseLabel, playBreathCue, preloadBreathVoice } from '@/lib/breathVoice';
+import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { BodyContextCard, PracticeClose } from './body-context';
 
@@ -58,6 +62,9 @@ export default function RespiracionScreen() {
 
   const [tech, setTech] = useState<BreathingTechnique>(BREATHING_TECHNIQUES[0]);
   const [running, setRunning] = useState(false);
+  // La guía de entrada (voz) se calla ANTES de que empiece el ciclo — mientras
+  // suena, el orbe no debe marcar INHALA/EXHALA todavía.
+  const [voiceIntroActive, setVoiceIntroActive] = useState(false);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [phaseLeft, setPhaseLeft] = useState(BREATHING_TECHNIQUES[0].phases[0].duration);
   const [cycles, setCycles] = useState(0);
@@ -67,13 +74,20 @@ export default function RespiracionScreen() {
   const phaseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const introRef = useRef<NarrationHandle | null>(null);
 
   const phases = tech.phases;
   const currentPhase = phases[phaseIdx];
 
-  // Idle pulse when not running
+  // Precarga los ~11 clips de conteo UNA vez al entrar a la pantalla — nunca
+  // en cada tick del ciclo (sería `createAsync` con latencia de red por segundo).
   useEffect(() => {
-    if (running) {
+    preloadBreathVoice();
+  }, []);
+
+  // Idle pulse cuando no hay ciclo activo (ni corriendo, ni en la guía de entrada)
+  useEffect(() => {
+    if (running && !voiceIntroActive) {
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
       return;
@@ -86,9 +100,9 @@ export default function RespiracionScreen() {
     );
     loop.start();
     return () => loop.stop();
-  }, [running, pulseAnim]);
+  }, [running, voiceIntroActive, pulseAnim]);
 
-  // Animate orb scale to the current phase target
+  // Animate orb scale to the current phase target + anuncia la fase por voz.
   const animatePhase = useCallback((idx: number) => {
     const phase = phases[idx];
     Animated.timing(scaleAnim, {
@@ -97,15 +111,22 @@ export default function RespiracionScreen() {
       useNativeDriver: true,
     }).start();
     haptic('light');
+    playBreathCue(cueForPhaseLabel(phase.label, phases[(idx - 1 + phases.length) % phases.length]?.label));
   }, [phases, scaleAnim]);
 
-  // Phase countdown + advance (1s tick, mirrors design)
+  // Phase countdown + advance (1s tick, mirrors design). No corre mientras
+  // suena la guía de entrada — el ciclo empieza cuando ella termina.
   useEffect(() => {
-    if (!running) return;
+    if (!running || voiceIntroActive) return;
 
     phaseTickRef.current = setInterval(() => {
       setPhaseLeft((left) => {
-        if (left > 1) return left - 1;
+        if (left > 1) {
+          const next = left - 1;
+          const cue = cueForCount(next);
+          if (cue) playBreathCue(cue);
+          return next;
+        }
         // advance to next phase
         const nextIdx = (phaseIdx + 1) % phases.length;
         if (nextIdx === 0) setCycles((c) => c + 1);
@@ -119,7 +140,7 @@ export default function RespiracionScreen() {
       if (phaseTickRef.current) clearInterval(phaseTickRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, phaseIdx, tech.id]);
+  }, [running, voiceIntroActive, phaseIdx, tech.id]);
 
   // Total elapsed → wellness store (mini player)
   useEffect(() => {
@@ -131,13 +152,31 @@ export default function RespiracionScreen() {
     return () => { if (totalTimerRef.current) clearInterval(totalTimerRef.current); };
   }, [running, storeElapsed]);
 
-  const start = useCallback(() => {
-    setRunning(true);
+  // Auto-cierre al completar los ciclos previstos — mismo patrón que
+  // MicroRitual (app/checkin.tsx). Antes el tick solo hacía
+  // `phaseIdx % phases.length` sin mirar `tech.cycles`: con voz de por medio,
+  // un bucle hablado sin fin es insoportable. Ahora toda técnica se detiene sola.
+  useEffect(() => {
+    if (running && !voiceIntroActive && cycles >= tech.cycles) {
+      void stop();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cycles, running, voiceIntroActive]);
+
+  // Cleanup al desmontar: salir de la pantalla (back del sistema, deep link,
+  // cambio de tab) mientras la guía de entrada suena la dejaba hablando para
+  // siempre — los timers de fase/total ya se limpian solos vía su propio
+  // efecto, pero la guía no tenía a quién.
+  useEffect(() => () => {
+    introRef.current?.stop();
+  }, []);
+
+  const beginCycle = useCallback(() => {
+    setVoiceIntroActive(false);
     setPhaseIdx(0);
     setPhaseLeft(phases[0].duration);
     setCycles(0);
     startTimeRef.current = Date.now();
-    haptic('medium');
     animatePhase(0);
     const targetSecs = Math.round(
       phases.reduce((acc, p) => acc + p.duration, 0) * tech.cycles,
@@ -145,8 +184,39 @@ export default function RespiracionScreen() {
     storeStart({ type: 'breathing', sessionName: tech.title, targetSeconds: targetSecs });
   }, [animatePhase, phases, tech.cycles, tech.title, storeStart]);
 
+  const start = useCallback(() => {
+    setRunning(true);
+    haptic('medium');
+
+    // La guía de entrada explica postura/ritmo y se calla ANTES de que
+    // empiece el ciclo — no tiene sentido que el orbe ya esté marcando
+    // INHALA/EXHALA mientras Norman sigue hablando. Sin guía (o sin
+    // expo-av), el ciclo arranca directo, como siempre.
+    const guide = getBreathingGuide(tech.id);
+    if (guide?.segments.length) {
+      const n = createNarrationPlayer({
+        phases: guide.segments.map((seg, i) => ({
+          url: normanVoiceUrl(`breathing-${tech.id}`, {}, i),
+          duration: seg.duration,
+          pauseAfter: seg.pauseAfter,
+        })),
+        onComplete: beginCycle,
+      });
+      if (n) {
+        setVoiceIntroActive(true);
+        introRef.current = n;
+        n.start();
+        return;
+      }
+    }
+    beginCycle();
+  }, [tech.id, beginCycle]);
+
   const stop = useCallback(async () => {
     const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+    introRef.current?.stop();
+    introRef.current = null;
+    setVoiceIntroActive(false);
     setRunning(false);
     scaleAnim.stopAnimation();
     scaleAnim.setValue(1);
@@ -164,9 +234,21 @@ export default function RespiracionScreen() {
     }
   }, [cycles, saveWellnessSession, scaleAnim, storeStop, tech.id, tech.title]);
 
+  // El mini-player debe poder parar esta sesión igual que las demás — sin
+  // esto, STOP escondía el mini-player mientras la guía de entrada o el
+  // ciclo seguían sonando (mismo bug que ya se corrigió para meditación,
+  // binaurales y sueño).
+  useEffect(() => {
+    if (!running) return;
+    return registerSessionControls({ stop: () => { void stop(); } });
+  }, [running, stop]);
+
   const selectTech = useCallback((t: BreathingTechnique) => {
     // switching technique resets the session
     if (running) {
+      introRef.current?.stop();
+      introRef.current = null;
+      setVoiceIntroActive(false);
       setRunning(false);
       scaleAnim.stopAnimation();
       scaleAnim.setValue(1);
@@ -218,11 +300,13 @@ export default function RespiracionScreen() {
           <Animated.View
             style={[
               styles.orb,
-              { transform: [{ scale: running ? scaleAnim : pulseAnim }] },
+              { transform: [{ scale: running && !voiceIntroActive ? scaleAnim : pulseAnim }] },
             ]}>
             <View style={styles.orbInner} pointerEvents="none">
-              <Text style={styles.orbPhase}>{running ? currentPhase.label : 'LISTO'}</Text>
-              <Text style={styles.orbCount}>{running ? phaseLeft : '—'}</Text>
+              <Text style={styles.orbPhase}>
+                {voiceIntroActive ? 'PREPÁRATE' : running ? currentPhase.label : 'LISTO'}
+              </Text>
+              <Text style={styles.orbCount}>{running && !voiceIntroActive ? phaseLeft : '—'}</Text>
             </View>
           </Animated.View>
         </View>

@@ -1131,7 +1131,12 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     id: 'wim-hof',
     title: 'WIM HOF',
     subtitle: 'Energía y activación',
-    description: '30 resp. rápidas · Retención · Recuperación',
+    // La descripción decía "30 resp. rápidas · Retención · Recuperación" —
+    // el protocolo real de Wim Hof, no lo que esta técnica hace. El timer
+    // solo alterna INHALA/EXHALA `cycles` veces (aquí, 6 respiraciones): no
+    // hay retención larga ni fase de recuperación guiada. El texto ahora
+    // describe lo que el timer realmente reproduce.
+    description: 'Respiración rápida en ciclos cortos, sin retención',
     benefit: 'Muchos la usan para sentir más energía y activación. Practícala con precaución.',
     whenToUse: 'En la mañana o pre-entreno — no de noche.',
     cycles: 3,
@@ -1139,7 +1144,11 @@ export const BREATHING_TECHNIQUES: BreathingTechnique[] = [
     phases: [
       { label: 'INHALA', duration: 1.5, scale: 1.5 },
       { label: 'EXHALA', duration: 1.5, scale: 0.7 },
-      // After 30 cycles, hold — handled specially in the component
+      // ponytail: el protocolo Wim Hof completo (30 respiraciones + retención
+      // larga + recuperación) no está implementado — el comentario anterior
+      // ("handled specially in the component") prometía eso y era falso.
+      // Si se implementa de verdad, es una fase nueva explícita aquí, no un
+      // caso especial oculto en el player.
     ],
   },
   {
