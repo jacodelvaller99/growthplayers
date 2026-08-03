@@ -171,6 +171,46 @@ backlog general.
 
 ---
 
+## El Turno — la app dejó de tener seis opiniones (2026-08-03, tarde)
+
+Un diagnóstico de 6 equipos con verificación adversarial (32 hallazgos
+confirmados, 3 refutados, 42 agentes) encontró la causa raíz de "la app no me
+lleva": **seis piezas decidían qué toca ahora y cinco estaban muertas.**
+
+- `nextActionConfig` (comando) era **siempre `null`**: indexaba un mapa de slugs
+  con las frases en español que escribe `calculate-intelligence`. La tarjeta de
+  próxima acción **no se renderizó nunca**.
+- `mandoDeHoy` caía a una constante por el mismo desajuste.
+- `todayPicks` (hub de bienestar) decidía con el reloj de pared, cero señal.
+- `DAILY_MESSAGES` (notificación local), índice rotativo.
+- `buildNextActionNotification` (edge fn), ramas muertas.
+- `recommendation` (check-in) era el **único** correcto — encerrado en la
+  pantalla que menos se abre.
+
+`lib/turnoLogic.ts` es ahora la única opinión: escalera de 3 peldaños
+(narrativa de coaching → reglas del check-in → la lectura de hoy). El último no
+depende de red, ML ni consentimiento, así que **siempre hay turno**. El ML
+afina, no habilita. 19 tests, dos de ellos barren el espacio completo de
+entradas: *siempre hay turno con verbo y ruta*, y *ningún copy amenaza con
+pérdida ni cuenta rachas* — la anti-gamificación que exige PRODUCT.md queda
+fijada por test, no por buena voluntad.
+
+Bugs verificados y cerrados de camino:
+- **El toast in-app nunca mostró nada**: filtraba por `sent` y `scheduled_for`,
+  columnas que no existen. Y la RLS solo tenía `FOR SELECT`, así que arreglar
+  la query sin la política UPDATE lo habría puesto en bucle cada 60s.
+- **La racha era Duolingo** ("¡N días en juego!", "No rompas ahora") — la
+  anti-referencia que la marca prohíbe por nombre.
+- **El recordatorio de check-in borraba los hábitos del usuario**
+  (`cancelAllScheduledNotificationsAsync`), y no llevaba `data`, así que el tap
+  no podía apuntar a ningún sitio.
+- **`configureNotificationHandler` tenía cero llamadores**: con la app abierta,
+  la notificación no se mostraba.
+- Botón de recuperar-tras-crash ilegible en modo claro; crash real al abrir
+  módulos sin lecciones; el momento del héroe encima del onboarding.
+
+---
+
 ## Handoffs tuyos (esto SÍ bloquea, y no es código)
 
 Estas son las acciones reales que dependen de tus cuentas, credenciales o
@@ -218,6 +258,16 @@ Para PB-5 (biblioteca funcional): necesito el nombre y archivo de tus propios
 materiales del Método a subir. Los 6 libros de terceros ya listados en la
 pantalla se quedan como recomendaciones externas — no se sirven como PDF
 propio por derechos de autor.
+
+### 5.bis · Migraciones nuevas en el SQL Editor (rápido, desbloquea lo de hoy)
+- `20260803000000_wellness_sessions_client_id_outbox.sql` — sin ella, una
+  práctica hecha sin red se sigue perdiendo (el código degrada, no rompe).
+- `20260803010000_smart_notifications_update_policy.sql` — **sin ella el toast
+  in-app queda en bucle**: la query ya está arreglada, pero marcar la
+  notificación como entregada se deniega en silencio sin política UPDATE.
+
+Y `supabase functions deploy smart-notifications` — el copy nuevo (sin racha
+Duolingo, con el porqué real) vive en la edge function.
 
 ### 6 · Audio nuevo por subir al bucket `wellness-audio`
 A medida que la rama de meditaciones genera clips (`compasion.mp3`, la
