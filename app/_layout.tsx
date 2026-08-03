@@ -232,6 +232,12 @@ export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let sub: { remove: () => void } | null = null;
+    // `configureNotificationHandler` existía con CERO llamadores: sin él, una
+    // notificación que llega con la app en primer plano no se muestra (expo
+    // la entrega al handler, y sin handler configurado no hay banner). El
+    // recordatorio de las 7:00 se perdía justo para quien ya tenía la app
+    // abierta.
+    import('@/services/notifications').then((N) => { N.configureNotificationHandler(); });
     import('expo-notifications').then((N) => {
       sub = N.addNotificationResponseReceivedListener((response) => {
         const data = response?.notification?.request?.content?.data as
