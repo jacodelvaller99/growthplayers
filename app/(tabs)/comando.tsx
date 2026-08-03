@@ -34,7 +34,9 @@ import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
-import { selectTurno } from '@/lib/turnoLogic';
+import { selectTurno, type TurnoKind } from '@/lib/turnoLogic';
+import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
+import { clientSafeNarrative } from '@/lib/coachIntelligenceLogic';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { ArcHeader } from '@/components/narrative';
 import { arcForDay } from '@/lib/narrativeLogic';
@@ -212,14 +214,41 @@ export default function DashboardScreen() {
     return Math.max(0, Math.floor(ms / 86_400_000));
   }, [todayCheckIn, latestCheckIn?.date]);
 
+  // Peldaño 1: la narrativa de coaching. `fetchCoachIntelligence` degrada a
+  // vacío por su cuenta (sin red, sin datos, sin ML), así que un fallo aquí
+  // simplemente deja la escalera en los peldaños 2 y 3 — nunca en blanco.
+  const [coachNarrative, setCoachNarrative] = useState<{
+    narrative: { headline: string; why: string };
+    kind: TurnoKind;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!userId) { setCoachNarrative(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { ci } = await fetchCoachIntelligence(userId);
+        if (cancelled) return;
+        const safe = clientSafeNarrative(ci);
+        setCoachNarrative({
+          narrative: { headline: safe.headline, why: safe.why },
+          kind: ci.next_action.kind,
+        });
+      } catch (e) {
+        logSilentError('comando.coachNarrative', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
+
   const turno = useMemo(() => selectTurno({
-    narrative: null,
-    kind: null,
+    narrative: coachNarrative?.narrative ?? null,
+    kind: coachNarrative?.kind ?? null,
     todayCheckIn: todayCheckIn
       ? { energy: todayCheckIn.energy, clarity: todayCheckIn.clarity, stress: todayCheckIn.stress, sleep: todayCheckIn.sleep }
       : null,
     daysSinceLastCheckIn,
-  }), [todayCheckIn, daysSinceLastCheckIn]);
+  }), [coachNarrative, todayCheckIn, daysSinceLastCheckIn]);
 
   // Wellness stats
   const totalWellnessSessions = (state.wellnessSessions ?? []).length;
@@ -973,7 +1002,7 @@ export default function DashboardScreen() {
   // Score Soberano — ring + eyebrow + descripción + delta semanal
   const mScoreCard = (
     <View style={mob.scoreCard}>
-      <ScoreRing value={sovereignScore} max={1000} size={132} stroke={8} sub={`/ ${sovereignTier}`} />
+      <ScoreRing value={sovereignScore} max={1000} size={96} stroke={7} sub={`/ ${sovereignTier}`} />
       <View style={{ flex: 1 }}>
         <Text style={mob.eyebrow}>SCORE SOBERANO</Text>
         {/* El copy decía "últimos 14 días" y era falso: `averages` promedia TODO
@@ -1556,10 +1585,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase' as const,
   },
   mandoText: {
-    ...typography.body,
+    // Era `typography.body` a 15px: copy de párrafo compitiendo con un anillo
+    // de 132px. Lo único que manda en la pantalla tiene que pesar más que la
+    // decoración que lo rodea.
+    ...typography.title,
     color: palette.ivory,
-    fontSize: 15,
-    lineHeight: 21,
+    lineHeight: 26,
   },
   mandoCaption: {
     ...typography.body,
