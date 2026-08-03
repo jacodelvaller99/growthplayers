@@ -142,9 +142,41 @@ export function useBinauralEngine() {
       if (n) { _narration = n; n.start(); }
     }
 
+    // El timer vive en una función para poder rearmarlo igual al arrancar y
+    // al reanudar de una pausa — antes solo existía inline en el arranque, así
+    // que no había forma de re-crearlo sin duplicar el cuerpo.
+    function armTimer() {
+      _timer = setInterval(() => {
+        const elapsed = Math.round((Date.now() - _startMs) / 1000);
+        setElapsed(elapsed);
+
+        // Auto-stop when target reached (targetSeconds > 0)
+        if (cfg.targetSeconds > 0 && elapsed >= cfg.targetSeconds) {
+          stopWellnessSession();
+        }
+      }, 500);
+    }
+
+    // Pausa/reanuda real: cama, voz y el timer que los gobierna. Antes esta
+    // sesión (Sueño) solo registraba `stop` — pulsar el indicador de pausa del
+    // mini-player no llegaba a ningún lado para esta sesión en concreto.
+    let pausedAtMs = 0;
+    function pause() {
+      if (_timer) { clearInterval(_timer); _timer = null; }
+      pausedAtMs = Date.now();
+      void _handle?.suspend();
+      _narration?.pause();
+    }
+    function resume() {
+      _startMs += Date.now() - pausedAtMs;
+      void _handle?.resume();
+      _narration?.resume();
+      armTimer();
+    }
+
     // El mini-player para ESTA sesión por aquí, igual que para las de
     // Meditación y Binaurales. Un solo camino para todas.
-    registerSessionControls({ stop: stopBinauralGlobal });
+    registerSessionControls({ stop: stopBinauralGlobal, pause, resume });
 
     startSession({
       type:          'binaural',
@@ -157,22 +189,22 @@ export function useBinauralEngine() {
       targetSeconds: cfg.targetSeconds,
     });
 
-    // Timer
     _startMs = Date.now();
-    _timer = setInterval(() => {
-      const elapsed = Math.round((Date.now() - _startMs) / 1000);
-      setElapsed(elapsed);
-
-      // Auto-stop when target reached (targetSeconds > 0)
-      if (cfg.targetSeconds > 0 && elapsed >= cfg.targetSeconds) {
-        stopWellnessSession();
-      }
-    }, 500);
+    armTimer();
   }, [startSession, setElapsed]);
 
   // ── stop ───────────────────────────────────────────────────────────────────
   const stop = useCallback(() => {
     stopWellnessSession();
+  }, []);
+
+  // ── pause / resume ─────────────────────────────────────────────────────────
+  const pause = useCallback(() => {
+    pauseWellnessSession();
+  }, []);
+
+  const resume = useCallback(() => {
+    resumeWellnessSession();
   }, []);
 
   // ── set volumes (live) ─────────────────────────────────────────────────────
@@ -187,5 +219,5 @@ export function useBinauralEngine() {
     _handle?.setAmbience(type);
   }, []);
 
-  return { start, stop, updateVolumes, setAmbience, player };
+  return { start, stop, pause, resume, updateVolumes, setAmbience, player };
 }

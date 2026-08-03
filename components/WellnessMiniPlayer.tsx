@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useWellnessStore } from '@/store/wellnessStore';
-import { resumeWellnessSession, stopWellnessSession } from '@/hooks/useBinauralEngine';
+import { pauseWellnessSession, resumeWellnessSession, stopWellnessSession } from '@/hooks/useBinauralEngine';
 
 function formatTime(s: number): string {
   const m = Math.floor(s / 60);
@@ -96,13 +96,38 @@ export function WellnessMiniPlayer() {
           </Text>
         </View>
 
-        {/* Pause indicator + stop */}
-        {player.isPaused && (
-          <Pressable onPress={resumeWellnessSession} style={styles.stopBtn} hitSlop={12}>
+        {/* Pausa/reanuda + stop. Antes solo había indicador de resume — no
+            había forma de pausar desde el mini-player, así que RESUME nunca
+            tenía nada real que hacer para la sesión de Sueño (useBinauralEngine
+            no registraba pause/resume, solo stop). */}
+        {player.isPaused ? (
+          <Pressable
+            testID="wellness-mini-resume"
+            onPress={resumeWellnessSession}
+            style={styles.stopBtn}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Reanudar sesión">
             <MaterialIcons name="play-arrow" size={18} color={color} />
           </Pressable>
+        ) : (
+          <Pressable
+            testID="wellness-mini-pause"
+            onPress={pauseWellnessSession}
+            style={styles.stopBtn}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Pausar sesión">
+            <MaterialIcons name="pause" size={18} color={color} />
+          </Pressable>
         )}
-        <Pressable onPress={handleStop} style={styles.stopBtn} hitSlop={12}>
+        <Pressable
+          testID="wellness-mini-stop"
+          onPress={handleStop}
+          style={styles.stopBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Detener sesión">
           <MaterialIcons name="stop" size={18} color={palette.ash} />
         </Pressable>
       </View>
