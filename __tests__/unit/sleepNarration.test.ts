@@ -15,7 +15,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { SLEEP_SESSIONS, getSleepScript, estimateVoiceSeconds, sleepSegmentsToPhases } from '@/data/sleep';
+import { SLEEP_SESSIONS, getSleepScript, estimateVoiceSeconds, sleepSegmentsToPhases, sleepScriptSeconds } from '@/data/sleep';
+import type { SleepSession } from '@/data/sleep';
 
 /** Ids de las tarjetas declaradas en la pantalla de Sueño. */
 function screenItemIds(): string[] {
@@ -87,5 +88,26 @@ describe('sleepSegmentsToPhases', () => {
   it('la URL apunta al prefijo de voz con el id posicional, no al de música', () => {
     expect(phases[0].url).toContain(`/wellness-audio/${session.id}/${session.id}-0.mp3`);
     expect(phases[0].url).not.toContain('/wellness-audio/meditation/');
+  });
+});
+
+describe('sleepScriptSeconds', () => {
+  // POR QUÉ: sueno.tsx usaba la etiqueta de marketing de la tarjeta ("20 min")
+  // como duración del timer del engine, sin relación con el guión real. Si el
+  // guión narrado dura más que esa etiqueta, el timer paraba la sesión — y con
+  // ella la voz de Norman — a mitad de frase.
+  it('es la suma de duration + pauseAfter de cada fase generada', () => {
+    const session = SLEEP_SESSIONS[0];
+    const manual = sleepSegmentsToPhases(session)
+      .reduce((total, p) => total + p.duration + p.pauseAfter, 0);
+
+    expect(sleepScriptSeconds(session)).toBe(manual);
+  });
+
+  it('crece si el guión tiene más segmentos', () => {
+    const base = SLEEP_SESSIONS[0];
+    const doble: SleepSession = { ...base, segments: [...base.segments, ...base.segments] };
+
+    expect(sleepScriptSeconds(doble)).toBeGreaterThan(sleepScriptSeconds(base));
   });
 });

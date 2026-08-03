@@ -61,3 +61,20 @@ export function sleepSegmentsToPhases(session: SleepSession) {
     url: normanVoiceUrl(session.id, {}, i),
   }));
 }
+
+/**
+ * Duración real del guión narrado, en segundos: suma de `duration` +
+ * `pauseAfter` de cada fase — el mismo criterio que usa el timer de respaldo
+ * de `createNarrationPlayer` fase a fase.
+ *
+ * `sueno.tsx` usaba `parseDurationSecs(item.duration)` (la etiqueta de
+ * marketing de la tarjeta, ej. "20 min" → 1200) como `targetSeconds` del
+ * engine. Esa cifra no tiene relación con el guión real: cuando el guión dura
+ * más que la etiqueta, el timer del engine paraba la sesión — y con ella la
+ * voz de Norman — a mitad de frase. El label de la tarjeta no cambia; solo el
+ * timer interno debe derivarse de esto cuando hay guión.
+ */
+export function sleepScriptSeconds(session: SleepSession): number {
+  return sleepSegmentsToPhases(session)
+    .reduce((total, phase) => total + phase.duration + phase.pauseAfter, 0);
+}

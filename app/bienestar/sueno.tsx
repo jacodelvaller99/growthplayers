@@ -8,7 +8,7 @@ import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polari
 import SafetyWarning from '@/components/SafetyWarning';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { SLEEP_MUSIC } from '@/data/wellness';
-import { getSleepScript, sleepSegmentsToPhases } from '@/data/sleep';
+import { getSleepScript, sleepSegmentsToPhases, sleepScriptSeconds } from '@/data/sleep';
 import { useBinauralEngine } from '@/hooks/useBinauralEngine';
 import { useWellnessStore } from '@/store/wellnessStore';
 
@@ -157,11 +157,14 @@ export default function SuenoScreen() {
 
     // Audio real: pista Suno de sueño + binaural delta suave debajo (2 Hz,
     // banda de sueño profundo). El engine global maneja timer, mini-player y stop.
+    // El timer usa la duración REAL del guión (cuando hay uno) — la etiqueta de
+    // la tarjeta ("20 min") es solo marketing y no cortaba a Norman a mitad de
+    // frase por accidente: ver `sleepScriptSeconds`.
     engine.start({
       carrierHz: 100,
       beatHz: 2,
       sessionName: item.title,
-      targetSeconds: parseDurationSecs(item.duration),
+      targetSeconds: script ? sleepScriptSeconds(script) : parseDurationSecs(item.duration),
       waveVolume: 0.2,
       bgVolume: 0,
       musicUrl: catId === 'nidra' ? SLEEP_MUSIC.nidra : SLEEP_MUSIC.descenso,
