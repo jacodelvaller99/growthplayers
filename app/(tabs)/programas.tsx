@@ -18,25 +18,24 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
-// A module is unlocked when either:
-//  - It is the first active module (static status 'active')
-//  - All lessons of the previous module have been completed
+/**
+ * Desbloqueo total: decisión del dueño, no un bug. Antes esto encadenaba
+ * `prev.lessons.every(...)` — ya corregido en su momento para que un módulo
+ * sin lecciones propias (classroom de Skool) no bloqueara para siempre todo
+ * lo posterior, pero seguía exigiendo completar cada módulo anterior para
+ * abrir el siguiente. El plan aprobado pide que el catálogo entero esté
+ * navegable desde ya — `coming_soon` sigue gateado aparte (ver `isComingSoon`
+ * en `renderModuleCard`, que corta el onPress y muestra "PRONTO" antes de
+ * llegar a mirar este valor).
+ *
+ * exportada para test — ver __tests__/unit/programasScreen.test.tsx
+ */
 export function isModuleUnlocked(
-  modules: typeof POLARIS_MODULES,
-  moduleIndex: number,
-  completedLessons: string[],
+  _modules: typeof POLARIS_MODULES,
+  _moduleIndex: number,
+  _completedLessons: string[],
 ): boolean {
-  // exportada para test — ver __tests__/unit/programasScreen.test.tsx
-  const mod = modules[moduleIndex];
-  if (mod.status === 'coming_soon') return false;
-  if (moduleIndex === 0) return true;
-  const prev = modules[moduleIndex - 1];
-  if (prev.status === 'coming_soon') return false;
-  // Un módulo SIN lecciones (los que enlazan directo a su classroom de Skool)
-  // no tiene nada que completar, así que no puede bloquear al siguiente —
-  // antes dejaba el resto de la ruta cerrado para siempre.
-  // `every` sobre un array vacío ya devuelve true; no hace falta caso especial.
-  return prev.lessons.every((l) => completedLessons.includes(l.id));
+  return true;
 }
 
 // "Por qué importa" — el peso del módulo en el camino, no su contenido literal.

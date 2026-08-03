@@ -68,6 +68,14 @@ export default function ModuleDetailScreen() {
     ? Math.round((completedCount / module.lessons.length) * 100)
     : 0;
 
+  // Desbloqueo total (mismo criterio que isModuleUnlocked en programas.tsx):
+  // el pill de esta pantalla leía `module.status` estático de data/modules.ts,
+  // que todavía tiene varios módulos marcados 'locked' a mano — mostraba
+  // "BLOQUEADO" en un módulo al que el usuario ya podía entrar y completar
+  // lecciones sin ningún gate real. `coming_soon` es el único bloqueo real.
+  const isAllDone = module.lessons.length > 0 && completedCount === module.lessons.length;
+  const effectiveStatus = isAllDone ? 'completed' : module.status === 'coming_soon' ? 'coming_soon' : 'active';
+
   return (
     <ScrollView
       style={sc.root}
@@ -83,20 +91,20 @@ export default function ModuleDetailScreen() {
         <View style={styles.heroTop}>
           <StatusPill
             label={
-              module.status === 'active'
-                ? 'ACTIVO'
-                : module.status === 'completed'
-                  ? 'COMPLETADO'
-                  : 'BLOQUEADO'
+              effectiveStatus === 'completed'
+                ? 'COMPLETADO'
+                : effectiveStatus === 'coming_soon'
+                  ? 'PRÓXIMAMENTE'
+                  : 'ACTIVO'
             }
             tone={
-              module.status === 'active'
-                ? 'gold'
-                : module.status === 'completed'
-                  ? 'success'
-                  : 'muted'
+              effectiveStatus === 'completed'
+                ? 'success'
+                : effectiveStatus === 'coming_soon'
+                  ? 'muted'
+                  : 'gold'
             }
-            dot={module.status === 'active'}
+            dot={effectiveStatus === 'active'}
           />
           <Text style={styles.heroNumber}>{String(module.order).padStart(2, '0')}</Text>
         </View>
@@ -105,7 +113,7 @@ export default function ModuleDetailScreen() {
           <View style={styles.arquetipoRow}>
             <MaterialIcons name="person" size={12} color={palette.goldText} />
             <Text style={styles.arquetipoText}>
-              {module.status === 'completed'
+              {effectiveStatus === 'completed'
                 ? `Ya eres el ${module.arquetipo.toUpperCase()}`
                 : `Arquetipo: ${module.arquetipo}`}
             </Text>
@@ -206,7 +214,17 @@ export default function ModuleDetailScreen() {
         })}
       </View>
 
-      {module.lessons.length > 0 && completedCount === module.lessons.length ? (
+      {/*
+        Módulos sin lecciones sueltas (8, 9, Sesiones Semanales) ya tienen su
+        propio CTA arriba ("ABRIR CLASSROOM") — no hay `activeLesson` que
+        continuar. El botón de abajo asumía que SIEMPRE existía uno y
+        reventaba con "Cannot read properties of undefined (reading 'title')"
+        en cualquier módulo de solo-classroom que no estuviera 100% marcado
+        completado. Antes del desbloqueo total esto era difícil de alcanzar
+        (esos módulos quedaban detrás de la cadena de lecciones); ahora que
+        `isModuleUnlocked` siempre abre, cualquiera puede entrar directo.
+      */}
+      {module.lessons.length === 0 ? null : completedCount === module.lessons.length ? (
         <View style={styles.completionBanner}>
           <MaterialIcons name="emoji-events" size={20} color={palette.goldText} />
           <View style={styles.completionCopy}>

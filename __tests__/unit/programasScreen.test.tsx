@@ -55,14 +55,15 @@ describe('ProgramasScreen — render smoke', () => {
   });
 });
 
-describe('isModuleUnlocked — un módulo sin lecciones no puede bloquear el resto', () => {
+describe('isModuleUnlocked — desbloqueo total (decisión del dueño)', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { isModuleUnlocked } = require('@/app/(tabs)/programas');
 
-  // Los módulos 8, 9 y Sesiones Semanales no tienen lecciones sueltas: su
-  // contenido vive entero en el classroom de Skool. El guard anterior
-  // (`prev.lessons.length === 0 → return false`) dejaba TODO lo que venía
-  // después cerrado para siempre, porque nunca habría lecciones que completar.
+  // Ya no encadena `prev.lessons.every(...)`: el plan aprobado pide el
+  // catálogo entero navegable, sin exigir completar el módulo anterior.
+  // `coming_soon` se sigue gateando aparte, en el onPress de la tarjeta
+  // (corta antes de mirar este valor) — por eso da igual lo que devuelva
+  // aquí para esos módulos.
   const mods = [
     { id: 'a', status: 'active',      lessons: [{ id: 'a1' }] },
     { id: 'b', status: 'active',      lessons: [] },            // solo classroom
@@ -75,19 +76,15 @@ describe('isModuleUnlocked — un módulo sin lecciones no puede bloquear el res
     expect(isModuleUnlocked(mods, 0, [])).toBe(true);
   });
 
-  it('bloquea mientras el anterior tenga lecciones pendientes', () => {
-    expect(isModuleUnlocked(mods, 1, [])).toBe(false);
+  it('abre aunque el anterior no tenga NINGUNA lección completada', () => {
+    expect(isModuleUnlocked(mods, 1, [])).toBe(true);
   });
 
-  it('abre cuando el anterior está completo', () => {
-    expect(isModuleUnlocked(mods, 1, ['a1'])).toBe(true);
+  it('un módulo sin lecciones también deja pasar al siguiente', () => {
+    expect(isModuleUnlocked(mods, 2, [])).toBe(true);
   });
 
-  it('un módulo sin lecciones deja pasar al siguiente (nada que completar)', () => {
-    expect(isModuleUnlocked(mods, 2, ['a1'])).toBe(true);
-  });
-
-  it('coming_soon sí sigue bloqueando al siguiente', () => {
-    expect(isModuleUnlocked(mods, 4, ['a1', 'c1'])).toBe(false);
+  it('el módulo que sigue a uno coming_soon también está abierto', () => {
+    expect(isModuleUnlocked(mods, 4, [])).toBe(true);
   });
 });
