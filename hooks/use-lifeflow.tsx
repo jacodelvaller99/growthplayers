@@ -857,6 +857,12 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       useWellnessStore.getState().setUserData({
         totalWellnessMinutes: newTotalMinutes,
         weeklyActivity,
+        // Sin esto, wellnessStore.user.subscriptionTier se quedaba en su
+        // default ('free') para siempre: sueno.tsx y progreso.tsx lo leen
+        // para desbloquear contenido premium (`user.subscriptionTier !==
+        // 'free'`), así que un usuario Premium veía Sueño bloqueado pese a
+        // haber pagado. El store solo distingue free/no-free.
+        subscriptionTier: state.subscriptionTier === 'free' ? 'free' : 'premium',
       });
 
       const uid = uidRef.current;
