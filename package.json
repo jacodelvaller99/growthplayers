@@ -11,6 +11,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "witness": "node scripts/check-witness.mjs",
+    "check:audio": "node --experimental-strip-types scripts/check-audio-urls.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --coverageReporters=text --coverageReporters=lcov"
