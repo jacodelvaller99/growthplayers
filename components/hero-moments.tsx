@@ -1,9 +1,10 @@
 /**
- * hero-moments — Camino del Héroe, Fase 2 (Motor de Momentos).
+ * hero-moments — Camino del Héroe, Motor de Momentos.
  *
  * Al entrar, como mucho una vez por día: ecoa lo último que el usuario le
- * dijo a Norman (si hay algo nuevo que ecoar) o, si no, un recordatorio de
- * gratitud. Nunca los dos — un solo momento por día, descartable.
+ * dijo a Norman (si hay algo nuevo que ecoar), si no un logro viejo que
+ * todavía no tuvo su momento, y si no, un recordatorio de gratitud. Nunca
+ * más de uno — un solo momento por día, descartable.
  */
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -19,7 +20,7 @@ import {
   type HeroMoment,
   type HeroMomentState,
 } from '@/lib/heroJourneyLogic';
-import { fetchLatestSummaries } from '@/lib/memory';
+import { fetchLatestSummaries, fetchMemoryProfile } from '@/lib/memory';
 import { logSilentError } from '@/lib/observability';
 import { readLocal, writeLocal } from '@/storage/local';
 
@@ -35,11 +36,16 @@ export function HeroMoments() {
 
     (async () => {
       try {
-        const [momentState, summaries] = await Promise.all([
-          readLocal<HeroMomentState>(STORAGE_KEY),
+        const [storedState, summaries, profile] = await Promise.all([
+          readLocal<Partial<HeroMomentState>>(STORAGE_KEY),
           fetchLatestSummaries(userId, 1),
+          fetchMemoryProfile(userId),
         ]);
         if (cancelled) return;
+
+        // Spread sobre el default: un `hero:v1` guardado antes de Fase 3 no
+        // tiene `echoedWinKeys` — sin esto, un momento viejo en disco revienta.
+        const momentState: HeroMomentState = { ...defaultHeroMomentState, ...storedState };
 
         const today = new Date().toISOString().slice(0, 10);
         const latest = summaries[0];
@@ -47,13 +53,14 @@ export function HeroMoments() {
           today,
           name: state.profile.name,
           latestSummary: latest?.id ? { id: latest.id, summary: latest.summary ?? '' } : null,
-          state: momentState ?? defaultHeroMomentState,
+          recentWins: profile?.recent_wins ?? [],
+          state: momentState,
         });
 
         if (!selected) return;
         setMoment(selected);
         analytics.track('hero_moment_shown', { kind: selected.kind });
-        await writeLocal(STORAGE_KEY, markMomentShown(momentState ?? defaultHeroMomentState, today, selected));
+        await writeLocal(STORAGE_KEY, markMomentShown(momentState, today, selected));
       } catch (e) {
         logSilentError('heroMoments.select', e);
       }

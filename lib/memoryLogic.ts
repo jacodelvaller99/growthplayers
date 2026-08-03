@@ -78,7 +78,12 @@ const CAP = {
   blockers: 6,
   patterns: 6,
   risks: 6,
-  wins: 8,
+  // 8 confundía dos límites distintos: cuánto entra al PROMPT de Norman (ya
+  // acotado aparte a 4 en `assembleMentorMemory`) y cuánto dura un logro antes
+  // de desaparecer para siempre de "MIS AVANCES" del cliente. El camino del
+  // héroe pide que esos momentos "perduren" — 20 les da meses de vida real
+  // sin que el perfil crezca sin límite.
+  wins: 20,
   commitmentsCompleted: 25,
   text: 600, // longitud máx. de campos de texto sintetizados
 } as const;

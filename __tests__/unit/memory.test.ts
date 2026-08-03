@@ -33,10 +33,10 @@ describe('mergeMemoryProfile — síntesis acumulativa pero acotada', () => {
     expect(merged.recurring_blockers).toEqual(['procrastinación', 'Delegar', 'Perfeccionismo']);
   });
 
-  it('capea recent_wins a 8 (anti-bloat)', () => {
-    const incoming = { recent_wins: Array.from({ length: 12 }, (_, i) => `win-${i}`) };
+  it('capea recent_wins a 20 (anti-bloat, pero deja perdurar los logros)', () => {
+    const incoming = { recent_wins: Array.from({ length: 25 }, (_, i) => `win-${i}`) };
     const merged = mergeMemoryProfile({}, incoming);
-    expect(merged.recent_wins).toHaveLength(8);
+    expect(merged.recent_wins).toHaveLength(20);
   });
 
   it('mueve compromisos open→completed cuando llegan como completados', () => {
