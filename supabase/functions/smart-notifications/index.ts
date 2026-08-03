@@ -232,14 +232,14 @@ async function processUser(
     const tpl = buildChurnCriticalNotification(name, intel.days_since_last_act);
     title = tpl.title;
     body  = tpl.body;
-    data  = { screen: 'comando', trigger: 'churn' };
+    data  = { screen: '/comando', trigger: 'churn' };
 
   } else if (intel.anomaly_detected && intel.anomaly_type) {
     notifType = `anomaly_${intel.anomaly_type}`;
     const tpl = buildAnomalyNotification(name, intel.anomaly_type);
     title = tpl.title;
     body  = tpl.body;
-    data  = { screen: 'mentor', trigger: 'anomaly', anomaly_type: intel.anomaly_type };
+    data  = { screen: '/mentor', trigger: 'anomaly', anomaly_type: intel.anomaly_type };
 
   } else if (intel.days_since_last_act === 0 && (intel.streak ?? 0) >= 3) {
     // Near end of day with active streak — rescue
@@ -249,7 +249,7 @@ async function processUser(
       const tpl = buildStreakRescueNotification(name, intel.streak!);
       title = tpl.title;
       body  = tpl.body;
-      data  = { screen: 'comando', trigger: 'streak' };
+      data  = { screen: '/comando', trigger: 'streak' };
     }
 
   } else if (intel.next_action && intel.next_action_urgency === 'high') {
@@ -257,14 +257,14 @@ async function processUser(
     const tpl = buildNextActionNotification(name, intel.next_action);
     title = tpl.title;
     body  = tpl.body;
-    data  = { screen: 'comando', trigger: 'nba', action: intel.next_action };
+    data  = { screen: '/comando', trigger: 'nba', action: intel.next_action };
 
   } else if (intel.engagement_score >= 75) {
     notifType = 'milestone';
     const tpl = buildMilestoneNotification(name, intel.engagement_score);
     title = tpl.title;
     body  = tpl.body;
-    data  = { screen: 'perfil', trigger: 'milestone' };
+    data  = { screen: '/perfil', trigger: 'milestone' };
   }
 
   if (!notifType) return { notified: false };
