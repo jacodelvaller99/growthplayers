@@ -6,8 +6,11 @@
 import {
   assembleMentorMemory,
   clientSafeProfile,
+  heroOriginSummary,
   mergeMemoryProfile,
   parseSummaryBlocks,
+  transformationGoalFromOrigin,
+  type HeroOrigin,
   type MemoryProfile,
 } from '@/lib/memoryLogic';
 
@@ -190,5 +193,59 @@ describe('assembleMentorMemory — contexto para Norman (sin capa admin)', () =>
     const a = assembleMentorMemory(null, null, null);
     expect(a.openCommitments).toEqual([]);
     expect(a.relevantMemories).toEqual([]);
+  });
+});
+
+// ─── El umbral — la historia de origen ────────────────────────────────────────
+describe('transformationGoalFromOrigin', () => {
+  const origin = (o: Partial<HeroOrigin>): HeroOrigin => ({
+    painPoint: null, purpose: null, identity: null, ...o,
+  });
+
+  it('combina dolor + propósito: "Desde: X → Hacia: Y"', () => {
+    expect(transformationGoalFromOrigin(origin({ painPoint: 'Trabajo sin delegar', purpose: 'Escalar con equipo' })))
+      .toBe('Desde: Trabajo sin delegar → Hacia: Escalar con equipo');
+  });
+
+  it('solo propósito → el propósito tal cual, sin "Desde/Hacia"', () => {
+    expect(transformationGoalFromOrigin(origin({ purpose: 'Construir algo que dure' })))
+      .toBe('Construir algo que dure');
+  });
+
+  it('solo dolor → "Salir de: X"', () => {
+    expect(transformationGoalFromOrigin(origin({ painPoint: 'Avanzo sin dirección clara' })))
+      .toBe('Salir de: Avanzo sin dirección clara');
+  });
+
+  it('onboarding completamente vacío → cadena vacía, el llamador IO no escribe', () => {
+    expect(transformationGoalFromOrigin(origin({}))).toBe('');
+  });
+});
+
+describe('heroOriginSummary', () => {
+  const origin = (o: Partial<HeroOrigin>): HeroOrigin => ({
+    painPoint: null, purpose: null, identity: null, ...o,
+  });
+
+  it('siempre abre con "Día 0 — el umbral."', () => {
+    expect(heroOriginSummary(origin({}))).toBe('Día 0 — el umbral.');
+  });
+
+  it('incluye las tres declaraciones citadas en sus propias palabras', () => {
+    const s = heroOriginSummary(origin({
+      painPoint: 'Empiezo y no sostengo',
+      purpose: 'Ser alguien que termina lo que empieza',
+      identity: 'Soy constante',
+    }));
+    expect(s).toContain('"Empiezo y no sostengo"');
+    expect(s).toContain('"Ser alguien que termina lo que empieza"');
+    expect(s).toContain('"Soy constante"');
+  });
+
+  it('omite las líneas de los campos ausentes, no las rellena', () => {
+    const s = heroOriginSummary(origin({ purpose: 'Solo esto' }));
+    expect(s).not.toContain('interpone');
+    expect(s).not.toContain('decide ser');
+    expect(s).toContain('El norte declarado');
   });
 });

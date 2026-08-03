@@ -18,6 +18,7 @@ import { calcProtocolDay, computeStreak } from '@/lib/utils';
 import { enqueueWrite, initOfflineFlush } from '@/lib/offlineQueue';
 import { checkCriticalSchema } from '@/lib/schemaHealth';
 import { resolveEntitlement } from '@/lib/subscription';
+import { logSilentError } from '@/lib/observability';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -83,15 +84,19 @@ async function persistMentorMessages(
 }
 
 // ─── Default values ──────────────────────────────────────────────────────────
+// VACÍOS a propósito. Antes venían rellenos ("Juan Carlos — Empresario" + un
+// Norte inventado) y el onboarding sembraba sus inputs desde aquí: el usuario
+// podía completar todo el flujo sin escribir una sola palabra propia, y la
+// ficción se persistía como si fuera su declaración. Peor: la condición que
+// persistía el obstáculo (painPoint) exigía `!purpose.trim()` — con el default
+// relleno era siempre false y el dolor del usuario se descartaba SIEMPRE.
+// El camino del héroe no puede empezar con la identidad de otro.
+// Los textos ejemplares viven ahora como `placeholder` en el onboarding.
 const defaultNorth: NorthStar = {
-  purpose: 'Construir una vida soberana, rentable y fisicamente impecable.',
-  identity: 'Soy un empresario que decide con calma, ejecuta con precision y protege su energia.',
-  nonNegotiables: [
-    'Entrenar o recuperar el cuerpo',
-    'Un bloque profundo antes de mensajeria',
-    'Cerrar una decision importante',
-  ],
-  dailyReminder: 'No negocio con el ruido. Hoy mando desde criterio, no desde urgencia.',
+  purpose: '',
+  identity: '',
+  nonNegotiables: [],
+  dailyReminder: '',
 };
 
 // Fixed epoch used in defaultState to ensure SSG output matches client hydration.
@@ -103,7 +108,7 @@ const defaultState: LifeFlowState = {
   protocolStartDate: DEFAULT_EPOCH,
   activeProgramId: 'protocolo-soberano',
   activeModuleId: ACTIVE_MODULE.id,
-  profile: { name: 'Juan Carlos', role: 'Empresario' },
+  profile: { name: '', role: '' },
   northStar: defaultNorth,
   checkIns: [],
   mentorMessages: [
@@ -137,6 +142,9 @@ type LifeFlowContextValue = {
     profile: UserProfile;
     northStar: NorthStar;
     activeProgramId: string;
+    /** El obstáculo declarado en el umbral — el punto de partida del héroe.
+     *  Antes se capturaba y se descartaba; ahora siembra la historia de origen. */
+    painPoint?: string;
   }) => Promise<void>;
   updateProfile: (profile: UserProfile) => Promise<void>;
   updateNorthStar: (northStar: NorthStar) => Promise<void>;
@@ -298,7 +306,10 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     activeModuleId:  ACTIVE_MODULE.id,
     profile: {
       name: profile.name ?? defaultState.profile.name,
-      role: defaultState.profile.role, // role is not stored in new schema
+      // `role` viaja a DB desde 20260801000000_hero_umbral.sql; antes se
+      // descartaba por diseño y lo que el usuario tecleaba se perdía en el
+      // primer refresh. Fallback '' si la columna aún no existe en prod.
+      role: (profile as { role?: string | null }).role ?? defaultState.profile.role,
     },
     northStar: {
       purpose:         profile.purpose        ?? defaultNorth.purpose,
@@ -597,7 +608,12 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   const completeOnboarding = useCallback(
-    async (payload: { profile: UserProfile; northStar: NorthStar; activeProgramId: string }) => {
+    async (payload: {
+      profile: UserProfile;
+      northStar: NorthStar;
+      activeProgramId: string;
+      painPoint?: string;
+    }) => {
       const now = new Date().toISOString();
       const next: LifeFlowState = {
         ...state,
@@ -613,9 +629,15 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       if (!uid) return;
 
       try {
-        await db.profiles().upsert({
+        // `role` requiere la migración 20260801000000_hero_umbral.sql — la
+        // columna es nueva y el tipo generado no la conoce aún, de ahí el
+        // cast. Si la columna no existe todavía en prod, el upsert falla y
+        // cae al catch: el onboarding no se bloquea por eso.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (db.profiles() as any).upsert({
           user_id:             uid,
           name:                payload.profile.name,
+          role:                payload.profile.role || null,
           protocol_start_date: now.split('T')[0],
           purpose:             payload.northStar.purpose,
           identity:            payload.northStar.identity,
@@ -624,6 +646,23 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         }, { onConflict: 'user_id' });
       } catch (e) {
         console.warn('[Supabase] completeOnboarding:', e);
+      }
+
+      // La historia de origen: el dolor declarado + hacia dónde va. Es la
+      // primera entrada de su línea de tiempo y el ancla del arco — el día 60
+      // el usuario puede mirar atrás y leer desde dónde partió. Import
+      // dinámico y fire-and-forget: la memoria degrada, el onboarding no.
+      if (payload.painPoint?.trim() || payload.northStar.purpose.trim()) {
+        try {
+          const { seedHeroOrigin } = await import('@/lib/memory');
+          await seedHeroOrigin(uid, {
+            painPoint: payload.painPoint?.trim() || null,
+            purpose:   payload.northStar.purpose.trim() || null,
+            identity:  payload.northStar.identity.trim() || null,
+          });
+        } catch (e) {
+          logSilentError('onboarding.seedHeroOrigin', e);
+        }
       }
     },
     [persist, state],

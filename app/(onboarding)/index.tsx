@@ -115,14 +115,13 @@ export default function OnboardingScreen() {
     setStep(1); // → intro de valor (skippable)
   };
 
-  // El obstáculo (painPoint) sigue pre-poblando north.purpose si el usuario no lo definió.
-  // Ahora el obstáculo va DESPUÉS del Norte (paso 3) → al avanzar al código de acceso.
-  const goFromObstacleToCode = () => {
-    if (painPoint.trim() && !north.purpose.trim()) {
-      setNorth((n) => ({ ...n, purpose: painPoint.trim() }));
-    }
-    setStep(5);
-  };
+  // El obstáculo ya NO se disfraza de propósito. Antes se copiaba a
+  // north.purpose "si el usuario no lo definió" — condición que era siempre
+  // false porque el default venía relleno — y el dolor se descartaba SIEMPRE.
+  // Ahora painPoint viaja por derecho propio en finish() y siembra la
+  // historia de origen (transformation_goal + primera entrada de la línea
+  // de tiempo). Un dolor no es un propósito; no se mezclan.
+  const goFromObstacleToCode = () => setStep(5);
 
   // Chips de ejemplo para arrancar el obstáculo sin enfrentar un textarea en blanco.
   const obstacleChip = (text: string) => () => setPainPoint(text);
@@ -161,6 +160,9 @@ export default function OnboardingScreen() {
         profile: { name: name.trim(), role: role.trim() },
         activeProgramId: 'protocolo-soberano',
         northStar: north,
+        // El punto de partida del héroe: siembra transformation_goal y la
+        // historia de origen en la línea de tiempo del Memory OS.
+        painPoint: painPoint.trim() || undefined,
       });
       router.replace('/(tabs)/comando');
     } catch (e) {
@@ -381,7 +383,7 @@ export default function OnboardingScreen() {
             <PremiumInput
               value={north.purpose}
               onChangeText={(purpose) => setNorth({ ...north, purpose })}
-              placeholder="¿Por que operas a este nivel?"
+              placeholder='Ej.: "Construir una vida soberana, rentable y físicamente impecable."'
               multiline
               style={styles.textArea}
               accessibilityLabel="Proposito principal"
@@ -392,7 +394,7 @@ export default function OnboardingScreen() {
             <PremiumInput
               value={north.identity}
               onChangeText={(identity) => setNorth({ ...north, identity })}
-              placeholder="Soy alguien que..."
+              placeholder='Ej.: "Decido con calma, ejecuto con precisión y protejo mi energía."'
               multiline
               style={styles.textArea}
               accessibilityLabel="Declaracion de identidad"
@@ -403,7 +405,7 @@ export default function OnboardingScreen() {
             <PremiumInput
               value={north.dailyReminder}
               onChangeText={(dailyReminder) => setNorth({ ...north, dailyReminder })}
-              placeholder="La frase que te ancla cada mañana..."
+              placeholder='Ej.: "No negocio con el ruido. Hoy mando desde criterio."'
               multiline
               style={styles.textArea}
               accessibilityLabel="Recordatorio diario"
