@@ -12,11 +12,19 @@ import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 import { WellnessMiniPlayer } from '@/components/WellnessMiniPlayer';
+import type { SessionType } from '@/store/wellnessStore';
 
-let mockPlayer = {
+let mockPlayer: {
+  isPlaying: boolean;
+  isPaused: boolean;
+  type: SessionType;
+  sessionName: string;
+  elapsedSeconds: number;
+  targetSeconds: number;
+} = {
   isPlaying: true,
   isPaused: false,
-  type: 'binaural' as const,
+  type: 'binaural',
   sessionName: 'Sesión de prueba',
   elapsedSeconds: 10,
   targetSeconds: 60,
@@ -25,8 +33,9 @@ let mockPlayer = {
 const mockPause = jest.fn();
 const mockResume = jest.fn();
 const mockStop = jest.fn();
+const mockPush = jest.fn();
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: (...args: unknown[]) => mockPush(...args) }) }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -44,6 +53,7 @@ beforeEach(() => {
   mockPause.mockClear();
   mockResume.mockClear();
   mockStop.mockClear();
+  mockPush.mockClear();
 });
 
 describe('WellnessMiniPlayer — controles', () => {
@@ -78,5 +88,19 @@ describe('WellnessMiniPlayer — controles', () => {
     const { queryByTestId } = render(<WellnessMiniPlayer />);
 
     expect(queryByTestId('wellness-mini-stop')).toBeNull();
+  });
+
+  it('sesión de sueño: no dice BINAURAL y navega a /bienestar/sueno, no a binaurales', () => {
+    // Antes `useBinauralEngine` mandaba type:'binaural' para CUALQUIER sesión
+    // que lanzara, incluida Sueño (su único llamador real) — el mini-player
+    // mostraba "BINAURAL" y, al tocarlo, mandaba a /bienestar/binaurales
+    // mientras sonaba una sesión de sueño.
+    mockPlayer = { ...mockPlayer, isPlaying: true, isPaused: false, type: 'sleep' };
+    const { getByText, getByTestId } = render(<WellnessMiniPlayer />);
+
+    expect(getByText(/SLEEP/)).toBeTruthy();
+
+    fireEvent.press(getByTestId('wellness-mini-card'));
+    expect(mockPush).toHaveBeenCalledWith('/bienestar/sueno');
   });
 });

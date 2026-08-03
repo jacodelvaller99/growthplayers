@@ -21,12 +21,14 @@ const TYPE_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name
   binaural:  'graphic-eq',
   meditation:'self-improvement',
   breathing: 'air',
+  sleep:     'bedtime',
 };
 
 const TYPE_COLOR: Record<string, string> = {
   binaural:  '#b07d1a',
   meditation: palette.purple,
   breathing: '#2e7d52',
+  sleep:      palette.info,
 };
 
 export function WellnessMiniPlayer() {
@@ -61,6 +63,7 @@ export function WellnessMiniPlayer() {
       binaural:  '/bienestar/binaurales',
       meditation:'/bienestar/meditacion',
       breathing: '/bienestar/respiracion',
+      sleep:     '/bienestar/sueno',
     };
     const route = routes[player.type ?? ''];
     if (route) router.push(route as never);
@@ -68,6 +71,7 @@ export function WellnessMiniPlayer() {
 
   return (
     <Pressable
+      testID="wellness-mini-card"
       onPress={handleTap}
       style={[styles.container, { bottom: tabBarHeight + 8 }]}>
 

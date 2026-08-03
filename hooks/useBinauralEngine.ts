@@ -179,7 +179,12 @@ export function useBinauralEngine() {
     registerSessionControls({ stop: stopBinauralGlobal, pause, resume });
 
     startSession({
-      type:          'binaural',
+      // `useBinauralEngine` hoy solo lo usa `sueno.tsx` (Sleep) — `binaurales.tsx`
+      // maneja su propio handle y llama a `startSession` directo con
+      // type: 'binaural'. Antes esto también decía 'binaural' aquí, así que el
+      // mini-player mostraba "BINAURAL" y navegaba a /bienestar/binaurales al
+      // tocar una sesión de Sueño en curso.
+      type:          'sleep',
       sessionName:   cfg.sessionName,
       leftHz:        cfg.carrierHz,
       rightHz:       cfg.carrierHz + cfg.beatHz,

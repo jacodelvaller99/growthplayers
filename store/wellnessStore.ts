@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import type { AmbienceType } from '@/data/wellness';
 
-export type SessionType = 'binaural' | 'meditation' | 'breathing' | 'movement' | null;
+export type SessionType = 'binaural' | 'meditation' | 'breathing' | 'movement' | 'sleep' | null;
 export type SubscriptionTier = 'free' | 'premium' | 'premium_plus';
 
 // ─── Weekly activity: index 0 = Monday, 6 = Sunday ────────────────────────────
