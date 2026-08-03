@@ -60,18 +60,37 @@ describe('registro de controles de sesión', () => {
     expect(c.stop).toHaveBeenCalledTimes(1);
   });
 
-  it('arrancar una segunda sesión desbanca a la primera', () => {
+  it('arrancar una segunda sesión PARA a la primera, no solo la desbanca', () => {
     // El invariante que se rompía al navegar: lanzar Sueño con una meditación
     // sonando dejaba las dos sonando a la vez.
+    //
+    // Este test afirmaba `expect(primera.stop).not.toHaveBeenCalled()` — daba
+    // por buena la mitad del bug. Desbancar sin parar es exactamente lo que
+    // dejaba huérfano el audio de la primera: su `stop` ya no lo alcanzaba
+    // nadie. Sueño y binaurales se salvaban porque `start()` llama aparte a
+    // `stopWellnessSession()`; meditación, respiración y movimiento no.
     const primera = makeControls();
     const segunda = makeControls();
     registerSessionControls(primera);
     registerSessionControls(segunda);
 
+    expect(primera.stop).toHaveBeenCalledTimes(1); // parada AL registrar la segunda
+
     stopWellnessSession();
 
     expect(segunda.stop).toHaveBeenCalledTimes(1);
-    expect(primera.stop).not.toHaveBeenCalled();
+    expect(primera.stop).toHaveBeenCalledTimes(1); // no se re-para
+  });
+
+  it('re-registrar los MISMOS controles no se para a sí mismo', () => {
+    // Las pantallas registran dentro de un useEffect con dependencias: un
+    // cambio de deps rehace el efecto. Si eso se auto-parara, la sesión moriría
+    // sola a mitad de práctica.
+    const c = makeControls();
+    registerSessionControls(c);
+    registerSessionControls(c);
+
+    expect(c.stop).not.toHaveBeenCalled();
   });
 
   it('la baja devuelta desregistra, y no pisa a quien vino después', () => {

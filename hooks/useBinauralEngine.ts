@@ -55,9 +55,25 @@ export interface SessionControls {
 
 let _controls: SessionControls | null = null;
 
-/** Registra los controles de la sesión que arranca. Devuelve la baja. */
+/**
+ * Registra los controles de la sesión que arranca. Devuelve la baja.
+ *
+ * Al pisar el slot hay que PARAR a quien estaba: en cuanto se sobrescribe, su
+ * `stop` se vuelve inalcanzable y su audio ya no lo para nadie.
+ * `useBinauralEngine.start()` (Sueño, binaurales) ya llamaba a
+ * `stopWellnessSession()` por su cuenta, pero meditación, respiración y
+ * movimiento arrancan su audio directamente y no lo hacían — abrir una de esas
+ * con otra sonando dejaba la anterior sonando para siempre y sin UI que la
+ * alcanzara. El guard vive aquí, que es por donde pasan las cinco pantallas.
+ *
+ * Solo el `stop` del anterior, NO `stopWellnessSession()`: ese además llama a
+ * `stopSession()` del store, que tumbaría el estado de la sesión que está
+ * entrando (el engine registra DESPUÉS de `startSession`).
+ */
 export function registerSessionControls(controls: SessionControls): () => void {
+  const previous = _controls;
   _controls = controls;
+  if (previous && previous !== controls) previous.stop();
   return () => { if (_controls === controls) _controls = null; };
 }
 
