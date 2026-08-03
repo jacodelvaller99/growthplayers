@@ -29,6 +29,8 @@ interface UserIntelligenceRow {
   anomaly_detected:     boolean;
   anomaly_type:         string | null;
   next_action:          string | null;
+  /** El PORQUÉ que ya escribe calculate-intelligence y que nadie leía. */
+  next_action_reason:   string | null;
   next_action_urgency:  string;
   dominant_module:      string | null;
   preferred_time:       string | null;
@@ -97,41 +99,52 @@ function buildAnomalyNotification(name: string, anomalyType: string | null): { t
   };
 }
 
+// La versión anterior era la anti-referencia literal de la marca: "¡${streak}
+// días de racha en juego!" + "No rompas ahora... mantén tu racha activa" —
+// ansiedad de pérdida estilo Duolingo, que PRODUCT.md prohíbe por nombre.
+// Aquí la racha deja de ser algo que se puede PERDER y pasa a ser evidencia de
+// lo que la persona ya demostró. El dato sigue citado (marca: confrontar con
+// dato, no con vibras); lo que cambia es de qué lado del ánimo empuja.
 function buildStreakRescueNotification(name: string, streak: number): { title: string; body: string } {
   return {
-    title: `¡${streak} días de racha en juego, ${name}!`,
-    body:  `No rompas ahora. Haz tu check-in de hoy y mantén tu racha activa.`,
+    title: `${name}, llevas ${streak} días leyéndote`,
+    body:  'Treinta segundos hoy y el sistema sigue viendo lo que a ti se te escapa.',
   };
 }
 
-function buildNextActionNotification(name: string, nextAction: string | null): { title: string; body: string } {
-  if (nextAction === 'complete_checkin') {
+/**
+ * `nextAction` NO es un slug: `calculate-intelligence` (líneas ~294-341) escribe
+ * frases completas en español ("Haz tu check-in de hoy", "Tu cuerpo pide
+ * recuperación — binaural delta (20 min)"). Las comparaciones contra slugs
+ * (`nextAction === 'complete_checkin'`) por tanto NUNCA se cumplían: todas las
+ * ramas estaban muertas y siempre salía el texto genérico del final.
+ *
+ * En vez de inventar un mapeo frágil por substring, se usa lo que el productor
+ * YA escribió — que es copy en voz de marca — como titular, y `reason` como el
+ * PORQUÉ. El dueño lo pidió explícitamente: la notificación tiene que decir por
+ * qué hacerlo, no solo minimizar el esfuerzo ("30 segundos es todo lo que
+ * necesitas" no le dice a nadie qué gana).
+ */
+function buildNextActionNotification(
+  name: string,
+  nextAction: string | null,
+  reason: string | null,
+): { title: string; body: string } {
+  const accion = (nextAction ?? '').trim();
+  const porque = (reason ?? '').trim();
+
+  if (accion) {
     return {
-      title: `Buen momento para tu check-in, ${name}`,
-      body:  '¿Cómo va tu energía hoy? 30 segundos es todo lo que necesitas.',
+      title: `${name}: ${accion}`,
+      // El porqué del motor, cuando existe, es el dato duro que justifica el
+      // turno ("Sin lectura del sistema Norman opera a ciegas").
+      body: porque || 'El estado se construye en los días normales, no en los heroicos.',
     };
   }
-  if (nextAction === 'continue_lesson') {
-    return {
-      title: `Continúa tu lección, ${name}`,
-      body:  'Tienes una lección pendiente en el Método Polaris. ¡Sigue el camino!',
-    };
-  }
-  if (nextAction === 'try_binaural') {
-    return {
-      title: `Boost mental en 10 minutos, ${name}`,
-      body:  'Prueba una sesión de audio binaural. Foco, relajación o energía — tú eliges.',
-    };
-  }
-  if (nextAction === 'journal') {
-    return {
-      title: `Reflexiona y crece, ${name}`,
-      body:  'Escribe en tu diario hoy. La claridad llega cuando pones tus pensamientos en palabras.',
-    };
-  }
+
   return {
     title: `Tu siguiente paso, ${name}`,
-    body:  'Vuelve al protocolo. El estado se construye en los días normales, no en los heroicos.',
+    body:  porque || 'Vuelve al protocolo. El estado se construye en los días normales, no en los heroicos.',
   };
 }
 
@@ -254,7 +267,7 @@ async function processUser(
 
   } else if (intel.next_action && intel.next_action_urgency === 'high') {
     notifType = `nba_${intel.next_action}`;
-    const tpl = buildNextActionNotification(name, intel.next_action);
+    const tpl = buildNextActionNotification(name, intel.next_action, intel.next_action_reason);
     title = tpl.title;
     body  = tpl.body;
     data  = { screen: '/comando', trigger: 'nba', action: intel.next_action };
@@ -372,6 +385,7 @@ Deno.serve(async (req: Request) => {
           anomaly_detected,
           anomaly_type,
           next_action,
+          next_action_reason,
           next_action_urgency,
           dominant_module,
           preferred_time

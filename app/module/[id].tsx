@@ -218,13 +218,20 @@ export default function ModuleDetailScreen() {
             </Text>
           </View>
         </View>
-      ) : (
+      ) : activeLesson ? (
+        // `activeLesson` sale de `lessonsWithStatus[0]` (:65): en un módulo sin
+        // lecciones propias es `undefined`, y esto reventaba con "Cannot read
+        // properties of undefined (reading 'title')". Los módulos solo-classroom
+        // (8, 9, Sesiones Semanales) son exactamente ese caso. Antes costaba
+        // llegar porque la cadena de desbloqueo los dejaba cerrados; ahora que
+        // el catálogo abre, se entra directo. No hace falta CTA alternativo:
+        // esos módulos ya renderizan "ABRIR CLASSROOM" más arriba (:148-157).
         <PrimaryButton
           label={`CONTINUAR: ${activeLesson.title.toUpperCase()}`}
           icon="play-arrow"
           onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
         />
-      )}
+      ) : null}
 
       {/* Next module anticipation strip */}
       {(() => {

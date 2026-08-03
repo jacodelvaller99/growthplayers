@@ -32,6 +32,11 @@ export function HeroMoments() {
 
   useEffect(() => {
     if (!isLoaded || !userId) return;
+    // El momento se monta en el layout raíz, así que también corría ENCIMA del
+    // onboarding: un usuario nuevo recibía "Bienvenido de nuevo" antes de haber
+    // entrado una sola vez, tapando el flujo que aún estaba completando. El
+    // umbral es justo lo que este componente celebra — no puede pisarlo.
+    if (!state.onboardingCompleted) return;
     let cancelled = false;
 
     (async () => {
@@ -67,7 +72,7 @@ export function HeroMoments() {
     })();
 
     return () => { cancelled = true; };
-  }, [isLoaded, userId, state.profile.name]);
+  }, [isLoaded, userId, state.onboardingCompleted, state.profile.name]);
 
   if (!moment) return null;
 
