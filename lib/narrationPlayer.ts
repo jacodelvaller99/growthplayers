@@ -69,8 +69,22 @@ interface Options {
 
 /** Volumen de la cama en silencio y mientras Norman habla. */
 const MUSIC_IDLE = 0.30;
-const MUSIC_DUCKED = 0.10;
 const VOICE_LEVEL = 1.0;
+
+/**
+ * Fracción del volumen base durante el ducking (voz por encima de la cama).
+ * MULTIPLICATIVA a propósito: antes el ducking bajaba siempre a un piso
+ * absoluto (0.10) vía `Math.min(musicVolume, 0.10)`, así que un usuario con
+ * volumen bajo (ej. 0.05) apenas notaba el ducking y uno con volumen alto
+ * (1.0) sufría una caída del 90% — el mismo piso fijo para cualquier volumen
+ * configurado. Multiplicar respeta la proporción que el usuario eligió.
+ */
+const DUCK_FACTOR = 0.35;
+
+/** Volumen objetivo de la cama dado el volumen base y si se está duckeando. */
+export function duckedVolume(baseVolume: number, ducked: boolean): number {
+  return ducked ? baseVolume * DUCK_FACTOR : baseVolume;
+}
 
 export function createNarrationPlayer(opts: Options): NarrationHandle | null {
   const { musicUrl, binaural, phases, onPhaseChange, onComplete, onDuck } = opts;
@@ -120,7 +134,7 @@ export function createNarrationPlayer(opts: Options): NarrationHandle | null {
   }
 
   function duck(on: boolean) {
-    const target = on ? Math.min(musicVolume, MUSIC_DUCKED) : musicVolume;
+    const target = duckedVolume(musicVolume, on);
     if (binauralHandle) binauralHandle.setVolume(target);
     else musicSound?.setVolumeAsync(target).catch(() => {});
     onDuck?.(on);

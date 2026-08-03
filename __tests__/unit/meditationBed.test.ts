@@ -13,7 +13,7 @@
  * que se suba devuelve 400. Eso tiene que sonar a voz sola, no a sesión rota.
  */
 import { MEDITATION_CATEGORY_MUSIC, MEDITATION_SESSIONS } from '@/data/wellness';
-import { createNarrationPlayer } from '@/lib/narrationPlayer';
+import { createNarrationPlayer, duckedVolume } from '@/lib/narrationPlayer';
 
 const MUSIC_URL = 'https://example.test/cama-que-no-existe.mp3';
 
@@ -93,5 +93,24 @@ describe('cama que no carga', () => {
 
     // Las tres fases sonaron, en orden, pese a que la cama nunca cargó.
     expect(fases).toEqual([0, 1, 2]);
+  });
+});
+
+describe('duckedVolume', () => {
+  // POR QUÉ: el ducking bajaba la cama a un piso ABSOLUTO fijo
+  // (Math.min(musicVolume, 0.10)) sin importar el volumen que el usuario
+  // hubiera configurado — un volumen bajo apenas se notaba duckeado y uno
+  // alto sufría una caída desproporcionada. Debe ser multiplicativo.
+  it('es proporcional al volumen base, no un piso fijo', () => {
+    expect(duckedVolume(0.8, true)).toBeCloseTo(0.28);
+    expect(duckedVolume(0.2, true)).toBeCloseTo(0.07);
+  });
+
+  it('el doble de volumen base produce el doble de volumen duckeado', () => {
+    expect(duckedVolume(0.8, true)).toBeCloseTo(duckedVolume(0.4, true) * 2);
+  });
+
+  it('sin duck, devuelve el volumen base intacto', () => {
+    expect(duckedVolume(0.8, false)).toBe(0.8);
   });
 });
