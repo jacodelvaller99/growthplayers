@@ -2,7 +2,11 @@
 // Catálogo de movimientos guiados. Mismo shape que MeditationSession/GuidedPhase
 // (data/wellness.ts) para reusar el patrón de reproductor por fases.
 
-import type { GuidedPhase } from './wellness';
+// Extensión explícita a propósito: el generador de voz (Node,
+// --experimental-strip-types) no resuelve imports de VALORES sin extensión —
+// mismo motivo por el que data/sleep.ts tiene el comentario equivalente.
+// `allowImportingTsExtensions` ya está activado en tsconfig.json para esto.
+import { estimateVoiceSeconds, normanVoiceUrl, type GuidedPhase } from './wellness.ts';
 
 export type MovementCategory = 'flow' | 'circuito';
 
@@ -19,21 +23,76 @@ export interface MovementPractice {
   level: 'principiante' | 'intermedio' | 'avanzado';
   description: string;
   phases: GuidedPhase[];
+  /**
+   * La voz de Norman narra cada fase desde un mp3 propio (mismo mecanismo que
+   * `MeditationSession.narrated` en data/wellness.ts). Los 3 circuitos no lo
+   * declaran todavía — no tienen guion narrado, solo texto en pantalla.
+   */
+  narrated?: boolean;
+}
+
+/**
+ * Fases de una práctica narrada, listas para `createNarrationPlayer`.
+ * Mismo cálculo que `meditationPhasesToNarration` (data/wellness.ts): el
+ * `pauseAfter` explícito si lo hay, o todo lo que sobra de `duration` después
+ * de hablar. No se reusa esa función directamente porque `MovementPractice`
+ * no tiene la forma de `MeditationSession` (sin `ambientType`/`category` de
+ * meditación) — la lógica es la misma, tres líneas, no vale la pena forzar
+ * un cast.
+ */
+export function movementPhasesToNarration(practice: MovementPractice) {
+  return practice.phases.map((p, i) => ({
+    url: normanVoiceUrl(practice.id, p, i),
+    duration: p.duration,
+    pauseAfter: p.pauseAfter ?? Math.max(0, p.duration - estimateVoiceSeconds(p.text)),
+  }));
 }
 
 export const MOVEMENT_PRACTICES: MovementPractice[] = [
   {
     id: 'flow-principiante',
     title: 'Flow principiante',
-    durationMinutes: 1,
+    durationMinutes: 2,
     category: 'flow',
     level: 'principiante',
-    description: 'Un primer estado honesto antes de registrar cómo llegaste.',
+    description: 'Tu primer estado honesto — cómo entrar, qué sentir, cómo sostenerlo antes de registrar cómo llegaste.',
+    narrated: true,
     phases: [
-      { text: 'Siente los pies en el suelo.\nSuelta los hombros.', duration: 15 },
-      { text: 'Abre las manos.\nRespira sin intentar cambiar nada.', duration: 15 },
-      { text: 'Solo observa cómo estás.', duration: 10 },
-      { text: 'Eso es suficiente para empezar:\ncuerpo presente, atención honesta.', duration: 10 },
+      {
+        id: 'entrada',
+        text: 'Ponte de pie o siéntate, donde estés.\nEsto no es ejercicio: es notar honestamente cómo llegaste, antes de seguir con tu día.',
+        duration: 14,
+      },
+      {
+        id: 'pies',
+        text: 'Siente los tres puntos de apoyo de cada pie contra el suelo.\nSi estás sentado, siente el peso del cuerpo sobre la silla.',
+        duration: 14,
+      },
+      {
+        id: 'hombros',
+        text: 'Sube los hombros hacia las orejas al inhalar,\ny déjalos caer de golpe al exhalar. Repite una vez más.',
+        duration: 16,
+      },
+      {
+        id: 'manos',
+        text: 'Abre las manos, dedos separados.\nRespira sin intentar cambiar nada todavía — solo mira qué está pasando.',
+        duration: 16,
+      },
+      {
+        id: 'observa',
+        text: 'Nombra en silencio una palabra para cómo llegaste:\ncansado, disperso, tenso, bien. La que sea, sin corregirla.',
+        duration: 16,
+      },
+      {
+        id: 'sostener',
+        text: 'Quédate ahí un momento más.\nNo necesitas sentirte mejor todavía — solo estar presente con lo que hay.',
+        duration: 14,
+      },
+      {
+        id: 'cierre',
+        text: 'Eso es suficiente para empezar: cuerpo presente, atención honesta.\nAhora registra cómo llegaste.',
+        duration: 16,
+      },
     ],
   },
   {
@@ -43,12 +102,14 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'principiante',
     description: 'Un minuto para volver al cuerpo cuando la energía está baja.',
+    narrated: true,
     phases: [
-      { text: 'Separa los pies. Suelta los hombros.', duration: 10 },
-      { text: 'Inhala por la nariz durante 4 segundos.\nSiente cómo se expanden las costillas.', duration: 10 },
-      { text: 'Exhala lentamente durante 6.\nDeja caer un poco la cabeza y los brazos.', duration: 12 },
-      { text: 'Vuelve al centro y repite.', duration: 12 },
-      { text: 'Registra cómo llegaste y cómo te vas.', duration: 6 },
+      { id: 'postura', text: 'Separa los pies al ancho de la cadera.\nDeja caer los hombros, sin forzarlo.', duration: 12 },
+      { id: 'inhala', text: 'Inhala por la nariz durante cuatro segundos,\nsintiendo cómo se expanden las costillas, no solo el pecho.', duration: 14 },
+      { id: 'exhala', text: 'Exhala lentamente durante seis.\nDeja caer un poco más la cabeza y los brazos en cada salida.', duration: 14 },
+      { id: 'repite', text: 'Vuelve al centro y repite el ciclo dos veces más,\na tu propio ritmo, sin apurarte.', duration: 16 },
+      { id: 'nota', text: 'Nota si algo cambió en tu energía,\naunque sea poco.', duration: 10 },
+      { id: 'cierre', text: 'Registra cómo llegaste y cómo te vas — ese dato es el que importa.', duration: 12 },
     ],
   },
   {
@@ -58,12 +119,14 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'avanzado',
     description: 'Sostener la emoción con presencia — toques suaves y una frase honesta.',
+    narrated: true,
     phases: [
-      { text: 'Empieza con toques suaves\nen el canto de la mano.', duration: 12 },
-      { text: 'Nombra en una frase\nla emoción que está presente.', duration: 10 },
-      { text: 'Pasa a la ceja, al lateral del ojo\ny a la clavícula.', duration: 12 },
-      { text: 'Mantén una respiración cómoda.', duration: 8 },
-      { text: 'Termina con una mano en el pecho\ny registra qué cambió.', duration: 13 },
+      { id: 'inicio', text: 'Empieza con toques suaves y constantes\nen el canto de la mano, el punto de kárate.', duration: 10 },
+      { id: 'nombra', text: 'Mientras tocas, nombra en una frase completa\nla emoción que está presente ahora mismo — no la evites.', duration: 14 },
+      { id: 'puntos', text: 'Pasa a la ceja, después al lateral del ojo\ny luego a la clavícula. Ritmo constante, sin prisa.', duration: 14 },
+      { id: 'respira', text: 'Mantén una respiración cómoda todo el tiempo.\nNo necesitas controlarla, solo dejarla pasar.', duration: 14 },
+      { id: 'revisa', text: 'Vuelve a nombrar la emoción —\n¿cambió algo en su intensidad?', duration: 12 },
+      { id: 'cierre', text: 'Termina con una mano en el pecho.\nRegistra qué cambió, aunque sea pequeño.', duration: 14 },
     ],
   },
   {
@@ -76,13 +139,14 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'intermedio',
     description: 'Descarga la carga de una reunión o conversación difícil.',
+    narrated: true,
     phases: [
-      { text: 'De pie o sentado, inhala por la nariz\nmientras abres el pecho.', duration: 10 },
-      { text: 'Exhala y gira el torso suavemente\nhacia la derecha. Vuelve al centro.', duration: 12 },
-      { text: 'Repite hacia la izquierda.\nSin buscar rango.', duration: 10 },
-      { text: 'Solo acompaña el movimiento\ncon una exhalación más larga.', duration: 8 },
-      { text: 'Última ronda: lleva los brazos arriba al inhalar\ny déjalos caer al exhalar.', duration: 12 },
-      { text: 'Siente el peso bajando de los hombros.', duration: 8 },
+      { id: 'apertura', text: 'De pie o sentado, inhala por la nariz\nmientras abres el pecho y llevas los hombros hacia atrás.', duration: 14 },
+      { id: 'giro-derecha', text: 'Exhala y gira el torso suavemente hacia la derecha,\nsin forzar el rango. Vuelve al centro.', duration: 14 },
+      { id: 'giro-izquierda', text: 'Repite el giro hacia la izquierda,\ncon la misma exhalación larga.', duration: 12 },
+      { id: 'exhalacion', text: 'Ahora acompaña cada giro con una exhalación\nmás larga que la inhalación — eso es lo que baja la carga.', duration: 16 },
+      { id: 'brazos', text: 'Última ronda: sube los brazos al inhalar\ny déjalos caer de golpe al exhalar.', duration: 14 },
+      { id: 'cierre', text: 'Siente el peso bajando de los hombros\ny de la mandíbula.', duration: 10 },
     ],
   },
   {
@@ -92,12 +156,13 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'principiante',
     description: 'Baja la activación reconociendo la emoción en el cuerpo.',
+    narrated: true,
     phases: [
-      { text: 'Con dos dedos, da toques suaves\nen la ceja.', duration: 10 },
-      { text: 'Respira y di en voz baja:\n"ahora mismo siento…"', duration: 8 },
-      { text: 'Pasa al lateral del ojo, debajo del ojo,\ndebajo de la nariz, mentón y clavícula.', duration: 15 },
-      { text: 'Entre seis y ocho toques por punto,\nsin golpear fuerte.', duration: 10 },
-      { text: 'Termina con una exhalación larga.\nObserva si la intensidad cambió del uno al diez.', duration: 12 },
+      { id: 'ceja', text: 'Con dos dedos, da toques suaves y constantes\nen la ceja, cerca del entrecejo.', duration: 12 },
+      { id: 'nombra', text: 'Mientras tocas, di en voz baja o en tu mente:\n"ahora mismo siento…" y completa la frase.', duration: 16 },
+      { id: 'puntos', text: 'Pasa al lateral del ojo, debajo del ojo,\ndebajo de la nariz, el mentón y la clavícula.', duration: 16 },
+      { id: 'ritmo', text: 'Entre seis y ocho toques por punto,\nsin golpear fuerte — es contacto, no percusión.', duration: 14 },
+      { id: 'cierre', text: 'Termina con una exhalación larga.\nObserva si la intensidad cambió del uno al diez.', duration: 14 },
     ],
   },
   {
@@ -107,12 +172,13 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'intermedio',
     description: 'Ancla la calma después de nombrar la emoción.',
+    narrated: true,
     phases: [
-      { text: 'Pon una mano sobre el pecho\ny otra sobre el abdomen.', duration: 8 },
-      { text: 'Inhala 4 segundos por la nariz.\nHaz una pausa cómoda.', duration: 10 },
-      { text: 'Exhala durante 6 u 8 segundos.', duration: 10 },
-      { text: 'Repite cuatro veces.\nEn cada exhalación suelta mandíbula, hombros y manos.', duration: 15 },
-      { text: 'Registra qué sentías antes,\nqué sientes ahora y tu siguiente acción.', duration: 12 },
+      { id: 'manos', text: 'Pon una mano sobre el pecho\ny otra sobre el abdomen.', duration: 10 },
+      { id: 'inhala', text: 'Inhala cuatro segundos por la nariz.\nHaz una pausa cómoda antes de soltar.', duration: 14 },
+      { id: 'exhala', text: 'Exhala durante seis u ocho segundos,\nel doble de largo que la entrada si puedes.', duration: 14 },
+      { id: 'repite', text: 'Repite el ciclo cuatro veces.\nEn cada exhalación suelta mandíbula, hombros y manos.', duration: 16 },
+      { id: 'cierre', text: 'Registra qué sentías antes,\nqué sientes ahora y tu siguiente acción.', duration: 14 },
     ],
   },
   {
@@ -172,13 +238,14 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'principiante',
     description: 'La misma calma, sin necesidad de estar de pie.',
+    narrated: true,
     phases: [
-      { text: 'Siéntate con los pies apoyados\ny la espalda lejos del respaldo.', duration: 10 },
-      { text: 'Inhala 4 segundos por la nariz\nabriendo el pecho.', duration: 10 },
-      { text: 'Exhala 6 segundos\ny deja caer los hombros.', duration: 10 },
-      { text: 'Gira el torso suavemente hacia un lado,\nsostén dos respiraciones y vuelve al centro.', duration: 12 },
-      { text: 'Repite hacia el otro lado.', duration: 10 },
-      { text: 'Quédate quieto un momento\nantes de seguir con tu día.', duration: 8 },
+      { id: 'postura', text: 'Siéntate con los pies apoyados en el suelo\ny la espalda lejos del respaldo.', duration: 12 },
+      { id: 'inhala', text: 'Inhala cuatro segundos por la nariz,\nabriendo el pecho sin levantar los hombros.', duration: 14 },
+      { id: 'exhala', text: 'Exhala seis segundos\ny deja caer los hombros de verdad, no solo un poco.', duration: 14 },
+      { id: 'giro', text: 'Gira el torso suavemente hacia un lado,\nsostén dos respiraciones completas y vuelve al centro.', duration: 16 },
+      { id: 'giro-otro-lado', text: 'Repite hacia el otro lado,\ncon la misma calma.', duration: 12 },
+      { id: 'cierre', text: 'Quédate quieto un momento\nantes de seguir con tu día.', duration: 10 },
     ],
   },
   {
@@ -188,12 +255,13 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'principiante',
     description: 'La postura base de la que parten todos los demás flows.',
+    narrated: true,
     phases: [
-      { text: 'De pie, pies al ancho de cadera,\npeso repartido por igual.', duration: 10 },
-      { text: 'Inhala por la nariz\nsintiendo cómo se expande el abdomen.', duration: 10 },
-      { text: 'Exhala por la boca,\nmás largo que la inhalación.', duration: 10 },
-      { text: 'Repite tres veces\nsin cambiar el ritmo a la fuerza.', duration: 12 },
-      { text: 'Nota qué parte del cuerpo\nsostiene más tensión hoy.', duration: 8 },
+      { id: 'postura', text: 'De pie, pies al ancho de cadera,\npeso repartido por igual entre los dos.', duration: 12 },
+      { id: 'inhala', text: 'Inhala por la nariz\nsintiendo cómo se expande el abdomen, no solo el pecho.', duration: 14 },
+      { id: 'exhala', text: 'Exhala por la boca,\nmás largo que la inhalación — deja salir el aire entero.', duration: 14 },
+      { id: 'repite', text: 'Repite el ciclo tres veces\nsin cambiar el ritmo a la fuerza.', duration: 14 },
+      { id: 'nota', text: 'Nota qué parte del cuerpo\nsostiene más tensión hoy, sin intentar arreglarla.', duration: 14 },
     ],
   },
   {
@@ -203,12 +271,13 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'principiante',
     description: 'Suma movimiento de hombros y cuello a la respiración de base.',
+    narrated: true,
     phases: [
-      { text: 'Desde la misma postura,\ninhala y sube los hombros hacia las orejas.', duration: 10 },
-      { text: 'Exhala y déjalos caer de un solo golpe suave.', duration: 8 },
-      { text: 'Repite tres veces.', duration: 10 },
-      { text: 'Inclina la cabeza hacia un hombro,\nsostén una respiración completa.', duration: 12 },
-      { text: 'Repite hacia el otro lado\ny vuelve al centro.', duration: 10 },
+      { id: 'hombros-sube', text: 'Desde la misma postura de base,\ninhala y sube los hombros hacia las orejas.', duration: 12 },
+      { id: 'hombros-suelta', text: 'Exhala y déjalos caer de un solo golpe suave,\ncomo si soltaras un peso.', duration: 12 },
+      { id: 'repite', text: 'Repite el gesto tres veces,\nsintiendo el contraste entre tensión y suelta.', duration: 14 },
+      { id: 'cuello', text: 'Inclina la cabeza hacia un hombro\ny sostén una respiración completa ahí.', duration: 14 },
+      { id: 'cuello-otro-lado', text: 'Repite hacia el otro lado\ny vuelve al centro despacio.', duration: 12 },
     ],
   },
   {
@@ -218,12 +287,13 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'intermedio',
     description: 'Une respiración, hombros y torso en una sola secuencia.',
+    narrated: true,
     phases: [
-      { text: 'Retoma la respiración de base:\ninhala por la nariz, exhala por la boca.', duration: 10 },
-      { text: 'En la siguiente inhalación,\nsube los brazos por los costados.', duration: 10 },
-      { text: 'Al exhalar, gira el torso suavemente\nhacia un lado y baja los brazos.', duration: 12 },
-      { text: 'Repite hacia el otro lado.', duration: 10 },
-      { text: 'Cierra de pie, quieto,\nnotando la diferencia con el inicio.', duration: 10 },
+      { id: 'base', text: 'Retoma la respiración de base:\ninhala por la nariz, exhala por la boca.', duration: 12 },
+      { id: 'brazos-sube', text: 'En la siguiente inhalación,\nsube los brazos por los costados hasta arriba de la cabeza.', duration: 14 },
+      { id: 'giro', text: 'Al exhalar, gira el torso suavemente\nhacia un lado y baja los brazos con el movimiento.', duration: 16 },
+      { id: 'giro-otro-lado', text: 'Repite hacia el otro lado,\ncon la misma coordinación entre brazos y respiración.', duration: 16 },
+      { id: 'cierre', text: 'Cierra de pie, quieto,\nnotando la diferencia con cómo empezaste.', duration: 14 },
     ],
   },
   {
@@ -233,12 +303,13 @@ export const MOVEMENT_PRACTICES: MovementPractice[] = [
     category: 'flow',
     level: 'intermedio',
     description: 'El puente entre el movimiento físico y la regulación emocional de Fase 2.',
+    narrated: true,
     phases: [
-      { text: 'Pon una mano en el pecho\ny otra en el abdomen.', duration: 8 },
-      { text: 'Antes de respirar, nombra en una palabra\ncómo llegaste a esta práctica.', duration: 10 },
-      { text: 'Inhala 4 segundos, exhala 6.\nRepite cuatro veces.', duration: 15 },
-      { text: 'En cada exhalación,\nsuelta un poco más la mandíbula.', duration: 10 },
-      { text: 'Registra si esa palabra inicial\nsigue siendo la misma ahora.', duration: 10 },
+      { id: 'manos', text: 'Pon una mano en el pecho\ny otra en el abdomen.', duration: 10 },
+      { id: 'nombra', text: 'Antes de respirar, nombra en una palabra\ncómo llegaste a esta práctica — solo una.', duration: 14 },
+      { id: 'respira', text: 'Inhala cuatro segundos, exhala seis.\nRepite el ciclo cuatro veces.', duration: 16 },
+      { id: 'suelta', text: 'En cada exhalación,\nsuelta un poco más la mandíbula y los hombros.', duration: 14 },
+      { id: 'cierre', text: 'Registra si esa palabra inicial\nsigue siendo la misma ahora, o si cambió.', duration: 14 },
     ],
   },
 ];

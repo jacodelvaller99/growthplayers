@@ -8,10 +8,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, StatusPill, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { palette, radii, spacing, typography } from '@/constants/theme';
-import { MOVEMENT_PRACTICES, type MovementPractice } from '@/data/movement';
+import { MOVEMENT_PRACTICES, movementPhasesToNarration, type MovementPractice } from '@/data/movement';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { useWellnessStore } from '@/store/wellnessStore';
+import { registerSessionControls } from '@/hooks/useBinauralEngine';
 import { analytics } from '@/lib/analytics';
+import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
+import { useWellnessStore } from '@/store/wellnessStore';
 import { BodyContextCard, PracticeClose } from './body-context';
 
 function haptic(type: 'light' | 'medium' | 'success') {
@@ -47,9 +49,12 @@ function MovementPlayer({
   const [phaseRemaining, setPhaseRemaining] = useState(practice.phases[0]?.duration ?? 0);
   const startTimeRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const narrationRef = useRef<NarrationHandle | null>(null);
 
   const finish = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    narrationRef.current?.stop();
+    narrationRef.current = null;
     setRunning(false);
     setDone(true);
     haptic('success');
@@ -65,10 +70,45 @@ function MovementPlayer({
     startTimeRef.current = Date.now();
     haptic('medium');
     storeStart({ type: 'movement', sessionName: practice.title, targetSeconds: totalSeconds });
-  }, [practice, totalSeconds, storeStart]);
+
+    // Guion narrado: la voz manda el avance de fase (mismo patrón que
+    // meditacion.tsx). Sin `narrated` (los 3 circuitos), el tick de abajo
+    // sigue llevando todo, como antes — sin regresión.
+    if (practice.narrated) {
+      const n = createNarrationPlayer({
+        phases: movementPhasesToNarration(practice),
+        onPhaseChange: (i) => {
+          setPhaseIdx(i);
+          setPhaseRemaining(practice.phases[i].duration);
+          haptic('light');
+        },
+        onComplete: finish,
+      });
+      narrationRef.current = n;
+      n?.start();
+    }
+  }, [practice, totalSeconds, storeStart, finish]);
 
   useEffect(() => {
     if (!running) return;
+
+    // Narrado: el avance de fase lo manda la voz (onPhaseChange/onComplete
+    // de arriba). Este tick solo alimenta el reloj total del mini-player y
+    // el countdown visual del paso — nunca decide cuándo avanzar o cerrar.
+    if (practice.narrated) {
+      let elapsedTotal = 0;
+      timerRef.current = setInterval(() => {
+        elapsedTotal += 1;
+        storeElapsed(elapsedTotal);
+        setPhaseRemaining((r) => Math.max(0, r - 1));
+      }, 1000);
+      return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }
+
+    // Sin narración: el tick de siempre manda todo el avance. La ÚLTIMA fase
+    // CIERRA el flow, no cicla — a diferencia de meditación (que sí cicla el
+    // TEXTO porque un reloj total independiente es quien termina la sesión);
+    // el movimiento no tiene ese reloj, así que si ciclara no acabaría nunca.
     let idx = 0;
     let elapsedInPhase = 0;
     let elapsedTotal = 0;
@@ -97,12 +137,29 @@ function MovementPlayer({
 
   const handleStop = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    narrationRef.current?.stop();
+    narrationRef.current = null;
     storeStop();
     setRunning(false);
     setDone(false);
     setPhaseIdx(0);
     setPhaseRemaining(practice.phases[0]?.duration ?? 0);
   }, [practice, storeStop]);
+
+  // Cleanup al desmontar — salir de la pantalla a mitad de un flow narrado
+  // dejaba la voz sonando para siempre (los timers ya se limpian solos vía
+  // su propio efecto, pero la narración no tenía a quién).
+  useEffect(() => () => {
+    narrationRef.current?.stop();
+  }, []);
+
+  // El mini-player debe poder parar esta sesión igual que meditación,
+  // binaurales, sueño y respiración — sin esto, STOP escondía el mini-player
+  // mientras la voz seguía sonando.
+  useEffect(() => {
+    if (!running) return;
+    return registerSessionControls({ stop: handleStop });
+  }, [running, handleStop]);
 
   const progress = (phaseIdx + (practice.phases[phaseIdx] ? 1 - phaseRemaining / practice.phases[phaseIdx].duration : 0)) / practice.phases.length;
 

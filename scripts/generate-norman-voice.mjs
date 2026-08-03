@@ -43,6 +43,10 @@ import { STORY_SESSIONS } from '../data/sleep/stories.ts';
 import { NIDRA_SESSIONS } from '../data/sleep/nidra.ts';
 import { RELAX_SESSIONS } from '../data/sleep/relax.ts';
 import { BINAURAL_GUIDES } from '../data/binauralGuides.ts';
+import { BREATHING_GUIDES } from '../data/breathingGuides.ts';
+// Los 11 flows narrados de Movimiento (los 3 circuitos no declaran `narrated`
+// todavia — solo texto en pantalla, sin guion de voz).
+import { MOVEMENT_PRACTICES } from '../data/movement.ts';
 
 const OUT_DIR = path.resolve('.voice-out');
 const FORCE = process.argv.includes('--force');
@@ -93,7 +97,29 @@ function allNarratedSessions() {
     })),
   }));
 
-  const all = [...meditacion, ...sueno, ...binaural];
+  // Guías de entrada de las 8 técnicas de Respiración. Mismo prefijo
+  // `breathing-` que construye respiracion.tsx.
+  const breathing = BREATHING_GUIDES.map((g) => ({
+    id: `breathing-${g.id}`,
+    phases: g.segments.map((seg, i) => ({
+      audioId: `breathing-${g.id}-${i}`,
+      text: seg.text,
+      budget: seg.duration - seg.pauseAfter,
+    })),
+  }));
+
+  // Los 11 flows narrados de Movimiento — mismo shape que meditación
+  // (`duration` explícito por fase, sin `pauseAfter` separado).
+  const movimiento = MOVEMENT_PRACTICES.filter((p) => p.narrated).map((p) => ({
+    id: p.id,
+    phases: p.phases.map((ph, i) => ({
+      audioId: ph.id ?? `${p.id}-${i}`,
+      text: ph.text,
+      budget: ph.duration - (ph.pauseAfter ?? 0),
+    })),
+  }));
+
+  const all = [...meditacion, ...sueno, ...binaural, ...breathing, ...movimiento];
   return ONLY ? all.filter((s) => s.id.startsWith(ONLY)) : all;
 }
 
