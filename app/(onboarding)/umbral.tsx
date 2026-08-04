@@ -28,6 +28,8 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { UMBRAL_BEAT_MS, UMBRAL_CLOSING, UMBRAL_SCRIPT } from '@/data/umbral';
 
+const BEAT_MS = 700;
+
 /** Una frase que aparece sola. Fade + un desplazamiento mínimo hacia arriba. */
 function Beat({ text, quoted = false }: { text: string; quoted?: boolean }) {
   const reduced = useReducedMotion();
@@ -35,7 +37,21 @@ function Beat({ text, quoted = false }: { text: string; quoted?: boolean }) {
 
   useEffect(() => {
     if (reduced) return;
-    Animated.timing(anim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
+    Animated.timing(anim, { toValue: 1, duration: BEAT_MS, useNativeDriver: true }).start();
+
+    // Red de seguridad: si nunca corre un frame, la frase se queda en opacidad 0
+    // PARA SIEMPRE y el Umbral se ve en blanco. No es teórico — se reprodujo:
+    // en una pestaña oculta `requestAnimationFrame` no dispara (0 frames en un
+    // segundo, medido) y las cuatro frases quedaban invisibles con el botón
+    // solo en pantalla. Los temporizadores sí siguen corriendo ahí, así que
+    // este `setTimeout` es el canal fiable: al terminar lo que debía durar la
+    // animación, se fuerza el estado final. Si la animación sí corrió, es un
+    // no-op (ya vale 1).
+    //
+    // La regla general: una animación de entrada MEJORA algo ya visible; nunca
+    // es la condición para que se vea.
+    const net = setTimeout(() => anim.setValue(1), BEAT_MS + 200);
+    return () => clearTimeout(net);
   }, [anim, reduced]);
 
   return (
