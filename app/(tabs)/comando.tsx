@@ -48,7 +48,7 @@ import { stripMarkdownLite } from '@/lib/markdownLite';
 import { logSilentError } from '@/lib/observability';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { useWearableConnections } from '@/lib/wearables';
-import { LIVE_SESSION, getNextSession, formatSessionDate } from '@/data/live-sessions';
+import { LIVE_SESSION, LIVE_SESSION_READY, getNextSession, formatSessionDate } from '@/data/live-sessions';
 import { db2, supabase } from '@/lib/supabase';
 
 function greeting() {
@@ -74,16 +74,22 @@ function ScoreRing({
   size = 132,
   stroke = 8,
   sub,
+  empty = false,
 }: {
   value: number;
   max?: number;
   size?: number;
   stroke?: number;
   sub?: string;
+  /** Sin una sola lectura no hay score que enseñar. `averages` mete
+   *  `stress: 5` por defecto y, como el término va invertido, eso son 25
+   *  puntos fabricados en el anillo de oro el día 1. Un vacío honesto vale
+   *  más que un número inventado. */
+  empty?: boolean;
 }) {
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const pct = Math.max(0, Math.min(1, value / max));
+  const pct = empty ? 0 : Math.max(0, Math.min(1, value / max));
 
   const progress = useSharedValue(0);
   useEffect(() => {
@@ -119,8 +125,16 @@ function ScoreRing({
         />
       </Svg>
       <View style={ringStyles.center}>
-        <AnimatedNumber value={value} delay={120} style={ringStyles.big} />
-        {sub ? <Text style={ringStyles.sub}>{sub}</Text> : null}
+        {empty ? (
+          <Text style={ringStyles.big}>—</Text>
+        ) : (
+          <AnimatedNumber value={value} delay={120} style={ringStyles.big} />
+        )}
+        {empty ? (
+          <Text style={ringStyles.sub}>SIN LECTURAS</Text>
+        ) : sub ? (
+          <Text style={ringStyles.sub}>{sub}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -316,6 +330,9 @@ export default function DashboardScreen() {
     [averages, checkinStreak, state.completedLessons, state.completedTasks, wellnessByType],
   );
   const sovereignTier = calcSovereignTier(sovereignScore);
+  /** Sin una sola lectura el score no mide nada: los 25 puntos que salían el
+   *  día 1 venían del `stress: 5` por defecto de `averages`. */
+  const sinLecturas = state.checkIns.length === 0;
 
   // Weekly score gain — real contribution from check-ins logged in the last 7 days.
   // Each check-in adds its coherence-derived points to the composite score.
@@ -513,7 +530,7 @@ export default function DashboardScreen() {
     },
     score: {
       label: 'Score',
-      value: `${sovereignScore}`,
+      value: sinLecturas ? '—' : `${sovereignScore}`,
       numericValue: sovereignScore,
       meta: sovereignTier.toLowerCase(),
       icon: 'military-tech',
@@ -647,18 +664,15 @@ export default function DashboardScreen() {
           <StateMeter label="Estrés" value={checkIn.stress} inverted />
         </PremiumCard>
       ) : (
-        <HoverCard
-          onPress={() => router.push('/checkin')}
-          accessibilityRole="button"
-          accessibilityLabel="Registrar check-in de hoy"
-          style={styles.estadoEmpty}>
+        /* Informativo, no pulsable: era el CUARTO control a /checkin en el
+           mismo scroll. Dice lo que falta; quien manda ahí es el Mando. */
+        <View style={styles.estadoEmpty}>
           <MaterialIcons name="assignment" size={20} color={palette.smoke} />
           <View style={{ flex: 1 }}>
             <Text style={styles.estadoEmptyTitle}>SIN LECTURA HOY</Text>
             <Text style={styles.estadoEmptySub}>Registra tu check-in para calibrar el sistema</Text>
           </View>
-          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-        </HoverCard>
+        </View>
       )}
       {!hasWearable && protocolDay >= 3 && (
         <HoverCard
@@ -858,8 +872,11 @@ export default function DashboardScreen() {
   );
 
   // ── Live Session Card ────────────────────────────────────────────────────────
+  // No se monta con el `joinUrl` de marcador de posición: la cuenta atrás es
+  // real y el botón AGENDAR llevaba a un 404 de Zoom. Vuelve sola en cuanto
+  // haya enlace (`LIVE_SESSION_READY`).
   const liveSession = getNextSession(LIVE_SESSION);
-  const liveSessionBlock = (
+  const liveSessionBlock = !LIVE_SESSION_READY ? null : (
     <HoverCard
       style={[styles.liveCard, liveSession.isOngoing && styles.liveCardOngoing]}
       onPress={() => {
@@ -997,7 +1014,14 @@ export default function DashboardScreen() {
   // Score Soberano — ring + eyebrow + descripción + delta semanal
   const mScoreCard = (
     <View style={mob.scoreCard}>
-      <ScoreRing value={sovereignScore} max={1000} size={96} stroke={7} sub={`/ ${sovereignTier}`} />
+      <ScoreRing
+        value={sovereignScore}
+        max={1000}
+        size={96}
+        stroke={7}
+        sub={`/ ${sovereignTier}`}
+        empty={sinLecturas}
+      />
       <View style={{ flex: 1 }}>
         <Text style={mob.eyebrow}>SCORE SOBERANO</Text>
         {/* El copy decía "últimos 14 días" y era falso: `averages` promedia TODO
@@ -1006,7 +1030,9 @@ export default function DashboardScreen() {
             texto, no la fórmula: cambiarla movería el score de todos los
             usuarios y rompería el ranking admin. */}
         <Text style={mob.scoreDesc}>
-          Acumulado de todo tu historial: promedio de tus check-ins + lecciones y tareas completadas. No baja — el movimiento reciente lo marca el delta.
+          {sinLecturas
+            ? 'Falta 1 check-in para encender el score. Se calcula sobre tus lecturas: sin ninguna, no hay nada que medir.'
+            : 'Acumulado de todo tu historial: promedio de tus check-ins + lecciones y tareas completadas. No baja — el movimiento reciente lo marca el delta.'}
         </Text>
         <View style={mob.deltaWrap}>
           <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
@@ -1022,6 +1048,11 @@ export default function DashboardScreen() {
   );
 
   // Check-in: hecho → COHERENCIA DE HOY · pendiente → CALIBRAR SISTEMA HOY
+  //
+  // La variante PENDIENTE no se monta si el Mando ya lleva ahí: sería el
+  // tercer control al mismo destino en la misma pantalla. La variante HECHO se
+  // queda siempre — da la coherencia del día, un dato que el Mando no da.
+  const checkinDuplicaAlMando = !todayCheckIn && turno.route === '/checkin';
   const mCheckinCard = todayCheckIn ? (
     <HoverCard
       onPress={() => router.push('/checkin')}
@@ -1041,7 +1072,7 @@ export default function DashboardScreen() {
         <View style={[mob.trackFill, { width: `${coherenceToday * 10}%` }]} />
       </View>
     </HoverCard>
-  ) : (
+  ) : checkinDuplicaAlMando ? null : (
     <HoverCard
       onPress={() => router.push('/checkin')}
       accessibilityRole="button"
@@ -1153,7 +1184,14 @@ export default function DashboardScreen() {
       entering={FadeInDown.springify().damping(20).stiffness(180)}
       style={[styles.deskHeroBand, deskHeroGlow]}>
       <View style={styles.deskScoreCol}>
-        <ScoreRing value={sovereignScore} max={1000} size={180} stroke={10} sub={`/ ${sovereignTier}`} />
+        <ScoreRing
+          value={sovereignScore}
+          max={1000}
+          size={180}
+          stroke={10}
+          sub={`/ ${sovereignTier}`}
+          empty={sinLecturas}
+        />
         <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
         {weeklyScoreDelta > 0 && (
           <View style={styles.deskDeltaRow}>
@@ -1163,18 +1201,22 @@ export default function DashboardScreen() {
         )}
       </View>
       <View style={styles.deskHeroCenter}>
-        <Text style={styles.deskHeroEyebrow}>{`DÍA ${protocolDay} · PROTOCOLO SOBERANO · ${todayLabel()}`}</Text>
+        {/* Sin `DÍA N ·`: lo dice el eyebrow del ArcHeader tres líneas abajo
+            («ACTO II · PROFUNDIDAD · DÍA 45 · 90»), y decirlo dos veces en la
+            misma banda es ruido. El arco es el dueño de dónde estás. */}
+        <Text style={styles.deskHeroEyebrow}>{`PROTOCOLO SOBERANO · ${todayLabel()}`}</Text>
         <Text style={styles.deskHeroTitle}>{`${greeting()},\n${state.profile.name}.`}</Text>
         {intelligenceGreeting ? (
           <Text style={styles.deskHeroBody}>{intelligenceGreeting}</Text>
         ) : null}
         {mandoStripBlock}
+        {/* El `PrimaryButton` de oro macizo que vivía aquí se quitó: el Mando
+            de arriba YA es una tarjeta pulsable con su propio verbo y su
+            flecha, y en el día normal los dos apuntaban a /checkin. Dos CTA de
+            oro en la misma banda es exactamente el «nada es primero» que este
+            trabajo vino a matar. La afordancia sobrevive en la tarjeta de
+            check-in, a la derecha del hero. */}
         <View style={styles.deskHeroActions}>
-          <PrimaryButton
-            label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'}
-            icon="assignment"
-            onPress={() => router.push('/checkin')}
-          />
           <Text style={styles.time} numberOfLines={1}>
             {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })}
           </Text>

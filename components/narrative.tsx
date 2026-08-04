@@ -32,8 +32,10 @@ import type { Arc, Milestone } from '@/lib/narrativeLogic';
  * El marcador de posición en el arco de 90 días.
  *
  * Es lo primero que debe leerse al abrir la app. Antes solo existía en la
- * rama desktop de Comando (`comando.tsx:1112`) y enterrado en Progreso; el
- * móvil —que es donde se abre a diario— no tenía ningún marcador de día.
+ * rama de escritorio de Comando y enterrado en Progreso; el móvil —que es
+ * donde se abre a diario— no tenía ningún marcador de día. (El comentario
+ * apuntaba a `comando.tsx:1112`, que hoy es una barra de progreso: los
+ * punteros a línea envejecen mal y aquí se leen como fuente.)
  *
  * `compact` quita la línea narrativa y deja solo el eyebrow, para cuando ya
  * hay otro texto largo cerca y repetir la frase sería ruido.
@@ -47,7 +49,13 @@ export function ArcHeader({ arc, compact = false }: { arc: Arc; compact?: boolea
       accessibilityLabel={`${arc.actLabel}. ${arc.dayLabel}. ${arc.line}`}>
       <View style={styles.arcEyebrowRow}>
         <View style={styles.arcRule} />
-        <Text style={styles.arcEyebrow}>{arc.actLabel} · {arc.dayLabel}</Text>
+        {/* `numberOfLines` + `flexShrink`: el eyebrow pasó de 21 a 35
+            caracteres al mudarse aquí el día, y en RN `flexShrink` es 0 por
+            defecto — cuando no cabía, los filetes `flex: 1` se comían a sí
+            mismos antes de que el texto cediera. */}
+        <Text style={styles.arcEyebrow} numberOfLines={1}>
+          {arc.actLabel} · {arc.dayLabel}
+        </Text>
         <View style={styles.arcRule} />
       </View>
       {/* La cita va en ORO. Es la misma gramática del Umbral y del mapa: el oro
@@ -190,13 +198,17 @@ const styles = StyleSheet.create({
   arcEyebrow: {
     ...typography.label,
     color: palette.goldText,
+    flexShrink: 1,
   },
   arcLine: {
-    // NO lleva `statement`. Se le puso en la ronda anterior por subir de 14px, y
-    // el resultado fue peor: `arcForDay` devuelve 85-155 caracteres —tres
-    // oraciones—, así que el cockpit abría con ~300px de párrafo centrado a
-    // 26px mientras el verbo de "TU TURNO" seguía a 11px. `statement` es para
-    // FRASES; un párrafo a ese tamaño no es jerarquía, es ruido grande.
+    // NO lleva `statement`, y la razón cambió: cuando se le puso, `arcForDay`
+    // devolvía párrafos de tres oraciones y a 26px el cockpit abría con ~300px
+    // de texto centrado mientras el verbo de "TU TURNO" seguía a 11px. Hoy las
+    // ramas son UNA frase de 39-129 caracteres, así que ese argumento ya no
+    // aplica — pero la decisión sí: en Comando el Mando es la única cosa
+    // grande, y un segundo titular a su tamaño reintroduce el "nada es
+    // primero". La cita se distingue por COLOR (`arcLineQuoted`), no por
+    // tamaño.
     ...typography.body,
     color: palette.ivoryDim,
     textAlign: 'center',

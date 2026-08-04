@@ -139,14 +139,28 @@ describe('geometria de la silueta — ninguna zona pisa a otra', () => {
     expect(solapes).toEqual([]);
   });
 
-  it('ninguna zona baja del minimo tactil: react-native-web ignora hitSlop', () => {
-    // En la PWA el area real es la caja cruda. Con el canvas a 303pt de ancho y
-    // aspectRatio 0.72 (=421pt de alto), un 10% de alto son 42pt. El piso es 44.
-    // 44, el piso real. Estaba en 28 bajo un comentario que decia 44: el test
-    // afirmaba un minimo que no comprobaba, y dejaba pasar zonas de 29pt.
-    const ALTO_CANVAS = 421;
-    const PISO_TACTIL = 44;
+  // El canvas real: `width: '100%'` con `maxWidth: 340` da ~303pt en un
+  // telefono de 375, y `aspectRatio: 0.72` lo alarga a 421pt de alto.
+  const ANCHO_CANVAS = 303;
+  const ALTO_CANVAS = 421;
+  const PISO_TACTIL = 44;
+
+  it('ninguna zona baja del minimo tactil DE ALTO: react-native-web ignora hitSlop', () => {
+    // En la PWA el area real es la caja cruda. Un 10% de alto son 42pt; el piso
+    // es 44. Estuvo en 28 bajo un comentario que decia 44: el test afirmaba un
+    // minimo que no comprobaba, y dejaba pasar zonas de 29pt.
     const flacas = cajas.filter((c) => ((c.y1 - c.y0) / 100) * ALTO_CANVAS < PISO_TACTIL);
     expect(flacas.map((c) => c.zona)).toEqual([]);
+  });
+
+  it('ninguna zona baja del minimo tactil DE ANCHO', () => {
+    // POR QUE ESTE TEST EXISTE: la correccion de hitSlop se aplico al alto y no
+    // al ancho, y este mismo bloque parseaba `x0`/`x1` sin comprobarlos nunca.
+    // `espalda` y `manos` estuvieron en 30.3pt de ancho —dos tercios del piso—
+    // y `garganta` en 42.4, mientras el test de al lado se llamaba "ninguna
+    // zona baja del minimo tactil". Un test que afirma en su nombre mas de lo
+    // que asserta es peor que no tenerlo: certifica lo roto.
+    const estrechas = cajas.filter((c) => ((c.x1 - c.x0) / 100) * ANCHO_CANVAS < PISO_TACTIL);
+    expect(estrechas.map((c) => c.zona)).toEqual([]);
   });
 });

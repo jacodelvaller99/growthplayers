@@ -113,7 +113,14 @@ export function HeroMoments() {
         <Pressable style={s.panel} onPress={(e) => e.stopPropagation()}>
           <View style={s.topAccent} />
           <View style={s.content}>
-            <Text style={s.message}>{moment.message}</Text>
+            {/* El oro SOLO cuando hay palabras suyas. La rama `gratitude` no
+                cita nada —es copy nuestro de principio a fin— y salia en el
+                color que la marca reserva para lo que escribio el usuario.
+                Es el mismo defecto que `Arc.quoted` arreglo en el arco: el
+                `kind` ya distingue las ramas, no hace falta bandera nueva. */}
+            <Text style={[s.message, moment.kind !== 'gratitude' && s.messageQuoted]}>
+              {moment.message}
+            </Text>
             <PrimaryButton label="SEGUIR" onPress={dismiss} />
           </View>
         </Pressable>
@@ -160,10 +167,14 @@ const s = StyleSheet.create({
     // de este mismo caso: la frase del usuario tiene un tamaño en la marca,
     // no uno por pantalla.
     //
-    // Y un color: `goldText`, el mismo que el Umbral usa para lo que escribió
-    // el usuario y que el mapa usa para lo que señaló. Este momento CITA al
-    // usuario; en ivory se leía como si hablara la app.
     ...typography.statement,
+    color: palette.ivory,
+  },
+  // `goldText`, el mismo que el Umbral usa para lo que escribió el usuario y
+  // que el mapa usa para lo que señaló — pero SOLO en las ramas que lo citan.
+  // Estaba en `message`, así que el saludo de gratitud (100% copy nuestro)
+  // salía dorado y el oro dejaba de significar "esto es tuyo".
+  messageQuoted: {
     color: palette.goldText,
   },
 });

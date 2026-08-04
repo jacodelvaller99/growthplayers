@@ -44,12 +44,18 @@ const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; hei
   // A 8% y 7% salian 33 y 29 — el test lo dejaba pasar filtrando por 28 bajo un
   // comentario que decia 44.
   mandibula: { top: '16%', left: '40%', width: '20%', height: '11%', radius: 8 },
-  garganta:  { top: '27%', left: '43%', width: '14%', height: '11%', radius: 6 },
+  // 16%, no 14%: al 14% eran 42.4pt de ANCHO sobre el canvas de 303. La
+  // correccion de "react-native-web ignora hitSlop" se habia aplicado solo al
+  // alto, y el test solo media el alto (por eso llego hasta la ronda 9).
+  garganta:  { top: '27%', left: '42%', width: '16%', height: '11%', radius: 6 },
   // left 34%, no 38%: con width 32% el centro cae en 50%, el mismo del torso
   // (22%-78%) y el de cabeza/mandibula/garganta. A 38% centraban en 54% y las
   // dos zonas mas grandes de la silueta iban 14px corridas a la derecha.
-  pecho:     { top: '38%', left: '34%', width: '32%', height: '16%', radius: 14 },
-  estomago:  { top: '54%', left: '34%', width: '32%', height: '14%', radius: 12 },
+  // left 37% / width 26%, no 34% / 32%: siguen centrados en el 50% (37+13) y
+  // ceden el hueco 22%-37% para que `espalda` y `manos` lleguen al piso tactil
+  // sin salirse del torso. A 26% miden 79pt de ancho — sobra.
+  pecho:     { top: '38%', left: '37%', width: '26%', height: '16%', radius: 14 },
+  estomago:  { top: '54%', left: '37%', width: '26%', height: '14%', radius: 12 },
   // espalda y manos estaban en left 12% y 73% contra un torso que va de 22% a
   // 78%: flotaban AL LADO del cuerpo, sin brazos que las conectaran. Ahora la
   // espalda es la banda izquierda del torso y las manos van a la cadera.
@@ -57,8 +63,12 @@ const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; hei
   // Tres puntos de solape, y como `espalda` se renderiza DESPUES gana el
   // hit-test: tocabas el borde izquierdo de tu pecho y la app encendia tu
   // espalda — y te mandaba a la practica equivocada.
-  espalda:   { top: '38%', left: '24%', width: '10%', height: '28%', radius: 12 },
-  manos:     { top: '67%', left: '24%', width: '10%', height: '11%', radius: 999 },
+  // width 15% = 45.5pt sobre el canvas de 303, por encima del piso de 44.
+  // Empiezan en el 22%: EXACTAMENTE el borde izquierdo del torso, ni un punto
+  // fuera del cuerpo, y acaban en el 37% donde empieza el pecho — se tocan sin
+  // solaparse, que es lo que el test verifica.
+  espalda:   { top: '38%', left: '22%', width: '15%', height: '28%', radius: 12 },
+  manos:     { top: '67%', left: '22%', width: '15%', height: '11%', radius: 999 },
 };
 
 /** Zonas que se apilan verticalmente: su hitSlop no puede crecer hacia

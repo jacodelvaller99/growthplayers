@@ -62,8 +62,11 @@ jest.mock('@/hooks/use-lifeflow', () => ({
     latestCheckIn: null,
     userId: 'u-test',
     state: {
-      profile: { name: 'Juan Jacobo' },
-      northStar: { purpose: '', identity: '', dailyReminder: '' },
+      // Con `painPoint`/`purpose`/`identity` VACIOS la rama que cita al usuario
+      // no se ejecutaba nunca: se podia volver a esconder la frase y la suite
+      // seguia verde. Ese fue exactamente el defecto de la ronda 8.
+      profile: { name: 'Juan Jacobo', painPoint: 'No logro parar de trabajar' },
+      northStar: { purpose: 'Construir sin quemarme', identity: 'Alguien que sostiene', dailyReminder: '' },
       checkIns: [],
       wellnessSessions: [],
       completedLessons: [],
@@ -122,5 +125,24 @@ describe('DashboardScreen — render smoke', () => {
   it('desktop renderiza sin throw', () => {
     mockIsDesktop = true;
     expect(() => render(<DashboardScreen />)).not.toThrow();
+  });
+});
+
+describe('Comando pinta las palabras del usuario, no solo las guarda', () => {
+  // POR QUE ESTE BLOQUE: la frase del arco que cita al usuario vivio una ronda
+  // entera sin pintarse en ninguna pantalla — los cuatro consumidores pasaban
+  // `compact`, que es justo lo que la oculta. El test que se escribio despues
+  // prueba el COMPONENTE `ArcHeader`; el defecto era un PROP de esta pantalla.
+  // Sin esto, volver a poner `compact` aqui deja los tests verdes.
+  it('en escritorio', () => {
+    mockIsDesktop = true;
+    const { getByText } = render(<DashboardScreen />);
+    getByText(/No logro parar de trabajar/);
+  });
+
+  it('en movil', () => {
+    mockIsDesktop = false;
+    const { getByText } = render(<DashboardScreen />);
+    getByText(/No logro parar de trabajar/);
   });
 });

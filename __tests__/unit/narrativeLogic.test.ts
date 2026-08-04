@@ -221,12 +221,19 @@ describe('arcForDay cita al usuario — la voz diaria de los 90 dias', () => {
     expect(arcForDay(12, {}).dayLabel).toBe('DÍA 12 · 90');
   });
 
-  it('cada rama es UNA sola frase — el parrafo era lo que la hacia impintable', () => {
+  it('ninguna rama pasa de DOS oraciones — el parrafo era lo que la hacia impintable', () => {
     // Tres oraciones centradas encima del Mando fue la razon real de que
     // alguien la escondiera. Si vuelve a crecer, vuelve el incentivo.
+    //
+    // Se cuenta FUERA de la cita: `cita()` recorta el final pero no limpia por
+    // dentro, asi que un punto en la frase del usuario inflaba la cuenta y
+    // obligaba a assertar `<= 2` bajo un titulo que decia «UNA sola frase».
+    // El test afirmaba mas de lo que medía — el patron de esta ronda entera.
     for (const dia of [1, 5, 12, 20, 45, 75]) {
-      const puntos = (arcForDay(dia, suyas).line.match(/[.!?]/g) ?? []).length;
+      const nuestro = arcForDay(dia, suyas).line.replace(/«[^»]*»/g, '');
+      const puntos = (nuestro.match(/[.!?]/g) ?? []).length;
       expect(puntos).toBeLessThanOrEqual(2);
+      expect(nuestro.length).toBeLessThan(120);
     }
   });
 });

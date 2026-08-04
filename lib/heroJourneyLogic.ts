@@ -90,7 +90,7 @@ export function selectMoment(input: {
     return {
       kind: 'ai_echo',
       summaryId: latestSummary.id,
-      message: `${greeting(name)} La última vez me dijiste: "${echo}". Sigo aquí, y lo recuerdo.`,
+      message: `${greeting(name)} La última vez me dijiste: «${echo}». Sigo aquí, y lo recuerdo.`,
     };
   }
 
@@ -99,7 +99,7 @@ export function selectMoment(input: {
     return {
       kind: 'memory_echo',
       win,
-      message: `${greeting(name)} ¿Recuerdas esto? Hace un tiempo lograste: "${win}". Sigue contando.`,
+      message: `${greeting(name)} ¿Recuerdas esto? Hace un tiempo lograste: «${win}». Sigue contando.`,
     };
   }
 

@@ -85,7 +85,7 @@ export function arcForDay(
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!obstaculo,
       line: obstaculo
-        ? `Escribiste que lo que se interpone es «${obstaculo}». Sigue ahí, y tú también.`
+        ? `Dijiste que lo que se interpone es «${obstaculo}». Sigue ahí, y tú también.`
         : `Llevas ${day} día${plural}. La mayoría abandona en los primeros siete.`,
     };
   }
@@ -109,7 +109,7 @@ export function arcForDay(
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!obstaculo,
       line: obstaculo
-        ? `Dos semanas desde que escribiste «${obstaculo}».`
+        ? `${day} días desde que dijiste «${obstaculo}».`
         : 'Superaste el punto donde la mayoría desaparece.',
     };
   }
@@ -133,7 +133,7 @@ export function arcForDay(
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!norte,
       line: norte
-        ? `«${norte}» ya no es algo que escribiste: es lo que llevas dos meses haciendo.`
+        ? `«${norte}» ya no es algo que dijiste: son ${day} días haciéndolo.`
         : 'Los cambios dejan de ser visibles y empiezan a ser estructurales.',
     };
   }
@@ -144,7 +144,7 @@ export function arcForDay(
     dayLabel: `DÍA ${day} · 90`,
     quoted: !!quien,
     line: quien
-      ? `Escribiste que decides ser «${quien}». Ya no lo decides: lo eres.`
+      ? `Dijiste que decides ser «${quien}». Ya no lo decides: lo eres.`
       : 'Eso no es disciplina. Es quién eres ahora.',
   };
 }
@@ -274,7 +274,7 @@ export function milestoneCrossed(
       id: 'day-90',
       title: 'PROTOCOLO COMPLETO',
       line: obstaculo
-        ? `90 días. El día 0 escribiste «${obstaculo}». Vuelve a leerlo hoy.`
+        ? `90 días. El día 0 dijiste «${obstaculo}». Vuelve a leerlo hoy.`
         : '90 días. Terminaste lo que la mayoría no empieza.',
     };
   }

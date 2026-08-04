@@ -44,7 +44,7 @@ describe('selectMoment', () => {
     });
     expect(moment?.kind).toBe('ai_echo');
     expect(moment?.message).toContain('Bienvenido de nuevo, Ana.');
-    expect(moment?.message).toContain('"Quiero delegar finanzas."');
+    expect(moment?.message).toContain('«Quiero delegar finanzas.»');
     if (moment?.kind === 'ai_echo') expect(moment.summaryId).toBe('s1');
   });
 
@@ -58,7 +58,7 @@ describe('selectMoment', () => {
     });
     expect(moment?.kind).toBe('memory_echo');
     if (moment?.kind === 'memory_echo') expect(moment.win).toBe('Logro más viejo');
-    expect(moment?.message).toContain('"Logro más viejo"');
+    expect(moment?.message).toContain('«Logro más viejo»');
   });
 
   it('todos los logros ya fueron ecoados → gratitud, no repite', () => {

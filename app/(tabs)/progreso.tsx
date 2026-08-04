@@ -672,7 +672,10 @@ export default function ProgresoScreen() {
     const lines: string[] = [];
 
     if (state.northStar.identity && protocolDay >= 7) {
-      lines.push(`Tu identidad declarada: "${state.northStar.identity.slice(0, 100)}". Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);
+      // «» y no comillas rectas: es la cita del mismo usuario que el
+      // ArcHeader de tres líneas más arriba pinta con «» en oro. Dos juegos de
+      // comillas en la misma tarjeta era la gramática contradiciéndose sola.
+      lines.push(`Tu identidad declarada: «${state.northStar.identity.slice(0, 100)}». Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);
     } else if (completedLessonCount > 0) {
       lines.push(`${completedLessonCount} lección${completedLessonCount === 1 ? '' : 'es'} completada${completedLessonCount === 1 ? '' : 's'}. Cada una reconfiguró algo — aunque no lo hayas notado todavía.`);
     }
@@ -838,15 +841,24 @@ export default function ProgresoScreen() {
           <AppHeader title="PROGRESO" />
           <SovereignScore score={score} />
           <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
-          {narrativeBlock.length > 0 && (
-            <View style={styles.narrativeCard}>
-              <ArcHeader arc={arcForDay(protocolDay, arcoSuyas)} compact />
+          {/* El arco FUERA del condicional: `narrativeBlock` exige identidad
+              con día>=7, o lecciones, o tareas, así que el usuario de los días
+              1 a 6 no veía dónde estaba — justo cuando más importa. Dónde
+              estás no depende de cuánta historia haya que contar.
+              Y `compact` pasa a ser condicional: se puso para no repetir la
+              frase encima de tres párrafos. Sin párrafos no hay repetición. */}
+          <View style={styles.narrativeCard}>
+            <ArcHeader
+              arc={arcForDay(protocolDay, arcoSuyas)}
+              compact={narrativeBlock.length > 0}
+            />
+            {narrativeBlock.length > 0 && (
               <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-              {narrativeBlock.map((line, i) => (
-                <Text key={i} style={styles.narrativeLine}>{line}</Text>
-              ))}
-            </View>
-          )}
+            )}
+            {narrativeBlock.map((line, i) => (
+              <Text key={i} style={styles.narrativeLine}>{line}</Text>
+            ))}
+          </View>
 
           {/* ── ZONA 2: Middle two-column row ── */}
           <View style={deskStyles.desktopMiddle}>
@@ -1178,21 +1190,24 @@ export default function ProgresoScreen() {
       </Pressable>
 
       {/* ── Transformation Narrative ── */}
-      {narrativeBlock.length > 0 && (
-        <View style={styles.narrativeCard}>
-          {/* `compact` aquí SÍ: encima hay tres párrafos de "TU HISTORIA" y la
-              frase del arco diría lo mismo una cuarta vez.
-              (El comentario anterior lo justificaba diciendo "la frase ya la
-              dice Comando al abrir la app" — y durante una ronda entera Comando
-              tampoco la decía, porque también pasaba `compact`. Dos sitios
-              escondiéndola cada uno porque el otro la mostraba.) */}
-          <ArcHeader arc={arcForDay(protocolDay, arcoSuyas)} compact />
+      {/* `compact` SOLO cuando hay historia debajo: encima de tres párrafos
+          de "TU HISTORIA" la frase del arco diría lo mismo una cuarta vez,
+          pero sin ellos no hay nada que repetir y el usuario del día 3 se
+          quedaba sin ver su propia frase en esta pantalla. La tarjeta ya no
+          cuelga de `narrativeBlock`: dónde estás no depende de cuánta historia
+          haya que contar. */}
+      <View style={styles.narrativeCard}>
+        <ArcHeader
+          arc={arcForDay(protocolDay, arcoSuyas)}
+          compact={narrativeBlock.length > 0}
+        />
+        {narrativeBlock.length > 0 && (
           <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-          {narrativeBlock.map((line, i) => (
-            <Text key={i} style={styles.narrativeLine}>{line}</Text>
-          ))}
-        </View>
-      )}
+        )}
+        {narrativeBlock.map((line, i) => (
+          <Text key={i} style={styles.narrativeLine}>{line}</Text>
+        ))}
+      </View>
 
       {/* ── Protocol Progress ── */}
       <ProgressCard

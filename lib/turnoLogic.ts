@@ -91,8 +91,12 @@ const RUTA_POR_KIND: Record<Exclude<TurnoKind, 'investigate'>, { route: string; 
 
 /** Peldaño 2 — las mismas reglas deterministas que ya vivían en el check-in,
  *  priorizando el sistema más comprometido. Se mueven aquí para que dejen de
- *  ser exclusivas de esa pantalla. */
-function desdeCheckIn(c: TurnoCheckIn): Turno | null {
+ *  ser exclusivas de esa pantalla.
+ *
+ *  TOTAL a propósito: con lectura de hoy SIEMPRE devuelve turno. Devolvía
+ *  `null` en el día normal y la escalera caía al peldaño 3, que pide la
+ *  lectura que acaba de hacerse. */
+function desdeCheckIn(c: TurnoCheckIn): Turno {
   if (c.stress >= 7) {
     return {
       source: 'checkin', delta: `Tensión ${c.stress}/10 en tu última lectura.`,
@@ -125,7 +129,15 @@ function desdeCheckIn(c: TurnoCheckIn): Turno | null {
       verb: 'ABRIR EL PROTOCOLO', route: '/(tabs)/programas',
     };
   }
-  return null;
+  // El día normal. No engancha ninguna alarma y tampoco es la ventana alta:
+  // ni corregir ni celebrar — avanzar. Esta rama faltaba, y es el estado MÁS
+  // frecuente de todos: un usuario sano que ya se leyó.
+  return {
+    source: 'checkin', delta: `Coherencia ${COHERENCE(c)}/10 — banda operativa.`,
+    headline: 'Ya te leíste hoy. Ahora ejecuta.',
+    why: 'Un día en banda no pide corrección, pide avance. La lectura ya está hecha: lo que queda es mover el protocolo un peldaño mientras el sistema aguanta.',
+    verb: 'ABRIR EL PROTOCOLO', route: '/(tabs)/programas',
+  };
 }
 
 /** Peldaño 3 — no necesita nada. Por eso siempre hay turno. */
@@ -165,10 +177,9 @@ export function selectTurno(input: TurnoInput): Turno {
   }
 
   // Peldaño 2 — con la lectura de hoy basta para tener una opinión propia.
-  if (todayCheckIn) {
-    const porCheckIn = desdeCheckIn(todayCheckIn);
-    if (porCheckIn) return porCheckIn;
-  }
+  // Sin `if (porCheckIn)`: `desdeCheckIn` ya no puede devolver null, y ese
+  // hueco era justo por donde el día normal se escapaba al peldaño 3.
+  if (todayCheckIn) return desdeCheckIn(todayCheckIn);
 
   // Peldaño 3.
   return fallback(daysSinceLastCheckIn);

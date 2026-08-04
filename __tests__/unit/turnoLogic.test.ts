@@ -77,8 +77,33 @@ describe('peldaño 2 — reglas deterministas del check-in', () => {
     expect(t.delta).toContain('Coherencia');
   });
 
-  it('un día normal sin señal fuerte cae al fallback, no fuerza una recomendación', () => {
-    const t = selectTurno({ ...base, todayCheckIn: SANO });
+  it('un día normal NUNCA manda a hacer el check-in que ya está hecho', () => {
+    // ESTE TEST CERTIFICABA EL DEFECTO. Afirmaba `source === 'fallback'` y se
+    // ponía verde mientras el usuario leía «Empieza por la lectura de hoy» con
+    // la lectura hecha, un botón que decía «REVISAR CHECK-IN» a tres líneas y
+    // un check verde de «SISTEMA EN LÍNEA» dos tarjetas abajo. Verificaba la
+    // rama, no lo que se lee — el mismo hueco que dejó pasar `compact`.
+    const t = selectTurno({ ...base, todayCheckIn: SANO, daysSinceLastCheckIn: 0 });
+    expect(t.route).not.toBe('/checkin');
+    expect(t.headline).not.toMatch(/lectura de hoy/i);
+    expect(t.verb).not.toMatch(/CHECK-IN/i);
+  });
+
+  it('y lo reconoce con el dato, no con una frase amable', () => {
+    // El día normal es el estado MÁS frecuente que existe: usuario sano que ya
+    // se leyó. Ni corregir ni celebrar — avanzar, citando su coherencia real.
+    const t = selectTurno({ ...base, todayCheckIn: SANO, daysSinceLastCheckIn: 0 });
+    expect(t.source).toBe('checkin');
+    expect(t.delta).toMatch(/Coherencia \d+\/10/);
+  });
+
+  it('sin lectura de hoy SÍ la pide, aunque la de ayer fuera hace horas', () => {
+    // El borde que descarta arreglarlo en `fallback(dias === 0)`: comando.tsx
+    // pasa 0 también cuando la última lectura fue hace menos de 24h pero NO es
+    // de hoy (lectura a las 23:00, app abierta a las 06:00). Ahí «ya te leíste»
+    // sería mentira. La bifurcación cuelga de `todayCheckIn`, no de los días.
+    const t = selectTurno({ ...base, todayCheckIn: null, daysSinceLastCheckIn: 0 });
+    expect(t.route).toBe('/checkin');
     expect(t.source).toBe('fallback');
   });
 });

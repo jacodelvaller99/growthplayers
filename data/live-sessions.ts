@@ -25,7 +25,14 @@ export interface LiveSession {
 
 /**
  * Configuración de la sesión semanal recurrente.
- * Actualiza joinUrl cuando cambie el link de Zoom.
+ *
+ * `joinUrl` sigue siendo el MARCADOR DE POSICIÓN: Zoom espera un id numérico
+ * (`zoom.us/j/8123456789`) y este da 404. Mientras siga así, la tarjeta NO se
+ * monta — `LIVE_SESSION_READY` lo decide en un solo sitio. Una cuenta atrás
+ * real y un botón AGENDAR sobre una puerta que no abre es peor que no tener
+ * la tarjeta.
+ *
+ * PARA ACTIVARLA: pon el enlace real de Zoom aquí y la tarjeta vuelve sola.
  */
 export const LIVE_SESSION: LiveSession = {
   title:           'SESIÓN SEMANAL EN VIVO',
@@ -35,6 +42,11 @@ export const LIVE_SESSION: LiveSession = {
   time:            '20:00', // 8 PM hora Colombia (COT = UTC-5)
   durationMinutes: 90,
 };
+
+/** `true` solo cuando `joinUrl` deja de ser el marcador de posición. Lo lee
+ *  Comando para decidir si monta la tarjeta. */
+export const LIVE_SESSION_READY =
+  !LIVE_SESSION.joinUrl.includes('growthplayers') && /\/j\/\d+/.test(LIVE_SESSION.joinUrl);
 
 /**
  * Calcula la fecha de la próxima sesión a partir de ahora.
