@@ -231,12 +231,15 @@ const styles = StyleSheet.create({
   },
   consequenceTitle: {
     // Es la lectura que la app le devuelve — el titular de la tarjeta, no su
-    // etiqueta. Iba en `typography.section`: versalitas a 13px con tracking 2.
-    // O sea que la frase sobre el propio cuerpo, que dos segundos antes se leía
-    // a 26px en caja baja, reaparecía convertida en rótulo administrativo. La
-    // jerarquía invertida sobrevivía dentro del mismo flujo que se arregló.
+    // etiqueta. Paso por `typography.section` (versalitas 13px con tracking 2),
+    // asi que la frase sobre el propio cuerpo, leida dos segundos antes a 26px
+    // en oro, reaparecia convertida en rotulo administrativo.
+    //
+    // Y en ORO: cuando este titular es la lectura del cuerpo es literalmente la
+    // MISMA frase que el mapa acaba de pintar en `goldText`. Cambiarle el color
+    // al cruzar de tarjeta rompe la unica continuidad visual que el gesto tiene.
     ...typography.statement,
-    color: palette.ivory,
+    color: palette.goldText,
   },
   consequenceBody: {
     ...typography.body,

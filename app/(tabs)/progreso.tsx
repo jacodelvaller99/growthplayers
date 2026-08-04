@@ -652,6 +652,17 @@ export default function ProgresoScreen() {
     return { totalModules, completedModules, activePct, locked };
   }, [state.completedLessons]);
 
+  // Las palabras del usuario, para que el arco lo cite en vez de hablarle a
+  // cualquiera. Objeto estable: se recalcula solo si cambia lo que escribio.
+  const arcoSuyas = useMemo(
+    () => ({
+      painPoint: state.profile.painPoint,
+      purpose: state.northStar.purpose,
+      identity: state.northStar.identity,
+    }),
+    [state.profile.painPoint, state.northStar.purpose, state.northStar.identity],
+  );
+
   // Transformation narrative
   const narrativeBlock = useMemo(() => {
     const completedLessonCount = (state.completedLessons ?? []).length;
@@ -829,7 +840,7 @@ export default function ProgresoScreen() {
           <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
           {narrativeBlock.length > 0 && (
             <View style={styles.narrativeCard}>
-              <ArcHeader arc={arcForDay(protocolDay)} compact />
+              <ArcHeader arc={arcForDay(protocolDay, arcoSuyas)} compact />
               <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
               {narrativeBlock.map((line, i) => (
                 <Text key={i} style={styles.narrativeLine}>{line}</Text>
@@ -1173,7 +1184,7 @@ export default function ProgresoScreen() {
               abrir la app, y repetirla justo encima de tres párrafos de
               historia era decir lo mismo dos veces. `compact` existe para
               exactamente esto. */}
-          <ArcHeader arc={arcForDay(protocolDay)} compact />
+          <ArcHeader arc={arcForDay(protocolDay, arcoSuyas)} compact />
           <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
           {narrativeBlock.map((line, i) => (
             <Text key={i} style={styles.narrativeLine}>{line}</Text>

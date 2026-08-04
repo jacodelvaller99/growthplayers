@@ -26,11 +26,12 @@ import { analytics } from '@/lib/analytics';
 import { deltaSince, milestoneCrossed, type Milestone } from '@/lib/narrativeLogic';
 import { readLocal, writeLocal } from '@/storage/local';
 import { BodyMap } from '@/components/body-map';
-import { readBody, type BodyZone } from '@/lib/bodyMapLogic';
+import { readBody, ZONE_AURA_ORIGIN, type BodyZone } from '@/lib/bodyMapLogic';
 import { Aura } from '@/components/aura';
 import { auraFromCheckIn } from '@/lib/auraLogic';
 import { logSilentError } from '@/lib/observability';
 import { computeStreak } from '@/lib/utils';
+import { scheduleCheckinReminder } from '@/services/notifications';
 
 function todayLabel() {
   return new Date()
@@ -73,9 +74,13 @@ type RitualPhase = 'intro' | 'breathing' | 'post';
 
 function MicroRitual({
   preTension,
+  preTensionReal,
   onLog,
 }: {
+  /** Banda 1-3, comparable con el post. Elige la COPY del delta. */
   preTension: number;
+  /** El número que el usuario declaró (1-10). Es el que se le muestra. */
+  preTensionReal: number;
   onLog: (durationSeconds: number, cycles: number) => void;
 }) {
   const [phase, setPhase] = useState<RitualPhase>('intro');
@@ -216,7 +221,7 @@ function MicroRitual({
     <PremiumCard style={styles.ritualCard}>
       <Text style={styles.ritualTag}>¿CÓMO ESTÁS AHORA?</Text>
       <Text style={styles.ritualBody}>
-        Tu tensión antes era {preTension}/10. Marca dónde está ahora — un toque.
+        Tu tensión antes era {preTensionReal}/10. Marca dónde está ahora — un toque.
       </Text>
       <View style={styles.postScale}>
         {[1, 2, 3].map((v) => {
@@ -285,6 +290,16 @@ export default function CheckInScreen() {
   const [systemNeed, setSystemNeed] = useState(todayCheckIn?.systemNeed ?? '');
   const [saved, setSaved] = useState(false);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
+  // 'ofrecer' | 'listo' | 'oculto' — el gancho de la sesión 2. Se oculta si ya
+  // hay racha (ya vuelve solo) o si el permiso no se puede pedir.
+  const [recordatorio, setRecordatorio] = useState<'ofrecer' | 'listo' | 'oculto'>(
+    // Oculto en web: `scheduleCheckinReminder` devuelve null ahí (no hay
+    // notificaciones locales en la PWA). Ofrecer un recordatorio que no puede
+    // llegar y luego decir "mañana a las 7:00" sería exactamente la clase de
+    // mentira que este bucle lleva seis rondas quitando.
+    // Oculto también con racha: quien ya vuelve solo no necesita que lo llamen.
+    Platform.OS === 'web' || streak >= 3 ? 'oculto' : 'ofrecer',
+  );
   // Guard anti-doble-tap: saveCheckIn es async → evita doble submit del check-in.
   const [submitting, setSubmitting] = useState(false);
   // Simplificación (feedback Capuozzo): camino mínimo = 4 sliders → guardar.
@@ -380,6 +395,23 @@ export default function CheckInScreen() {
     }
   };
 
+  // El aura sigue al gesto, no solo a los números.
+  //
+  // Se disparaba únicamente con `listo` (los cuatro deslizadores). En móvil el
+  // mapa va ANTES, así que tocar tu propio cuerpo —la pieza que el dueño llamó
+  // el mejor UX que ha visto— no movía el fondo ni un píxel, y mover un número
+  // administrativo sí. Ahora la primera zona señalada decide el estado y el
+  // ORIGEN del resplandor: tocas el pecho y la pantalla se ilumina ahí.
+  const auraOrigin = bodyZones.length ? ZONE_AURA_ORIGIN[bodyZones[0]] : undefined;
+  const auraState = listo
+    ? auraFromCheckIn({ stress: stress!, energy: energy!, hour: new Date().getHours() })
+    : bodyZones.length ? 'tension'
+    : 'reposo';
+  const auraWeight = listo
+    ? Math.min(1, Math.max(stress!, 10 - energy!) / 10)
+    : bodyZones.length ? 0.7
+    : 0.4;
+
   // ── Dónde lo sientes ────────────────────────────────────────────────────────
   // Los deslizadores dicen CUÁNTO y nunca DÓNDE. "Tensión 8" no distingue una
   // mandíbula apretada de un estómago cerrado, y se regulan distinto. Tocar la
@@ -459,12 +491,32 @@ export default function CheckInScreen() {
     };
   })();
 
+  const activarRecordatorio = async () => {
+    try {
+      const id = await scheduleCheckinReminder(protocolDay);
+      // `null` = no se agendó (permiso denegado o plataforma sin soporte). No
+      // se confirma lo que no ocurrió.
+      setRecordatorio(id ? 'listo' : 'oculto');
+      if (!id) showToast('No se pudo activar el recordatorio. Puedes hacerlo en Perfil.', 'warning');
+    } catch (e) {
+      // Si el permiso se deniega no se miente diciendo que quedó puesto.
+      logSilentError('checkin.reminder', e);
+      setRecordatorio('oculto');
+      showToast('No se pudo activar el recordatorio. Puedes hacerlo en Perfil.', 'warning');
+    }
+  };
+
   const goToCommando = () => router.replace('/(tabs)/comando');
   const followRecommendation = () => router.replace(recommendation.route as never);
 
   // ── Micro-ritual: estado pre (tensión declarada, banda 1–3) + logging ──────
   // El check-in mide estrés 1–10; lo llevamos a la misma escala 1–3 del post
   // para que el delta sea comparable de un toque.
+  // La BANDA elige el copy; el NUMERO es el que el usuario dijo.
+  //
+  // Se pasaba la banda al ritual y este imprimia `{preTension}/10`: al que puso
+  // 9 la app le contestaba "tu tension antes era 3/10". Le devolvia su propio
+  // dato mal, en la pantalla que existe para devolverle datos.
   const preTensionBand = (stress ?? 0) >= 7 ? 3 : (stress ?? 0) >= 4 ? 2 : 1;
   const logBreathing = (durationSeconds: number, cycles: number) => {
     if (cycles <= 0 || durationSeconds <= 5) return;
@@ -478,7 +530,7 @@ export default function CheckInScreen() {
   };
 
   const ritualBlock = (
-    <MicroRitual preTension={preTensionBand} onLog={logBreathing} />
+    <MicroRitual preTension={preTensionBand} preTensionReal={stress ?? 5} onLog={logBreathing} />
   );
 
   // El delta contra el registro anterior. Es la ÚNICA información que aparece
@@ -699,6 +751,24 @@ export default function CheckInScreen() {
         <MaterialIcons name="check-circle" size={18} color={palette.success} />
         <Text style={styles.savedText}>Check-in guardado.</Text>
       </View>
+      {/* El único mecanismo que produce la sesión 2.
+          La sesión 1 terminaba y no había nada que trajera al usuario de
+          vuelta: el recordatorio de las 7:00 vive en un interruptor al fondo
+          de Perfil, donde nadie nuevo lo encuentra. Se ofrece aquí, una vez,
+          en el momento en que acaba de ver para qué sirvió — que es el único
+          instante en que la respuesta honesta es sí. */}
+      {recordatorio === 'ofrecer' && (
+        <PremiumCard style={styles.savedOffer}>
+          <Text style={styles.savedSub}>¿Te lo recuerdo mañana a las 7:00?</Text>
+          <PrimaryButton label="SÍ, RECUÉRDAMELO" icon="notifications-active" onPress={activarRecordatorio} />
+        </PremiumCard>
+      )}
+      {recordatorio === 'listo' && (
+        <View style={styles.savedRow}>
+          <MaterialIcons name="notifications-active" size={16} color={palette.goldText} />
+          <Text style={styles.savedText}>Mañana a las 7:00.</Text>
+        </View>
+      )}
       {/* Va ANTES de la recomendación: cruzar los 7 días es la noticia, y la
           lectura del sistema viene después. Casi siempre es null — un hito que
           aparece a diario deja de ser un hito. */}
@@ -733,8 +803,9 @@ export default function CheckInScreen() {
           que esto existe para no ser. Y se iba con el scroll. Aquí cubre la
           pantalla y se queda quieta. */}
       <Aura
-        state={listo ? auraFromCheckIn({ stress: stress!, energy: energy!, hour: new Date().getHours() }) : 'reposo'}
-        weight={listo ? Math.min(1, Math.max(stress!, 10 - energy!) / 10) : 0.4}
+        state={auraState}
+        weight={auraWeight}
+        origin={auraOrigin}
       />
         <ScrollView
           contentContainerStyle={[styles.contentDesktop, { paddingTop: insets.top + 32 }]}
@@ -767,7 +838,7 @@ export default function CheckInScreen() {
                   icon="center-focus-strong"
                 />
                 <ScaleSelector
-                  label="ESTRÉS"
+                  label="CARGA DEL SISTEMA"
                   value={stress}
                   onChange={setStress}
                   icon="device-thermostat"
@@ -816,8 +887,9 @@ export default function CheckInScreen() {
         que esto existe para no ser. Y se iba con el scroll. Aquí cubre la
         pantalla y se queda quieta. */}
     <Aura
-      state={listo ? auraFromCheckIn({ stress: stress!, energy: energy!, hour: new Date().getHours() }) : 'reposo'}
-      weight={listo ? Math.min(1, Math.max(stress!, 10 - energy!) / 10) : 0.4}
+      state={auraState}
+      weight={auraWeight}
+      origin={auraOrigin}
     />
     <ScrollView
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}

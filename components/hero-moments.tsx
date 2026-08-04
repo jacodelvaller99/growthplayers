@@ -159,7 +159,11 @@ const s = StyleSheet.create({
     // Era 26/34 escrito a mano aquí. Ahora es el token `statement`, que nació
     // de este mismo caso: la frase del usuario tiene un tamaño en la marca,
     // no uno por pantalla.
+    //
+    // Y un color: `goldText`, el mismo que el Umbral usa para lo que escribió
+    // el usuario y que el mapa usa para lo que señaló. Este momento CITA al
+    // usuario; en ivory se leía como si hablara la app.
     ...typography.statement,
-    color: palette.ivory,
+    color: palette.goldText,
   },
 });

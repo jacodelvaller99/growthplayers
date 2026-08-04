@@ -160,7 +160,13 @@ export default function DashboardScreen() {
   // SETUP del arco: dónde está el usuario en la historia de 90 días.
   // La voz vive en lib/narrativeLogic para que Comando, Progreso y Check-in
   // hablen igual sin copiar strings.
-  const arc = arcForDay(protocolDay);
+  // Con sus palabras: el arco es la voz diaria, y sin esto le hablaba a
+  // cualquiera. `state.profile.painPoint` lo escribe `completeOnboarding`.
+  const arc = arcForDay(protocolDay, {
+    painPoint: state.profile.painPoint,
+    purpose: state.northStar.purpose,
+    identity: state.northStar.identity,
+  });
   const checkIn = todayCheckIn ?? latestCheckIn;
 
   const { isConnected: isWearableConnected } = useWearableConnections();
@@ -1201,7 +1207,11 @@ export default function DashboardScreen() {
           {/* SETUP — el mismo arco que en móvil. El hero ya trae "DÍA N" en su
               eyebrow, pero no la línea narrativa: es la única voz de la app y
               vivía enterrada en la pestaña Progreso. */}
-          <ArcHeader arc={arc} />
+          {/* `compact`: el acto, sin su parrafo. Encima del Mando habia ~133pt
+              de carraspeo —dos filetes, un eyebrow de 9px y cuatro lineas
+              centradas— antes de la unica orden del dia. El arco dice DONDE
+              estas; el Mando dice QUE hacer. Solo uno de los dos manda. */}
+          <ArcHeader arc={arc} compact />
           {northAnchorStrip}
 
           {/* ZONA 1 — hero cinematográfico full-width */}
@@ -1277,7 +1287,11 @@ export default function DashboardScreen() {
           {mHeader}
           {/* SETUP — día y acto. El móvil no tenía NINGÚN marcador de posición
               en el protocolo: el "Día N de 90" solo existía en la rama desktop. */}
-          <ArcHeader arc={arc} />
+          {/* `compact`: el acto, sin su parrafo. Encima del Mando habia ~133pt
+              de carraspeo —dos filetes, un eyebrow de 9px y cuatro lineas
+              centradas— antes de la unica orden del dia. El arco dice DONDE
+              estas; el Mando dice QUE hacer. Solo uno de los dos manda. */}
+          <ArcHeader arc={arc} compact />
           {/* TENSIÓN — la única decisión de hoy. mandoStripBlock estaba escrito
               pero solo se montaba dentro de deskHero, así que el teléfono
               —donde se abre a diario— perdía la única pieza direccional. */}

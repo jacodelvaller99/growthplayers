@@ -88,7 +88,7 @@ function getOpeningMessage(params: {
     return `Un mes completo, ${firstName}. Treinta días de datos, treinta días de decisiones, treinta días de construir quien eres en lugar de quien deberías ser. La mayoría nunca llega aquí. ¿Qué parte de ti de hace 30 días ya no existe?`;
   }
   if (protocolDay === 60) {
-    return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. Los estudios sobre formación de hábitos sugieren que un comportamiento tarda semanas en volverse automático. Estás construyendo el tuyo, día a día. ¿Qué quieres que sea automático en ti?`;
+    return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. Ya no decides cada día si aparecer: apareces. ¿Qué quieres que sea automático en ti?`;
   }
   if (protocolDay === 90) {
     return `${firstName}. Noventa días. Eres una persona diferente. No diferente en lo que dices — diferente en lo que haces cuando nadie mira. Eso es el protocolo funcionando. Una sola pregunta: comparado con quien eras en el Día 1 — ¿cuál es la diferencia más importante que has ganado?`;

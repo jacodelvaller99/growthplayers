@@ -109,7 +109,7 @@
       "id": "F-ARC-COMANDO",
       "desc": "El arco narrativo abre Comando. La voz existía pero vivía enterrada en la cuarta posición de la pestaña Progreso, invisible desde el home.",
       "file": "app/(tabs)/comando.tsx",
-      "marker": "arcForDay(protocolDay)"
+      "marker": "arcForDay(protocolDay, {"
     }
   ]
 }

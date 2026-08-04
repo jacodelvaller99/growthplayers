@@ -142,8 +142,11 @@ describe('geometria de la silueta — ninguna zona pisa a otra', () => {
   it('ninguna zona baja del minimo tactil: react-native-web ignora hitSlop', () => {
     // En la PWA el area real es la caja cruda. Con el canvas a 303pt de ancho y
     // aspectRatio 0.72 (=421pt de alto), un 10% de alto son 42pt. El piso es 44.
+    // 44, el piso real. Estaba en 28 bajo un comentario que decia 44: el test
+    // afirmaba un minimo que no comprobaba, y dejaba pasar zonas de 29pt.
     const ALTO_CANVAS = 421;
-    const flacas = cajas.filter((c) => ((c.y1 - c.y0) / 100) * ALTO_CANVAS < 28);
+    const PISO_TACTIL = 44;
+    const flacas = cajas.filter((c) => ((c.y1 - c.y0) / 100) * ALTO_CANVAS < PISO_TACTIL);
     expect(flacas.map((c) => c.zona)).toEqual([]);
   });
 });

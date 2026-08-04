@@ -38,16 +38,38 @@ export interface Arc {
  * `protocolDay` se clampa a >= 1: un día 0 o negativo viene de un perfil sin
  * fecha de inicio, y es mejor mostrar el acto de arranque que una frase rota.
  */
-export function arcForDay(protocolDay: number): Arc {
+export function arcForDay(
+  protocolDay: number,
+  /**
+   * Lo que el usuario declaro al cruzar el Umbral. Mismo contrato que
+   * `milestoneCrossed`: si no escribio nada, el arco se dice igual y NO se
+   * inventa una frase suya.
+   *
+   * POR QUE: estas seis ramas son la unica voz que narra los 90 dias, y eran
+   * identicas para todo el mundo. El dia 0 la app le lee sus palabras con una
+   * puesta en escena entera; el dia 12 le habla como a nadie. La continuidad
+   * no es una funcion nueva — es este argumento.
+   */
+  suyas?: { painPoint?: string; purpose?: string; identity?: string },
+): Arc {
   const day = Math.max(1, Math.floor(protocolDay || 1));
   const plural = day === 1 ? '' : 's';
+  const cita = (t?: string) => {
+    const limpio = (t ?? '').trim().replace(/[.!?…\s]+$/, '');
+    return limpio.length > 60 ? `${limpio.slice(0, 60).trimEnd()}…` : limpio;
+  };
+  const obstaculo = cita(suyas?.painPoint);
+  const norte = cita(suyas?.purpose);
+  const quien = cita(suyas?.identity);
 
   if (day <= 3) {
     return {
       act: 'inicio',
       actNumber: 1,
       actLabel: 'ACTO I · BASE',
-      line: `Llevas ${day} día${plural} en el protocolo. Esto acaba de comenzar — la mayoría abandona en los primeros 7 días. Tú no eres la mayoría.`,
+      line: obstaculo
+        ? `Día ${day}. Escribiste que lo que se interpone es «${obstaculo}». Sigue ahí, y tú también.`
+        : `Llevas ${day} día${plural} en el protocolo. Esto acaba de comenzar — la mayoría abandona en los primeros 7 días. Tú no eres la mayoría.`,
     };
   }
   if (day <= 7) {
@@ -55,7 +77,9 @@ export function arcForDay(protocolDay: number): Arc {
       act: 'filtro',
       actNumber: 1,
       actLabel: 'ACTO I · BASE',
-      line: `${day} días. Estás cruzando la primera zona de filtro. Cada check-in es una declaración de quién eres — no de lo que sientes.`,
+      line: quien
+        ? `${day} días. Dijiste que decides ser «${quien}». Cada check-in es esa declaración, no un estado de ánimo.`
+        : `${day} días. Estás cruzando la primera zona de filtro. Cada check-in es una declaración de quién eres — no de lo que sientes.`,
     };
   }
   if (day <= 14) {
@@ -63,7 +87,9 @@ export function arcForDay(protocolDay: number): Arc {
       act: 'grabado',
       actNumber: 2,
       actLabel: 'ACTO II · PROFUNDIDAD',
-      line: `Día ${day}. Superaste el punto donde la mayoría desaparece. El hábito ya está grabándose en tu sistema nervioso.`,
+      line: obstaculo
+        ? `Día ${day}. Dos semanas desde que escribiste «${obstaculo}». Superaste el punto donde la mayoría desaparece.`
+        : `Día ${day}. Superaste el punto donde la mayoría desaparece. El hábito ya está grabándose en tu sistema nervioso.`,
     };
   }
   if (day <= 30) {
@@ -75,7 +101,9 @@ export function arcForDay(protocolDay: number): Arc {
       // habitos sugieren..." sin citar ninguno, a tres archivos de
       // `data/internistKnowledge.ts`, que exige fuente y grado de evidencia
       // para cada afirmacion. La misma app no puede tener dos varas.
-      line: `${day} días. Un mes. A esta altura ya no estás decidiendo cada día si aparecer — y eso es lo que cambia.`,
+      line: norte
+        ? `${day} días hacia «${norte}». A esta altura ya no decides cada día si aparecer — y eso es lo que cambia.`
+        : `${day} días. Un mes. A esta altura ya no estás decidiendo cada día si aparecer — y eso es lo que cambia.`,
     };
   }
   if (day <= 60) {
@@ -83,14 +111,18 @@ export function arcForDay(protocolDay: number): Arc {
       act: 'profundidad',
       actNumber: 2,
       actLabel: 'ACTO II · PROFUNDIDAD',
-      line: `Día ${day} de 90. Estás en el arco de profundidad — donde los cambios dejan de ser visibles y empiezan a ser estructurales.`,
+      line: norte
+        ? `Día ${day} de 90. «${norte}» ya no es una frase que escribiste: es lo que llevas dos meses haciendo.`
+        : `Día ${day} de 90. Estás en el arco de profundidad — donde los cambios dejan de ser visibles y empiezan a ser estructurales.`,
     };
   }
   return {
     act: 'identidad',
     actNumber: 3,
     actLabel: 'ACTO III · IDENTIDAD',
-    line: `Día ${day} de 90. Eso no es disciplina — es quién eres ahora. El protocolo ya vive en ti.`,
+    line: quien
+      ? `Día ${day} de 90. Escribiste que decides ser «${quien}». Ya no lo decides: lo eres.`
+      : `Día ${day} de 90. Eso no es disciplina — es quién eres ahora. El protocolo ya vive en ti.`,
   };
 }
 

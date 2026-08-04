@@ -128,7 +128,11 @@ export default function UmbralScreen() {
   ];
 
   const beats: { text: string; quoted?: boolean }[] = [
-    ...(suyas.length ? suyas : [{ text: `${name || 'Aquí'} empieza el día 0.`, quoted: true }]),
+    // SIN `quoted`: esta frase la escribe la app, no el usuario. El oro marca
+    // lo que es suyo, y pintar de oro el respaldo era decir "esto lo dijiste tú"
+    // sobre copy nuestro — la misma mentira que el filtro de `source_type`
+    // acaba de quitar del eco del día 1.
+    ...(suyas.length ? suyas : [{ text: `${name || 'Aquí'} empieza el día 0.` }]),
     ...UMBRAL_SCRIPT.map((text) => ({ text })),
     { text: UMBRAL_CLOSING },
   ];
@@ -158,7 +162,10 @@ export default function UmbralScreen() {
   // es el mismo para todos.
   useEffect(() => {
     if (shown > beats.length) return;
-    const t = setTimeout(() => setShown((n) => n + 1), UMBRAL_BEAT_MS);
+    // El último beat dura más: es el remate del guion y se sostenía exactamente
+    // lo mismo que "Esto no es una app de hábitos".
+    const esCierre = shown === beats.length;
+    const t = setTimeout(() => setShown((n) => n + 1), esCierre ? UMBRAL_BEAT_MS * 1.5 : UMBRAL_BEAT_MS);
     return () => clearTimeout(t);
   }, [shown, beats.length]);
 
@@ -237,7 +244,11 @@ const styles = StyleSheet.create({
   skip: {
     position: 'absolute',
     right: spacing.xl,
-    padding: spacing.sm,
+    // 44 de alto: el único escape de la secuencia medía 29pt, por debajo del
+    // piso táctil, en una pantalla sin ningún otro control.
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
     zIndex: 2,
   },
   skipText: {

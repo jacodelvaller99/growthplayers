@@ -41,6 +41,24 @@ export const ZONE_LABEL: Record<BodyZone, string> = {
   manos:     'Las manos',
 };
 
+/**
+ * Dónde se centra el resplandor del aura cuando se señala esa zona.
+ *
+ * Aproximado a la altura de la zona en la silueta, no a su caja exacta: el aura
+ * es atmósfera, y un origen al píxel se leería como un foco. Vive aquí y no en
+ * el componente porque es una propiedad de la ZONA, no del mapa — el check-in
+ * lo consume sin montar la silueta.
+ */
+export const ZONE_AURA_ORIGIN: Record<BodyZone, { x: `${number}%`; y: `${number}%` }> = {
+  cabeza:    { x: '50%', y: '14%' },
+  mandibula: { x: '50%', y: '20%' },
+  garganta:  { x: '50%', y: '26%' },
+  pecho:     { x: '50%', y: '36%' },
+  estomago:  { x: '50%', y: '48%' },
+  espalda:   { x: '36%', y: '40%' },
+  manos:     { x: '36%', y: '60%' },
+};
+
 export interface BodyReading {
   /** Lo que el usuario ubicó. Vacío = no quiso decirlo, y está bien. */
   zones: BodyZone[];
@@ -109,6 +127,14 @@ export function joinZones(zones: BodyZone[]): string {
     .map((z) => ZONE_LABEL[z].replace(/^(La|El|Las|Los) /, (m) => m.toLowerCase()));
   if (names.length === 0) return '';
   if (names.length === 1) return names[0];
+  // Tope de tres. Sin él, siete zonas dan 113 caracteres — cinco líneas a 26px,
+  // y la silueta se desplaza 68pt bajo el dedo justo mientras se está tocando.
+  // El arreglo va aquí y no subiendo otra vez el `minHeight` del hueco: eso es
+  // empujar el mismo salto más tarde, que ya se hizo dos veces.
+  if (names.length > 3) {
+    const resto = names.length - 3;
+    return `${names.slice(0, 3).join(', ')} y ${resto} más`;
+  }
   return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
 }
 
@@ -140,7 +166,10 @@ export function readBody(input: BodyReading): BodyInsight {
   // Antes llegaba aquí como 0 y caía siempre en la rama baja — la graduación
   // existía en el código y no ocurría nunca en la pantalla.
   const intensidad =
-    stress === null ? 'Ahí lo estás notando'
+    // Frase propia, no la misma que la rama baja. Con `null` el usuario aún no
+    // ha dicho CUÁNTO —en móvil eso es el 100% de los primeros toques—, así que
+    // la app nombra el lugar y se calla la intensidad, que es lo honesto.
+    stress === null ? 'Ahí lo estás sintiendo'
     : stress >= 8 ? 'Lo estás sosteniendo fuerte'
     : stress >= 5 ? 'Ahí se está acumulando'
     : 'Ahí lo estás notando';

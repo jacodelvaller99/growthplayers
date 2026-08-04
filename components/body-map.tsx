@@ -39,13 +39,17 @@ const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; hei
   // implementa `hitSlop` en `Pressable` (comprobado en node_modules), y la PWA
   // es lo unico desplegado hoy. Con 5% y 6% de altura salian 21 y 25pt de area
   // real — la mitad del minimo tactil. La caja ES el area en web.
-  mandibula: { top: '16%', left: '40%', width: '20%', height: '8%',  radius: 8 },
-  garganta:  { top: '24%', left: '43%', width: '14%', height: '7%',  radius: 6 },
+  // 11% y 10% = 46 y 42pt de alto real sobre un canvas de 421. El piso tactil
+  // es 44 y en la PWA la caja ES el area: react-native-web ignora `hitSlop`.
+  // A 8% y 7% salian 33 y 29 — el test lo dejaba pasar filtrando por 28 bajo un
+  // comentario que decia 44.
+  mandibula: { top: '16%', left: '40%', width: '20%', height: '11%', radius: 8 },
+  garganta:  { top: '27%', left: '43%', width: '14%', height: '11%', radius: 6 },
   // left 34%, no 38%: con width 32% el centro cae en 50%, el mismo del torso
   // (22%-78%) y el de cabeza/mandibula/garganta. A 38% centraban en 54% y las
   // dos zonas mas grandes de la silueta iban 14px corridas a la derecha.
-  pecho:     { top: '31%', left: '34%', width: '32%', height: '16%', radius: 14 },
-  estomago:  { top: '47%', left: '34%', width: '32%', height: '14%', radius: 12 },
+  pecho:     { top: '38%', left: '34%', width: '32%', height: '16%', radius: 14 },
+  estomago:  { top: '54%', left: '34%', width: '32%', height: '14%', radius: 12 },
   // espalda y manos estaban en left 12% y 73% contra un torso que va de 22% a
   // 78%: flotaban AL LADO del cuerpo, sin brazos que las conectaran. Ahora la
   // espalda es la banda izquierda del torso y las manos van a la cadera.
@@ -53,8 +57,8 @@ const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; hei
   // Tres puntos de solape, y como `espalda` se renderiza DESPUES gana el
   // hit-test: tocabas el borde izquierdo de tu pecho y la app encendia tu
   // espalda — y te mandaba a la practica equivocada.
-  espalda:   { top: '31%', left: '24%', width: '10%', height: '28%', radius: 12 },
-  manos:     { top: '62%', left: '24%', width: '10%', height: '10%', radius: 999 },
+  espalda:   { top: '38%', left: '24%', width: '10%', height: '28%', radius: 12 },
+  manos:     { top: '67%', left: '24%', width: '10%', height: '11%', radius: 999 },
 };
 
 /** Zonas que se apilan verticalmente: su hitSlop no puede crecer hacia
@@ -156,7 +160,7 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
               accessibilityLabel={ZONE_LABEL[zone]}
               accessibilityHint="En la lista"
               style={[s.chip, on && s.chipOn, on && selected[0] === zone && s.chipPrimary]}>
-              <Text style={[s.chipText, on && s.chipTextOn]}>
+              <Text style={[s.chipText, on && s.chipTextOn, on && selected[0] === zone && s.chipTextPrimary]}>
                 {ZONE_LABEL[zone].replace(/^(La|El|Las|Los) /, '')}
               </Text>
             </Pressable>
@@ -181,14 +185,16 @@ const s = StyleSheet.create({
   // Silueta: hombros anchos que se estrechan. Sugiere un cuerpo sin dibujarlo.
   torso: {
     position: 'absolute',
-    // 19%, no 25%: entre la cabeza (acaba en 16%) y el torso habia un hueco
-    // de 9% del canvas donde flotaban mandibula y garganta sin nada detras.
-    top: '19%',
+    // 16%: EXACTAMENTE donde acaba la cabeza. Con 25% el hueco era del 9% y con
+    // 19% seguia siendo del 3% — la mandibula flotaba con su tercio superior
+    // sobre la nada, y el comentario ya lo daba por cerrado.
+    top: '16%',
     left: '22%',
     right: '22%',
     // 54%: llega al 73%, por debajo de las manos (acaban en 72%). Con 48% el
     // torso terminaba en 67% y las manos colgaban fuera del cuerpo.
-    height: '54%',
+    // Llega al 77%, por debajo de las manos (acaban en 77%).
+    height: '63%',
     borderRadius: 28,
     // graphiteLight #181818 sobre la tarjeta #111111 daba 1.06:1 — WCAG 1.4.11
     // exige 3:1 para graficos esenciales. Se veian los bordes de zona y NO el
@@ -226,12 +232,24 @@ const s = StyleSheet.create({
     backgroundColor: palette.goldGlow,
     borderColor: palette.gold,
   },
-  // La que manda. Borde doble, no otro color: sigue siendo oro, solo pesa más.
+  // La que manda: ORO MACIZO contra el oro tintado de las secundarias.
+  //
+  // Era 1px de borde extra — por debajo del umbral perceptivo, así que la única
+  // jerarquía que el gesto tiene seguía invisible. Y el relleno sólido no es
+  // una decisión nueva: es la gramática que la marca ya usa en todas partes
+  // (oro macizo = lo elegido, oro tintado = el recorrido), la misma que el
+  // selector 1-10 acaba de recuperar.
   zonePrimary: {
+    backgroundColor: palette.gold,
     borderWidth: 2,
   },
   chipPrimary: {
+    backgroundColor: palette.gold,
     borderWidth: 2,
+  },
+  // Sobre oro macizo el texto tiene que ser tinta, no oro.
+  chipTextPrimary: {
+    color: palette.ink,
   },
   legend: {
     flexDirection: 'row',
