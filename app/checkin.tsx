@@ -24,6 +24,8 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { ConsequenceCard } from '@/components/narrative';
 import { analytics } from '@/lib/analytics';
 import { deltaSince } from '@/lib/narrativeLogic';
+import { BodyMap } from '@/components/body-map';
+import { readBody, type BodyZone } from '@/lib/bodyMapLogic';
 import { logSilentError } from '@/lib/observability';
 import { computeStreak } from '@/lib/utils';
 
@@ -270,6 +272,8 @@ export default function CheckInScreen() {
   // La lectura interna es opcional, y el ritual/recomendación se difieren a una oferta.
   const [showNeed, setShowNeed]     = useState(false);
   const [showRegula, setShowRegula] = useState(false);
+  const [showBody, setShowBody]     = useState(false);
+  const [bodyZones, setBodyZones]   = useState<BodyZone[]>([]);
 
   // Real-time coherence score
   const coherence = Math.round((energy + clarity + sleep + (11 - stress)) / 4);
@@ -515,6 +519,46 @@ export default function CheckInScreen() {
     </PremiumCard>
   );
 
+  // ── Dónde lo sientes ────────────────────────────────────────────────────────
+  // Los deslizadores dicen CUÁNTO y nunca DÓNDE. "Tensión 8" no distingue una
+  // mandíbula apretada de un estómago cerrado, y se regulan distinto. Tocar la
+  // silueta cuesta dos segundos y da una señal que ningún número da.
+  // Opcional a propósito: el camino mínimo del check-in sigue siendo 30s.
+  const bodyInsight = readBody({ zones: bodyZones, stress });
+
+  const bodyCard = (
+    <PremiumCard style={styles.card}>
+      <Text style={styles.systemLabel}>¿DÓNDE LO SIENTES?</Text>
+      <BodyMap
+        selected={bodyZones}
+        onToggle={(z) =>
+          setBodyZones((prev) => (prev.includes(z) ? prev.filter((p) => p !== z) : [...prev, z]))
+        }
+      />
+      {bodyZones.length > 0 && (
+        <View style={styles.bodyReading}>
+          <Text style={styles.bodyReadingText}>{bodyInsight.reading}</Text>
+          {bodyInsight.practice && (
+            <Text style={styles.bodyReadingWhy}>{bodyInsight.practice.why}</Text>
+          )}
+        </View>
+      )}
+    </PremiumCard>
+  );
+
+  const bodyToggle = (
+    <Pressable
+      onPress={() => setShowBody((v) => !v)}
+      accessibilityRole="button"
+      accessibilityLabel={showBody ? 'Ocultar el mapa del cuerpo' : 'Señalar dónde lo sientes'}
+      style={({ pressed }) => [styles.needToggle, pressed && { opacity: 0.7 }]}>
+      <MaterialIcons name={showBody ? 'remove' : 'add'} size={16} color={palette.goldText} />
+      <Text style={styles.needToggleText}>
+        {showBody ? 'Ocultar el cuerpo' : '¿Dónde lo sientes? Señálalo (opcional)'}
+      </Text>
+    </Pressable>
+  );
+
   // Toggle de "lectura interna" — opcional, fuera del camino mínimo.
   const needToggle = (
     <Pressable
@@ -631,6 +675,8 @@ export default function CheckInScreen() {
               {!saved ? (
                 <>
                   {submitButton}
+                  {bodyToggle}
+                  {showBody && bodyCard}
                   {needToggle}
                   {showNeed && systemNeedCard}
                   <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
@@ -712,6 +758,8 @@ export default function CheckInScreen() {
       {!saved ? (
         <>
           {submitButton}
+          {bodyToggle}
+          {showBody && bodyCard}
           {needToggle}
           {showNeed && systemNeedCard}
         </>
@@ -928,6 +976,22 @@ const styles = StyleSheet.create({
     color: palette.ash,
     fontSize: 13,
     flex: 1,
+  },
+
+  // Lectura del cuerpo — le devuelve en palabras lo que acaba de señalar.
+  bodyReading: {
+    borderTopColor: palette.line,
+    borderTopWidth: 1,
+    gap: spacing.xs,
+    paddingTop: spacing.md,
+  },
+  bodyReadingText: {
+    ...typography.body,
+    color: palette.ivory,
+  },
+  bodyReadingWhy: {
+    ...typography.caption,
+    color: palette.ash,
   },
   savedOffer: {
     borderColor: palette.lineGold,
