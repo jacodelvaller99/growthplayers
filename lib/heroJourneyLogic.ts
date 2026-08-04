@@ -73,6 +73,15 @@ export function selectMoment(input: {
   const { today, name, latestSummary, recentWins, state } = input;
   if (state.lastShownDate === today) return null;
 
+  // PRIMERA VEZ: callarse. `lastShownDate === null` significa que este usuario
+  // nunca vio un momento — y la rama de gratitud dice "Bienvenido de NUEVO" y
+  // "gracias por VOLVER a aparecer hoy". A alguien que acaba de terminar el
+  // onboarding eso es una mentira verificable, en la primera frase que el
+  // producto le dirige. En una marca cuyo principio 1 es confrontar con dato,
+  // abrir mintiendo es el peor arranque posible. El momento empieza mañana,
+  // cuando volver ya es cierto.
+  if (state.lastShownDate === null) return null;
+
   const hasFreshEcho =
     !!latestSummary?.summary.trim() && latestSummary.id !== state.lastEchoedSummaryId;
 

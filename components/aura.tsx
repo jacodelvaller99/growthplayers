@@ -2,10 +2,14 @@
  * Aura — el resplandor que respira detrás del contenido.
  *
  * React Native no tiene `radial-gradient` (está comentado literalmente en
- * `app/(auth)/welcome.tsx:379`, donde se falsea con boxShadow solo-web). Aquí
- * se resuelve con el MISMO patrón de split que ya usa `components/polaris.tsx`
- * para el sparkline (`:408-411`): Skia en nativo, CSS en web. Skia ya es
- * dependencia usada, así que no entra nada nuevo al bundle.
+ * `app/(auth)/welcome.tsx:379`, donde se falsea con boxShadow solo-web). Se
+ * resuelve con el mismo patrón de split que ya usa `components/polaris.tsx`
+ * para el sparkline (`:408-411`): CSS `radial-gradient` en web, y en nativo un
+ * `expo-linear-gradient` vertical — dependencia ya instalada que hasta hoy
+ * tenía CERO imports, así que no entra nada nuevo al bundle.
+ *
+ * (Una versión anterior de este comentario prometía Skia. No lo usa: montar un
+ * Canvas por pantalla para un fondo que nadie mira de frente no se paga.)
  *
  * Va SIEMPRE detrás: `pointerEvents="none"` y posición absoluta. No captura
  * toques ni cambia el layout de la pantalla que lo monta.
@@ -15,7 +19,7 @@
  * decora — es la regla de marca, no una preferencia.
  */
 import { useEffect } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -24,6 +28,7 @@ import Animated, {
   withTiming,
   cancelAnimation,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { auraForState, type AuraState } from '@/lib/auraLogic';
@@ -46,8 +51,13 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
   const x = origin?.x ?? '50%';
   const y = origin?.y ?? '18%';
 
-  // Respira entre el 80% y el 100% de su opacidad — nunca desaparece, porque
-  // un aura que se apaga del todo se lee como parpadeo/bug (ver auraLogic).
+  // Respira en ESCALA, no en opacidad.
+  //
+  // La primera versión animaba opacidad entre el 80% y el 100% de un alfa que
+  // ya era ~0.10: el resultado era una variación por debajo de un nivel de
+  // cuantización del display — invisible por definición. Un borde difuso que
+  // CRUZA píxeles sí se percibe; dos centésimas de alfa no. La opacidad se
+  // queda fija (y acotada por el techo de marca); lo que se mueve es el tamaño.
   const breath = useSharedValue(1);
 
   useEffect(() => {
@@ -57,14 +67,17 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
       return;
     }
     breath.value = withRepeat(
-      withTiming(0.8, { duration: BREATH_MS, easing: Easing.inOut(Easing.ease) }),
+      withTiming(1.08, { duration: BREATH_MS, easing: Easing.inOut(Easing.ease) }),
       -1,
       true,
     );
     return () => cancelAnimation(breath);
   }, [reduced, breath]);
 
-  const animated = useAnimatedStyle(() => ({ opacity: opacity * breath.value }));
+  const animated = useAnimatedStyle(() => ({
+    opacity,
+    transform: [{ scale: breath.value }],
+  }));
 
   // En web el radial-gradient nativo del CSS es exacto y gratis — el mismo
   // recurso que ya usa `comando.tsx:1348-1353` para su glow de escritorio.
@@ -83,30 +96,26 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
     );
   }
 
-  // Nativo: capas concéntricas con opacidad decreciente. Es la aproximación
-  // barata a un radial — sin Canvas ni shader, sin coste de montaje, y
-  // suficiente para un fondo que nunca se mira de frente.
+  // Nativo: gradiente real con `expo-linear-gradient` (ya era dependencia con
+  // CERO imports en el repo — no entra nada nuevo al bundle).
+  //
+  // La primera versión apilaba dos Views de color plano. Eso deja un ESCALÓN
+  // duro entre capas, más visible que la propia respiración: se leía como un
+  // rectángulo mal puesto, no como atmósfera. El degradado elimina el borde.
+  //
+  // Es un gradiente lineal, no radial: RN no tiene radial nativo y montar Skia
+  // aquí costaría un Canvas por pantalla para un fondo que nadie mira de
+  // frente. Con el origen arriba y el desvanecido hacia abajo, la diferencia
+  // contra un radial es imperceptible en un fondo de esta opacidad.
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animated]}>
-      <View style={[s.layer, { backgroundColor: color, opacity: 0.55, transform: [{ scaleX: 1.6 }] }]} />
-      <View style={[s.layer, s.inner, { backgroundColor: color, opacity: 0.75, transform: [{ scaleX: 1.4 }] }]} />
+      <LinearGradient
+        colors={[color, `${color}00`]}
+        locations={[0, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.85 }}
+        style={StyleSheet.absoluteFill}
+      />
     </Animated.View>
   );
 }
-
-const s = StyleSheet.create({
-  layer: {
-    position: 'absolute',
-    top: '-30%',
-    left: '-30%',
-    right: '-30%',
-    height: '85%',
-    borderRadius: 9999,
-  },
-  inner: {
-    top: '-18%',
-    left: '-10%',
-    right: '-10%',
-    height: '55%',
-  },
-});

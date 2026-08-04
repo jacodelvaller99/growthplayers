@@ -23,13 +23,24 @@ export type AuraState = 'reposo' | 'recuperado' | 'tension' | 'noche' | 'umbral'
  *  lo que el aura existe para lograr. */
 export const MAX_OPACITY = 0.14;
 
-/** Croma bajo a propósito: son casi-grises con una insinuación de color. */
+/**
+ * Croma bajo, pero luminancia SUFICIENTE.
+ *
+ * La primera versión usaba colores casi negros (#3A2E1C sobre un fondo #090909).
+ * Con la opacidad acotada a 0.14, el canal más fuerte se movía de 12.5 a 13.4
+ * sobre 255 — por debajo del cuanto del display. Era matemáticamente invisible:
+ * un aura que nadie iba a ver nunca, en verde en CI porque los tests solo
+ * medían "que no se pase", jamás "que se note".
+ *
+ * Estos colores son claros para poder ATRAVESAR una opacidad de 0.10-0.14 y
+ * seguir siendo croma bajo: siguen siendo tonos apagados, no colores saturados.
+ */
 const AURA_COLOR: Record<AuraState, string> = {
-  reposo:     '#2A2A2E',   // neutro con un punto frío — el estado por defecto
-  recuperado: '#1E3A32',   // verde profundo desaturado
-  tension:    '#3A2E1C',   // ámbar apagado, nunca rojo (rojo = alarma clínica)
-  noche:      '#1C2033',   // índigo nocturno
-  umbral:     '#332B14',   // oro muy rebajado — el único momento con la marca detrás
+  reposo:     '#5A5A66',   // neutro con un punto frío — el estado por defecto
+  recuperado: '#3E8C74',   // verde profundo desaturado
+  tension:    '#9A7430',   // ámbar apagado, nunca rojo (rojo = alarma clínica)
+  noche:      '#4A5490',   // índigo nocturno
+  umbral:     '#8A7434',   // oro muy rebajado — el único momento con la marca detrás
 };
 
 export interface AuraInput {

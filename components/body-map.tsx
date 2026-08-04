@@ -13,7 +13,8 @@
  * con Views redondeadas pesa cero, se tinta con los tokens del tema y no
  * necesita assets. La precisión anatómica sería falsa precisión — son 7 zonas.
  */
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { BODY_ZONES, ZONE_LABEL, type BodyZone } from '@/lib/bodyMapLogic';
@@ -23,8 +24,15 @@ export interface BodyMapProps {
   onToggle: (zone: BodyZone) => void;
 }
 
-/** Geometría de la silueta, en porcentajes del contenedor. Cada zona es un
- *  área táctil de al menos 44pt (regla de toque del proyecto). */
+/**
+ * Geometría de la silueta, en porcentajes del contenedor.
+ *
+ * Una versión anterior de este comentario afirmaba que cada zona era un área
+ * táctil de 44pt. Era falso: con el canvas fijo de 200×260, la garganta medía
+ * 28×18pt. El área táctil real la da `hitSlop` en el Pressable, más el chip
+ * equivalente de la leyenda (que sí es de 44pt de alto) — dos formas de tocar
+ * la misma zona, para dedo grande y para dedo fino.
+ */
 const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; height: string; radius: number }> = {
   cabeza:    { top: '2%',  left: '38%', width: '24%', height: '14%', radius: 999 },
   mandibula: { top: '15%', left: '40%', width: '20%', height: '7%',  radius: 8 },
@@ -49,7 +57,17 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
           return (
             <Pressable
               key={zone}
-              onPress={() => onToggle(zone)}
+              onPress={() => {
+                // El gesto más corporal de la app era el único sin háptica,
+                // mientras el resto de la pantalla vibra. Tocarte y que el
+                // teléfono no responda rompe justo la sensación que buscamos.
+                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onToggle(zone);
+              }}
+              // Varias zonas (garganta, mandíbula) dibujan menos de 44pt a
+              // propósito — anatómicamente son pequeñas. `hitSlop` da el área
+              // táctil que exige PRODUCT.md sin deformar el cuerpo.
+              hitSlop={12}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: on }}
               accessibilityLabel={ZONE_LABEL[zone]}
@@ -96,10 +114,13 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
 
 const s = StyleSheet.create({
   root: { gap: spacing.lg },
+  // Antes era 200x260 FIJO en cualquier dispositivo: diminuto en un teléfono
+  // grande y apretado en uno pequeño. Con aspectRatio escala con el ancho real.
   canvas: {
-    height: 260,
     alignSelf: 'center',
-    width: 200,
+    width: '100%',
+    maxWidth: 340,
+    aspectRatio: 0.72,
     position: 'relative',
   },
   // Silueta: hombros anchos que se estrechan. Sugiere un cuerpo sin dibujarlo.
@@ -111,7 +132,7 @@ const s = StyleSheet.create({
     height: '48%',
     borderRadius: 28,
     backgroundColor: palette.graphiteLight,
-    opacity: 0.5,
+    opacity: 0.95,
   },
   head: {
     position: 'absolute',
@@ -121,12 +142,14 @@ const s = StyleSheet.create({
     height: '14%',
     borderRadius: 999,
     backgroundColor: palette.graphiteLight,
-    opacity: 0.5,
+    opacity: 0.95,
   },
   zone: {
     position: 'absolute',
     borderWidth: 1,
-    borderColor: palette.line,
+    // `line` (alfa 0.07) sobre la silueta era invisible: no se veía que
+    // hubiera regiones tocables hasta tocarlas. `lineHard` las declara.
+    borderColor: palette.lineHard,
     backgroundColor: 'transparent',
   },
   // El oro marca lo señalado. Es el acento ganado de la marca: aquí lo gana el

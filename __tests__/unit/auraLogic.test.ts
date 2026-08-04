@@ -66,14 +66,53 @@ describe('auraForState — el techo es sagrado', () => {
     expect(out.color).toBe(auraForState({ state: 'reposo' }).color);
   });
 
-  it('la paleta es de croma bajo — ningún canal se dispara (nada saturado)', () => {
-    // Un color de marca sobrio no tiene un canal muy por encima de los otros.
+  it('la paleta es de croma bajo — saturación acotada, nada estridente', () => {
+    // Croma se mide como saturación relativa, NO como oscuridad: un color puede
+    // ser claro y seguir siendo apagado. La versión anterior de este test exigía
+    // max(r,g,b) <= 0x40 — o sea, exigía que fuese casi negro — y por eso la
+    // paleta salió invisible sobre un fondo #090909.
     for (const state of ESTADOS) {
       const hex = auraForState({ state }).color;
       const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-      expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThanOrEqual(0x30);
-      expect(Math.max(r, g, b)).toBeLessThanOrEqual(0x40); // y todo es oscuro
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const saturacion = max === 0 ? 0 : (max - min) / max;
+      expect(saturacion).toBeLessThanOrEqual(0.7); // apagado, no neón
     }
+  });
+
+  /**
+   * EL TEST QUE FALTABA.
+   *
+   * El suite original tenía 8 aserciones de "que no se pase" y CERO de "que se
+   * note". Por eso la primera paleta salió matemáticamente invisible —
+   * componiendo #3A2E1C al 10% sobre #090909, el canal más fuerte se movía de
+   * 12.5 a 13.4 sobre 255 — y aun así CI estaba en verde. Un aura que nadie ve
+   * cumple el techo perfectamente y no sirve para nada.
+   */
+  describe('perceptibilidad — el suelo también es sagrado', () => {
+    const FONDO = 0x09; // palette.black real de la app
+
+    /** Composita el canal más fuerte del aura sobre el fondo de la app. */
+    function deltaVisible(state: AuraState, weight: number): number {
+      const { color, opacity } = auraForState({ state, weight });
+      const canal = Math.max(...[1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16)));
+      return (canal - FONDO) * opacity;
+    }
+
+    it('todo estado se separa del fondo de forma perceptible', () => {
+      // ~3/255 es el umbral práctico por debajo del cual un degradado sobre
+      // negro no se distingue en una pantalla de teléfono.
+      for (const state of ESTADOS) {
+        expect(deltaVisible(state, 0.6)).toBeGreaterThan(3);
+      }
+    });
+
+    it('incluso en su peso mínimo el aura sigue existiendo en pantalla', () => {
+      for (const state of ESTADOS) {
+        expect(deltaVisible(state, 0)).toBeGreaterThan(1.5);
+      }
+    });
   });
 });
 

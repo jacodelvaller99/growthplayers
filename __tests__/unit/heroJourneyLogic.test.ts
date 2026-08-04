@@ -10,6 +10,20 @@ import {
 } from '@/lib/heroJourneyLogic';
 
 describe('selectMoment', () => {
+  /** Un usuario que YA volvió alguna vez. La escalera solo corre para él:
+   *  a alguien que nunca vino, decirle "bienvenido de nuevo" es mentir. */
+  const VUELTO: HeroMomentState = {
+    lastShownDate: '2026-08-01', lastEchoedSummaryId: null, echoedWinKeys: [],
+  };
+
+  it('PRIMERA VEZ: se calla — no dice "bienvenido de nuevo" a quien nunca volvió', () => {
+    const moment = selectMoment({
+      today: '2026-08-03', name: 'Ana', latestSummary: null,
+      recentWins: ['Un logro'], state: defaultHeroMomentState,
+    });
+    expect(moment).toBeNull();
+  });
+
   it('ya se mostró un momento hoy → null', () => {
     const state: HeroMomentState = {
       lastShownDate: '2026-08-03', lastEchoedSummaryId: null, echoedWinKeys: [],
@@ -26,7 +40,7 @@ describe('selectMoment', () => {
       name: 'Ana',
       latestSummary: { id: 's1', summary: 'Quiero delegar finanzas. Me da miedo soltar control.' },
       recentWins: ['Corrió su primer 5k'],
-      state: defaultHeroMomentState,
+      state: VUELTO,
     });
     expect(moment?.kind).toBe('ai_echo');
     expect(moment?.message).toContain('Bienvenido de nuevo, Ana.');
@@ -40,7 +54,7 @@ describe('selectMoment', () => {
       name: 'Ana',
       latestSummary: null,
       recentWins: ['Logro más nuevo', 'Logro más viejo'], // recentWins[0] = el más nuevo
-      state: defaultHeroMomentState,
+      state: VUELTO,
     });
     expect(moment?.kind).toBe('memory_echo');
     if (moment?.kind === 'memory_echo') expect(moment.win).toBe('Logro más viejo');
@@ -49,7 +63,7 @@ describe('selectMoment', () => {
 
   it('todos los logros ya fueron ecoados → gratitud, no repite', () => {
     const state: HeroMomentState = {
-      lastShownDate: null, lastEchoedSummaryId: null, echoedWinKeys: ['logro a', 'logro b'],
+      lastShownDate: '2026-08-01', lastEchoedSummaryId: null, echoedWinKeys: ['logro a', 'logro b'],
     };
     const moment = selectMoment({
       today: '2026-08-03', name: 'Ana', latestSummary: null,
@@ -61,7 +75,7 @@ describe('selectMoment', () => {
 
   it('sin resumen ni logros → gratitud', () => {
     const moment = selectMoment({
-      today: '2026-08-03', name: 'Ana', latestSummary: null, recentWins: [], state: defaultHeroMomentState,
+      today: '2026-08-03', name: 'Ana', latestSummary: null, recentWins: [], state: VUELTO,
     });
     expect(moment?.kind).toBe('gratitude');
     expect(moment?.message).toContain('gracias por volver a aparecer hoy');
@@ -84,7 +98,7 @@ describe('selectMoment', () => {
   it('resumen vacío/solo-espacios → cae a logros/gratitud, no revienta con comillas vacías', () => {
     const moment = selectMoment({
       today: '2026-08-03', name: 'Ana', latestSummary: { id: 's2', summary: '   ' },
-      recentWins: [], state: defaultHeroMomentState,
+      recentWins: [], state: VUELTO,
     });
     expect(moment?.kind).toBe('gratitude');
   });
@@ -92,7 +106,7 @@ describe('selectMoment', () => {
   it('logro vacío/solo-espacios en la lista → se salta, no se ecoa basura', () => {
     const moment = selectMoment({
       today: '2026-08-03', name: 'Ana', latestSummary: null,
-      recentWins: ['   ', 'Logro real'], state: defaultHeroMomentState,
+      recentWins: ['   ', 'Logro real'], state: VUELTO,
     });
     expect(moment?.kind).toBe('memory_echo');
     if (moment?.kind === 'memory_echo') expect(moment.win).toBe('Logro real');
@@ -100,7 +114,7 @@ describe('selectMoment', () => {
 
   it('sin nombre → saludo sin coma colgando', () => {
     const moment = selectMoment({
-      today: '2026-08-03', name: '   ', latestSummary: null, recentWins: [], state: defaultHeroMomentState,
+      today: '2026-08-03', name: '   ', latestSummary: null, recentWins: [], state: VUELTO,
     });
     expect(moment?.message.startsWith('Bienvenido de nuevo.')).toBe(true);
   });

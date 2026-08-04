@@ -26,6 +26,8 @@ import { analytics } from '@/lib/analytics';
 import { deltaSince } from '@/lib/narrativeLogic';
 import { BodyMap } from '@/components/body-map';
 import { readBody, type BodyZone } from '@/lib/bodyMapLogic';
+import { Aura } from '@/components/aura';
+import { auraFromCheckIn } from '@/lib/auraLogic';
 import { logSilentError } from '@/lib/observability';
 import { computeStreak } from '@/lib/utils';
 
@@ -307,6 +309,7 @@ export default function CheckInScreen() {
         stress,
         sleep,
         systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
+        zones: bodyZones.length ? bodyZones : undefined,
       });
       analytics.checkinSubmit(energy, clarity, stress, sleep);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -539,7 +542,18 @@ export default function CheckInScreen() {
         <View style={styles.bodyReading}>
           <Text style={styles.bodyReadingText}>{bodyInsight.reading}</Text>
           {bodyInsight.practice && (
-            <Text style={styles.bodyReadingWhy}>{bodyInsight.practice.why}</Text>
+            <>
+              <Text style={styles.bodyReadingWhy}>{bodyInsight.practice.why}</Text>
+              {/* La lectura terminaba en una frase preciosa y una puerta
+                  cerrada: ZONE_PRACTICE tenía label y route escritos, testeados
+                  y jamás renderizados. Señalar dónde duele y que la app no te
+                  lleve a la salida es el peor final posible para este gesto. */}
+              <SecondaryButton
+                label={bodyInsight.practice.label.toUpperCase()}
+                icon="arrow-forward"
+                onPress={() => router.push(bodyInsight.practice!.route as never)}
+              />
+            </>
           )}
         </View>
       )}
@@ -674,9 +688,9 @@ export default function CheckInScreen() {
 
               {!saved ? (
                 <>
-                  {submitButton}
                   {bodyToggle}
                   {showBody && bodyCard}
+                  {submitButton}
                   {needToggle}
                   {showNeed && systemNeedCard}
                   <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
@@ -703,6 +717,13 @@ export default function CheckInScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
+      {/* El fondo responde a lo que la persona acaba de declarar: mover el
+          deslizador de TENSIÓN cambia el color de la pantalla. Es el único
+          sitio del producto donde el estado del usuario se vuelve atmósfera. */}
+      <Aura
+        state={auraFromCheckIn({ stress, energy, hour: new Date().getHours() })}
+        weight={Math.min(1, Math.max(stress, 10 - energy) / 10)}
+      />
       {/* ── Header: back → comando · fecha · título ── */}
       <View style={styles.header}>
         <Pressable
@@ -757,9 +778,9 @@ export default function CheckInScreen() {
       {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
       {!saved ? (
         <>
-          {submitButton}
           {bodyToggle}
           {showBody && bodyCard}
+          {submitButton}
           {needToggle}
           {showNeed && systemNeedCard}
         </>

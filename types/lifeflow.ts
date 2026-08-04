@@ -1,3 +1,5 @@
+import type { BodyZone } from '@/lib/bodyMapLogic';
+
 export type LessonStatus = 'completed' | 'active' | 'locked' | 'available';
 export type ModuleStatus = 'completed' | 'active' | 'locked' | 'coming_soon';
 
@@ -48,6 +50,11 @@ export type CheckIn = {
   stress: number;
   sleep: number;
   systemNeed: string;
+  /** Dónde lo sintió, si lo señaló. Los números dan la magnitud; esto da el
+   *  lugar, que es lo que permite a Norman decir "cuarta vez esta semana en la
+   *  mandíbula" en vez de "tu tensión sigue alta". Opcional: nadie está
+   *  obligado a señalar. */
+  zones?: BodyZone[];
 };
 
 export type MentorMessage = {

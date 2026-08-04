@@ -10,7 +10,8 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { Aura } from '@/components/aura';
+import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
 import {
@@ -62,7 +63,16 @@ export function HeroMoments() {
           state: momentState,
         });
 
-        if (!selected) return;
+        if (!selected) {
+          // Primera vez: `selectMoment` calla a propósito (decir "bienvenido de
+          // nuevo" a quien nunca ha vuelto es mentir). Pero hay que SEMBRAR la
+          // fecha igual, o `lastShownDate` se queda en null para siempre y el
+          // motor no arranca nunca. Mañana ya hay historia que contar.
+          if (momentState.lastShownDate === null) {
+            await writeLocal(STORAGE_KEY, { ...momentState, lastShownDate: today });
+          }
+          return;
+        }
         setMoment(selected);
         analytics.track('hero_moment_shown', { kind: selected.kind });
         await writeLocal(STORAGE_KEY, markMomentShown(momentState, today, selected));
@@ -84,6 +94,10 @@ export function HeroMoments() {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={dismiss} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={dismiss}>
+        {/* El momento del héroe es de los pocos instantes inmersivos del
+            producto: el aura le da cuerpo al fondo en vez de dejarlo en un
+            velo negro plano. */}
+        <Aura state="umbral" weight={0.75} />
         <Pressable style={s.panel} onPress={(e) => e.stopPropagation()}>
           <View style={s.topAccent} />
           <View style={s.content}>
@@ -126,10 +140,14 @@ const s = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.lg,
   },
+  // Las palabras del propio usuario a 14px dentro de una tarjeta era lo
+  // contrario de la referencia, donde el usuario es lo MÁS grande de la
+  // pantalla. Aquí es lo único que hay: que pese como tal.
   message: {
-    ...typography.body,
-    fontFamily: Fonts.displayMedium,
+    fontFamily: Fonts.display,
+    fontSize: 26,
+    lineHeight: 34,
     color: palette.ivory,
-    lineHeight: 24,
+    letterSpacing: 0.2,
   },
 });
