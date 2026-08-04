@@ -391,17 +391,29 @@ export default function DashboardScreen() {
 
   // ── Shared JSX blocks (idénticos en mobile y desktop) ─────────────────────
 
-  // Mando de hoy — una sola decisión, ancla forward del día (hero desktop)
+  // EL TURNO — una sola tarjeta, una sola opinión, un solo destino.
+  //
+  // Había DOS, y las dos salían del MISMO objeto `turno`: esta (el titular a
+  // 26px) y `nbaBlock` (el verbo a 11px). O sea que la pantalla decía lo mismo
+  // dos veces con dos pesos distintos — y encima la grande, la que manda
+  // visualmente, navegaba a `/norte` mientras la chica llevaba a la acción de
+  // verdad. El usuario pulsaba lo que pesaba y acababa en otro sitio.
+  //
+  // Ahora el titular, el delta y el porqué viven juntos y van a `turno.route`.
   const mandoStripBlock = (
     <GoldAccentCard
-      onPress={() => router.push('/(tabs)/norte')}
+      onPress={() => router.push(turno.route as never)}
       accessibilityRole="button"
-      accessibilityLabel="Tu mando de hoy">
-      <Text style={styles.mandoLabel}>TU MANDO DE HOY</Text>
+      accessibilityLabel={`${mandoDeHoy}. ${turno.why}`}>
+      <Text style={styles.mandoLabel}>TU TURNO</Text>
       <Text style={styles.mandoText}>{mandoDeHoy}</Text>
-      <Text style={styles.mandoCaption}>
-        Tu única decisión no-negociable de hoy — sale de tu Norte y tu lectura del check-in.
-      </Text>
+      {/* El delta primero: es lo único que el usuario no podía saber solo. */}
+      {turno.delta && <Text style={styles.mandoDelta}>{turno.delta}</Text>}
+      <Text style={styles.mandoCaption}>{turno.why}</Text>
+      <View style={styles.mandoCta}>
+        <Text style={styles.mandoCtaText}>{turno.verb}</Text>
+        <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
+      </View>
     </GoldAccentCard>
   );
 
@@ -423,29 +435,6 @@ export default function DashboardScreen() {
         </Text>
       </View>
       <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
-    </HoverCard>
-  );
-
-  // Ya no hay condición: el turno SIEMPRE existe (ese es el invariante de
-  // `selectTurno`, con test que barre el espacio de entradas). Esta tarjeta
-  // pasa de no renderizar nunca a ser la que manda.
-  const nbaBlock = (
-    <HoverCard
-      onPress={() => router.push(turno.route as never)}
-      accessibilityRole="button"
-      accessibilityLabel={`${turno.verb}. ${turno.why}`}
-      style={styles.nbaCard}>
-      <View style={styles.nbaBadge}>
-        <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />
-      </View>
-      <View style={styles.nbaTextBlock}>
-        <Text style={styles.nbaLabel}>TU TURNO</Text>
-        <Text style={styles.nbaAction}>{turno.verb}</Text>
-        {/* El delta primero: es lo único que el usuario no podía saber solo. */}
-        {turno.delta && <Text style={styles.nbaReason}>{turno.delta}</Text>}
-        <Text style={styles.nbaReason}>{turno.why}</Text>
-      </View>
-      <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
     </HoverCard>
   );
 
@@ -1246,7 +1235,6 @@ export default function DashboardScreen() {
               entering={FadeInDown.delay(280).springify().damping(20).stiffness(180)}
               style={styles.deskColAccion}>
               {anomalyBlock}
-              {nbaBlock}
               <GoldDivider label="HOY EN TU PROTOCOLO" />
               {mNextLessonBlock}
             </Animated.View>
@@ -1300,7 +1288,6 @@ export default function DashboardScreen() {
           {/* Señales en tiempo real (solo cuando aplican) */}
           {northAnchorStrip}
           {anomalyBlock}
-          {nbaBlock}
 
           {/* Norman */}
           {mNormanCard}
@@ -1602,6 +1589,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+  // El delta es lo único que el usuario no podía deducir solo: va en oro-texto,
+  // por encima del porqué.
+  mandoDelta: {
+    ...typography.body,
+    color: palette.goldText,
+    fontSize: 13,
+  },
+  mandoCta: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
+  },
+  mandoCtaText: {
+    ...typography.section,
+    color: palette.goldText,
+  },
 
   // ── Shared ────────────────────────────────────────────────────────────────
   time: {
@@ -1819,50 +1823,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Next best action card ───────────────────────────────────────────────────
-  nbaCard: {
-    alignItems: 'center',
-    backgroundColor: palette.charcoal,
-    borderColor: palette.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  nbaBadge: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  nbaTextBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  nbaLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  nbaAction: {
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: palette.ivory,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase' as const,
-    lineHeight: 16,
-  },
-  nbaReason: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 11,
-  },
 
   // ── Engagement bar ──────────────────────────────────────────────────────────
   engagementRow: {

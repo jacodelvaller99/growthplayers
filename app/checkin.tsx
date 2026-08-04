@@ -266,10 +266,22 @@ export default function CheckInScreen() {
 
   // Racha real para el aviso de protección (días consecutivos, no días de calendario).
   const streak = computeStreak(state.checkIns);
-  const [energy, setEnergy] = useState(todayCheckIn?.energy ?? 7);
-  const [clarity, setClarity] = useState(todayCheckIn?.clarity ?? 7);
-  const [stress, setStress] = useState(todayCheckIn?.stress ?? 4);
-  const [sleep, setSleep] = useState(todayCheckIn?.sleep ?? 7);
+  // ARRANCAN VACÍOS. Venían en 7/7/4/7, así que la pantalla abría con el aura
+  // verde de "recuperado" y un 7/10 "SISTEMA OPERATIVO" antes de que el usuario
+  // tocara nada: la app se contestaba a sí misma y le enseñaba el resultado
+  // como si fuera suyo. Es el mismo pecado que ya se corrigió en `defaultNorth`
+  // —donde el onboarding venía relleno con la identidad de otro— y aquí seguía
+  // vivo, en el dato que alimenta a Norman y el score soberano.
+  //
+  // Cuesta cuatro toques. Un check-in ES cuatro toques; pre-rellenarlo hacía
+  // que la mayoría pulsara guardar sobre ficción.
+  const [energy, setEnergy]   = useState<number | null>(todayCheckIn?.energy ?? null);
+  const [clarity, setClarity] = useState<number | null>(todayCheckIn?.clarity ?? null);
+  const [stress, setStress]   = useState<number | null>(todayCheckIn?.stress ?? null);
+  const [sleep, setSleep]     = useState<number | null>(todayCheckIn?.sleep ?? null);
+  // La lectura no existe hasta que las cuatro existen. Media verdad leída como
+  // verdad entera es peor que esperar.
+  const listo = energy !== null && clarity !== null && stress !== null && sleep !== null;
   const [systemNeed, setSystemNeed] = useState(todayCheckIn?.systemNeed ?? '');
   const [saved, setSaved] = useState(false);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
@@ -285,8 +297,11 @@ export default function CheckInScreen() {
   // silencio el detector de Norman, que pide 3 apariciones en 7 registros.
   const [bodyZones, setBodyZones]   = useState<BodyZone[]>(todayCheckIn?.zones ?? []);
 
-  // Real-time coherence score
-  const coherence = Math.round((energy + clarity + sleep + (11 - stress)) / 4);
+  // Real-time coherence score — 0 mientras falte algún valor (la tarjeta que lo
+  // muestra no se renderiza hasta que `listo`, así que nunca se ve ese 0).
+  const coherence = listo
+    ? Math.round((energy! + clarity! + sleep! + (11 - stress!)) / 4)
+    : 0;
   const coherenceStrong = coherence >= 7;
   const coherenceLabel =
     coherence >= 8
@@ -299,23 +314,23 @@ export default function CheckInScreen() {
 
   // Stress as intelligence — never a failure
   const stressReading =
-    stress >= 8
+    (stress ?? 0) >= 8
       ? `Estrés ${stress}/10 — tu sistema reconoce un desafío real. Eso es información, no debilidad.`
-      : stress >= 6
+      : (stress ?? 0) >= 6
         ? `Estrés ${stress}/10 — carga moderada activa. Opera con claridad sobre tus prioridades.`
-        : stress <= 3
+        : (stress ?? 99) <= 3
           ? `Estrés ${stress}/10 — sistema en calma. Condiciones óptimas para trabajo profundo.`
           : null;
 
   const submit = async () => {
-    if (submitting) return;
+    if (submitting || !listo) return;
     setSubmitting(true);
     try {
       const syncStatus = await saveCheckIn({
-        energy,
-        clarity,
-        stress,
-        sleep,
+        energy: energy!,
+        clarity: clarity!,
+        stress: stress!,
+        sleep: sleep!,
         systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
         zones: bodyZones.length ? bodyZones : undefined,
       });
@@ -370,7 +385,7 @@ export default function CheckInScreen() {
   // mandíbula apretada de un estómago cerrado, y se regulan distinto. Tocar la
   // silueta cuesta dos segundos y da una señal que ningún número da.
   // Opcional a propósito: el camino mínimo del check-in sigue siendo 30s.
-  const bodyInsight = readBody({ zones: bodyZones, stress });
+  const bodyInsight = readBody({ zones: bodyZones, stress: stress ?? 0 });
 
   // ── Recomendación accionable post-guardado ──────────────────────────────────
   // Lógica local determinista, priorizando el sistema más comprometido.
@@ -394,7 +409,7 @@ export default function CheckInScreen() {
         cta: bodyInsight.practice.label.toUpperCase(),
       };
     }
-    if (stress >= 7) {
+    if ((stress ?? 0) >= 7) {
       return {
         icon: 'self-improvement' as const,
         tag: 'DESCOMPRESIÓN',
@@ -404,7 +419,7 @@ export default function CheckInScreen() {
         cta: 'IR A RESPIRACIÓN',
       };
     }
-    if (sleep <= 4) {
+    if ((sleep ?? 99) <= 4) {
       return {
         icon: 'bedtime' as const,
         tag: 'RECUPERACIÓN',
@@ -414,7 +429,7 @@ export default function CheckInScreen() {
         cta: 'IR A MEDITACIÓN',
       };
     }
-    if (energy <= 4) {
+    if ((energy ?? 99) <= 4) {
       return {
         icon: 'battery-charging-full' as const,
         tag: 'PROTEGER ENERGÍA',
@@ -450,7 +465,7 @@ export default function CheckInScreen() {
   // ── Micro-ritual: estado pre (tensión declarada, banda 1–3) + logging ──────
   // El check-in mide estrés 1–10; lo llevamos a la misma escala 1–3 del post
   // para que el delta sea comparable de un toque.
-  const preTensionBand = stress >= 7 ? 3 : stress >= 4 ? 2 : 1;
+  const preTensionBand = (stress ?? 0) >= 7 ? 3 : (stress ?? 0) >= 4 ? 2 : 1;
   const logBreathing = (durationSeconds: number, cycles: number) => {
     if (cycles <= 0 || durationSeconds <= 5) return;
     void saveWellnessSession({
@@ -476,7 +491,7 @@ export default function CheckInScreen() {
   // precisamente el día en que el usuario más necesita saber para qué sirvió.
   // No hay dato: hay que decir eso, que además es verdad y es una promesa.
   const deltaLine = previousCheckIn
-    ? deltaSince({ energy, clarity, stress, sleep }, previousCheckIn)
+    ? deltaSince({ energy: energy!, clarity: clarity!, stress: stress!, sleep: sleep! }, previousCheckIn)
     : 'Esta es tu línea base. A partir de mañana todo se mide contra esto.';
 
   const recommendationCard = (
@@ -556,9 +571,9 @@ export default function CheckInScreen() {
   );
 
   const systemNeedSuggestions =
-    stress >= 7
+    (stress ?? 0) >= 7
       ? ['Decomprimirme antes de arrancar', 'Espacio para procesar sin decidir', 'Un solo foco hoy']
-      : energy <= 4
+      : (energy ?? 99) <= 4
         ? ['Mínimo viable hoy — una acción', 'Descanso sin culpa esta tarde', 'Apagar lo no urgente']
         : ['Claridad sobre mis prioridades', 'Foco sin interrupciones', 'Ejecutar sin analizar de más'];
 
@@ -642,10 +657,16 @@ export default function CheckInScreen() {
   // estado disabled no puedan divergir entre layouts.
   const submitButton = (
     <PrimaryButton
-      label={submitting ? 'GUARDANDO...' : 'GUARDAR CHECK-IN'}
+      label={
+        submitting ? 'GUARDANDO...'
+        : listo ? 'GUARDAR CHECK-IN'
+        // Deshabilitado y mudo era un callejón: el botón decía "guardar" y no
+        // guardaba, sin decir por qué.
+        : 'MARCA LOS CUATRO'
+      }
       icon={submitting ? 'hourglass-empty' : 'check'}
       onPress={submit}
-      disabled={submitting}
+      disabled={submitting || !listo}
     />
   );
 
@@ -698,8 +719,8 @@ export default function CheckInScreen() {
           que esto existe para no ser. Y se iba con el scroll. Aquí cubre la
           pantalla y se queda quieta. */}
       <Aura
-        state={auraFromCheckIn({ stress, energy, hour: new Date().getHours() })}
-        weight={Math.min(1, Math.max(stress, 10 - energy) / 10)}
+        state={listo ? auraFromCheckIn({ stress: stress!, energy: energy!, hour: new Date().getHours() }) : 'reposo'}
+        weight={listo ? Math.min(1, Math.max(stress!, 10 - energy!) / 10) : 0.4}
       />
         <ScrollView
           contentContainerStyle={[styles.contentDesktop, { paddingTop: insets.top + 32 }]}
@@ -748,7 +769,7 @@ export default function CheckInScreen() {
 
             {/* ── Right column: Coherencia + Necesidad ── */}
             <View style={styles.desktopRight}>
-              {coherenceCard}
+              {listo && coherenceCard}
 
               {!saved ? (
                 <>
@@ -781,8 +802,8 @@ export default function CheckInScreen() {
         que esto existe para no ser. Y se iba con el scroll. Aquí cubre la
         pantalla y se queda quieta. */}
     <Aura
-      state={auraFromCheckIn({ stress, energy, hour: new Date().getHours() })}
-      weight={Math.min(1, Math.max(stress, 10 - energy) / 10)}
+      state={listo ? auraFromCheckIn({ stress: stress!, energy: energy!, hour: new Date().getHours() }) : 'reposo'}
+      weight={listo ? Math.min(1, Math.max(stress!, 10 - energy!) / 10) : 0.4}
     />
     <ScrollView
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
@@ -848,7 +869,10 @@ export default function CheckInScreen() {
       </PremiumCard>
 
       {/* ── Lectura en vivo: se evalúa al mover los sliders ── */}
-      {capacityCardMobile}
+      {/* La lectura llega cuando llegan los cuatro. Antes se pintaba con los
+          valores por defecto, así que el usuario veía su "capacidad de hoy"
+          antes de haber dicho nada sobre hoy. */}
+      {listo && capacityCardMobile}
 
       {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
       {!saved ? (

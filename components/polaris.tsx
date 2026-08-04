@@ -542,7 +542,8 @@ export function ScaleSelector({
   icon,
 }: {
   label: string;
-  value: number;
+  /** `null` = el usuario todavía no ha elegido. NO es lo mismo que un 5. */
+  value: number | null;
   onChange: (value: number) => void;
   icon?: IconName;
 }) {
@@ -579,7 +580,8 @@ export function ScaleSelector({
               // ahí lo regalaba una barra de progreso. Además dejaba sin efecto
               // las dos cosas que sí deben brillar: el botón de guardar y la
               // zona del cuerpo que uno señala.
-              item < value && styles.scaleStepFilled,
+              // `value === null` = sin elegir: ninguna celda encendida.
+              value !== null && item < value && styles.scaleStepFilled,
               item === value && styles.scaleStepActive,
               item === value && styles.scaleStepGlow,
               pressed && { transform: [{ scale: 0.88 }] },
