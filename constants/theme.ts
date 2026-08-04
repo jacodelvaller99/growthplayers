@@ -160,8 +160,11 @@ export const typography = {
   // ya es una tipografía ancha. Light (300) por lo mismo — el peso lo da el
   // tamaño, no la tinta.
   //
-  // 26px es el techo real dentro de una tarjeta a 375px: ~17 caracteres por
-  // línea. Más grande y una frase normal se parte en cinco líneas rotas.
+  // 26px es el techo real dentro de una tarjeta a 375px. Medido en el navegador
+  // con esta misma cara y tracking: 11.3px por carácter → 26 caracteres por
+  // línea dentro de la tarjeta, 28 a ancho de pantalla. A los 44px que pedía la
+  // primera propuesta caen a 15 por línea, y ahí una frase de dos oraciones se
+  // parte en cuatro renglones rotos.
   statement: {
     fontFamily: Fonts.displayLight,
     fontSize:   26,

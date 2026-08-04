@@ -7,9 +7,10 @@
  *
  * Las frases están en el orden en que aparecen, una a una. Son cortas a
  * propósito: medidas en el navegador a 375px, cada una debe caber en DOS líneas
- * a 26px. GrandisExtended es una tipografía ancha — ahí entran unos 17
- * caracteres por línea, y a la tercera una declaración se convierte en párrafo.
- * (La frase sobre Norman iba junta y ocupaba cuatro; por eso son dos.)
+ * a 26px. GrandisExtended es una tipografía ancha — 11.3px por carácter, o sea
+ * 28 caracteres por línea aquí — y a la tercera línea una declaración se
+ * convierte en párrafo. (La frase sobre Norman iba junta y ocupaba cuatro
+ * líneas, 136px de alto; por eso ahora son dos frases.)
  *
  * EL VIDEO: cuando el dueño grabe la pieza de bienvenida, va exactamente aquí
  * —a pantalla completa, en lugar de esta secuencia—, y `umbral.tsx` queda como
