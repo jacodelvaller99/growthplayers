@@ -1180,10 +1180,12 @@ export default function ProgresoScreen() {
       {/* ── Transformation Narrative ── */}
       {narrativeBlock.length > 0 && (
         <View style={styles.narrativeCard}>
-          {/* El acto del arco, sin su frase: la frase ya la dice Comando al
-              abrir la app, y repetirla justo encima de tres párrafos de
-              historia era decir lo mismo dos veces. `compact` existe para
-              exactamente esto. */}
+          {/* `compact` aquí SÍ: encima hay tres párrafos de "TU HISTORIA" y la
+              frase del arco diría lo mismo una cuarta vez.
+              (El comentario anterior lo justificaba diciendo "la frase ya la
+              dice Comando al abrir la app" — y durante una ronda entera Comando
+              tampoco la decía, porque también pasaba `compact`. Dos sitios
+              escondiéndola cada uno porque el otro la mostraba.) */}
           <ArcHeader arc={arcForDay(protocolDay, arcoSuyas)} compact />
           <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
           {narrativeBlock.map((line, i) => (

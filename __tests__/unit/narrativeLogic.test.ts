@@ -46,7 +46,10 @@ describe('arcForDay', () => {
   });
 
   it('concuerda singular/plural en el primer día', () => {
-    expect(arcForDay(1).line).toContain('1 día ');
+    // El invariante es la CONCORDANCIA, no el espacio que venía detrás: la
+    // rama se acortó a una frase y ahora cierra en punto ("Llevas 1 día.").
+    expect(arcForDay(1).line).toContain('1 día.');
+    expect(arcForDay(1).line).not.toContain('1 días');
     expect(arcForDay(2).line).toContain('2 días');
   });
 
@@ -161,5 +164,69 @@ describe('milestoneCrossed', () => {
     const sinNada = milestoneCrossed({ streak: 6, protocolDay: 10 }, { streak: 7, protocolDay: 10 }, {});
     expect(sinNada?.line).not.toContain('«');
     expect(sinNada?.line).toContain('la mayoría abandona');
+  });
+});
+
+describe('arcForDay cita al usuario — la voz diaria de los 90 dias', () => {
+  // POR QUE: estas seis ramas se escribieron para que el arco dejara de hablarle
+  // a cualquiera, y NADA las verificaba. El equivalente para `milestoneCrossed`
+  // si existia. Ese hueco dejo pasar una ronda entera en la que la frase no se
+  // pintaba en ninguna pantalla: verde en CI, invisible en producto.
+  const suyas = {
+    painPoint: 'No logro parar de trabajar.',
+    purpose: 'Construir sin quemarme',
+    identity: 'Alguien que sostiene',
+  };
+
+  it('el dia 3 le recuerda su obstaculo', () => {
+    const a = arcForDay(3, suyas);
+    expect(a.line).toContain('No logro parar de trabajar');
+    expect(a.quoted).toBe(true);
+  });
+
+  it('el dia 5 le recuerda quien decide ser', () => {
+    const a = arcForDay(5, suyas);
+    expect(a.line).toContain('Alguien que sostiene');
+    expect(a.quoted).toBe(true);
+  });
+
+  it('el dia 12 vuelve al obstaculo, dos semanas despues', () => {
+    expect(arcForDay(12, suyas).line).toContain('No logro parar de trabajar');
+  });
+
+  it('los dias 20 y 45 citan el norte', () => {
+    expect(arcForDay(20, suyas).line).toContain('Construir sin quemarme');
+    expect(arcForDay(45, suyas).line).toContain('Construir sin quemarme');
+  });
+
+  it('el dia 75 le devuelve su identidad como hecho, no como decision', () => {
+    const a = arcForDay(75, suyas);
+    expect(a.line).toContain('Alguien que sostiene');
+    expect(a.line).toContain('lo eres');
+  });
+
+  it('sin palabras suyas NO inventa una cita, y lo marca', () => {
+    for (const dia of [1, 5, 12, 20, 45, 75]) {
+      const a = arcForDay(dia, {});
+      expect(a.quoted).toBe(false);
+      expect(a.line).not.toContain('«');
+      expect(a.line.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('la posicion en los 90 dias vive en el eyebrow, no dentro de la frase', () => {
+    // Se mudo ahi porque el movil perdia el dato entero cuando la frase se
+    // ocultaba: donde estas no puede depender de si la narrativa cabe.
+    expect(arcForDay(12, suyas).dayLabel).toBe('DÍA 12 · 90');
+    expect(arcForDay(12, {}).dayLabel).toBe('DÍA 12 · 90');
+  });
+
+  it('cada rama es UNA sola frase — el parrafo era lo que la hacia impintable', () => {
+    // Tres oraciones centradas encima del Mando fue la razon real de que
+    // alguien la escondiera. Si vuelve a crecer, vuelve el incentivo.
+    for (const dia of [1, 5, 12, 20, 45, 75]) {
+      const puntos = (arcForDay(dia, suyas).line.match(/[.!?]/g) ?? []).length;
+      expect(puntos).toBeLessThanOrEqual(2);
+    }
   });
 });

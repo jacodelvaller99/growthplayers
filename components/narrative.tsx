@@ -44,13 +44,19 @@ export function ArcHeader({ arc, compact = false }: { arc: Arc; compact?: boolea
       style={styles.arcWrap}
       accessible
       accessibilityRole="header"
-      accessibilityLabel={`${arc.actLabel}. ${arc.line}`}>
+      accessibilityLabel={`${arc.actLabel}. ${arc.dayLabel}. ${arc.line}`}>
       <View style={styles.arcEyebrowRow}>
         <View style={styles.arcRule} />
-        <Text style={styles.arcEyebrow}>{arc.actLabel}</Text>
+        <Text style={styles.arcEyebrow}>{arc.actLabel} · {arc.dayLabel}</Text>
         <View style={styles.arcRule} />
       </View>
-      {compact ? null : <Text style={styles.arcLine}>{arc.line}</Text>}
+      {/* La cita va en ORO. Es la misma gramática del Umbral y del mapa: el oro
+          marca lo que escribió el usuario. Sin distinguirla, la continuidad
+          existe en el string y no se nota en la pantalla — que es como estuvo
+          una ronda entera. */}
+      {compact ? null : (
+        <Text style={[styles.arcLine, arc.quoted && styles.arcLineQuoted]}>{arc.line}</Text>
+      )}
     </View>
   );
 }
@@ -194,6 +200,12 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: palette.ivoryDim,
     textAlign: 'center',
+  },
+  // Oro y no 26px: en Comando el Mando es la única cosa grande, y dos titulares
+  // del mismo tamaño es exactamente el "nada es primero" que este bucle vino a
+  // matar. El color dice "esto es tuyo"; el tamaño sigue diciendo "esto manda".
+  arcLineQuoted: {
+    color: palette.goldText,
   },
 
   // ConsequenceCard

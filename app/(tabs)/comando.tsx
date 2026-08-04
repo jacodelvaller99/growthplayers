@@ -1207,11 +1207,13 @@ export default function DashboardScreen() {
           {/* SETUP — el mismo arco que en móvil. El hero ya trae "DÍA N" en su
               eyebrow, pero no la línea narrativa: es la única voz de la app y
               vivía enterrada en la pestaña Progreso. */}
-          {/* `compact`: el acto, sin su parrafo. Encima del Mando habia ~133pt
-              de carraspeo —dos filetes, un eyebrow de 9px y cuatro lineas
-              centradas— antes de la unica orden del dia. El arco dice DONDE
-              estas; el Mando dice QUE hacer. Solo uno de los dos manda. */}
-          <ArcHeader arc={arc} compact />
+          {/* SIN `compact`. Con él, la frase que cita al usuario no se pintaba
+              en ninguna parte: los cuatro consumidores lo pasaban, así que el
+              arco personalizado vivía solo en el `accessibilityLabel`. El
+              problema real era el PÁRRAFO de tres oraciones, no la línea — así
+              que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
+              al eyebrow. El Mando sigue siendo lo único grande. */}
+          <ArcHeader arc={arc} />
           {northAnchorStrip}
 
           {/* ZONA 1 — hero cinematográfico full-width */}
@@ -1287,11 +1289,13 @@ export default function DashboardScreen() {
           {mHeader}
           {/* SETUP — día y acto. El móvil no tenía NINGÚN marcador de posición
               en el protocolo: el "Día N de 90" solo existía en la rama desktop. */}
-          {/* `compact`: el acto, sin su parrafo. Encima del Mando habia ~133pt
-              de carraspeo —dos filetes, un eyebrow de 9px y cuatro lineas
-              centradas— antes de la unica orden del dia. El arco dice DONDE
-              estas; el Mando dice QUE hacer. Solo uno de los dos manda. */}
-          <ArcHeader arc={arc} compact />
+          {/* SIN `compact`. Con él, la frase que cita al usuario no se pintaba
+              en ninguna parte: los cuatro consumidores lo pasaban, así que el
+              arco personalizado vivía solo en el `accessibilityLabel`. El
+              problema real era el PÁRRAFO de tres oraciones, no la línea — así
+              que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
+              al eyebrow. El Mando sigue siendo lo único grande. */}
+          <ArcHeader arc={arc} />
           {/* TENSIÓN — la única decisión de hoy. mandoStripBlock estaba escrito
               pero solo se montaba dentro de deskHero, así que el teléfono
               —donde se abre a diario— perdía la única pieza direccional. */}
