@@ -23,6 +23,7 @@ import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import { useWellnessStore } from '@/store/wellnessStore';
 import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, UserProfile, WellnessSession } from '@/types/lifeflow';
+import type { BodyZone } from '@/lib/bodyMapLogic';
 
 // ─── Local cache key ──────────────────────────────────────────────────────────
 const STATE_KEY = 'state';
@@ -38,6 +39,19 @@ function isMissingClientIdColumn(err: unknown): boolean {
   // 42703 undefined_column · 42P10 no unique/exclusion constraint matching ON CONFLICT
   return msg.includes('client_id') || msg.includes('on conflict') ||
     msg.includes('42703') || msg.includes('42p10');
+}
+
+// ─── Degradación de `daily_checkins.zones` (migración 20260804000000) ────────
+// Mismo contrato que `_clientIdColMissing`: si la columna no está, el check-in
+// se guarda SIN ella en vez de perderse entero.
+let _zonesColMissing = false;
+
+function isMissingZonesColumn(err: unknown): boolean {
+  const e = err as { message?: string; code?: string } | null;
+  const msg = (e?.message ?? '').toLowerCase();
+  // PGRST204 = PostgREST no encontró la columna en su caché de esquema.
+  return e?.code === 'PGRST204' || msg.includes('pgrst204') ||
+    (msg.includes('zones') && (msg.includes('column') || msg.includes('columna')));
 }
 
 async function persistMentorMessages(
@@ -295,6 +309,10 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     stress:     c.stress    ?? 5,
     sleep:      c.sleep     ?? 5,
     systemNeed: c.system_need ?? '',
+    // Las zonas se guardaban y no se volvían a leer: al recargar la app
+    // desaparecían, así que el patrón que Norman debe citar ("cuarta vez esta
+    // semana en la mandíbula") solo existía dentro de la sesión que lo escribió.
+    zones:      (c.zones as BodyZone[] | null) ?? undefined,
   }));
 
   // Rebuild completedTasks from DB rows
@@ -777,16 +795,47 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         zones:           checkIn.zones ?? null,
       };
       let syncStatus: 'synced' | 'queued' = 'synced';
+      // supabase-js v2 NO lanza en error de servidor: resuelve con `{ error }`.
+      // Mandar `zones` contra una base sin la migración 20260804000000 devuelve
+      // PGRST204, que rechaza la FILA ENTERA — no solo el campo. Sin leer
+      // `error`, el catch no se dispara, no se encola nada, `syncStatus` queda
+      // 'synced' y el usuario ve un check verde mientras su racha, su score y
+      // los datos que ve Norman se quedan en los de ayer. Un check-in perdido
+      // en silencio es el peor fallo posible en el loop central.
+      //
+      // Mismo patrón de degradación que `persistMentorMessages` (:36-84):
+      // detectar la columna ausente, marcarla, y reintentar sin ella.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const checkins = () => db.checkins() as any;
+      const upsertCheckIn = async (payload: Record<string, unknown>) => {
+        const { error } = await checkins().upsert(payload, { onConflict: 'user_id,date' });
+        if (error) throw error;
+      };
       try {
-        // Cast acotado: los tipos generados de Supabase todavía no conocen
-        // `zones` (la migración 20260804000000 aún no se aplicó a la fuente de
-        // generación). Mismo patrón que se usó para `user_profiles.role`.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (db.checkins() as any).upsert(checkInPayload, { onConflict: 'user_id,date' });
+        if (_zonesColMissing) {
+          const { zones: _drop, ...sinZonas } = checkInPayload;
+          await upsertCheckIn(sinZonas);
+        } else {
+          await upsertCheckIn(checkInPayload);
+        }
       } catch (e) {
-        console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
-        await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });
-        syncStatus = 'queued';
+        if (isMissingZonesColumn(e)) {
+          // Pre-migración: el resto del check-in NO puede perderse por un campo
+          // nuevo. Se reintenta sin `zones` y se recuerda para los siguientes.
+          _zonesColMissing = true;
+          const { zones: _drop, ...sinZonas } = checkInPayload;
+          try {
+            await upsertCheckIn(sinZonas);
+          } catch (e2) {
+            console.warn('[Supabase] saveCheckIn (encolado para reintento):', e2);
+            await enqueueWrite({ table: 'daily_checkins', payload: sinZonas, onConflict: 'user_id,date' });
+            syncStatus = 'queued';
+          }
+        } else {
+          console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
+          await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });
+          syncStatus = 'queued';
+        }
       }
 
       // Also update profile with latest score

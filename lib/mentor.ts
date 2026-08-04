@@ -9,6 +9,7 @@ import { streamGroq } from './groq';
 import { streamOpenAI } from './openai';
 import type { CheckIn } from '@/types/lifeflow';
 import type { AssembledMentorMemory } from '@/lib/memoryLogic';
+import { ZONE_LABEL, type BodyZone } from '@/lib/bodyMapLogic';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,29 @@ function analyzeUserPatterns(ctx: MentorContext): string {
       `No es cansancio — es carga acumulada sin descarga. ` +
       `Pregunta: "¿Cuándo fue la última vez que hiciste algo sin ningún propósito productivo?" ` +
       `Herramienta recomendada: escritura terapéutica o binaural de recuperación antes del contenido.`,
+    );
+  }
+
+  // ── Zona del cuerpo que se repite ──────────────────────────────────────────
+  // Los cuatro deslizadores dan la MAGNITUD y ocultan el LUGAR: "tensión 8" no
+  // distingue una mandíbula apretada de un estómago cerrado. El mapa corporal
+  // del check-in captura el DÓNDE, y hasta aquí ese dato moría en la pantalla:
+  // Norman solo miraba stress/energy/sleep. La promesa escrita en la migración
+  // 20260804000000 —"cuarta vez esta semana en la mandíbula"— era falsa.
+  //
+  // Se cuenta sobre los 7 más recientes y solo se nombra la zona dominante:
+  // una lista de siete partes del cuerpo no es un dato, es ruido.
+  const zoneCounts = new Map<BodyZone, number>();
+  for (const c of sorted.slice(0, 7)) {
+    for (const z of c.zones ?? []) zoneCounts.set(z, (zoneCounts.get(z) ?? 0) + 1);
+  }
+  const [topZone, topCount] = [...zoneCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+  if (topZone && topCount >= 3) {
+    lines.push(
+      `PATRÓN CORPORAL: el operador señaló ${ZONE_LABEL[topZone]} ${topCount} veces en sus últimos ` +
+      `${Math.min(sorted.length, 7)} registros. Es el dato más concreto que tienes: no es "tu tensión sigue alta", ` +
+      `es un lugar del cuerpo que se repite. Cítalo literal —"${topCount} veces en ${ZONE_LABEL[topZone].toLowerCase()}"— ` +
+      `y pregunta qué pasa alrededor de ese momento. NO interpretes clínicamente ni nombres diagnósticos.`,
     );
   }
 

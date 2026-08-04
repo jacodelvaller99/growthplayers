@@ -77,6 +77,8 @@ export type Database = {
           sleep: number | null;
           system_need: string | null;
           sovereign_score: number | null;
+          // Migracion 20260804000000. NULL = no quiso decir; [] = miro y no marco.
+          zones: string[] | null;
           created_at: string | null;
         };
         Insert: {
@@ -89,6 +91,7 @@ export type Database = {
           sleep?: number | null;
           system_need?: string | null;
           sovereign_score?: number | null;
+          zones?: string[] | null;
           created_at?: string | null;
         };
         Update: {
@@ -101,6 +104,7 @@ export type Database = {
           sleep?: number | null;
           system_need?: string | null;
           sovereign_score?: number | null;
+          zones?: string[] | null;
           created_at?: string | null;
         };
         Relationships: [];

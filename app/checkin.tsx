@@ -332,9 +332,35 @@ export default function CheckInScreen() {
     }
   };
 
+  // ── Dónde lo sientes ────────────────────────────────────────────────────────
+  // Los deslizadores dicen CUÁNTO y nunca DÓNDE. "Tensión 8" no distingue una
+  // mandíbula apretada de un estómago cerrado, y se regulan distinto. Tocar la
+  // silueta cuesta dos segundos y da una señal que ningún número da.
+  // Opcional a propósito: el camino mínimo del check-in sigue siendo 30s.
+  const bodyInsight = readBody({ zones: bodyZones, stress });
+
   // ── Recomendación accionable post-guardado ──────────────────────────────────
   // Lógica local determinista, priorizando el sistema más comprometido.
   const recommendation = (() => {
+    // Lo que la persona SEÑALÓ gana sobre lo que el deslizador estimó.
+    //
+    // Antes esta cadena no leía `bodyZones` ni una vez: señalabas la mandíbula
+    // y la app te mandaba a respiración por tener tensión ≥7. El gesto más
+    // íntimo del producto no cambiaba nada de lo que pasaba después — y un
+    // gesto sin consecuencia es una demo, no un mecanismo.
+    //
+    // El número dice CUÁNTO (y sigue graduando el tono de la lectura); la zona
+    // dice DÓNDE, que es lo que decide la salida física.
+    if (bodyZones.length && bodyInsight.practice) {
+      return {
+        icon: 'accessibility-new' as const,
+        tag: 'LO QUE SEÑALASTE',
+        title: bodyInsight.reading,
+        body: bodyInsight.practice.why,
+        route: bodyInsight.practice.route,
+        cta: bodyInsight.practice.label.toUpperCase(),
+      };
+    }
     if (stress >= 7) {
       return {
         icon: 'self-improvement' as const,
@@ -525,13 +551,6 @@ export default function CheckInScreen() {
     </PremiumCard>
   );
 
-  // ── Dónde lo sientes ────────────────────────────────────────────────────────
-  // Los deslizadores dicen CUÁNTO y nunca DÓNDE. "Tensión 8" no distingue una
-  // mandíbula apretada de un estómago cerrado, y se regulan distinto. Tocar la
-  // silueta cuesta dos segundos y da una señal que ningún número da.
-  // Opcional a propósito: el camino mínimo del check-in sigue siendo 30s.
-  const bodyInsight = readBody({ zones: bodyZones, stress });
-
   const bodyCard = (
     <PremiumCard style={styles.card}>
       <Text style={styles.systemLabel}>¿DÓNDE LO SIENTES?</Text>
@@ -543,21 +562,12 @@ export default function CheckInScreen() {
       />
       {bodyZones.length > 0 && (
         <View style={styles.bodyReading}>
+          {/* La lectura y nada más. La salida (la práctica de esa zona) vive en
+              la recomendación de después de guardar: aquí un botón secundario
+              sacaba de la pantalla ANTES de guardar —te llevabas la lectura y
+              perdías el check-in— y competía con el único primario que esta
+              pantalla debe tener. */}
           <Text style={styles.bodyReadingText}>{bodyInsight.reading}</Text>
-          {bodyInsight.practice && (
-            <>
-              <Text style={styles.bodyReadingWhy}>{bodyInsight.practice.why}</Text>
-              {/* La lectura terminaba en una frase preciosa y una puerta
-                  cerrada: ZONE_PRACTICE tenía label y route escritos, testeados
-                  y jamás renderizados. Señalar dónde duele y que la app no te
-                  lleve a la salida es el peor final posible para este gesto. */}
-              <SecondaryButton
-                label={bodyInsight.practice.label.toUpperCase()}
-                icon="arrow-forward"
-                onPress={() => router.push(bodyInsight.practice!.route as never)}
-              />
-            </>
-          )}
         </View>
       )}
     </PremiumCard>
@@ -1025,10 +1035,6 @@ const styles = StyleSheet.create({
   bodyReadingText: {
     ...typography.body,
     color: palette.ivory,
-  },
-  bodyReadingWhy: {
-    ...typography.caption,
-    color: palette.ash,
   },
   savedOffer: {
     borderColor: palette.lineGold,
