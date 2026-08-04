@@ -570,11 +570,21 @@ export function ScaleSelector({
             }}
             style={({ pressed }) => [
               styles.scaleStep,
-              item <= value && styles.scaleStepActive,
+              // Oro MACIZO solo en el paso elegido; el recorrido va tintado.
+              //
+              // Antes `item <= value` rellenaba de #FFC804 sólido todo lo que
+              // quedaba por debajo: con los valores por defecto (7/7/4/7) el
+              // check-in abría con 25 de 40 celdas de oro macizo, sin que el
+              // usuario hubiera tocado nada. El oro de esta marca se GANA, y
+              // ahí lo regalaba una barra de progreso. Además dejaba sin efecto
+              // las dos cosas que sí deben brillar: el botón de guardar y la
+              // zona del cuerpo que uno señala.
+              item < value && styles.scaleStepFilled,
+              item === value && styles.scaleStepActive,
               item === value && styles.scaleStepGlow,
               pressed && { transform: [{ scale: 0.88 }] },
             ]}>
-            <Text style={[styles.scaleStepText, item <= value && styles.scaleStepTextActive]}>
+            <Text style={[styles.scaleStepText, item === value && styles.scaleStepTextActive]}>
               {item}
             </Text>
           </Pressable>
@@ -1235,6 +1245,11 @@ const styles = StyleSheet.create({
   scaleStepActive: {
     backgroundColor: palette.gold,
     borderColor: palette.gold,
+  },
+  // El recorrido hasta el valor: se lee como camino, no como premio.
+  scaleStepFilled: {
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
   },
   scaleStepGlow: {
     shadowColor: palette.gold,

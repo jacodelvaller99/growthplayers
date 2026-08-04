@@ -642,7 +642,8 @@ export default function BinauralesScreen() {
 
   return (
     <View style={sc.root}>
-      <Aura state="reposo" />
+      {/* Enfocar. `reposo` es el gris neutro — aquí no se busca un estado, se sostiene la atención. */}
+      <Aura state="reposo" weight={0.8} />
     <ScrollView
       style={styles.auraScroll}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}

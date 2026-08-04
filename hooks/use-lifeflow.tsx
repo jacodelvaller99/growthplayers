@@ -165,7 +165,7 @@ const defaultState: LifeFlowState = {
     {
       id: 'seed-mentor',
       role: 'mentor',
-      text: 'Estoy leyendo tu protocolo. Haz check-in y te devuelvo una instruccion operativa para hoy.',
+      text: 'Estoy leyendo tu protocolo. Haz check-in y te devuelvo una instrucción operativa para hoy.',
       createdAt: DEFAULT_EPOCH,
     },
   ],
@@ -673,7 +673,9 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         ...state,
         onboardingCompleted: true,
         protocolStartDate:   now,
-        profile:             payload.profile,
+        // El obstáculo entra al perfil, no solo a la memoria de Norman: el
+        // Umbral se lo cita de vuelta al cruzar.
+        profile:             { ...payload.profile, painPoint: payload.painPoint?.trim() || undefined },
         northStar:           payload.northStar,
         activeProgramId:     payload.activeProgramId,
       };

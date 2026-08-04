@@ -279,10 +279,11 @@ export default function CheckInScreen() {
   // La lectura interna es opcional, y el ritual/recomendación se difieren a una oferta.
   const [showNeed, setShowNeed]     = useState(false);
   const [showRegula, setShowRegula] = useState(false);
-  // Arranca ENCENDIDO. Estaba en false detras de un + gris identico al de
-  // la nota opcional y rotulado (opcional): la pieza que el dueno llamo el
-  // mejor UX que ha visto no la veia nadie. No tocar nada ya es opt-out.
-  const [bodyZones, setBodyZones]   = useState<BodyZone[]>([]);
+  // Rehidrata como los otros cinco campos. Era el ÚNICO que no lo hacía:
+  // reabrir el check-in la misma tarde y volver a guardar escribía `zones:
+  // null` encima de lo que habías señalado por la mañana, y erosionaba en
+  // silencio el detector de Norman, que pide 3 apariciones en 7 registros.
+  const [bodyZones, setBodyZones]   = useState<BodyZone[]>(todayCheckIn?.zones ?? []);
 
   // Real-time coherence score
   const coherence = Math.round((energy + clarity + sleep + (11 - stress)) / 4);
@@ -467,7 +468,13 @@ export default function CheckInScreen() {
   // los sliders (:284), así que sin esto el acto de guardar no revela nada y la
   // pantalla se siente como un formulario, no como una lectura.
   const previousCheckIn = state.checkIns.find((c) => c.id !== todayCheckIn?.id) ?? null;
-  const deltaLine = deltaSince({ energy, clarity, stress, sleep }, previousCheckIn);
+  // El primer check-in no tiene contra qué compararse, así que `deltaSince`
+  // devuelve null y la tarjeta se quedaba sin su única línea de recompensa —
+  // precisamente el día en que el usuario más necesita saber para qué sirvió.
+  // No hay dato: hay que decir eso, que además es verdad y es una promesa.
+  const deltaLine = previousCheckIn
+    ? deltaSince({ energy, clarity, stress, sleep }, previousCheckIn)
+    : 'Esta es tu línea base. A partir de mañana todo se mide contra esto.';
 
   const recommendationCard = (
     <ConsequenceCard
@@ -803,6 +810,15 @@ export default function CheckInScreen() {
         </Text>
       </GoldAccentCard>
 
+      {/* La pregunta abre; los deslizadores completan.
+          Estaba el CUARTO bloque: header → intro → BIOMETRÍA → cuatro
+          ScaleSelector (que en 375px envuelven a dos filas cada uno) → tarjeta
+          de capacidad, y recién ahí el cuerpo — unos 1.200px de scroll y 40
+          objetivos táctiles administrativos antes de la pieza que el dueño
+          llamó el mejor UX que ha visto. La ronda anterior le quitó el plegado
+          pero no lo sacó del sótano. En escritorio ya estaba arriba. */}
+      {!saved && bodyCard}
+
       {/* ── Biometrics ── */}
       <GoldDivider label="BIOMETRÍA" />
       <PremiumCard style={styles.card}>
@@ -828,7 +844,6 @@ export default function CheckInScreen() {
       {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
       {!saved ? (
         <>
-          {bodyCard}
           {submitButton}
           {needToggle}
           {showNeed && systemNeedCard}

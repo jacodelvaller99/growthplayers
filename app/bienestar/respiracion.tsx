@@ -186,7 +186,8 @@ export default function RespiracionScreen() {
           permite color de fondo. Va FUERA del ScrollView y anclado al
           viewport: dentro del `contentContainerStyle` (que es `maxWidth: 430`
           centrado) se vería como una franja con costura contra el negro. */}
-      <Aura state="reposo" />
+      {/* Regular. Mismo verde que meditación: la misma familia de acto. */}
+      <Aura state="recuperado" weight={0.8} />
       <ScrollView
         style={styles.flex}
         contentContainerStyle={[

@@ -31,6 +31,18 @@ colors:
   info: "#3D8FC0"
   wellness-purple: "#7C5CBF"
 typography:
+  statement:
+    # La frase que le pertenece al usuario: su lectura corporal, el mando del
+    # dia, el eco del heroe, cada beat del Umbral. UNICO token display en caja
+    # baja -- es una frase, no un rotulo, y versalitas a este tamano se leen
+    # como un grito. 26px es el techo medido dentro de una tarjeta a 375px
+    # (11.3px por caracter -> 26 caracteres por linea).
+    fontFamily: "GrandisExtended, Poppins, Arial, sans-serif"
+    fontSize: "26px"
+    fontWeight: 300
+    lineHeight: "34px"
+    letterSpacing: "-0.2px"
+    textTransform: "none"
   hero:
     fontFamily: "GrandisExtended, Poppins, Arial, sans-serif"
     fontSize: "34px"
@@ -162,6 +174,7 @@ The palette is intentionally narrow: one warm neutral-black canvas, one earned g
 **Character:** GrandisExtended supplies the voice of authority (bold, spaced, always shouting a little by design); Inter supplies the calm, readable counterweight. The pairing is a contrast axis — display/geometric against humanist body — not two similar sans-serifs competing.
 
 ### Hierarchy
+- **Statement** (300, 26px, 34px line-height, −0.2px tracking, **sentence case**): the sentence that belongs to the *user* — the body-map reading, the day's mando, the hero-moment echo, each beat of El Umbral. It exists because the hierarchy was inverted: administrative labels shouted in 11px tracked caps while the phrase the app hands back about the user's own body whispered at 14px. 26px is the measured ceiling inside a 375px card (11.3px per character → 26 characters per line); above that a normal sentence breaks into four ragged rows.
 - **Hero** (900, 34px, 40px line-height, 2px tracking, uppercase): splash and fullscreen player moments only — the rarest, loudest voice in the system.
 - **Title** (700, 20px, 26px line-height, 1.5px tracking, uppercase): screen header bars.
 - **Section** (500, 11px, 16px line-height, 2px tracking, uppercase): card headings and section labels — the most common display-font usage.
@@ -170,7 +183,9 @@ The palette is intentionally narrow: one warm neutral-black canvas, one earned g
 - **Mono** (11px, 16px line-height, 0.5px tracking): data readouts, timestamps.
 
 ### Named Rules
-**The All-Caps Display Rule.** Every GrandisExtended usage is uppercase, no exceptions. Mixed-case GrandisExtended reads as a bug, not a style choice.
+**The All-Caps Display Rule — with exactly one exception.** Every GrandisExtended usage is uppercase *except* `statement`. The rule holds for anything the *system* says (labels, headers, section titles): mixed-case GrandisExtended there reads as a bug. It inverts for anything the *user* said, or that the app says back to the user as a sentence — a personal statement set in tracked caps reads as a command shouted at them. The tell that this exception was missing: `turno.headline` (a real sentence, with a period) rendered through `typography.title` came out as "BAJA LA CARGA ANTES DE EJECUTAR."
+
+**The User's Words Are the Largest Thing on Screen.** When a screen shows something the user wrote or something the app is telling them about *themselves*, that text takes `statement` and everything around it stays quiet. This is the single rule most often broken by well-meaning additions: a new card arrives with a tidy 11px uppercase title, and the user's own sentence ends up smaller than the label announcing it.
 
 ## 4. Elevation
 
@@ -212,6 +227,12 @@ Flat by default, with shadow reserved strictly for things that visually float ab
 - **Desktop sidebar** (240px fixed): grouped by domain (Comando · Protocolo · Norman · Recuperación), active item marked by a 3px gold left bar plus a tinted gold background — the sidebar is the one place a persistent gold background tint is acceptable, because it marks exactly one item at a time.
 - **Hover / focus states:** every interactive sidebar row and card uses the shared `HoverCard` primitive — on web, hover lifts the element 2px, tints the border to `border-hard`, and shows a solid 2px gold focus ring on keyboard focus; on native, hover is a no-op and only the press state (0.9 opacity) applies. Transitions run at 160ms.
 - **Mobile:** bottom tab bar, hidden entirely on desktop (`display: none`) in favor of the sidebar.
+
+### Body Map (`components/body-map.tsx`)
+A silhouette built from rounded `View`s — no image, no SVG asset — with seven tappable zones (head, jaw, throat, chest, stomach, back, hands) plus a chip legend below it. It is the one gesture in the product that no competitor has: the four sliders capture *how much*, this captures *where*, and the two regulate differently. **Order of touch is information**, not noise: `zones[0]` decides the practice the app routes to after saving, because the first place someone points to is the one they felt first. Zones are transparent fills with a `rgba(255,255,255,0.38)` border (3:1 against the silhouette, per WCAG 1.4.11 for essential graphics); selection paints them `goldLight` over a solid gold border — the earned accent, earned here by saying where it hurts. Press feedback *brightens* (`goldGlow`); it must never dim, because a zone fading under the finger says the opposite of what the gesture means. `hitSlop` is lateral-only on the five stacked zones, since a uniform vertical slop let the later-rendered throat swallow half the jaw.
+
+### Aura (`components/aura.tsx`)
+A very low-opacity radial glow behind the content, tied to a state (`reposo` · `recuperado` · `tension` · `noche` · `umbral`). It breathes in **scale, not opacity** — at ~0.10 alpha an opacity animation lands below display quantization and is invisible by definition, while a soft edge crossing pixels reads. Hard brand ceiling: opacity never exceeds 0.14, enforced by `MAX_OPACITY` in `lib/auraLogic.ts` and pinned by a test that hard-codes the number rather than importing it. **Where it goes:** El Umbral, the wellness practices, the check-in, the hero moments. **Where it never goes:** Comando, Progreso, Programas, and the whole admin surface — the cockpit is not decorated. That exclusion is a brand rule, not a preference, and it is greppable.
 
 ### Sovereign Score Ring (signature component)
 The one recurring "hero" visual in the system: an animated circular progress ring (SVG stroke-dasharray, 900ms ease) with a count-up number in its center, gold stroke against a charcoal track. It is the closest thing this system has to a mascot, deliberately restrained to a single ring rather than a cast of characters — the score is the character.

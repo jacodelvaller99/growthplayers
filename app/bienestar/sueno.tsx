@@ -174,7 +174,8 @@ export default function SuenoScreen() {
 
   return (
     <View style={sc.root}>
-      <Aura state="reposo" />
+      {/* Dormir. `noche` es el único estado azul de la paleta. */}
+      <Aura state="noche" weight={0.85} />
     <ScrollView
       style={styles.auraScroll}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}

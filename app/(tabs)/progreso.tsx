@@ -1693,8 +1693,8 @@ export default function ProgresoScreen() {
 const styles = StyleSheet.create({
   // Transformation narrative
   narrativeCard: {
-    backgroundColor: 'rgba(179,141,60,0.06)',
-    borderColor: 'rgba(179,141,60,0.2)',
+    backgroundColor: palette.goldGlow,
+    borderColor: palette.lineGold,
     borderRadius: 8,
     borderWidth: 1,
     gap: 10,

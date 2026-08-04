@@ -26,9 +26,43 @@ import { PrimaryButton } from '@/components/polaris';
 import { Colors, palette, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { UMBRAL_BEAT_MS, UMBRAL_CLOSING, UMBRAL_SCRIPT } from '@/data/umbral';
+import { citar, UMBRAL_BEAT_MS, UMBRAL_CLOSING, UMBRAL_SCRIPT } from '@/data/umbral';
 
 const BEAT_MS = 700;
+
+/**
+ * Aparece con un fade y un desplazamiento mínimo hacia arriba.
+ *
+ * Genérico a propósito: lo usan la frase (`Beat`) y el cierre. La única razón
+ * de que el cierre no entrara igual era que estaba escrito aparte.
+ */
+function Fade({ style, children }: { style?: object; children: React.ReactNode }) {
+  const reduced = useReducedMotion();
+  const anim = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (reduced) { anim.setValue(1); return; }
+    Animated.timing(anim, { toValue: 1, duration: BEAT_MS, useNativeDriver: true }).start();
+
+    // Misma red de seguridad que las frases: sin fotogramas, esto se queda en
+    // opacidad 0 para siempre y no habría botón para cruzar.
+    const net = setTimeout(() => anim.setValue(1), BEAT_MS + 200);
+    return () => clearTimeout(net);
+  }, [anim, reduced]);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: anim,
+          transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+        },
+      ]}>
+      {children}
+    </Animated.View>
+  );
+}
 
 /** Una frase que aparece sola. Fade + un desplazamiento mínimo hacia arriba. */
 function Beat({ text, quoted = false }: { text: string; quoted?: boolean }) {
@@ -36,7 +70,7 @@ function Beat({ text, quoted = false }: { text: string; quoted?: boolean }) {
   const anim = useRef(new Animated.Value(reduced ? 1 : 0)).current;
 
   useEffect(() => {
-    if (reduced) return;
+    if (reduced) { anim.setValue(1); return; }
     Animated.timing(anim, { toValue: 1, duration: BEAT_MS, useNativeDriver: true }).start();
 
     // Red de seguridad: si nunca corre un frame, la frase se queda en opacidad 0
@@ -79,28 +113,55 @@ export default function UmbralScreen() {
   // —ya están ahí tras `completeOnboarding`— y NO viajan como parámetros de
   // ruta: en web eso las pondría en la barra de direcciones, y son lo más
   // íntimo que ha escrito en la app.
-  const purpose = state.northStar.purpose.trim();
-  const identity = state.northStar.identity.trim();
+  const painPoint = citar(state.profile.painPoint ?? '');
+  const purpose = citar(state.northStar.purpose);
+  const identity = citar(state.northStar.identity);
+  const name = state.profile.name.trim();
+
+  // Las suyas primero. Los tres campos son opcionales en el onboarding, así que
+  // si no escribió ninguno el Umbral no contendría una sola palabra suya: para
+  // ese caso queda su nombre, que sí es obligatorio. Una app que te lee de
+  // vuelta y no tiene nada que leer debe decir eso, no fingir que sí.
+  const suyas: { text: string; quoted?: boolean }[] = [
+    ...(painPoint ? [{ text: `Dijiste que lo que se interpone es «${painPoint}».`, quoted: true }] : []),
+    ...(purpose ? [{ text: `Y que tu norte es «${purpose}».`, quoted: true }] : []),
+    ...(identity ? [{ text: `Decides ser «${identity}».`, quoted: true }] : []),
+  ];
 
   const beats: { text: string; quoted?: boolean }[] = [
+    ...(suyas.length ? suyas : [{ text: `${name || 'Aquí'} empieza el día 0.`, quoted: true }]),
     ...UMBRAL_SCRIPT.map((text) => ({ text })),
-    ...(purpose ? [{ text: `Dijiste que tu norte es «${purpose}».`, quoted: true }] : []),
-    ...(identity ? [{ text: `Y que decides ser «${identity}».`, quoted: true }] : []),
     { text: UMBRAL_CLOSING },
   ];
 
-  // Con movimiento reducido no hay secuencia: está todo desde el primer frame,
-  // incluido el botón. Esperar 15 segundos a que aparezca una salida que no se
-  // anima sería castigar justo a quien pidió menos animación.
-  const [shown, setShown] = useState(reduced ? beats.length : 1);
+  // `shown` va de 1 a beats.length + 1. El último paso NO monta una frase: monta
+  // el cierre. La frase final necesita su propio silencio — compartir fotograma
+  // con un botón le quita exactamente lo que la hace pesar.
+  const [shown, setShown] = useState(1);
 
+  // Movimiento reducido acelera, NO desvía.
+  //
+  // Antes esto era `useState(reduced ? beats.length : 1)` más un `if (reduced)
+  // return` en el efecto, y dejaba tirado justo a quien decía proteger:
+  // `useReducedMotion` arranca SIEMPRE en false (lee la preferencia por
+  // promesa), así que `shown` se inicializaba en 1 igual; cuando `reduced`
+  // resolvía a true, el efecto salía por el `return` y `shown` se quedaba en 1
+  // PARA SIEMPRE. Una frase, sin botón, sin salida salvo "SALTAR". El
+  // comentario juraba lo contrario.
+  //
+  // Ahora la preferencia solo cambia el RITMO. El fade ya se salta él solo
+  // dentro de `Beat`, así que con reduce-motion no se anima nada: simplemente
+  // las frases pasan de corrido.
   useEffect(() => {
-    if (reduced || shown >= beats.length) return;
-    const t = setTimeout(() => setShown((n) => n + 1), UMBRAL_BEAT_MS);
+    if (shown > beats.length) return;
+    const t = setTimeout(() => setShown((n) => n + 1), reduced ? 0 : UMBRAL_BEAT_MS);
     return () => clearTimeout(t);
   }, [reduced, shown, beats.length]);
 
-  const done = shown >= beats.length;
+  const done = shown > beats.length;
+  // Cuando entra el cierre, la última frase SE QUEDA. Desaparecerla para poner
+  // un botón sería cambiar la frase por el trámite.
+  const current = beats[Math.min(shown, beats.length) - 1];
   const enter = () => router.replace('/(tabs)/comando');
 
   return (
@@ -111,7 +172,7 @@ export default function UmbralScreen() {
           secuencia cinematográfica sin salida es una pantalla de carga. */}
       {!done && (
         <Pressable
-          onPress={() => setShown(beats.length)}
+          onPress={() => setShown(beats.length + 1)}
           accessibilityRole="button"
           accessibilityLabel="Saltar la introducción"
           style={({ pressed }) => [styles.skip, { top: insets.top + spacing.md }, pressed && { opacity: 0.6 }]}>
@@ -119,17 +180,26 @@ export default function UmbralScreen() {
         </Pressable>
       )}
 
+      {/* UNA frase a la vez. Antes era `slice(0, shown)` y se apilaban: el
+          contenedor no tiene scroll, así que con el guion completo el texto se
+          salía por abajo —y lo que se salía eran justo las citas del usuario,
+          que no tienen tope de longitud—. Además cada frase nueva empujaba a
+          las anteriores de un salto sin animar: no era cine, era una lista
+          creciendo a tirones. Es lo que decía el propio `data/umbral.ts`:
+          "en el orden en que aparecen, una a una". */}
       <View style={styles.stage}>
-        {beats.slice(0, shown).map((b) => (
-          <Beat key={b.text} text={b.text} quoted={b.quoted} />
-        ))}
+        <Beat key={current.text} text={current.text} quoted={current.quoted} />
       </View>
 
+      {/* El cierre entra DEBAJO de la última frase, no en su lugar: la frase se
+          queda en pantalla mientras aparece la salida. Y llega un tiempo
+          después, no en el mismo fotograma — la frase que cierra el guion
+          necesita su propio silencio antes de que haya un botón que pulsar. */}
       {done && (
-        <View style={styles.footer}>
+        <Fade style={styles.footer}>
           <PolarisLogo size={36} color={palette.gold} />
           <PrimaryButton label="CRUZAR EL UMBRAL" icon="arrow-forward" onPress={enter} />
-        </View>
+        </Fade>
       )}
     </View>
   );

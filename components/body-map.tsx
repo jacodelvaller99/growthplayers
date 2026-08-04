@@ -68,7 +68,11 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
                 // El gesto más corporal de la app era el único sin háptica,
                 // mientras el resto de la pantalla vibra. Tocarte y que el
                 // teléfono no responda rompe justo la sensación que buscamos.
-                if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (Platform.OS !== 'web') {
+                  // Apagar no se siente igual que encender.
+                  if (on) Haptics.selectionAsync();
+                  else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
                 onToggle(zone);
               }}
               // hitSlop SOLO lateral en las zonas apiladas. Un slop vertical
@@ -90,7 +94,12 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
                   borderRadius: box.radius,
                 },
                 on && s.zoneOn,
-                pressed && { opacity: 0.7 },
+                // Encender, no desvanecer. `opacity: 0.7` sobre un borde blanco
+                // hacia que la zona se APAGARA bajo el dedo -- y en web es el
+                // unico feedback, porque la haptica se salta por plataforma.
+                // Senalar donde te duele y ver que se apaga es lo contrario de
+                // lo que el gesto quiere decir.
+                pressed && s.zonePressed,
               ]}
             />
           );
@@ -105,7 +114,16 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
           return (
             <Pressable
               key={zone}
-              onPress={() => onToggle(zone)}
+              onPress={() => {
+                // El chip hace exactamente lo mismo que la silueta; que uno
+                // vibre y el otro no es la clase de inconsistencia que se nota
+                // sin saber nombrarla.
+                if (Platform.OS !== 'web') {
+                  if (on) Haptics.selectionAsync();
+                  else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                onToggle(zone);
+              }}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: on }}
               accessibilityLabel={ZONE_LABEL[zone]}
@@ -161,13 +179,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     // `line` (alfa 0.07) sobre la silueta era invisible: no se veía que
     // hubiera regiones tocables hasta tocarlas. `lineHard` las declara.
-    borderColor: 'rgba(255,255,255,0.20)',
+    // Al 20% daba 1.84:1 contra el relleno de la silueta. WCAG 1.4.11 pide 3:1
+    // para graficos esenciales, y estas regiones son EL control de la pantalla.
+    borderColor: 'rgba(255,255,255,0.38)',
     backgroundColor: 'transparent',
   },
   // El oro marca lo señalado. Es el acento ganado de la marca: aquí lo gana el
   // usuario al decir dónde le duele.
   zoneOn: {
     backgroundColor: palette.goldLight,
+    borderColor: palette.gold,
+  },
+  zonePressed: {
+    backgroundColor: palette.goldGlow,
     borderColor: palette.gold,
   },
   legend: {

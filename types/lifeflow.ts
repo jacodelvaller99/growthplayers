@@ -40,6 +40,19 @@ export type UserProfile = {
   mlConsent?: boolean;
   /** Expo push notification token */
   expoPushToken?: string | null;
+  /**
+   * Lo que el usuario declaró que se interpone en su camino, en sus palabras.
+   *
+   * El onboarding lo pregunta y hasta ahora solo lo mandaba a `seedHeroOrigin`:
+   * la respuesta más personal de todo el flujo no quedaba en ningún sitio que
+   * la app pudiera volver a leer. El Umbral la necesita — es la única confesión
+   * de las tres cosas que escribe.
+   *
+   * Solo local: no hay columna en `profiles`. El Umbral corre en la misma
+   * sesión en que se escribió, así que alcanza. En una reinstalación se pierde,
+   * y no importa: el Umbral no se vuelve a cruzar.
+   */
+  painPoint?: string;
 };
 
 export type CheckIn = {

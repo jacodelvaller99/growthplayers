@@ -200,6 +200,10 @@ export default function OnboardingScreen() {
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <View key={i} style={[styles.stepSeg, i <= step && styles.stepSegActive]} />
         ))}
+        {/* La barra es la ÚNICA que numera. Las píldoras de cada pantalla
+            decían "PASO 1" sobre el paso 3 de 6 —contaban solo los pasos con
+            formulario— y dejaban al usuario con dos cuentas distintas de dónde
+            está. Ahora nombran la sección y no compiten con el contador. */}
         <Text style={styles.stepCounter}>{step + 1}/{TOTAL_STEPS}</Text>
       </View>
 
@@ -330,7 +334,7 @@ export default function OnboardingScreen() {
       {/* ─────────────────────────────────────────── STEP 2 — IDENTIDAD ── */}
       {step === 2 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 1 · IDENTIDAD" />
+          <StatusPill label="IDENTIDAD" />
           <Text style={styles.stepSubtitle}>Cuéntame quién eres</Text>
           <Text style={styles.stepTitle}>OPERADOR{'\n'}SOBERANO.</Text>
           <Text style={styles.stepBody}>
@@ -374,7 +378,7 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────────────────── STEP 3 — MI NORTE ── */}
       {step === 3 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 2 · MI NORTE" tone="gold" dot />
+          <StatusPill label="MI NORTE" tone="gold" dot />
           <Text style={styles.stepSubtitle}>Tu propósito para los próximos 90 días</Text>
           <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
@@ -425,7 +429,7 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────────────────── STEP 4 — OBSTÁCULO ── */}
       {step === 4 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 3 · TU SITUACIÓN" />
+          <StatusPill label="TU SITUACIÓN" />
           <Text style={styles.stepSubtitle}>Qué cambia todo — opcional</Text>
           <Text style={styles.stepTitle}>NOMBRA EL{'\n'}OBSTÁCULO.</Text>
           <Text style={styles.stepBody}>
@@ -484,7 +488,7 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────── STEP 5 — CÓDIGO DE ACCESO ── */}
       {step === 5 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 4 · MEMBRESÍA" />
+          <StatusPill label="MEMBRESÍA" />
           <Text style={styles.stepSubtitle}>Tu código de acceso, si tienes</Text>
           <Text style={styles.stepTitle}>ACTIVA TU{'\n'}MEMBRESÍA.</Text>
           <Text style={styles.stepBody}>

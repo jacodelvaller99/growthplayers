@@ -154,7 +154,9 @@ export function MilestoneToast({ milestone }: { milestone: Milestone | null }) {
           transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
         },
       ]}>
-      <MaterialIcons name="military-tech" size={20} color={palette.ink} />
+      {/* Sin medalla. `military-tech` es literalmente una condecoración, y
+          PRODUCT.md nombra la insignia-juguete como anti-referencia. La copy
+          ("Cruzaste la zona donde la mayoría abandona") aguanta sola. */}
       <View style={styles.milestoneText}>
         <Text style={styles.milestoneTitle}>{milestone.title}</Text>
         <Text style={styles.milestoneLine}>{milestone.line}</Text>
@@ -184,9 +186,12 @@ const styles = StyleSheet.create({
     color: palette.goldText,
   },
   arcLine: {
-    // Lo primero que se lee al abrir la app: dónde va en su arco de 90 días.
-    // A 14px competía de igual a igual con el pie de cualquier tarjeta.
-    ...typography.statement,
+    // NO lleva `statement`. Se le puso en la ronda anterior por subir de 14px, y
+    // el resultado fue peor: `arcForDay` devuelve 85-155 caracteres —tres
+    // oraciones—, así que el cockpit abría con ~300px de párrafo centrado a
+    // 26px mientras el verbo de "TU TURNO" seguía a 11px. `statement` es para
+    // FRASES; un párrafo a ese tamaño no es jerarquía, es ruido grande.
+    ...typography.body,
     color: palette.ivoryDim,
     textAlign: 'center',
   },
@@ -225,9 +230,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   consequenceTitle: {
-    ...typography.section,
+    // Es la lectura que la app le devuelve — el titular de la tarjeta, no su
+    // etiqueta. Iba en `typography.section`: versalitas a 13px con tracking 2.
+    // O sea que la frase sobre el propio cuerpo, que dos segundos antes se leía
+    // a 26px en caja baja, reaparecía convertida en rótulo administrativo. La
+    // jerarquía invertida sobrevivía dentro del mismo flujo que se arregló.
+    ...typography.statement,
     color: palette.ivory,
-    fontSize: 13,
   },
   consequenceBody: {
     ...typography.body,

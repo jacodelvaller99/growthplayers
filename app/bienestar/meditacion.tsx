@@ -453,7 +453,8 @@ export default function MeditacionScreen() {
           permite color de fondo. Va FUERA del ScrollView y anclado al
           viewport: dentro del `contentContainerStyle` (que es `maxWidth: 430`
           centrado) se vería como una franja con costura contra el negro. */}
-      <Aura state="reposo" />
+      {/* Asentar. `recuperado` es el verde bajo en croma. */}
+      <Aura state="recuperado" weight={0.8} />
     <ScrollView
       style={styles.auraScroll}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}

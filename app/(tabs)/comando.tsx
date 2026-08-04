@@ -1585,12 +1585,16 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase' as const,
   },
   mandoText: {
-    // Era `typography.body` a 15px: copy de párrafo compitiendo con un anillo
-    // de 132px. Lo único que manda en la pantalla tiene que pesar más que la
-    // decoración que lo rodea.
-    ...typography.title,
+    // La ÚNICA frase directiva de la app: qué toca ahora. Si algo merece el
+    // tamaño grande en el cockpit, es esto.
+    //
+    // Pasó por dos versiones malas. `typography.body` a 15px: copy de párrafo
+    // compitiendo con un anillo de 132px. Y luego `typography.title`, que es
+    // uppercase — pero `turno.headline` son oraciones con punto final, así que
+    // salía "BAJA LA CARGA ANTES DE EJECUTAR." Una instrucción gritada en
+    // versalitas no es autoridad, es un rótulo mal usado.
+    ...typography.statement,
     color: palette.ivory,
-    lineHeight: 26,
   },
   mandoCaption: {
     ...typography.body,
