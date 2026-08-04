@@ -164,7 +164,11 @@ export default function OnboardingScreen() {
         // historia de origen en la línea de tiempo del Memory OS.
         painPoint: painPoint.trim() || undefined,
       });
-      router.replace('/(tabs)/comando');
+      // Al Umbral, no al tablero. Acaba de escribir qué se interpone en su
+      // vida y quién decide ser; caer directo en una rejilla de métricas era
+      // gastar el momento con más carga del producto en una transición de
+      // router. El Umbral se lo lee de vuelta y de ahí entra a Comando.
+      router.replace('/(onboarding)/umbral');
     } catch (e) {
       // Si falla el cierre, re-habilita para reintentar (no dejamos el botón muerto)
       // y lo decimos: es el último paso del onboarding, fallar en silencio aquí

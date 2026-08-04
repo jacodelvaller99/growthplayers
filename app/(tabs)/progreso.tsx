@@ -30,6 +30,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { arcForDay } from '@/lib/narrativeLogic';
+import { ArcHeader } from '@/components/narrative';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -652,10 +653,6 @@ export default function ProgresoScreen() {
 
     const lines: string[] = [];
 
-    // La línea del arco sale de lib/narrativeLogic: la misma voz que ahora
-    // abre Comando. Estaba escrita aquí y solo aquí, invisible desde el home.
-    lines.push(arcForDay(protocolDay).line);
-
     if (state.northStar.identity && protocolDay >= 7) {
       lines.push(`Tu identidad declarada: "${state.northStar.identity.slice(0, 100)}". Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);
     } else if (completedLessonCount > 0) {
@@ -825,6 +822,7 @@ export default function ProgresoScreen() {
           <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
           {narrativeBlock.length > 0 && (
             <View style={styles.narrativeCard}>
+              <ArcHeader arc={arcForDay(protocolDay)} compact />
               <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
               {narrativeBlock.map((line, i) => (
                 <Text key={i} style={styles.narrativeLine}>{line}</Text>
@@ -1167,6 +1165,11 @@ export default function ProgresoScreen() {
       {/* ── Transformation Narrative ── */}
       {narrativeBlock.length > 0 && (
         <View style={styles.narrativeCard}>
+          {/* El acto del arco, sin su frase: la frase ya la dice Comando al
+              abrir la app, y repetirla justo encima de tres párrafos de
+              historia era decir lo mismo dos veces. `compact` existe para
+              exactamente esto. */}
+          <ArcHeader arc={arcForDay(protocolDay)} compact />
           <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
           {narrativeBlock.map((line, i) => (
             <Text key={i} style={styles.narrativeLine}>{line}</Text>

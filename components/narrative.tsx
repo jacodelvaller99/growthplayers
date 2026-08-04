@@ -184,7 +184,9 @@ const styles = StyleSheet.create({
     color: palette.goldText,
   },
   arcLine: {
-    ...typography.body,
+    // Lo primero que se lee al abrir la app: dónde va en su arco de 90 días.
+    // A 14px competía de igual a igual con el pie de cualquier tarjeta.
+    ...typography.statement,
     color: palette.ivoryDim,
     textAlign: 'center',
   },

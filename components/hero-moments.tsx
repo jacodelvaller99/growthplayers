@@ -11,7 +11,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/polaris';
 import { Aura } from '@/components/aura';
-import { Fonts, palette, radii, spacing } from '@/constants/theme';
+import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
 import {
@@ -144,10 +144,10 @@ const s = StyleSheet.create({
   // contrario de la referencia, donde el usuario es lo MÁS grande de la
   // pantalla. Aquí es lo único que hay: que pese como tal.
   message: {
-    fontFamily: Fonts.display,
-    fontSize: 26,
-    lineHeight: 34,
+    // Era 26/34 escrito a mano aquí. Ahora es el token `statement`, que nació
+    // de este mismo caso: la frase del usuario tiene un tamaño en la marca,
+    // no uno por pantalla.
+    ...typography.statement,
     color: palette.ivory,
-    letterSpacing: 0.2,
   },
 });

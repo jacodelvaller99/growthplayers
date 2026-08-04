@@ -17,6 +17,7 @@ import { useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
+import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { analytics } from '@/lib/analytics';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -181,6 +182,11 @@ export default function RespiracionScreen() {
 
   return (
     <View style={sc.root}>
+      {/* Las prácticas son de los pocos momentos inmersivos donde la marca
+          permite color de fondo. Va FUERA del ScrollView y anclado al
+          viewport: dentro del `contentContainerStyle` (que es `maxWidth: 430`
+          centrado) se vería como una franja con costura contra el negro. */}
+      <Aura state="reposo" />
       <ScrollView
         style={styles.flex}
         contentContainerStyle={[

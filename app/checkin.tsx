@@ -277,7 +277,6 @@ export default function CheckInScreen() {
   // Arranca ENCENDIDO. Estaba en false detras de un + gris identico al de
   // la nota opcional y rotulado (opcional): la pieza que el dueno llamo el
   // mejor UX que ha visto no la veia nadie. No tocar nada ya es opt-out.
-  const [showBody, setShowBody]     = useState(true);
   const [bodyZones, setBodyZones]   = useState<BodyZone[]>([]);
 
   // Real-time coherence score
@@ -553,7 +552,12 @@ export default function CheckInScreen() {
 
   const bodyCard = (
     <PremiumCard style={styles.card}>
-      <Text style={styles.systemLabel}>¿DÓNDE LO SIENTES?</Text>
+      {/* La pregunta es la invitación al único gesto que ninguna otra app hace.
+          Iba en `systemLabel` a 11px, indistinguible del rótulo de cualquier
+          campo administrativo — la misma voz para "¿dónde lo sientes?" que
+          para "necesidad del sistema". A `title` es lo primero que se lee de
+          la tarjeta, que es lo que es. */}
+      <Text style={styles.bodyQuestion}>¿DÓNDE LO SIENTES?</Text>
       <BodyMap
         selected={bodyZones}
         onToggle={(z) =>
@@ -571,19 +575,6 @@ export default function CheckInScreen() {
         </View>
       )}
     </PremiumCard>
-  );
-
-  const bodyToggle = (
-    <Pressable
-      onPress={() => setShowBody((v) => !v)}
-      accessibilityRole="button"
-      accessibilityLabel={showBody ? 'Ocultar el mapa del cuerpo' : 'Señalar dónde lo sientes'}
-      style={({ pressed }) => [styles.needToggle, pressed && { opacity: 0.7 }]}>
-      <MaterialIcons name={showBody ? 'remove' : 'add'} size={16} color={palette.goldText} />
-      <Text style={styles.needToggleText}>
-        {showBody ? 'Ocultar el cuerpo' : '¿Dónde lo sientes?'}
-      </Text>
-    </Pressable>
   );
 
   // Toggle de "lectura interna" — opcional, fuera del camino mínimo.
@@ -711,8 +702,7 @@ export default function CheckInScreen() {
 
               {!saved ? (
                 <>
-                  {bodyToggle}
-                  {showBody && bodyCard}
+                  {bodyCard}
                   {submitButton}
                   {needToggle}
                   {showNeed && systemNeedCard}
@@ -804,8 +794,7 @@ export default function CheckInScreen() {
       {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
       {!saved ? (
         <>
-          {bodyToggle}
-          {showBody && bodyCard}
+          {bodyCard}
           {submitButton}
           {needToggle}
           {showNeed && systemNeedCard}
@@ -1025,6 +1014,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  bodyQuestion: {
+    ...typography.title,
+    color: palette.ivory,
+  },
+
   // Lectura del cuerpo — le devuelve en palabras lo que acaba de señalar.
   bodyReading: {
     borderTopColor: palette.line,
@@ -1033,7 +1027,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   bodyReadingText: {
-    ...typography.body,
+    // La frase sobre su propio cuerpo. Iba en `body` (14px) — el mismo tamaño
+    // que el pie de una tarjeta, y más pequeña que el rótulo que la anuncia.
+    ...typography.statement,
     color: palette.ivory,
   },
   savedOffer: {

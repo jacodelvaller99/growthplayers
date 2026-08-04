@@ -147,6 +147,28 @@ export const typography = {
     letterSpacing: 2.0,
     textTransform: 'uppercase' as const,
   },
+  // La frase que le pertenece al usuario — su lectura, su acto, su compromiso.
+  //
+  // POR QUÉ EXISTE: la jerarquía estaba invertida. Las etiquetas administrativas
+  // ("¿DÓNDE LO SIENTES?", "LECTURA DEL SISTEMA") gritaban en versalitas
+  // rastreadas, y la frase que la app le devuelve sobre su propio cuerpo se
+  // susurraba en `body` a 14px — el mismo tamaño que un pie de tarjeta. Lo
+  // administrativo mandaba sobre lo íntimo.
+  //
+  // NO es uppercase, a diferencia del resto de la escala display: es una frase,
+  // no un rótulo. Versalitas a este tamaño se leen como un grito y GrandisExtended
+  // ya es una tipografía ancha. Light (300) por lo mismo — el peso lo da el
+  // tamaño, no la tinta.
+  //
+  // 26px es el techo real dentro de una tarjeta a 375px: ~17 caracteres por
+  // línea. Más grande y una frase normal se parte en cinco líneas rotas.
+  statement: {
+    fontFamily: Fonts.displayLight,
+    fontSize:   26,
+    lineHeight: 34,
+    fontWeight: '300' as const,
+    letterSpacing: -0.2,
+  },
   // Major screen title (header bars)
   title: {
     fontFamily: Fonts.display,
