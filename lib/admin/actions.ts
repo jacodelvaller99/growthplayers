@@ -563,6 +563,35 @@ export async function redeemAccessCode(params: {
   error?: string;
 }> {
   try {
+    // Camino bueno: una RPC que valida, consume Y activa la membresía en una
+    // sola transacción del lado del servidor (migración 20260804010000).
+    //
+    // El camino de abajo —SELECT de cliente sobre `access_codes`— lleva roto
+    // desde el endurecimiento de seguridad P0: esa tabla dejó de tener política
+    // de SELECT para no-admin, así que el SELECT devuelve cero filas y esta
+    // función respondía 'invalid' a códigos perfectamente válidos. Se conserva
+    // solo como degradación pre-migración; en cuanto la RPC exista, no corre.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rpcStatus, error: rpcErr } = await (supa as any)
+        .rpc('redeem_access_code_for_user', { p_code: params.code.trim().toUpperCase() });
+      if (!rpcErr && typeof rpcStatus === 'string') {
+        if (rpcStatus !== 'ok') {
+          return { status: rpcStatus as 'invalid' | 'exhausted' | 'expired' | 'inactive' };
+        }
+        // La membresía ya está creada y el tier sincronizado por la RPC. Se
+        // vuelve a leer el producto solo para el copy de confirmación.
+        const { data: mem } = await supa
+          .from('user_memberships')
+          .select('product')
+          .eq('user_id', params.userId)
+          .order('activated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return { status: 'ok', product: (mem as { product?: MembershipProduct } | null)?.product };
+      }
+    } catch (_) { /* RPC ausente (pre-migración) → camino de abajo */ }
+
     // 1. Fetch code record
     const { data: codeData, error: fetchError } = await supa
       .from('access_codes')

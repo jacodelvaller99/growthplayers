@@ -502,16 +502,16 @@ function SparklineNativeSkia({ label, values, color = palette.gold }: SparklineP
   );
 }
 
-// ─── Achievement Badge ───────────────────────────────────────────────────────
-
-export function AchievementBadge({ icon, label, earned }: { icon: IconName; label: string; earned: boolean }) {
-  return (
-    <View style={[styles.badge, !earned && styles.badgeEarned]}>
-      <MaterialIcons name={icon} size={22} color={earned ? palette.ink : palette.smoke} />
-      <Text style={[styles.badgeLabel, !earned && styles.badgeLabelDim]}>{label}</Text>
-    </View>
-  );
-}
+// ─── Achievement Badge — BORRADO ─────────────────────────────────────────────
+//
+// Era una ficha de 22% de ancho que se rellenaba de oro macizo al ganarse, con
+// icono de copa o medalla. Sus unicos consumidores eran las ocho baldosas de
+// LOGROS en Progreso, que es la "badge-as-toy mechanic" que PRODUCT.md nombra
+// como anti-referencia. Sin ellas, este componente no tiene a quien servir: un
+// primitivo de premio en el sistema de diseño es una invitacion a que vuelva.
+//
+// El reconocimiento del cruce vive en `MilestoneToast` (components/narrative),
+// que es sobrio y cita las palabras del usuario.
 
 // ─── State Meter ─────────────────────────────────────────────────────────────
 
@@ -1152,27 +1152,6 @@ const styles = StyleSheet.create({
   },
 
   // Achievement badge
-  badge: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    gap: 6,
-    padding: spacing.md,
-    width: '22%',
-  },
-  badgeEarned: {
-    backgroundColor: palette.graphite,
-    borderColor: palette.lineSoft,
-    borderWidth: 1,
-  },
-  badgeLabel: {
-    ...typography.label,
-    color: palette.ink,
-    textAlign: 'center',
-  },
-  badgeLabelDim: {
-    color: palette.smoke,
-  },
 
   // Progress
   progressCard: {

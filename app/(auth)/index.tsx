@@ -115,14 +115,21 @@ export default function AuthScreen() {
       return;
     }
     await runAuthAction('auth.register', async () => {
-      // Validar + consumir el código de forma ATÓMICA vía RPC SECURITY DEFINER.
-      // El cliente ya NO lee ni escribe access_codes directamente (cierra el hueco
-      // de enumeración de códigos y el double-spend). La RPC incrementa uses_count
-      // con guarda de concurrencia y devuelve el estado del canje.
+      // VALIDAR, no consumir. Aquí todavía no existe el usuario al que
+      // activarle la membresía, así que quemar el código en este punto lo
+      // dejaba agotado para el ÚNICO sitio que sí la activa (el paso 5 del
+      // onboarding): el cliente pagaba, se registraba, y tres pantallas
+      // después leía "este código ya fue usado" — el suyo, quemado por la app
+      // misma treinta segundos antes. Entraba en tier free y al tercer mensaje
+      // a Norman chocaba con un paywall que en la PWA no tiene salida.
+      //
+      // `check_access_code` (migración 20260804010000) valida sin tocar
+      // `uses_count`. El consumo Y la activación ocurren juntos, después, con
+      // `auth.uid()`.
       const code = accessCode.trim().toUpperCase();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: status, error: rpcErr } = await (supabase as any)
-        .rpc('redeem_access_code', { p_code: code });
+        .rpc('check_access_code', { p_code: code });
 
       if (rpcErr) {
         setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
@@ -139,10 +146,13 @@ export default function AuthScreen() {
         return;
       }
 
-      // Código válido y consumido — crear cuenta.
+      // Código válido (sin consumir) — crear cuenta. El código viaja en el
+      // metadata para que el onboarding no obligue a reescribirlo: lo pedía
+      // dos veces con el mismo copy, y el segundo era el que contaba.
       const { error: err } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
+        options: { data: { access_code: code } },
       });
       if (err) {
         setError(err.message);

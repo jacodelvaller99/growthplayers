@@ -8,7 +8,6 @@ import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AchievementBadge,
   AppHeader,
   DangerButton,
   GoldDivider,
@@ -599,17 +598,25 @@ export default function ProgresoScreen() {
     };
   }, [state.checkIns]);
 
-  // Achievements
-  const achievements = [
-    { icon: 'local-fire-department' as const, label: 'RACHA\n7D', earned: protocolDay >= 7 },
-    { icon: 'verified' as const, label: 'PRIMER\nMES', earned: protocolDay >= 30 },
-    { icon: 'bolt' as const, label: 'ENERGÍA\n8+', earned: (averages.energy ?? 0) >= 8 },
-    { icon: 'stars' as const, label: 'SCORE\n600', earned: score >= 600 },
-    { icon: 'fact-check' as const, label: '10 CHECK\nINS', earned: state.checkIns.length >= 10 },
-    { icon: 'emoji-events' as const, label: 'ELITE\n800', earned: score >= 800 },
-    { icon: 'psychology' as const, label: 'CLARIDAD\n8+', earned: (averages.clarity ?? 0) >= 8 },
-    { icon: 'workspace-premium' as const, label: 'SOBERANO\n90D', earned: protocolDay >= 90 },
-  ];
+  // SIN VITRINA DE TROFEOS. Aqui vivia un array de ocho fichas de 22% de ancho
+  // que se rellenaban de oro macizo al ganarse, con iconos de copa, estrellas y
+  // medalla, y etiquetas "ELITE 800" / "SOBERANO 90D".
+  //
+  // Es, literal, la anti-referencia que PRODUCT.md nombra: "badge-as-toy
+  // mechanics". Y rompia el principio del oro —se gana, no decora— de la forma
+  // mas directa posible: el oro como ficha-premio. El propio repo ya lo sabia:
+  // `components/narrative.tsx` quito UN icono `military-tech` del hito citando
+  // esta misma regla, mientras a dos archivos de distancia seguia el estante
+  // entero.
+  //
+  // El coste narrativo era el peor: la app contaba dos historias incompatibles
+  // sobre que es un logro. En el check-in, "hace una semana dijiste que lo que
+  // se interponia era X, y llevas siete dias apareciendo". En Progreso, una
+  // copa dorada que dice ELITE 800. La segunda le quita autoridad a la primera.
+  //
+  // Lo que queda ya cubre "donde estoy": el score soberano, el delta, y la
+  // tarjeta TU HISTORIA. Y el cruce de un hito lo reconoce `MilestoneToast`,
+  // que es sobrio y cita las palabras del usuario.
 
   // Archetype badges — earned by completing all lessons in a module with an arquetipo
   const archetypes = useMemo(() => {
@@ -882,12 +889,6 @@ export default function ProgresoScreen() {
                 )}
               </PremiumCard>
 
-              <GoldDivider label="LOGROS" />
-              <View style={styles.achievementsGrid}>
-                {achievements.map((a) => (
-                  <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
-                ))}
-              </View>
 
               <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
               <View style={styles.archetypeList}>
@@ -896,7 +897,10 @@ export default function ProgresoScreen() {
                     key={arch.id}
                     style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
                     <MaterialIcons
-                      name={arch.earned ? 'military-tech' : 'lock'}
+                      // Sin condecoracion: `military-tech` es la misma medalla que se quito del
+                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
+                      // de comprobado, no con un galardon.
+                      name={arch.earned ? 'check-circle-outline' : 'lock'}
                       size={18}
                       color={arch.earned ? palette.goldText : palette.smoke}
                     />
@@ -1357,14 +1361,6 @@ export default function ProgresoScreen() {
         </>
       )}
 
-      {/* ── Achievements ── */}
-      <GoldDivider label="LOGROS" />
-      <View style={styles.achievementsGrid}>
-        {achievements.map((a) => (
-          <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
-        ))}
-      </View>
-
       {/* ── Archetype badges ── */}
       <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
       <View style={styles.archetypeList}>
@@ -1373,7 +1369,10 @@ export default function ProgresoScreen() {
             key={arch.id}
             style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
             <MaterialIcons
-              name={arch.earned ? 'military-tech' : 'lock'}
+              // Sin condecoracion: `military-tech` es la misma medalla que se quito del
+                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
+                      // de comprobado, no con un galardon.
+                      name={arch.earned ? 'check-circle-outline' : 'lock'}
               size={18}
               color={arch.earned ? palette.goldText : palette.smoke}
             />
@@ -1867,11 +1866,6 @@ const styles = StyleSheet.create({
   },
 
   // Achievements
-  achievementsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
 
   // Archetype badges
   archetypeList: {
