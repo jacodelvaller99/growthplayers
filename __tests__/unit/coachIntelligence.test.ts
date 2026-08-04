@@ -277,3 +277,36 @@ describe('coachIntelligenceLogic — end to end', () => {
     expect(n).toContain('10 días sin escribir');
   });
 });
+
+describe('quien nunca escribio no se fue: no ha llegado', () => {
+  // POR QUE: `days_since_last_message` vale `Infinity` cuando el usuario nunca
+  // escribio a Norman — que es exactamente el usuario del dia 1
+  // (lib/coachIntelligence.ts:65 y :190). Sin guard, computeRelationalDepth da
+  // score 0 -> 'silent', selectNextAction da 'reconnect', y la unica decision
+  // primaria de Comando le dice al recien llegado que «lleva un tiempo fuera
+  // del sistema» y lo manda al check-in como si hubiera recaido. Ademas
+  // `Math.min(Infinity, 60)` es 60: el dossier le decia al coach que un
+  // usuario creado hoy lleva 60 dias en silencio, y el coach actua sobre eso.
+  const nuevo: CoachBundle = { ...emptyBundle(), days_since_last_message: Infinity };
+
+  it('no cuenta 60 dias de silencio de un usuario que acaba de entrar', () => {
+    const r = computeRelationalDepth(nuevo);
+    expect(r.days_silent).toBe(0);
+    expect(r.label).toMatch(/no ha escrito/i);
+  });
+
+  it('y la accion sugerida no es reconectar con quien nunca se fue', () => {
+    const a = selectNextAction(
+      computeDrivers(nuevo), nuevo, computeMomentum(nuevo), computeRelationalDepth(nuevo),
+    );
+    expect(a.kind).not.toBe('reconnect');
+  });
+
+  it('pero con 9 dias reales de silencio SI reconecta', () => {
+    const ido: CoachBundle = { ...emptyBundle(), days_since_last_message: 9 };
+    const a = selectNextAction(
+      computeDrivers(ido), ido, computeMomentum(ido), computeRelationalDepth(ido),
+    );
+    expect(a.kind).toBe('reconnect');
+  });
+});

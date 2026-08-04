@@ -332,17 +332,22 @@ export function computeRelationalDepth(bundle: CoachBundle): RelationalDepth {
   else if (score >= 45) state = 'open';
   else if (score >= 20) state = 'transactional';
 
+  // `Infinity` = nunca escribió. `Math.min(Infinity, 60)` da 60, así que el
+  // dossier le decía al coach que un usuario creado hoy lleva "60 días sin
+  // escribir" — y el coach actúa sobre eso.
+  const nuncaEscribio = !Number.isFinite(bundle.days_since_last_message);
+
   const stateLabel: Record<RelationalDepth['state'], string> = {
     deep: 'Conversación profunda y honesta',
     open: 'Relación activa, con apertura',
     transactional: 'Contacto puntual, poca profundidad',
-    silent: 'En silencio — reconectar',
+    silent: nuncaEscribio ? 'Aún no ha escrito — no es silencio, es el principio' : 'En silencio — reconectar',
   };
 
   return {
     score,
     state,
-    days_silent: bundle.days_since_last_message,
+    days_silent: nuncaEscribio ? 0 : bundle.days_since_last_message,
     turns_7d: turns,
     open_commitments: open,
     label: stateLabel[state],
@@ -373,7 +378,18 @@ export function selectNextAction(
   }
 
   // 1. Silencio → reconectar con calor humano, no presión.
-  if (relational.state === 'silent' || bundle.days_since_last_message >= 7) {
+  //
+  // `everWrote` NO es defensivo: `days_since_last_message` vale `Infinity`
+  // cuando el usuario nunca escribió a Norman, que es exactamente el usuario
+  // del día 1. Sin este guard, `relational.state` sale 'silent' (score 0) y
+  // el recién llegado entra por aquí — la app le dice que lleva un tiempo
+  // fuera del sistema al que acaba de terminar el onboarding.
+  //
+  // Quien nunca escribió no se fue: no ha llegado. Cae a los peldaños de
+  // abajo y termina en `investigate`, que `selectTurno` excluye a propósito
+  // para dejar decidir a la lectura de hoy.
+  const everWrote = Number.isFinite(bundle.days_since_last_message);
+  if (everWrote && (relational.state === 'silent' || bundle.days_since_last_message >= 7)) {
     return {
       kind: 'reconnect',
       what_to_say: `Lleva ${pluralDays(Math.min(bundle.days_since_last_message, 60))} sin escribir. Mándale un mensaje corto preguntando cómo va el cuerpo y el sueño — no le pidas resultados.`,

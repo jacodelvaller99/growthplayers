@@ -161,9 +161,16 @@ export function selectTurno(input: TurnoInput): Turno {
   const { narrative, kind, todayCheckIn, daysSinceLastCheckIn } = input;
 
   // Peldaño 1 — lo más informado, cuando hay red + ML + consentimiento.
+  //
+  // El `!(todayCheckIn && ...)` es el mismo invariante que el peldaño 2 y no
+  // una excepción: NINGÚN peldaño puede mandar a hacer la lectura que ya está
+  // hecha. La ronda anterior lo arregló abajo y lo dejó abierto aquí — que es
+  // el camino POR DEFECTO en cuanto el ML está vivo. Sin esto, `reconnect`
+  // (la rama que dispara el silencio) manda al check-in a quien acaba de
+  // hacerlo, y la pantalla se vuelve a contradecir con la tarjeta de al lado.
   if (narrative && kind && kind !== 'investigate') {
     const destino = RUTA_POR_KIND[kind];
-    if (destino) {
+    if (destino && !(todayCheckIn && destino.route === '/checkin')) {
       return {
         source: 'narrative',
         // La narrativa ya trae su porqué redactado; el delta queda para el

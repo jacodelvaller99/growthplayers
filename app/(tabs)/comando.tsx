@@ -223,10 +223,12 @@ export default function DashboardScreen() {
   // trae el destino real — el texto y la ruta salen del mismo cómputo y no
   // pueden volver a contradecirse.
   //
-  // El peldaño de narrativa de coaching entra cuando esta pantalla también
-  // cargue `fetchCoachIntelligence`; hasta entonces la escalera resuelve con
-  // los peldaños 2 y 3, que es exactamente para lo que se diseñó (degrada sin
-  // ML, sin red y sin consentimiento — el ML afina, no habilita).
+  // El peldaño 1 SÍ está cableado: `fetchCoachIntelligence` se llama unas
+  // líneas más abajo y su `kind` entra en `selectTurno`. Este comentario decía
+  // lo contrario, y por creerlo la ronda anterior arregló los peldaños 2 y 3 y
+  // dejó intacto el 1 —que es el que manda en cuanto hay ML—, donde el mismo
+  // defecto seguía vivo. Los peldaños 2 y 3 son la degradación (sin ML, sin
+  // red, sin consentimiento): el ML afina, no habilita.
   const daysSinceLastCheckIn = useMemo(() => {
     if (todayCheckIn) return 0;
     if (!latestCheckIn?.date) return null;

@@ -167,3 +167,41 @@ describe('invariantes que no se pueden romper', () => {
     }
   });
 });
+
+describe('NINGUN peldaño manda a hacer la lectura que ya esta hecha', () => {
+  // POR QUE ESTE BLOQUE Y NO OTRO TEST DE RAMA: la ronda anterior arreglo el
+  // peldaño 2 y escribio un test del peldaño 2. El peldaño 1 —el que manda en
+  // cuanto el ML esta vivo, o sea el camino POR DEFECTO— seguia mandando al
+  // check-in a quien ya lo hizo, y la suite estaba verde. Peor: el `it.each` de
+  // arriba afirma reconnect -> /checkin SIN pasar `todayCheckIn`, asi que el
+  // caso roto no se tocaba ni de refilon. Un test por rama deja pasar
+  // exactamente esto; aqui se fija la PROPIEDAD de toda la funcion.
+  const KINDS: TurnoKind[] = [
+    'confront', 'support', 'celebrate', 'investigate', 'rest_signal', 'reconnect',
+  ];
+
+  it('con lectura de hoy, ningun kind del ML enruta a /checkin', () => {
+    for (const kind of KINDS) {
+      const t = selectTurno({
+        narrative: { headline: 'Llevas un tiempo fuera del sistema.', why: 'x' },
+        kind,
+        todayCheckIn: SANO,
+        daysSinceLastCheckIn: 0,
+      });
+      expect(t.route).not.toBe('/checkin');
+      expect(t.verb).not.toMatch(/CHECK-IN/i);
+    }
+  });
+
+  it('sin lectura de hoy, `reconnect` SI puede pedirla', () => {
+    // El guard no rompe el caso legitimo: quien de verdad se fue y no se ha
+    // leido hoy debe volver por la lectura.
+    const t = selectTurno({
+      narrative: { headline: 'Llevas un tiempo fuera del sistema.', why: 'x' },
+      kind: 'reconnect',
+      todayCheckIn: null,
+      daysSinceLastCheckIn: 9,
+    });
+    expect(t.route).toBe('/checkin');
+  });
+});
