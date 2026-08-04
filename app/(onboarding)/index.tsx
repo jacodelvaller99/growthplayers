@@ -723,9 +723,6 @@ const styles = StyleSheet.create({
   formCard: {
     gap: spacing.lg,
   },
-  stack: {
-    gap: spacing.lg,
-  },
   stepTitle: {
     color: palette.ivory,
     fontFamily: Fonts.display,

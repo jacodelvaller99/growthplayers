@@ -1230,6 +1230,7 @@ const styles = StyleSheet.create({
   scaleRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'flex-start',
     gap: 4,
   },
   scaleStep: {
@@ -1237,7 +1238,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.charcoal,
     borderColor: palette.lineSoft,
     borderWidth: 1,
-    flex: 1,
+    // SIN `flex: 1`. Con flexWrap, a 301px de ancho util caben 6 pasos y los 4
+    // restantes bajan de fila -- y `flex: 1` los estiraba a ~73pt contra los
+    // 47pt de arriba. La escala 1-10 se veia como dos escalas distintas.
     height: 44,
     justifyContent: 'center',
     minWidth: 44,
@@ -1261,7 +1264,9 @@ const styles = StyleSheet.create({
   scaleStepText: {
     color: palette.ash,
     fontFamily: Fonts.mono,
-    fontSize: 10,
+    // 11 es el piso del proyecto para cualquier etiqueta visible, y estos son
+    // los diez numeros que hay que leer para calibrarse.
+    fontSize: 11,
   },
   scaleStepTextActive: {
     color: palette.ink,

@@ -14,8 +14,35 @@
  * webhook de Supabase no firma uno) — el gate es el header `x-webhook-secret`
  * contra el secret SEVEN_KEYS_WEBHOOK_SECRET. Fail closed: sin secret o con
  * secret incorrecto, 401 y no se llama a Resend ni se toca la tabla.
+ *
+ * ponytail: autocontenida (no importa ../_shared/supabase.ts como las demás
+ * funciones) para poder desplegarla desde el editor del dashboard de Supabase
+ * sin depender de que resuelva imports relativos fuera de esta carpeta — no
+ * hay CLI/service-role local en este repo (ver CLAUDE.md). Si más adelante se
+ * despliega por CLI, se puede volver a compartir _shared/supabase.ts.
  */
-import { adminSupabase, json, corsHeaders } from '../_shared/supabase.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const adminSupabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  { auth: { persistSession: false } },
+);
+
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-secret',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
+
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+  });
+}
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
 const WEBHOOK_SECRET = Deno.env.get('SEVEN_KEYS_WEBHOOK_SECRET') ?? '';

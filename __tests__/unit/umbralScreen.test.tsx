@@ -95,13 +95,36 @@ describe('El Umbral', () => {
     expect(mockReplace).toHaveBeenCalledWith('/(tabs)/comando');
   });
 
-  it('con movimiento reducido TAMBIÉN llega al botón', () => {
-    // La regresión que motivó este archivo: aquí el contador se congelaba en 1
-    // y la pantalla se quedaba con una frase y ninguna salida.
+  it('con movimiento reducido se LEE el guion — no se salta ni se congela', () => {
+    // Este test estaba mal escrito y certificaba el estado roto: solo miraba
+    // que "TAMBIÉN llega al botón". Con eso verde pasaron DOS regresiones
+    // opuestas — congelarse en la frase 1, y despachar las siete en ~20ms —
+    // porque en ambas se llegaba al boton. El invariante que fijaba era "llega
+    // al trámite", que es justo el diagnóstico que este loop persigue.
+    //
+    // Lo que importa es que las frases SE LEAN. Reducir movimiento significa
+    // menos movimiento, jamás menos contenido.
     mockReduced = true;
-    const { getByText } = render(<UmbralScreen />);
+    const { getByText, queryByText } = render(<UmbralScreen />);
+
+    // A cero milisegundos: su primera frase en pantalla, y NINGÚN botón.
+    getByText(/No logro parar de trabajar/);
+    expect(queryByText(CTA)).toBeNull();
+
+    // El reloj es el mismo para todos: un beat, una frase.
+    act(() => { jest.advanceTimersByTime(2600); });
+    getByText(/Construir sin quemarme/);
+    expect(queryByText(CTA)).toBeNull();
+
     correrSecuencia();
     getByText(CTA);
+  });
+
+  it('tocar adelanta la frase, sin esperar el reloj', () => {
+    const { getByLabelText, queryByText } = render(<UmbralScreen />);
+    act(() => { fireEvent.press(getByLabelText('Siguiente frase')); });
+    expect(queryByText(/No logro parar de trabajar/)).toBeNull();
+    expect(queryByText(/Construir sin quemarme/)).not.toBeNull();
   });
 
   it('SALTAR va directo al final', () => {

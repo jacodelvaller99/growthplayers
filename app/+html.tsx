@@ -37,6 +37,11 @@ export default function Root({ children }: PropsWithChildren) {
         {/* ── GrandisExtended preload — critical fonts first (reduces FOIT) ─── */}
         <link rel="preload" href="/assets/fonts/GrandisExtended-Bold.ttf"   as="font" type="font/ttf" crossOrigin="anonymous" />
         <link rel="preload" href="/assets/fonts/GrandisExtended-Medium.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+        {/* Light es la cara de `typography.statement` — el Umbral, el Mando y la
+            lectura del cuerpo. Sin precargar, la frase del usuario entra en la
+            tipografía de respaldo y CAMBIA DE CARA a mitad de lectura, que es
+            justo la frase que no debe parpadear. */}
+        <link rel="preload" href="/assets/fonts/GrandisExtended-Light.ttf"  as="font" type="font/ttf" crossOrigin="anonymous" />
 
         {/* ── Web Fonts: Inter + Space Mono (Google Fonts) ──────────────── */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

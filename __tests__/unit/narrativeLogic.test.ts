@@ -142,4 +142,24 @@ describe('milestoneCrossed', () => {
   it('no dispara en un día cualquiera', () => {
     expect(milestoneCrossed({ streak: 3, protocolDay: 12 }, { streak: 4, protocolDay: 13 })).toBeNull();
   });
+
+  it('cita al usuario cuando escribió algo, y NO inventa cuando no', () => {
+    // El Umbral le lee sus frases el día 0; sin esto la app no volvía a citarlo
+    // nunca más y contaba los otros 89 días en genérico.
+    const suyas = { painPoint: 'No logro parar de trabajar.', purpose: 'Construir sin quemarme' };
+    const siete = milestoneCrossed({ streak: 6, protocolDay: 10 }, { streak: 7, protocolDay: 10 }, suyas);
+    expect(siete?.line).toContain('No logro parar de trabajar');
+    // Sin punto duplicado: el usuario escribe con puntuación y la frase que lo
+    // envuelve ya cierra con la suya.
+    expect(siete?.line).not.toContain('.».');
+
+    const treinta = milestoneCrossed({ streak: 1, protocolDay: 29 }, { streak: 1, protocolDay: 30 }, suyas);
+    expect(treinta?.line).toContain('Construir sin quemarme');
+
+    // Los tres campos son opcionales: sin palabras, el hito se dice igual y no
+    // aparece ninguna comilla vacía.
+    const sinNada = milestoneCrossed({ streak: 6, protocolDay: 10 }, { streak: 7, protocolDay: 10 }, {});
+    expect(sinNada?.line).not.toContain('«');
+    expect(sinNada?.line).toContain('la mayoría abandona');
+  });
 });

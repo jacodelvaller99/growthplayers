@@ -123,7 +123,7 @@ export function readBody(input: BodyReading): BodyInsight {
 
   if (zones.length === 0) {
     return {
-      reading: 'No señalaste dónde. Está bien — a veces el cuerpo no habla claro todavía.',
+      reading: 'Toca donde lo sientes. No hay respuesta correcta — y está bien no señalar nada.',
       practice: null,
     };
   }

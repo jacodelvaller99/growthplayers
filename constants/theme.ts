@@ -43,6 +43,11 @@ export const palette = {
   ivory:          cv('--c-text',       '#EBEBEB'),   // primary text
   ivoryWarm:      cv('--c-text-warm',  '#F0EBE0'),   // warm off-white for special headings
   ivoryDim:       cv('--c-text-dim',   'rgba(235, 235, 235, 0.55)'), // dimmed text
+  // Mapa corporal: la silueta y el borde de sus zonas tactiles. Son tokens y
+  // no hex porque en tema claro la silueta se oscurece y el borde se invierte
+  // -- con los valores del tema oscuro, en claro no se veia ninguno de los dos.
+  silhouette:     cv('--c-silhouette',  '#5F5F5F'),
+  zoneBorder:     cv('--c-zone-border', 'rgba(255,255,255,0.38)'),
   ash:            cv('--c-text-2',     '#AAAAAA'),   // secondary text
   smoke:          cv('--c-text-3',     '#888888'),   // tertiary/placeholder text — 5.5:1 sobre graphite (WCAG AA en texto normal). Antes #666666 fallaba (3.3:1).
   muted:          cv('--c-text-faint', '#444444'),   // disabled, locked states

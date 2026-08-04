@@ -36,10 +36,15 @@ describe('joinZones — lenguaje natural, sin comas colgando', () => {
 });
 
 describe('readBody — la primera zona manda', () => {
-  it('sin señalar nada, no presiona ni inventa lectura', () => {
+  it('sin señalar nada INVITA, no juzga — es el texto que se ve antes del primer toque', () => {
+    // Dejo de ser copy muerto: ocupa el hueco reservado encima de la silueta,
+    // asi que se lee ANTES de tocar. En pasado ("no señalaste") sonaba a
+    // veredicto sobre algo que el usuario todavia no habia tenido ocasion de
+    // hacer.
     const out = readBody({ zones: [], stress: 9 });
     expect(out.practice).toBeNull();
-    expect(out.reading).toContain('Está bien');
+    expect(out.reading).toContain('Toca donde lo sientes');
+    expect(out.reading).not.toMatch(/señalaste|deberías|falta/i);
   });
 
   it('la práctica sale de la PRIMERA zona, no de la última ni de un promedio', () => {

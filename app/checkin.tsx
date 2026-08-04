@@ -340,7 +340,10 @@ export default function CheckInScreen() {
         // `computeStreak` ya lo contaba. Sumar ahí inflaría la racha y regalaría
         // un hito que no se cruzó.
         const next = { streak: todayCheckIn ? streak : streak + 1, protocolDay };
-        setMilestone(milestoneCrossed(prev, next));
+        setMilestone(milestoneCrossed(prev, next, {
+          painPoint: state.profile.painPoint,
+          purpose: state.northStar.purpose,
+        }));
         await writeLocal(MILESTONE_KEY, next);
       } catch (e) {
         // Perder un hito no puede costar el check-in.
@@ -589,28 +592,34 @@ export default function CheckInScreen() {
 
   const bodyCard = (
     <PremiumCard style={styles.card}>
-      {/* La pregunta es la invitación al único gesto que ninguna otra app hace.
-          Iba en `systemLabel` a 11px, indistinguible del rótulo de cualquier
-          campo administrativo — la misma voz para "¿dónde lo sientes?" que
-          para "necesidad del sistema". A `title` es lo primero que se lee de
-          la tarjeta, que es lo que es. */}
-      <Text style={styles.bodyQuestion}>¿DÓNDE LO SIENTES?</Text>
+      {/* Una pregunta, no un rótulo. Pasó por `systemLabel` (11px, versalitas,
+          la misma voz que "necesidad del sistema") y luego por `title` — que es
+          EL MISMO token que "CHECK-IN DIARIO" y "BIOMETRÍA". Subió de tamaño y
+          se quedó gritando. En caja baja se lee como lo que es: alguien
+          preguntándote algo. */}
+      <Text style={styles.bodyQuestion}>¿Dónde lo sientes?</Text>
+
+      {/* LA RESPUESTA VA ANTES DEL MAPA, no después.
+          Renderizada debajo, nacía ~124pt por DEBAJO del borde de la pantalla:
+          el canvas mide 420pt y la leyenda otros 92. El usuario tocaba su
+          mandíbula y lo único que ocurría en su campo de visión era que un
+          rectángulo se pintaba de oro; la frase existía, bien escrita y a
+          26px, a un scroll de distancia. Aquí cambia donde ya tiene los ojos.
+          `minHeight` reserva las dos líneas para que aparecer no empuje nada.
+          Y el vacío usa el texto que `readBody` ya escribía para el caso sin
+          zonas y que no se renderizaba en ninguna parte del producto. */}
+      <View style={styles.bodyReading}>
+        <Text style={[styles.bodyReadingText, !bodyZones.length && styles.bodyReadingEmpty]}>
+          {bodyInsight.reading}
+        </Text>
+      </View>
+
       <BodyMap
         selected={bodyZones}
         onToggle={(z) =>
           setBodyZones((prev) => (prev.includes(z) ? prev.filter((p) => p !== z) : [...prev, z]))
         }
       />
-      {bodyZones.length > 0 && (
-        <View style={styles.bodyReading}>
-          {/* La lectura y nada más. La salida (la práctica de esa zona) vive en
-              la recomendación de después de guardar: aquí un botón secundario
-              sacaba de la pantalla ANTES de guardar —te llevabas la lectura y
-              perdías el check-in— y competía con el único primario que esta
-              pantalla debe tener. */}
-          <Text style={styles.bodyReadingText}>{bodyInsight.reading}</Text>
-        </View>
-      )}
     </PremiumCard>
   );
 
@@ -1064,22 +1073,28 @@ const styles = StyleSheet.create({
   },
 
   bodyQuestion: {
-    ...typography.title,
+    ...typography.statement,
     color: palette.ivory,
   },
 
   // Lectura del cuerpo — le devuelve en palabras lo que acaba de señalar.
+  // Va ENCIMA de la silueta y con altura reservada: aparecer no puede empujar
+  // el mapa hacia abajo justo cuando el usuario esta tocandolo. 68 = dos lineas
+  // de `statement` (34 x 2).
   bodyReading: {
-    borderTopColor: palette.line,
-    borderTopWidth: 1,
-    gap: spacing.xs,
-    paddingTop: spacing.md,
+    minHeight: 68,
+    justifyContent: 'center',
   },
   bodyReadingText: {
     // La frase sobre su propio cuerpo. Iba en `body` (14px) — el mismo tamaño
     // que el pie de una tarjeta, y más pequeña que el rótulo que la anuncia.
     ...typography.statement,
     color: palette.ivory,
+  },
+  // Antes de tocar es una invitacion, no una lectura: mismo tamaño (no es menos
+  // importante), menos peso de color (todavia no dice nada de el).
+  bodyReadingEmpty: {
+    color: palette.smoke,
   },
   savedOffer: {
     borderColor: palette.lineGold,
@@ -1105,46 +1120,6 @@ const styles = StyleSheet.create({
   },
 
   // Recommendation (post-save closing card)
-  recoCard: {
-    borderColor: palette.lineGold,
-    borderWidth: 1,
-    gap: spacing.md,
-  },
-  recoHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  recoIconWrap: {
-    alignItems: 'center',
-    backgroundColor: palette.goldLight,
-    borderColor: palette.lineGold,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  recoTag: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 9,
-    letterSpacing: 1.2,
-  },
-  recoTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 22,
-    marginTop: 4,
-  },
-  recoBody: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 14,
-    lineHeight: 21,
-  },
 
   // Micro-ritual (box-breathing inline)
   ritualCard: {

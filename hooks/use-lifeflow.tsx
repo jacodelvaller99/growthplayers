@@ -1170,6 +1170,12 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     applyUid(null);
     await removeLocal(STATE_KEY);
+    // Las claves narrativas también. Se quedaban, así que la SEGUNDA cuenta que
+    // entrara en este dispositivo heredaba el "ya te vi antes" de la primera:
+    // recibía "Bienvenido de nuevo" su día 0, y su primer check-in comparaba
+    // contra la racha de otra persona.
+    await removeLocal('hero:v1');
+    await removeLocal('milestone:v1');
     setState(defaultState);
   }, []);
 

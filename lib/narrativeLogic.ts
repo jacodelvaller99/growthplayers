@@ -163,14 +163,33 @@ export interface Milestone {
 export function milestoneCrossed(
   prev: { streak: number; protocolDay: number } | null,
   next: { streak: number; protocolDay: number },
+  /**
+   * Lo que el usuario declaró al cruzar el Umbral, en sus palabras.
+   *
+   * El Umbral le lee sus frases el día 0 y después la app no volvía a citarlo
+   * NUNCA: los hitos hablaban en genérico ("Completaste el acto de base") con
+   * `painPoint` a una interpolación de distancia. Contar su historia un día y
+   * rellenar campos los otros ochenta y nueve es peor que no contarla.
+   *
+   * Opcional: si no escribió nada, el hito se dice igual, sin cita. Nunca se
+   * inventa una frase suya.
+   */
+  suyas?: { painPoint?: string; purpose?: string },
 ): Milestone | null {
   if (!prev) return null;
+  const cita = (t?: string) => {
+    const limpio = (t ?? '').trim().replace(/[.!?…\s]+$/, '');
+    return limpio.length > 70 ? `${limpio.slice(0, 70).trimEnd()}…` : limpio;
+  };
 
   if (prev.streak < 7 && next.streak >= 7) {
+    const obstaculo = cita(suyas?.painPoint);
     return {
       id: 'streak-7',
       title: '7 DÍAS SEGUIDOS',
-      line: 'Cruzaste la zona donde la mayoría abandona. A partir de aquí el sistema empieza a sostenerte a ti.',
+      line: obstaculo
+        ? `Hace una semana dijiste que lo que se interponía era «${obstaculo}». Llevas siete días apareciendo de todos modos.`
+        : 'Cruzaste la zona donde la mayoría abandona. A partir de aquí el sistema empieza a sostenerte a ti.',
     };
   }
   if (prev.streak < 30 && next.streak >= 30) {
@@ -181,17 +200,23 @@ export function milestoneCrossed(
     };
   }
   if (prev.protocolDay < 30 && next.protocolDay >= 30) {
+    const norte = cita(suyas?.purpose);
     return {
       id: 'day-30',
       title: 'PRIMER TERCIO',
-      line: 'Día 30 de 90. Completaste el acto de base. Lo que viene ya no construye el hábito: lo profundiza.',
+      line: norte
+        ? `Día 30 de 90. Escribiste que tu norte era «${norte}». Un tercio del camino hecho hacia eso.`
+        : 'Día 30 de 90. Completaste el acto de base. Lo que viene ya no construye el hábito: lo profundiza.',
     };
   }
   if (prev.protocolDay < 90 && next.protocolDay >= 90) {
+    const obstaculo = cita(suyas?.painPoint);
     return {
       id: 'day-90',
       title: 'PROTOCOLO COMPLETO',
-      line: '90 días. Terminaste lo que la mayoría no empieza.',
+      line: obstaculo
+        ? `90 días. El día 0 escribiste «${obstaculo}». Vuelve a leerlo hoy.`
+        : '90 días. Terminaste lo que la mayoría no empieza.',
     };
   }
   return null;

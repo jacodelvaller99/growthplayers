@@ -111,6 +111,13 @@ function MainStack() {
         <Stack.Screen name="comunidad/eventos/index" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/eventos/crear" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/eventos/[id]" options={{ headerShown: false }} />
+        {/* Cuatro que faltaban. `movimiento` es el destino de la práctica de
+            espalda del mapa corporal, e `internista`/`examenes` tocan PHI —
+            exámenes médicos subidos por el usuario. Estar fuera de este bloque
+            significa que un deep link sin sesión las renderiza. */}
+        <Stack.Screen name="bienestar/movimiento" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/internista" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/examenes" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />

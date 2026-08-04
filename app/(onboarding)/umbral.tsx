@@ -139,24 +139,29 @@ export default function UmbralScreen() {
   // con un botón le quita exactamente lo que la hace pesar.
   const [shown, setShown] = useState(1);
 
-  // Movimiento reducido acelera, NO desvía.
+  // MOVIMIENTO REDUCIDO NO TOCA ESTE RELOJ. Ni antes ni después.
   //
-  // Antes esto era `useState(reduced ? beats.length : 1)` más un `if (reduced)
-  // return` en el efecto, y dejaba tirado justo a quien decía proteger:
-  // `useReducedMotion` arranca SIEMPRE en false (lee la preferencia por
-  // promesa), así que `shown` se inicializaba en 1 igual; cuando `reduced`
-  // resolvía a true, el efecto salía por el `return` y `shown` se quedaba en 1
-  // PARA SIEMPRE. Una frase, sin botón, sin salida salvo "SALTAR". El
-  // comentario juraba lo contrario.
+  // Dos versiones equivocadas seguidas, ambas en esta línea, ambas por creer
+  // que la preferencia tenía algo que ver con la secuencia:
   //
-  // Ahora la preferencia solo cambia el RITMO. El fade ya se salta él solo
-  // dentro de `Beat`, así que con reduce-motion no se anima nada: simplemente
-  // las frases pasan de corrido.
+  //  · `useState(reduced ? beats.length : 1)` + `if (reduced) return`: como
+  //    `useReducedMotion` arranca SIEMPRE en false (lee la preferencia por
+  //    promesa), al resolver a true el efecto salía por el `return` y `shown`
+  //    se quedaba en 1 para siempre. Una frase y ninguna salida.
+  //  · `reduced ? 0 : UMBRAL_BEAT_MS`: 0ms encadena macrotasks, así que las
+  //    siete frases pasaban en ~20ms y ese usuario no leía NINGUNA de las
+  //    suyas. Verificado con un test que renderiza con `reduced` y avanza cero
+  //    milisegundos: llegaba al botón igual.
+  //
+  // Los dos extremos del mismo error. "Reducir movimiento" significa MENOS
+  // MOVIMIENTO, nunca menos contenido — y el fade ya se salta él solo dentro
+  // de `Beat`, así que aquí no hay nada que animar de todos modos. El reloj
+  // es el mismo para todos.
   useEffect(() => {
     if (shown > beats.length) return;
-    const t = setTimeout(() => setShown((n) => n + 1), reduced ? 0 : UMBRAL_BEAT_MS);
+    const t = setTimeout(() => setShown((n) => n + 1), UMBRAL_BEAT_MS);
     return () => clearTimeout(t);
-  }, [reduced, shown, beats.length]);
+  }, [shown, beats.length]);
 
   const done = shown > beats.length;
   // Cuando entra el cierre, la última frase SE QUEDA. Desaparecerla para poner
@@ -187,9 +192,17 @@ export default function UmbralScreen() {
           las anteriores de un salto sin animar: no era cine, era una lista
           creciendo a tirones. Es lo que decía el propio `data/umbral.ts`:
           "en el orden en que aparecen, una a una". */}
-      <View style={styles.stage}>
+      {/* Tocar adelanta — el gesto de Stories. 2.6s es el ritmo de quien lee
+          despacio; quien ya leyó no tiene por qué esperarlo. Sin esto, la
+          unica alternativa era saltarse el guion entero. */}
+      <Pressable
+        style={styles.stage}
+        onPress={() => setShown((n) => Math.min(n + 1, beats.length + 1))}
+        accessibilityRole="button"
+        accessibilityLabel="Siguiente frase"
+        disabled={done}>
         <Beat key={current.text} text={current.text} quoted={current.quoted} />
-      </View>
+      </Pressable>
 
       {/* El cierre entra DEBAJO de la última frase, no en su lugar: la frase se
           queda en pantalla mientras aparece la salida. Y llega un tiempo

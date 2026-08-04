@@ -51,6 +51,7 @@ supabase functions deploy sync-wearables
 supabase functions deploy delete-account        # GDPR account deletion
 supabase functions deploy create-user           # admin crea usuario real (service-role, gate is_admin)
 supabase functions deploy ml-dashboard
+supabase functions deploy notify-7-llaves --no-verify-jwt   # Las 7 Llaves → correo (Resend) por cada respuesta nueva
 ```
 
 ## Environment Variables (`.env.local`)

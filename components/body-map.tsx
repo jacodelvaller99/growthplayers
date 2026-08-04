@@ -37,8 +37,11 @@ const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; hei
   cabeza:    { top: '3%',  left: '38%', width: '24%', height: '13%', radius: 999 },
   mandibula: { top: '16%', left: '40%', width: '20%', height: '6%',  radius: 8 },
   garganta:  { top: '22%', left: '43%', width: '14%', height: '5%',  radius: 6 },
-  pecho:     { top: '28%', left: '38%', width: '32%', height: '16%', radius: 14 },
-  estomago:  { top: '45%', left: '38%', width: '32%', height: '14%', radius: 12 },
+  // left 34%, no 38%: con width 32% el centro cae en 50%, el mismo del torso
+  // (22%-78%) y el de cabeza/mandibula/garganta. A 38% centraban en 54% y las
+  // dos zonas mas grandes de la silueta iban 14px corridas a la derecha.
+  pecho:     { top: '28%', left: '34%', width: '32%', height: '16%', radius: 14 },
+  estomago:  { top: '45%', left: '34%', width: '32%', height: '14%', radius: 12 },
   // espalda y manos estaban en left 12% y 73% contra un torso que va de 22% a
   // 78%: flotaban AL LADO del cuerpo, sin brazos que las conectaran. Ahora la
   // espalda es la banda izquierda del torso y las manos van a la cadera.
@@ -161,7 +164,7 @@ const s = StyleSheet.create({
     // graphiteLight #181818 sobre la tarjeta #111111 daba 1.06:1 — WCAG 1.4.11
     // exige 3:1 para graficos esenciales. Se veian los bordes de zona y NO el
     // cuerpo: lo unico legible eran 7 rectangulos flotando.
-    backgroundColor: '#5F5F5F',
+    backgroundColor: palette.silhouette,
     opacity: 0.55,
   },
   head: {
@@ -171,7 +174,7 @@ const s = StyleSheet.create({
     width: '24%',
     height: '14%',
     borderRadius: 999,
-    backgroundColor: '#5F5F5F',
+    backgroundColor: palette.silhouette,
     opacity: 0.55,
   },
   zone: {
@@ -181,7 +184,7 @@ const s = StyleSheet.create({
     // hubiera regiones tocables hasta tocarlas. `lineHard` las declara.
     // Al 20% daba 1.84:1 contra el relleno de la silueta. WCAG 1.4.11 pide 3:1
     // para graficos esenciales, y estas regiones son EL control de la pantalla.
-    borderColor: 'rgba(255,255,255,0.38)',
+    borderColor: palette.zoneBorder,
     backgroundColor: 'transparent',
   },
   // El oro marca lo señalado. Es el acento ganado de la marca: aquí lo gana el
