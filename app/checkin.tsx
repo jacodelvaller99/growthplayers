@@ -21,9 +21,10 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { ConsequenceCard } from '@/components/narrative';
+import { ConsequenceCard, MilestoneToast } from '@/components/narrative';
 import { analytics } from '@/lib/analytics';
-import { deltaSince } from '@/lib/narrativeLogic';
+import { deltaSince, milestoneCrossed, type Milestone } from '@/lib/narrativeLogic';
+import { readLocal, writeLocal } from '@/storage/local';
 import { BodyMap } from '@/components/body-map';
 import { readBody, type BodyZone } from '@/lib/bodyMapLogic';
 import { Aura } from '@/components/aura';
@@ -51,6 +52,9 @@ function checkInTitle(streak: number): string {
   const idx = streak % CHECK_IN_TITLES.length;
   return CHECK_IN_TITLES[idx];
 }
+
+/** Racha y día de protocolo del último check-in guardado — el "antes" del hito. */
+const MILESTONE_KEY = 'milestone:v1';
 
 // ── Micro-ritual: box-breathing inline (4·4·4·4) ────────────────────────────
 // Que el check-in REGULE, no solo recolecte. Reusa el patrón del orbe de
@@ -257,7 +261,7 @@ export default function CheckInScreen() {
   const { isDesktop } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { todayCheckIn, saveCheckIn, saveWellnessSession, state } = useLifeFlow();
+  const { todayCheckIn, saveCheckIn, saveWellnessSession, state, protocolDay } = useLifeFlow();
   const { showToast } = useToast();
 
   // Racha real para el aviso de protección (días consecutivos, no días de calendario).
@@ -268,6 +272,7 @@ export default function CheckInScreen() {
   const [sleep, setSleep] = useState(todayCheckIn?.sleep ?? 7);
   const [systemNeed, setSystemNeed] = useState(todayCheckIn?.systemNeed ?? '');
   const [saved, setSaved] = useState(false);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
   // Guard anti-doble-tap: saveCheckIn es async → evita doble submit del check-in.
   const [submitting, setSubmitting] = useState(false);
   // Simplificación (feedback Capuozzo): camino mínimo = 4 sliders → guardar.
@@ -315,6 +320,31 @@ export default function CheckInScreen() {
       });
       analytics.checkinSubmit(energy, clarity, stress, sleep);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // El cruce que pasaba en silencio.
+      //
+      // `milestoneCrossed` y `MilestoneToast` estaban escritos y testeados desde
+      // la ola narrativa, y NADIE los montaba: la racha de 7, el día 30 y el día
+      // 90 se cruzaban sin que la app dijera nada. Un motor sin consumidor es
+      // código muerto con buena documentación.
+      //
+      // Se compara contra lo guardado en disco, no contra el render anterior:
+      // el día 30 se cruza a medianoche, no por una acción, así que un
+      // "anterior" en memoria nunca lo vería. Aquí, en el primer acto del día,
+      // sí. Y como solo dispara en el CRUCE, la felicitación no se vuelve diaria
+      // —que es exactamente lo que la convertiría en ruido.
+      try {
+        const prev = await readLocal<{ streak: number; protocolDay: number }>(MILESTONE_KEY);
+        // Si ya había check-in de hoy esto es una corrección, no un día nuevo:
+        // `computeStreak` ya lo contaba. Sumar ahí inflaría la racha y regalaría
+        // un hito que no se cruzó.
+        const next = { streak: todayCheckIn ? streak : streak + 1, protocolDay };
+        setMilestone(milestoneCrossed(prev, next));
+        await writeLocal(MILESTONE_KEY, next);
+      } catch (e) {
+        // Perder un hito no puede costar el check-in.
+        logSilentError('checkin.milestone', e);
+      }
       // Honestidad de guardado: si no hubo red, el dato quedó encolado — se dice.
       if (syncStatus === 'queued') {
         showToast('Guardado en este dispositivo — se sincronizará al recuperar conexión', 'warning');
@@ -618,6 +648,10 @@ export default function CheckInScreen() {
         <MaterialIcons name="check-circle" size={18} color={palette.success} />
         <Text style={styles.savedText}>Check-in guardado.</Text>
       </View>
+      {/* Va ANTES de la recomendación: cruzar los 7 días es la noticia, y la
+          lectura del sistema viene después. Casi siempre es null — un hito que
+          aparece a diario deja de ser un hito. */}
+      <MilestoneToast milestone={milestone} />
       {recommendationCard}
       {showRegula ? (
         ritualBlock
