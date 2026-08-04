@@ -20,7 +20,8 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 function lessonIcon(status: string) {
   if (status === 'completed') return 'check-circle' as const;
   if (status === 'active') return 'play-circle-filled' as const;
-  return 'lock' as const;
+  // Contorno, no candado: está abierta, simplemente no es la que toca ahora.
+  return 'play-circle-outline' as const;
 }
 
 function lessonIconColor(status: string) {
@@ -28,23 +29,27 @@ function lessonIconColor(status: string) {
   // La fila activa tiene fondo gold (lessonRowActive) → el ícono debe ser ink
   // (oscuro), no gold: gold-sobre-gold es invisible. El resto de la fila ya usa ink.
   if (status === 'active') return palette.ink;
-  return palette.smoke;
+  return palette.ash;
 }
 
+/**
+ * Todas las lecciones están abiertas. Antes la N seguía cerrada hasta
+ * completar la N-1, así que abrir el catálogo sin tocar esto dejaría al
+ * cliente entrando al Módulo 3 para encontrarse seis candados.
+ *
+ * Pero NO todas salen 'active': el fondo dorado de `lessonRowActive` significa
+ * «esta es la tuya ahora», y siete filas doradas es no marcar ninguna. La
+ * primera pendiente manda; el resto quedan navegables y sobrias.
+ */
 function deriveLessonStatus(
   lessonId: string,
   lessonIndex: number,
   allLessons: { id: string; status: string }[],
   completedLessons: string[],
-): 'completed' | 'active' | 'locked' {
+): 'completed' | 'active' | 'available' {
   if (completedLessons.includes(lessonId)) return 'completed';
-  // active if first lesson or previous is completed
-  if (lessonIndex === 0) return 'active';
-  const prevId = allLessons[lessonIndex - 1].id;
-  if (completedLessons.includes(prevId) || allLessons[lessonIndex - 1].status === 'completed') {
-    return 'active';
-  }
-  return 'locked';
+  const primeraPendiente = allLessons.findIndex((l) => !completedLessons.includes(l.id));
+  return lessonIndex === primeraPendiente ? 'active' : 'available';
 }
 
 export default function ModuleDetailScreen() {
@@ -53,9 +58,32 @@ export default function ModuleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state } = useLifeFlow();
-  const module = POLARIS_MODULES.find((item) => item.id === id) ?? POLARIS_MODULES[0];
+  // Sin `?? POLARIS_MODULES[0]`: un id desconocido —un deep link viejo, un
+  // enlace mal copiado— aterrizaba en Onboarding SIN decirlo, y el usuario
+  // creía que el módulo que pidió era ese. La pantalla de lección ya resuelve
+  // esto con un estado explícito; ésta mentía.
+  const module = POLARIS_MODULES.find((item) => item.id === id) ?? null;
 
   const completedLessons = state.completedLessons ?? [];
+
+  // Después de TODOS los hooks (los cinco están arriba) y antes del primer uso
+  // de `module`: así el orden de hooks no cambia entre renders.
+  if (!module) {
+    return (
+      <View style={[sc.root, styles.notFound]}>
+        <MaterialIcons name="explore-off" size={28} color={palette.smoke} />
+        <Text style={styles.notFoundTitle}>MÓDULO NO ENCONTRADO</Text>
+        <Text style={styles.notFoundBody}>
+          Ese enlace ya no apunta a ningún módulo del protocolo.
+        </Text>
+        <SecondaryButton
+          label="VER TODOS LOS MÓDULOS"
+          icon="arrow-back"
+          onPress={() => router.replace('/(tabs)/programas' as never)}
+        />
+      </View>
+    );
+  }
 
   const lessonsWithStatus = module.lessons.map((lesson, idx) => ({
     ...lesson,
@@ -162,7 +190,8 @@ export default function ModuleDetailScreen() {
         {lessonsWithStatus.map((lesson, index) => {
           const isActive = lesson.status === 'active';
           const isCompleted = lesson.status === 'completed';
-          const isNavigable = isActive || isCompleted;
+          // Todas: ya no hay estado no-navegable en un módulo abierto.
+          const isNavigable = true;
           return (
             <Pressable
               key={lesson.id}
@@ -187,9 +216,15 @@ export default function ModuleDetailScreen() {
                   <Text style={[styles.lessonTitle, isActive && styles.lessonTitleActive]}>
                     {lesson.title}
                   </Text>
-                  <Text style={[styles.lessonMeta, isActive && styles.lessonMetaActive]}>
-                    {lesson.duration}
-                  </Text>
+                  {/* Condicional: NINGUNA lección de `data/modules.ts` trae
+                      `duration` (el campo es opcional en el tipo), así que
+                      esto pintaba una línea vacía bajo cada uno de los 41
+                      títulos. */}
+                  {lesson.duration ? (
+                    <Text style={[styles.lessonMeta, isActive && styles.lessonMetaActive]}>
+                      {lesson.duration}
+                    </Text>
+                  ) : null}
                 </View>
                 {isNavigable && (
                   <View style={styles.activeIndicator}>
@@ -255,6 +290,21 @@ export default function ModuleDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  notFound: {
+    alignItems: 'center',
+    gap: spacing.md,
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  notFoundTitle: {
+    ...typography.label,
+    color: palette.ivoryDim,
+  },
+  notFoundBody: {
+    ...typography.body,
+    color: palette.smoke,
+    textAlign: 'center',
+  },
   // Hero
   hero: {
     gap: spacing.lg,
