@@ -768,10 +768,21 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         sleep:           checkIn.sleep,
         system_need:     checkIn.systemNeed,
         sovereign_score: newScore,
+        // Dónde lo sintió. Sin esto, lo que la persona señala en su propio
+        // cuerpo moría en el teléfono: no llegaba a Supabase, ni a Norman, ni
+        // al dossier del coach, y se perdía al reinstalar. La promesa de
+        // "cuarta vez esta semana en la mandíbula" era falsa sin esta línea.
+        // La columna la añade 20260804000000; el upsert degrada solo si aún
+        // no está aplicada (el catch de abajo lo encola igual).
+        zones:           checkIn.zones ?? null,
       };
       let syncStatus: 'synced' | 'queued' = 'synced';
       try {
-        await db.checkins().upsert(checkInPayload, { onConflict: 'user_id,date' });
+        // Cast acotado: los tipos generados de Supabase todavía no conocen
+        // `zones` (la migración 20260804000000 aún no se aplicó a la fuente de
+        // generación). Mismo patrón que se usó para `user_profiles.role`.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (db.checkins() as any).upsert(checkInPayload, { onConflict: 'user_id,date' });
       } catch (e) {
         console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
         await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });

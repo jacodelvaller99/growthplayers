@@ -274,7 +274,10 @@ export default function CheckInScreen() {
   // La lectura interna es opcional, y el ritual/recomendación se difieren a una oferta.
   const [showNeed, setShowNeed]     = useState(false);
   const [showRegula, setShowRegula] = useState(false);
-  const [showBody, setShowBody]     = useState(false);
+  // Arranca ENCENDIDO. Estaba en false detras de un + gris identico al de
+  // la nota opcional y rotulado (opcional): la pieza que el dueno llamo el
+  // mejor UX que ha visto no la veia nadie. No tocar nada ya es opt-out.
+  const [showBody, setShowBody]     = useState(true);
   const [bodyZones, setBodyZones]   = useState<BodyZone[]>([]);
 
   // Real-time coherence score
@@ -568,7 +571,7 @@ export default function CheckInScreen() {
       style={({ pressed }) => [styles.needToggle, pressed && { opacity: 0.7 }]}>
       <MaterialIcons name={showBody ? 'remove' : 'add'} size={16} color={palette.goldText} />
       <Text style={styles.needToggleText}>
-        {showBody ? 'Ocultar el cuerpo' : '¿Dónde lo sientes? Señálalo (opcional)'}
+        {showBody ? 'Ocultar el cuerpo' : '¿Dónde lo sientes?'}
       </Text>
     </Pressable>
   );
@@ -637,6 +640,16 @@ export default function CheckInScreen() {
         style={sc.root}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={insets.top}>
+      {/* El aura va FUERA del ScrollView, anclada al viewport.
+          Dentro del `contentContainerStyle` quedaba atrapada en `sc.content`
+          (maxWidth 430, centrado): en tablet o PWA ancha se veía como una BANDA
+          con costura vertical contra el negro — el rectángulo de color literal
+          que esto existe para no ser. Y se iba con el scroll. Aquí cubre la
+          pantalla y se queda quieta. */}
+      <Aura
+        state={auraFromCheckIn({ stress, energy, hour: new Date().getHours() })}
+        weight={Math.min(1, Math.max(stress, 10 - energy) / 10)}
+      />
         <ScrollView
           contentContainerStyle={[styles.contentDesktop, { paddingTop: insets.top + 32 }]}
           showsVerticalScrollIndicator={false}
@@ -711,19 +724,22 @@ export default function CheckInScreen() {
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
+    {/* El aura va FUERA del ScrollView, anclada al viewport.
+        Dentro del `contentContainerStyle` quedaba atrapada en `sc.content`
+        (maxWidth 430, centrado): en tablet o PWA ancha se veía como una BANDA
+        con costura vertical contra el negro — el rectángulo de color literal
+        que esto existe para no ser. Y se iba con el scroll. Aquí cubre la
+        pantalla y se queda quieta. */}
+    <Aura
+      state={auraFromCheckIn({ stress, energy, hour: new Date().getHours() })}
+      weight={Math.min(1, Math.max(stress, 10 - energy) / 10)}
+    />
     <ScrollView
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      {/* El fondo responde a lo que la persona acaba de declarar: mover el
-          deslizador de TENSIÓN cambia el color de la pantalla. Es el único
-          sitio del producto donde el estado del usuario se vuelve atmósfera. */}
-      <Aura
-        state={auraFromCheckIn({ stress, energy, hour: new Date().getHours() })}
-        weight={Math.min(1, Math.max(stress, 10 - energy) / 10)}
-      />
       {/* ── Header: back → comando · fecha · título ── */}
       <View style={styles.header}>
         <Pressable

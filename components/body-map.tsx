@@ -34,14 +34,21 @@ export interface BodyMapProps {
  * la misma zona, para dedo grande y para dedo fino.
  */
 const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; height: string; radius: number }> = {
-  cabeza:    { top: '2%',  left: '38%', width: '24%', height: '14%', radius: 999 },
-  mandibula: { top: '15%', left: '40%', width: '20%', height: '7%',  radius: 8 },
-  garganta:  { top: '21%', left: '43%', width: '14%', height: '7%',  radius: 6 },
-  pecho:     { top: '27%', left: '30%', width: '40%', height: '17%', radius: 14 },
-  estomago:  { top: '43%', left: '33%', width: '34%', height: '15%', radius: 12 },
-  espalda:   { top: '27%', left: '12%', width: '15%', height: '31%', radius: 12 },
-  manos:     { top: '50%', left: '73%', width: '15%', height: '14%', radius: 999 },
+  cabeza:    { top: '3%',  left: '38%', width: '24%', height: '13%', radius: 999 },
+  mandibula: { top: '16%', left: '40%', width: '20%', height: '6%',  radius: 8 },
+  garganta:  { top: '22%', left: '43%', width: '14%', height: '5%',  radius: 6 },
+  pecho:     { top: '28%', left: '38%', width: '32%', height: '16%', radius: 14 },
+  estomago:  { top: '45%', left: '38%', width: '32%', height: '14%', radius: 12 },
+  // espalda y manos estaban en left 12% y 73% contra un torso que va de 22% a
+  // 78%: flotaban AL LADO del cuerpo, sin brazos que las conectaran. Ahora la
+  // espalda es la banda izquierda del torso y las manos van a la cadera.
+  espalda:   { top: '28%', left: '24%', width: '13%', height: '31%', radius: 12 },
+  manos:     { top: '60%', left: '24%', width: '13%', height: '10%', radius: 999 },
 };
+
+/** Zonas que se apilan verticalmente: su hitSlop no puede crecer hacia
+ *  arriba ni abajo sin robarle el toque a la vecina. */
+const STACKED = new Set<BodyZone>(['cabeza', 'mandibula', 'garganta', 'pecho', 'estomago']);
 
 export function BodyMap({ selected, onToggle }: BodyMapProps) {
   return (
@@ -64,10 +71,12 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
                 if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 onToggle(zone);
               }}
-              // Varias zonas (garganta, mandíbula) dibujan menos de 44pt a
-              // propósito — anatómicamente son pequeñas. `hitSlop` da el área
-              // táctil que exige PRODUCT.md sin deformar el cuerpo.
-              hitSlop={12}
+              // hitSlop SOLO lateral en las zonas apiladas. Un slop vertical
+              // uniforme hacía que garganta —renderizada después— ganara el
+              // hit-test y se comiera media mandíbula: el usuario tocaba su
+              // mandíbula y la app encendía su garganta, y le ofrecía otra
+              // práctica. En las zonas aisladas el slop libre sí ayuda.
+              hitSlop={STACKED.has(zone) ? { top: 0, bottom: 0, left: 16, right: 16 } : 14}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: on }}
               accessibilityLabel={ZONE_LABEL[zone]}
@@ -131,8 +140,11 @@ const s = StyleSheet.create({
     right: '22%',
     height: '48%',
     borderRadius: 28,
-    backgroundColor: palette.graphiteLight,
-    opacity: 0.95,
+    // graphiteLight #181818 sobre la tarjeta #111111 daba 1.06:1 — WCAG 1.4.11
+    // exige 3:1 para graficos esenciales. Se veian los bordes de zona y NO el
+    // cuerpo: lo unico legible eran 7 rectangulos flotando.
+    backgroundColor: '#5F5F5F',
+    opacity: 0.55,
   },
   head: {
     position: 'absolute',
@@ -141,15 +153,15 @@ const s = StyleSheet.create({
     width: '24%',
     height: '14%',
     borderRadius: 999,
-    backgroundColor: palette.graphiteLight,
-    opacity: 0.95,
+    backgroundColor: '#5F5F5F',
+    opacity: 0.55,
   },
   zone: {
     position: 'absolute',
     borderWidth: 1,
     // `line` (alfa 0.07) sobre la silueta era invisible: no se veía que
     // hubiera regiones tocables hasta tocarlas. `lineHard` las declara.
-    borderColor: palette.lineHard,
+    borderColor: 'rgba(255,255,255,0.20)',
     backgroundColor: 'transparent',
   },
   // El oro marca lo señalado. Es el acento ganado de la marca: aquí lo gana el
