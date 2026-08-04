@@ -121,8 +121,14 @@ export interface CoachBundle {
   /** Turnos del usuario con Norman 7d / 7–14d. */
   user_turns_7d: number;
   user_turns_prev: number;
-  /** Días desde el último mensaje del usuario (Infinity si nunca). */
+  /**
+   * Días desde el último mensaje del usuario, sobre una ventana de 14 días.
+   * `Infinity` significa «nada en la ventana», NO «nunca escribió» — para eso
+   * está `ever_wrote`, que es un dato aparte a propósito.
+   */
   days_since_last_message: number;
+  /** Si escribió a Norman alguna vez. Separa «no ha llegado» de «se está yendo». */
+  ever_wrote: boolean;
   /** Tareas vencidas y abiertas (Mentor Execution / mentorship_tasks). */
   overdue_count: number;
   open_tasks_count: number;
@@ -163,7 +169,13 @@ export function computeDrivers(bundle: CoachBundle): ChurnDriver[] {
   }
 
   // 2. Silencio con Norman (cliente firmó canal de chat — su ausencia es señal).
-  if (bundle.days_since_last_message >= 5) {
+  //
+  // `ever_wrote` primero: sin él, `Infinity >= 5` es true, el peso sale al
+  // máximo (0.30 → ordena primero) y la evidencia dice «60 días sin escribirle
+  // al mentor» —`Math.min(Infinity, 60)`— en el dossier de un usuario creado
+  // hoy. El commit anterior arregló `label` y `days_silent` y dejó este
+  // consumidor, así que el coach seguía leyendo la cifra inventada.
+  if (bundle.ever_wrote && bundle.days_since_last_message >= 5) {
     out.push({
       kind: 'mentor_silence',
       weight: clamp(0.10 + (bundle.days_since_last_message - 5) * 0.04, 0, 0.30),
@@ -335,7 +347,7 @@ export function computeRelationalDepth(bundle: CoachBundle): RelationalDepth {
   // `Infinity` = nunca escribió. `Math.min(Infinity, 60)` da 60, así que el
   // dossier le decía al coach que un usuario creado hoy lleva "60 días sin
   // escribir" — y el coach actúa sobre eso.
-  const nuncaEscribio = !Number.isFinite(bundle.days_since_last_message);
+  const nuncaEscribio = !bundle.ever_wrote;
 
   const stateLabel: Record<RelationalDepth['state'], string> = {
     deep: 'Conversación profunda y honesta',
@@ -379,17 +391,20 @@ export function selectNextAction(
 
   // 1. Silencio → reconectar con calor humano, no presión.
   //
-  // `everWrote` NO es defensivo: `days_since_last_message` vale `Infinity`
-  // cuando el usuario nunca escribió a Norman, que es exactamente el usuario
-  // del día 1. Sin este guard, `relational.state` sale 'silent' (score 0) y
-  // el recién llegado entra por aquí — la app le dice que lleva un tiempo
-  // fuera del sistema al que acaba de terminar el onboarding.
+  // `ever_wrote` NO es defensivo. Sin este guard el recién llegado entra por
+  // aquí —`relational.state` sale 'silent' con score 0— y la app le dice que
+  // lleva un tiempo fuera del sistema al que acaba de terminar el onboarding.
+  //
+  // Es `ever_wrote` y no `Number.isFinite(days_since_last_message)`, que fue
+  // el primer intento: ese campo se calcula sobre una ventana de 14 días, así
+  // que `Infinity` significa «nada en la ventana». Con la inferencia, el que
+  // lleva 20 días yéndose se clasificaba como recién llegado y se quedaba
+  // fuera de la reconexión — justo la población para la que existe.
   //
   // Quien nunca escribió no se fue: no ha llegado. Cae a los peldaños de
   // abajo y termina en `investigate`, que `selectTurno` excluye a propósito
   // para dejar decidir a la lectura de hoy.
-  const everWrote = Number.isFinite(bundle.days_since_last_message);
-  if (everWrote && (relational.state === 'silent' || bundle.days_since_last_message >= 7)) {
+  if (bundle.ever_wrote && (relational.state === 'silent' || bundle.days_since_last_message >= 7)) {
     return {
       kind: 'reconnect',
       what_to_say: `Lleva ${pluralDays(Math.min(bundle.days_since_last_message, 60))} sin escribir. Mándale un mensaje corto preguntando cómo va el cuerpo y el sueño — no le pidas resultados.`,

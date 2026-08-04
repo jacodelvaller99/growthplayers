@@ -163,4 +163,37 @@ describe('geometria de la silueta — ninguna zona pisa a otra', () => {
     const estrechas = cajas.filter((c) => ((c.x1 - c.x0) / 100) * ANCHO_CANVAS < PISO_TACTIL);
     expect(estrechas.map((c) => c.zona)).toEqual([]);
   });
+
+  it('el hitSlop vertical no cruza a la zona de abajo', () => {
+    // POR QUE: los tests de arriba miden la CAJA CRUDA, que es lo unico que
+    // cuenta en la PWA (react-native-web ignora `hitSlop`). En nativo el area
+    // real es caja + slop, y ahi `espalda` y `manos` —que no estaban en
+    // STACKED— recibian `{top:14, bottom:14}` con 4.2pt de hueco entre ellas:
+    // sus areas se cruzaban 23.8pt y `manos`, que va despues en BODY_ZONES, se
+    // renderiza encima y gana el hit-test. Tocabas tu espalda y salian tus
+    // manos. El test se llamaba "ninguna zona pisa a otra" y solo miraba las
+    // cajas: otra vez afirmando en su nombre mas de lo que comprobaba.
+    //
+    // Se lee del componente que zonas renuncian al slop vertical, en vez de
+    // repetir la lista aqui — si alguien saca una del set, este test lo ve.
+    const sinSlopVertical = new Set<string>();
+    for (const nombre of ['STACKED', 'FLANCO']) {
+      const m = src.match(new RegExp(`const ${nombre} = new Set<BodyZone>\\(\\[([^\\]]*)\\]`));
+      for (const z of (m?.[1] ?? '').match(/'(\w+)'/g) ?? []) sinSlopVertical.add(z.replace(/'/g, ''));
+    }
+
+    const SLOP_PCT = (14 / ALTO_CANVAS) * 100;
+    const cruces: string[] = [];
+    for (const a of cajas) {
+      if (sinSlopVertical.has(a.zona)) continue;
+      for (const b of cajas) {
+        if (a.zona === b.zona || sinSlopVertical.has(b.zona)) continue;
+        const cruzaX = !(a.x1 <= b.x0 || b.x1 <= a.x0);
+        if (!cruzaX) continue;
+        const hueco = b.y0 - a.y1;
+        if (hueco >= 0 && hueco < SLOP_PCT) cruces.push(`${a.zona}/${b.zona}`);
+      }
+    }
+    expect(cruces).toEqual([]);
+  });
 });

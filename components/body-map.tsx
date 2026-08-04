@@ -75,6 +75,19 @@ const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; hei
  *  arriba ni abajo sin robarle el toque a la vecina. */
 const STACKED = new Set<BodyZone>(['cabeza', 'mandibula', 'garganta', 'pecho', 'estomago']);
 
+/**
+ * El flanco izquierdo. Tienen las DOS restricciones a la vez y por eso no
+ * caben en `STACKED`: se apilan entre sí (espalda acaba en 66%, manos empieza
+ * en 67% — 4.2pt de hueco sobre el canvas de 421) y tienen el pecho a la
+ * derecha. Con el slop libre de `{top:14, bottom:14}` sus áreas se cruzaban
+ * 23.8pt y `manos`, que va después en `BODY_ZONES`, se renderiza encima y gana
+ * el hit-test: tocabas tu espalda y la app encendía tus manos.
+ *
+ * Solo afecta a nativo — react-native-web ignora `hitSlop` —, que es
+ * justamente por lo que sobrevivió a la ronda que midió las cajas crudas.
+ */
+const FLANCO = new Set<BodyZone>(['espalda', 'manos']);
+
 export function BodyMap({ selected, onToggle }: BodyMapProps) {
   return (
     <View style={s.root}>
@@ -112,6 +125,8 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
               hitSlop={
                 STACKED.has(zone)
                   ? { top: 0, bottom: 0, left: 16, right: 16 }
+                  : FLANCO.has(zone)
+                  ? { top: 0, bottom: 0, left: 14, right: 0 }
                   : { top: 14, bottom: 14, left: 14, right: 0 }
               }
               accessibilityRole="checkbox"

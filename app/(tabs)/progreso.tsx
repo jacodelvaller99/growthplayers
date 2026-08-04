@@ -528,6 +528,9 @@ export default function ProgresoScreen() {
   // Racha real de check-ins (días consecutivos hacia atrás desde hoy).
   const checkinStreak = useMemo(() => computeStreak(state.checkIns), [state.checkIns]);
 
+  /** Sin lecturas el score no mide nada — ver el comentario en su render. */
+  const sinLecturas = state.checkIns.length === 0;
+
   // Sovereign Score v2 — includes wellness bonus
   const score = calcSovereignScore({
     energy:            averages.energy ?? 0,
@@ -1160,7 +1163,11 @@ export default function ProgresoScreen() {
           <View>
             <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
             <View style={styles.scoreNumberRow}>
-              <Text style={styles.scoreNumber}>{score}</Text>
+              {/* Sin una sola lectura el score no mide nada: los 25 puntos que
+                  salían el día 1 venían del `stress ?? 5` de arriba, con el
+                  término invertido. Comando ya lo resolvió así; esta pestaña
+                  se quedó con el número inventado. */}
+              <Text style={styles.scoreNumber}>{sinLecturas ? '—' : score}</Text>
               {analytics.scoreDelta !== 0 && (
                 <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
                   {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
@@ -1168,10 +1175,13 @@ export default function ProgresoScreen() {
               )}
             </View>
           </View>
-          <Text style={styles.scoreCaption}>ÚLTIMOS{'\n'}14 DÍAS</Text>
         </View>
         {analytics.score14.length >= 2 && (
           <View style={styles.scoreSpark}>
+            {/* «ÚLTIMOS 14 DÍAS» estaba arriba, etiquetando el número — que es
+                VITALICIO y no baja. El mismo copy falso que ya se corrigió en
+                Comando, vivo aquí. Baja a la gráfica, que sí son 14 días. */}
+            <Text style={styles.scoreCaption}>ÚLTIMOS 14 DÍAS</Text>
             <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
           </View>
         )}
