@@ -1240,9 +1240,14 @@ const styles = StyleSheet.create({
     backgroundColor: palette.charcoal,
     borderColor: palette.lineSoft,
     borderWidth: 1,
-    // SIN `flex: 1`. Con flexWrap, a 301px de ancho util caben 6 pasos y los 4
-    // restantes bajan de fila -- y `flex: 1` los estiraba a ~73pt contra los
-    // 47pt de arriba. La escala 1-10 se veia como dos escalas distintas.
+    // SIN `flex: 1`. Con flexWrap, a 301px de ancho util `flex: 1` estiraba las
+    // 4 celdas de la segunda fila a ~73pt contra los 47pt de arriba: la escala
+    // 1-10 se veia como dos escalas distintas.
+    //
+    // `flexBasis: 18%` fuerza 5+5 en vez de 6+4 — dos filas iguales se leen
+    // como rejilla; 6+4 se lee como desbordamiento. A 320px de pantalla siguen
+    // saliendo 44.6pt, asi que el piso tactil aguanta.
+    flexBasis: '18%',
     height: 44,
     justifyContent: 'center',
     minWidth: 44,

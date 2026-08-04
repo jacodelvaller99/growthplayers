@@ -83,7 +83,7 @@ export function auraForState(input: AuraInput): AuraStyle {
  *
  * Prioriza tensión sobre recuperación: si alguien viene cargado, eso manda
  * aunque haya dormido bien. Es la misma jerarquía que ya usa el check-in para
- * recomendar práctica (`app/checkin.tsx:327-360`).
+ * recomendar práctica (`app/checkin.tsx`).
  */
 export function auraFromCheckIn(input: {
   stress?: number | null;

@@ -58,7 +58,19 @@ export function HeroMoments() {
         const selected = selectMoment({
           today,
           name: state.profile.name,
-          latestSummary: latest?.id ? { id: latest.id, summary: latest.summary ?? '' } : null,
+          // `source_type: 'manual'` lo escribe SOLO `seedHeroOrigin`, y su
+          // resumen SIEMPRE abre con la etiqueta "Día 0 — el umbral." Para un
+          // usuario nuevo esa fila es la más reciente (chat y mentoría aún no
+          // han corrido), así que `firstSentence` cortaba justo ahí y el día 1
+          // Norman decía «La última vez me dijiste: "Día 0 — el umbral."» — a
+          // 26px, en la voz más íntima del producto, citando al usuario algo
+          // que jamás dijo. El Umbral entero existe para demostrar que la app
+          // escuchó; 24h después demostraba lo contrario. Sin eco real, cae a
+          // gratitud, que sí es cierto.
+          latestSummary:
+            latest?.id && latest.source_type !== 'manual'
+              ? { id: latest.id, summary: latest.summary ?? '' }
+              : null,
           recentWins: profile?.recent_wins ?? [],
           state: momentState,
         });

@@ -45,7 +45,8 @@ export interface BodyReading {
   /** Lo que el usuario ubicó. Vacío = no quiso decirlo, y está bien. */
   zones: BodyZone[];
   /** Tensión declarada en el check-in, 0-10. */
-  stress: number;
+  /** `null` = todavía no lo ha dicho. NO es lo mismo que 0. */
+  stress: number | null;
 }
 
 export interface BodyInsight {
@@ -60,7 +61,7 @@ export interface BodyInsight {
  * mandíbula y las manos piden soltar músculo, la garganta y el pecho piden
  * alargar la exhalación, el estómago pide bajar el ritmo. No es medicina —
  * es la misma lógica de "elige la práctica según la señal" que ya usa el
- * check-in (`app/checkin.tsx:327-360`), pero mirando el lugar y no solo el número.
+ * check-in (`app/checkin.tsx`), pero mirando el lugar y no solo el número.
  */
 const ZONE_PRACTICE: Record<BodyZone, { label: string; route: string; why: string }> = {
   cabeza: {
@@ -119,7 +120,7 @@ export function joinZones(zones: BodyZone[]): string {
  */
 export function readBody(input: BodyReading): BodyInsight {
   const zones = input.zones.filter((z) => BODY_ZONES.includes(z));
-  const stress = Number.isFinite(input.stress) ? input.stress : 0;
+  const stress = input.stress === null || !Number.isFinite(input.stress) ? null : input.stress;
 
   if (zones.length === 0) {
     return {
@@ -133,8 +134,14 @@ export function readBody(input: BodyReading): BodyInsight {
 
   // El adjetivo sale de la tensión declarada, no de la zona: la zona dice DÓNDE,
   // el número dice CUÁNTO. Mezclarlos sería inventar intensidad por ubicación.
+  //
+  // Y si todavía no ha dicho CUÁNTO, no se gradúa: en móvil el mapa va ANTES de
+  // los deslizadores, así que en el instante del gesto la tensión es `null`.
+  // Antes llegaba aquí como 0 y caía siempre en la rama baja — la graduación
+  // existía en el código y no ocurría nunca en la pantalla.
   const intensidad =
-    stress >= 8 ? 'Lo estás sosteniendo fuerte'
+    stress === null ? 'Ahí lo estás notando'
+    : stress >= 8 ? 'Lo estás sosteniendo fuerte'
     : stress >= 5 ? 'Ahí se está acumulando'
     : 'Ahí lo estás notando';
 

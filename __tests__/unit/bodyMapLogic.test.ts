@@ -99,3 +99,51 @@ describe('cobertura y línea roja clínica', () => {
     expect(readBody({ zones: [], stress: 9 }).reading).not.toMatch(prohibidas);
   });
 });
+
+describe('geometria de la silueta — ninguna zona pisa a otra', () => {
+  // POR QUE: `espalda` llegaba al 37% y `pecho` empezaba en el 34%. Tres puntos
+  // de solape, y como `espalda` se renderiza despues ganaba el hit-test: tocabas
+  // el borde de tu pecho, la app encendia tu espalda y te mandaba a otra
+  // practica. Un solape de rectangulos es aritmetica, no opinion — asi que se
+  // fija aqui y no en una revision visual.
+  //
+  // Se lee el fichero del componente en vez de importarlo: `ZONE_BOX` es
+  // privado a proposito (nadie mas debe posicionar zonas) y este test no
+  // justifica exportarlo.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '../../components/body-map.tsx'), 'utf8');
+  const bloque = src.slice(src.indexOf('const ZONE_BOX'), src.indexOf('};', src.indexOf('const ZONE_BOX')));
+  const cajas = [...bloque.matchAll(
+    /(\w+):\s*\{ top: '(\d+)%',\s*left: '(\d+)%',\s*width: '(\d+)%',\s*height: '(\d+)%'/g,
+  )].map((m) => ({
+    zona: m[1], y0: +m[2], y1: +m[2] + +m[5], x0: +m[3], x1: +m[3] + +m[4],
+  }));
+
+  it('las 7 zonas estan declaradas y se pueden leer', () => {
+    expect(cajas).toHaveLength(7);
+  });
+
+  it('ningun par de zonas se solapa', () => {
+    const solapes: string[] = [];
+    for (let i = 0; i < cajas.length; i++) {
+      for (let j = i + 1; j < cajas.length; j++) {
+        const a = cajas[i]; const b = cajas[j];
+        const cruzaY = !(a.y1 <= b.y0 || b.y1 <= a.y0);
+        const cruzaX = !(a.x1 <= b.x0 || b.x1 <= a.x0);
+        if (cruzaY && cruzaX) solapes.push(`${a.zona}/${b.zona}`);
+      }
+    }
+    expect(solapes).toEqual([]);
+  });
+
+  it('ninguna zona baja del minimo tactil: react-native-web ignora hitSlop', () => {
+    // En la PWA el area real es la caja cruda. Con el canvas a 303pt de ancho y
+    // aspectRatio 0.72 (=421pt de alto), un 10% de alto son 42pt. El piso es 44.
+    const ALTO_CANVAS = 421;
+    const flacas = cajas.filter((c) => ((c.y1 - c.y0) / 100) * ALTO_CANVAS < 28);
+    expect(flacas.map((c) => c.zona)).toEqual([]);
+  });
+});

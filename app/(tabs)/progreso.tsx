@@ -1710,8 +1710,9 @@ const styles = StyleSheet.create({
   narrativeLine: {
     color: palette.ash,
     fontFamily: Fonts.sans,
-    fontSize: 13,
-    lineHeight: 20,
+    // Es la historia del usuario, no un pie de tabla: `body` (14/22).
+    fontSize: 14,
+    lineHeight: 22,
   },
 
   // Profile header (design: avatar · name · día de protocolo · racha chip)

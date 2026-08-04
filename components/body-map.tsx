@@ -35,18 +35,26 @@ export interface BodyMapProps {
  */
 const ZONE_BOX: Record<BodyZone, { top: string; left: string; width: string; height: string; radius: number }> = {
   cabeza:    { top: '3%',  left: '38%', width: '24%', height: '13%', radius: 999 },
-  mandibula: { top: '16%', left: '40%', width: '20%', height: '6%',  radius: 8 },
-  garganta:  { top: '22%', left: '43%', width: '14%', height: '5%',  radius: 6 },
+  // Mas altas de lo que parecen necesarias a proposito: react-native-web NO
+  // implementa `hitSlop` en `Pressable` (comprobado en node_modules), y la PWA
+  // es lo unico desplegado hoy. Con 5% y 6% de altura salian 21 y 25pt de area
+  // real — la mitad del minimo tactil. La caja ES el area en web.
+  mandibula: { top: '16%', left: '40%', width: '20%', height: '8%',  radius: 8 },
+  garganta:  { top: '24%', left: '43%', width: '14%', height: '7%',  radius: 6 },
   // left 34%, no 38%: con width 32% el centro cae en 50%, el mismo del torso
   // (22%-78%) y el de cabeza/mandibula/garganta. A 38% centraban en 54% y las
   // dos zonas mas grandes de la silueta iban 14px corridas a la derecha.
-  pecho:     { top: '28%', left: '34%', width: '32%', height: '16%', radius: 14 },
-  estomago:  { top: '45%', left: '34%', width: '32%', height: '14%', radius: 12 },
+  pecho:     { top: '31%', left: '34%', width: '32%', height: '16%', radius: 14 },
+  estomago:  { top: '47%', left: '34%', width: '32%', height: '14%', radius: 12 },
   // espalda y manos estaban en left 12% y 73% contra un torso que va de 22% a
   // 78%: flotaban AL LADO del cuerpo, sin brazos que las conectaran. Ahora la
   // espalda es la banda izquierda del torso y las manos van a la cadera.
-  espalda:   { top: '28%', left: '24%', width: '13%', height: '31%', radius: 12 },
-  manos:     { top: '60%', left: '24%', width: '13%', height: '10%', radius: 999 },
+  // width 10%, no 13%: llegaba al 37% contra un pecho que empieza en el 34%.
+  // Tres puntos de solape, y como `espalda` se renderiza DESPUES gana el
+  // hit-test: tocabas el borde izquierdo de tu pecho y la app encendia tu
+  // espalda — y te mandaba a la practica equivocada.
+  espalda:   { top: '31%', left: '24%', width: '10%', height: '28%', radius: 12 },
+  manos:     { top: '62%', left: '24%', width: '10%', height: '10%', radius: 999 },
 };
 
 /** Zonas que se apilan verticalmente: su hitSlop no puede crecer hacia
@@ -83,10 +91,21 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
               // hit-test y se comiera media mandíbula: el usuario tocaba su
               // mandíbula y la app encendía su garganta, y le ofrecía otra
               // práctica. En las zonas aisladas el slop libre sí ayuda.
-              hitSlop={STACKED.has(zone) ? { top: 0, bottom: 0, left: 16, right: 16 } : 14}
+              // Nunca hacia el centro del cuerpo. Las apiladas no crecen en
+              // vertical (garganta se comia la mandibula); las del flanco
+              // izquierdo —espalda y manos— no crecen hacia la derecha, que es
+              // donde esta el pecho.
+              hitSlop={
+                STACKED.has(zone)
+                  ? { top: 0, bottom: 0, left: 16, right: 16 }
+                  : { top: 14, bottom: 14, left: 14, right: 0 }
+              }
               accessibilityRole="checkbox"
               accessibilityState={{ checked: on }}
               accessibilityLabel={ZONE_LABEL[zone]}
+              // La silueta y la lista repiten las 7 zonas: sin esto, un lector
+              // de pantalla lee catorce casillas con el mismo nombre.
+              accessibilityHint="En la silueta"
               style={({ pressed }) => [
                 s.zone,
                 {
@@ -97,6 +116,11 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
                   borderRadius: box.radius,
                 },
                 on && s.zoneOn,
+                // La primera tocada manda: `readBody` enruta por `zones[0]`.
+                // Pintarlas todas igual escondia la unica jerarquia que el
+                // gesto tiene — y deseleccionar y volver a tocar cambiaba la
+                // practica en silencio.
+                on && selected[0] === zone && s.zonePrimary,
                 // Encender, no desvanecer. `opacity: 0.7` sobre un borde blanco
                 // hacia que la zona se APAGARA bajo el dedo -- y en web es el
                 // unico feedback, porque la haptica se salta por plataforma.
@@ -130,7 +154,8 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
               accessibilityRole="checkbox"
               accessibilityState={{ checked: on }}
               accessibilityLabel={ZONE_LABEL[zone]}
-              style={[s.chip, on && s.chipOn]}>
+              accessibilityHint="En la lista"
+              style={[s.chip, on && s.chipOn, on && selected[0] === zone && s.chipPrimary]}>
               <Text style={[s.chipText, on && s.chipTextOn]}>
                 {ZONE_LABEL[zone].replace(/^(La|El|Las|Los) /, '')}
               </Text>
@@ -156,10 +181,14 @@ const s = StyleSheet.create({
   // Silueta: hombros anchos que se estrechan. Sugiere un cuerpo sin dibujarlo.
   torso: {
     position: 'absolute',
-    top: '25%',
+    // 19%, no 25%: entre la cabeza (acaba en 16%) y el torso habia un hueco
+    // de 9% del canvas donde flotaban mandibula y garganta sin nada detras.
+    top: '19%',
     left: '22%',
     right: '22%',
-    height: '48%',
+    // 54%: llega al 73%, por debajo de las manos (acaban en 72%). Con 48% el
+    // torso terminaba en 67% y las manos colgaban fuera del cuerpo.
+    height: '54%',
     borderRadius: 28,
     // graphiteLight #181818 sobre la tarjeta #111111 daba 1.06:1 — WCAG 1.4.11
     // exige 3:1 para graficos esenciales. Se veian los bordes de zona y NO el
@@ -196,6 +225,13 @@ const s = StyleSheet.create({
   zonePressed: {
     backgroundColor: palette.goldGlow,
     borderColor: palette.gold,
+  },
+  // La que manda. Borde doble, no otro color: sigue siendo oro, solo pesa más.
+  zonePrimary: {
+    borderWidth: 2,
+  },
+  chipPrimary: {
+    borderWidth: 2,
   },
   legend: {
     flexDirection: 'row',

@@ -121,8 +121,8 @@ describe('El Umbral', () => {
   });
 
   it('tocar adelanta la frase, sin esperar el reloj', () => {
-    const { getByLabelText, queryByText } = render(<UmbralScreen />);
-    act(() => { fireEvent.press(getByLabelText('Siguiente frase')); });
+    const { getByA11yHint, queryByText } = render(<UmbralScreen />);
+    act(() => { fireEvent.press(getByA11yHint('Toca para adelantar')); });
     expect(queryByText(/No logro parar de trabajar/)).toBeNull();
     expect(queryByText(/Construir sin quemarme/)).not.toBeNull();
   });

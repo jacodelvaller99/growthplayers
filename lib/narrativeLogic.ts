@@ -71,7 +71,11 @@ export function arcForDay(protocolDay: number): Arc {
       act: 'automatico',
       actNumber: 2,
       actLabel: 'ACTO II · PROFUNDIDAD',
-      line: `${day} días. Los estudios sobre formación de hábitos sugieren que, alrededor de esta etapa, una conducta empieza a volverse automática. Ya cruzaste ese umbral.`,
+      // Sin apelar a "los estudios". Decia "los estudios sobre formacion de
+      // habitos sugieren..." sin citar ninguno, a tres archivos de
+      // `data/internistKnowledge.ts`, que exige fuente y grado de evidencia
+      // para cada afirmacion. La misma app no puede tener dos varas.
+      line: `${day} días. Un mes. A esta altura ya no estás decidiendo cada día si aparecer — y eso es lo que cambia.`,
     };
   }
   if (day <= 60) {
@@ -105,7 +109,7 @@ export interface CheckInReading {
  * Coherencia 0-10 a partir de las cuatro lecturas. La carga (`stress`) se
  * invierte porque más carga = peor estado, al contrario que las otras tres.
  *
- * ⚠️ Fórmula IDÉNTICA a la de `app/checkin.tsx:284` a propósito. Si divergen,
+ * ⚠️ Fórmula IDÉNTICA a la de `app/checkin.tsx` a propósito. Si divergen,
  * el usuario ve dos números distintos para lo mismo en la misma pantalla.
  * El objetivo es que checkin.tsx acabe consumiendo esta y quede una sola.
  */
@@ -124,7 +128,7 @@ export function coherenceOf(r: CheckInReading): number {
  * lo que convierte el guardado en un acto con recompensa.
  *
  * La recomendación accionable NO se recalcula aquí: ya existe y está bien
- * resuelta en `app/checkin.tsx:336-385` (con icono, ruta y CTA). Duplicarla
+ * resuelta en `app/checkin.tsx` (con icono, ruta y CTA). Duplicarla
  * sería crear una segunda voz que se desincroniza con la primera.
  *
  * Devuelve `null` sin comparación previa: en el primer check-in no hay contra

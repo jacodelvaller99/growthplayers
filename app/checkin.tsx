@@ -43,7 +43,7 @@ const CHECK_IN_TITLES = [
   'AUDITA\nTU ESTADO.',
   'CALIBRA\nEL SISTEMA.',
   'MIDE EL\nTERRENO.',
-  'ENTRA\nEN DATA.',
+  'LEE TU\nSEÑAL.',
   'REGISTRA\nLA SEÑAL.',
   'VERIFICA\nTU BASE.',
 ];
@@ -385,7 +385,7 @@ export default function CheckInScreen() {
   // mandíbula apretada de un estómago cerrado, y se regulan distinto. Tocar la
   // silueta cuesta dos segundos y da una señal que ningún número da.
   // Opcional a propósito: el camino mínimo del check-in sigue siendo 30s.
-  const bodyInsight = readBody({ zones: bodyZones, stress: stress ?? 0 });
+  const bodyInsight = readBody({ zones: bodyZones, stress });
 
   // ── Recomendación accionable post-guardado ──────────────────────────────────
   // Lógica local determinista, priorizando el sistema más comprometido.
@@ -624,7 +624,21 @@ export default function CheckInScreen() {
           Y el vacío usa el texto que `readBody` ya escribía para el caso sin
           zonas y que no se renderizaba en ninguna parte del producto. */}
       <View style={styles.bodyReading}>
-        <Text style={[styles.bodyReadingText, !bodyZones.length && styles.bodyReadingEmpty]}>
+        <Text
+          // Que un lector de pantalla anuncie la frase al tocar. Hoy decía
+          // "La mandíbula, seleccionado" y jamás lo que el producto existe
+          // para devolverle.
+          accessible
+          accessibilityRole="text"
+          accessibilityLiveRegion="polite"
+          style={[
+            styles.bodyReadingText,
+            // ORO cuando ha señalado algo. Es lo que el Umbral ya hace con sus
+            // frases —"es suyo"— y aquí faltaba: la respuesta al gesto salía en
+            // el MISMO gris del rótulo que la pregunta. La pantalla cambia de
+            // color cuando tocas tu cuerpo; eso es todo lo que hacía falta.
+            bodyZones.length ? styles.bodyReadingOn : styles.bodyReadingEmpty,
+          ]}>
           {bodyInsight.reading}
         </Text>
       </View>
@@ -850,6 +864,11 @@ export default function CheckInScreen() {
       {!saved && bodyCard}
 
       {/* ── Biometrics ── */}
+      {/* `!saved` como el mapa: post-guardado se podían seguir moviendo los
+          cuatro y el ÍNDICE DE CAPACIDAD recalculaba sobre un dato que ya no
+          se guarda. Un número que cambia y no significa nada. */}
+      {!saved && (
+      <>
       <GoldDivider label="BIOMETRÍA" />
       <PremiumCard style={styles.card}>
         <ScaleSelector label="ENERGÍA" value={energy} onChange={setEnergy} icon="bolt" />
@@ -867,6 +886,8 @@ export default function CheckInScreen() {
         />
         <ScaleSelector label="CALIDAD DE SUEÑO" value={sleep} onChange={setSleep} icon="bedtime" />
       </PremiumCard>
+      </>
+      )}
 
       {/* ── Lectura en vivo: se evalúa al mover los sliders ── */}
       {/* La lectura llega cuando llegan los cuatro. Antes se pintaba con los
@@ -1106,7 +1127,11 @@ const styles = StyleSheet.create({
   // el mapa hacia abajo justo cuando el usuario esta tocandolo. 68 = dos lineas
   // de `statement` (34 x 2).
   bodyReading: {
-    minHeight: 68,
+    // 102, no 68. El hueco reservaba DOS líneas y el texto que lo llena mide
+    // TRES (el copy vacío son 76 caracteres a 28 por línea), así que la
+    // silueta saltaba 34pt bajo el dedo en el primer toque — justo el
+    // movimiento que este hueco existe para evitar.
+    minHeight: 102,
     justifyContent: 'center',
   },
   bodyReadingText: {
@@ -1119,6 +1144,9 @@ const styles = StyleSheet.create({
   // importante), menos peso de color (todavia no dice nada de el).
   bodyReadingEmpty: {
     color: palette.smoke,
+  },
+  bodyReadingOn: {
+    color: palette.goldText,
   },
   savedOffer: {
     borderColor: palette.lineGold,

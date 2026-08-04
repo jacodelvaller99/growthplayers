@@ -106,7 +106,6 @@ function Beat({ text, quoted = false }: { text: string; quoted?: boolean }) {
 export default function UmbralScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
   const { state } = useLifeFlow();
 
   // Las palabras del propio usuario, tal cual las escribió. Se leen del estado
@@ -199,7 +198,11 @@ export default function UmbralScreen() {
         style={styles.stage}
         onPress={() => setShown((n) => Math.min(n + 1, beats.length + 1))}
         accessibilityRole="button"
-        accessibilityLabel="Siguiente frase"
+        // SIN `accessibilityLabel`. Lo tenía, y un `Pressable` accesible con
+        // label propio GANA sobre el texto hijo: un lector de pantalla
+        // anunciaba "Siguiente frase, botón" y JAMÁS las palabras del usuario,
+        // que son la única razón de existir de esta pantalla.
+        accessibilityHint="Toca para adelantar"
         disabled={done}>
         <Beat key={current.text} text={current.text} quoted={current.quoted} />
       </Pressable>
@@ -208,12 +211,18 @@ export default function UmbralScreen() {
           queda en pantalla mientras aparece la salida. Y llega un tiempo
           después, no en el mismo fotograma — la frase que cierra el guion
           necesita su propio silencio antes de que haya un botón que pulsar. */}
-      {done && (
-        <Fade style={styles.footer}>
-          <PolarisLogo size={36} color={palette.gold} />
-          <PrimaryButton label="CRUZAR EL UMBRAL" icon="arrow-forward" onPress={enter} />
-        </Fade>
-      )}
+      {/* El hueco del pie existe SIEMPRE, ocupado o no. `stage` es flex:1
+          centrado, así que montar el pie al final recalculaba el centro y la
+          última frase —el remate del guion— saltaba 52pt hacia arriba justo en
+          el instante que más quieto debería estar. */}
+      <View style={styles.footerSlot}>
+        {done && (
+          <Fade style={styles.footer}>
+            <PolarisLogo size={36} color={palette.gold} />
+            <PrimaryButton label="CRUZAR EL UMBRAL" icon="arrow-forward" onPress={enter} />
+          </Fade>
+        )}
+      </View>
     </View>
   );
 }
@@ -251,6 +260,10 @@ const styles = StyleSheet.create({
   // tamaño (no es menos importante), color de marca (es suyo).
   beatQuoted: {
     color: palette.goldText,
+  },
+  footerSlot: {
+    height: 128,
+    justifyContent: 'flex-end',
   },
   footer: {
     alignItems: 'center',
