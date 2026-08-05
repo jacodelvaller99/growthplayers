@@ -21,7 +21,12 @@
    no son props de DOM; el linter de React no conoce el árbol de r3f. */
 import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+// Import directo al archivo, no al barrel `@react-three/drei` — el barrel
+// también re-exporta `KeyboardControls`, que importa `zustand/middleware`
+// (el devtools middleware usa `import.meta.env`); Metro lo empaqueta igual
+// como script clásico y la app entera revienta con "Cannot use 'import.meta'
+// outside a module" antes de montar nada. El archivo suelto no arrastra eso.
+import { OrbitControls } from '@react-three/drei/core/OrbitControls';
 import * as THREE from 'three';
 
 import { palette } from '@/constants/theme';
@@ -82,8 +87,16 @@ export interface BodyMap3DProps {
 }
 
 export function BodyMap3D({ selected }: BodyMap3DProps) {
+  // `height: '100%'`, NUNCA un `aspectRatio` propio: el `View` de RN que
+  // envuelve esto (`s.canvas` en body-map.tsx) ya fija su propio aspect-ratio
+  // (300×486, el VIEWBOX 2D). Dos aspect-ratio distintos anidados en la misma
+  // cadena hacían que el ResizeObserver de react-three-fiber midiera este div
+  // ANTES de que el `aspectRatio` del padre terminara de resolverse, y se
+  // quedaba pegado en esa medición intermedia: el canvas WebGL montaba con
+  // contexto válido pero a 300×150 en vez de 300×486 — la mitad de alto,
+  // "no se ve el cuerpo" aunque técnicamente sí estaba ahí.
   return (
-    <div style={{ width: '100%', aspectRatio: '1 / 1.2', background: palette.black }}>
+    <div style={{ width: '100%', height: '100%', background: palette.black }}>
       <Canvas camera={{ position: [0, 0, 9], fov: 40 }}>
         <ambientLight intensity={0.5} />
         <PointCloud selected={selected} />

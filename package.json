@@ -96,6 +96,9 @@
     "victory-native": "^41.20.2",
     "zustand": "^5.0.12"
   },
+  "overrides": {
+    "three": "$three"
+  },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
     "@mswjs/data": "^0.16.2",
