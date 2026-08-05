@@ -48,15 +48,19 @@ export const ZONE_LABEL: Record<BodyZone, string> = {
  * es atmósfera, y un origen al píxel se leería como un foco. Vive aquí y no en
  * el componente porque es una propiedad de la ZONA, no del mapa — el check-in
  * lo consume sin montar la silueta.
+ *
+ * Recalibrado para la figura de `lib/humanFigureLogic.ts` (cuerpo real, no
+ * siete cajas) — el lienzo pasó de 340×472 a 300×486, así que los porcentajes
+ * de la versión de cajas ya no señalaban al sitio correcto.
  */
 export const ZONE_AURA_ORIGIN: Record<BodyZone, { x: `${number}%`; y: `${number}%` }> = {
-  cabeza:    { x: '50%', y: '14%' },
-  mandibula: { x: '50%', y: '20%' },
-  garganta:  { x: '50%', y: '26%' },
-  pecho:     { x: '50%', y: '36%' },
-  estomago:  { x: '50%', y: '48%' },
-  espalda:   { x: '36%', y: '40%' },
-  manos:     { x: '36%', y: '60%' },
+  cabeza:    { x: '50%', y: '12%' },
+  mandibula: { x: '50%', y: '19%' },
+  garganta:  { x: '50%', y: '27%' },
+  pecho:     { x: '50%', y: '42%' },
+  estomago:  { x: '50%', y: '62%' },
+  espalda:   { x: '34%', y: '52%' },
+  manos:     { x: '10%', y: '67%' },
 };
 
 export interface BodyReading {
