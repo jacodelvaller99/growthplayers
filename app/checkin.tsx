@@ -23,8 +23,12 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { ConsequenceCard, MilestoneToast } from '@/components/narrative';
 import { analytics } from '@/lib/analytics';
-import { deltaSince, milestoneCrossed, type Milestone } from '@/lib/narrativeLogic';
-import { readLocal, writeLocal } from '@/storage/local';
+import { checkMilestone } from '@/lib/milestoneCheck';
+import { coherenceOf, deltaSince, type Milestone } from '@/lib/narrativeLogic';
+import { withStepDone } from '@/lib/jornadaLogic';
+import { selectTurno } from '@/lib/turnoLogic';
+import { useJornada } from '@/hooks/use-jornada';
+import { ACTIVE_MODULE } from '@/data/modules';
 import { BodyMap } from '@/components/body-map';
 import { readBody, ZONE_AURA_ORIGIN, type BodyZone } from '@/lib/bodyMapLogic';
 import { Aura } from '@/components/aura';
@@ -53,9 +57,6 @@ function checkInTitle(streak: number): string {
   const idx = streak % CHECK_IN_TITLES.length;
   return CHECK_IN_TITLES[idx];
 }
-
-/** Racha y día de protocolo del último check-in guardado — el "antes" del hito. */
-const MILESTONE_KEY = 'milestone:v1';
 
 // ── Micro-ritual: box-breathing inline (4·4·4·4) ────────────────────────────
 // Que el check-in REGULE, no solo recolecte. Reusa el patrón del orbe de
@@ -314,8 +315,9 @@ export default function CheckInScreen() {
 
   // Real-time coherence score — 0 mientras falte algún valor (la tarjeta que lo
   // muestra no se renderiza hasta que `listo`, así que nunca se ve ese 0).
+  // La fórmula vive en narrativeLogic (`coherenceOf`) — era la tercera copia.
   const coherence = listo
-    ? Math.round((energy! + clarity! + sleep! + (11 - stress!)) / 4)
+    ? coherenceOf({ energy: energy!, clarity: clarity!, stress: stress!, sleep: sleep! })
     : 0;
   const coherenceStrong = coherence >= 7;
   const coherenceLabel =
@@ -352,33 +354,15 @@ export default function CheckInScreen() {
       analytics.checkinSubmit(energy, clarity, stress, sleep);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // El cruce que pasaba en silencio.
-      //
-      // `milestoneCrossed` y `MilestoneToast` estaban escritos y testeados desde
-      // la ola narrativa, y NADIE los montaba: la racha de 7, el día 30 y el día
-      // 90 se cruzaban sin que la app dijera nada. Un motor sin consumidor es
-      // código muerto con buena documentación.
-      //
-      // Se compara contra lo guardado en disco, no contra el render anterior:
-      // el día 30 se cruza a medianoche, no por una acción, así que un
-      // "anterior" en memoria nunca lo vería. Aquí, en el primer acto del día,
-      // sí. Y como solo dispara en el CRUCE, la felicitación no se vuelve diaria
-      // —que es exactamente lo que la convertiría en ruido.
-      try {
-        const prev = await readLocal<{ streak: number; protocolDay: number }>(MILESTONE_KEY);
-        // Si ya había check-in de hoy esto es una corrección, no un día nuevo:
-        // `computeStreak` ya lo contaba. Sumar ahí inflaría la racha y regalaría
-        // un hito que no se cruzó.
-        const next = { streak: todayCheckIn ? streak : streak + 1, protocolDay };
-        setMilestone(milestoneCrossed(prev, next, {
-          painPoint: state.profile.painPoint,
-          purpose: state.northStar.purpose,
-        }));
-        await writeLocal(MILESTONE_KEY, next);
-      } catch (e) {
-        // Perder un hito no puede costar el check-in.
-        logSilentError('checkin.milestone', e);
-      }
+      // El cruce que pasaba en silencio — la evaluación vive ahora en
+      // lib/milestoneCheck.ts para que Comando y el cierre de jornada también
+      // la corran (un hito de calendario se perdía si ese día no había
+      // check-in). Si ya había check-in de hoy esto es una corrección, no un
+      // día nuevo: `computeStreak` ya lo contaba; sumar inflaría la racha.
+      setMilestone(await checkMilestone(
+        { streak: todayCheckIn ? streak : streak + 1, protocolDay },
+        { painPoint: state.profile.painPoint, purpose: state.northStar.purpose },
+      ));
       // Honestidad de guardado: si no hubo red, el dato quedó encolado — se dice.
       if (syncStatus === 'queued') {
         showToast('Guardado en este dispositivo — se sincronizará al recuperar conexión', 'warning');
@@ -509,6 +493,31 @@ export default function CheckInScreen() {
   const goToCommando = () => router.replace('/(tabs)/comando');
   const followRecommendation = () => router.replace(recommendation.route as never);
 
+  // ── El siguiente paso de la JORNADA ─────────────────────────────────────────
+  // Guardar el check-in completa LÉETE; la pantalla entrega el paso que sigue
+  // en vez de soltar al usuario. `withStepDone` pinta el estado post-guardado
+  // sin esperar a que el log local se relea, y `selectTurno` decide el destino
+  // con las MISMAS reglas de siempre (una alarma de tensión/sueño/energía
+  // sigue ganando al paso — mandan a regulación, que también es un paso).
+  const jornada = useJornada();
+  const nextLessonRoute = (() => {
+    const done = new Set(state.completedLessons ?? []);
+    const lesson = ACTIVE_MODULE.lessons.find((l) => !done.has(l.id)) ?? ACTIVE_MODULE.lessons[0];
+    return lesson ? `/lesson/${lesson.id}` : null;
+  })();
+  const turnoSiguiente = listo
+    ? selectTurno({
+        narrative: null, kind: null,
+        todayCheckIn: { energy: energy!, clarity: clarity!, stress: stress!, sleep: sleep! },
+        daysSinceLastCheckIn: 0,
+        jornada: jornada ? withStepDone(jornada, 'leete') : null,
+        nextLessonRoute,
+      })
+    : null;
+  const followTurnoSiguiente = () => {
+    if (turnoSiguiente) router.replace(turnoSiguiente.route as never);
+  };
+
   // ── Micro-ritual: estado pre (tensión declarada, banda 1–3) + logging ──────
   // El check-in mide estrés 1–10; lo llevamos a la misma escala 1–3 del post
   // para que el delta sea comparable de un toque.
@@ -546,6 +555,11 @@ export default function CheckInScreen() {
     ? deltaSince({ energy: energy!, clarity: clarity!, stress: stress!, sleep: sleep! }, previousCheckIn)
     : 'Esta es tu línea base. A partir de mañana todo se mide contra esto.';
 
+  // El CTA primario es el SIGUIENTE PASO de la jornada — la misión continúa.
+  // La recomendación local queda como salida secundaria SOLO cuando difiere
+  // (p. ej. señalaste la mandíbula y el paso que toca es la lección): ofrecer
+  // dos botones que van al mismo sitio con dos nombres sería la clase de
+  // duplicado que EL TURNO vino a matar.
   const recommendationCard = (
     <ConsequenceCard
       icon={recommendation.icon}
@@ -553,7 +567,18 @@ export default function CheckInScreen() {
       title={recommendation.title}
       body={recommendation.body}
       delta={deltaLine}>
-      <PrimaryButton label={recommendation.cta} icon="arrow-forward" onPress={followRecommendation} />
+      {turnoSiguiente ? (
+        <PrimaryButton
+          label={`SIGUIENTE: ${turnoSiguiente.verb}`}
+          icon="arrow-forward"
+          onPress={followTurnoSiguiente}
+        />
+      ) : (
+        <PrimaryButton label={recommendation.cta} icon="arrow-forward" onPress={followRecommendation} />
+      )}
+      {turnoSiguiente && recommendation.route !== turnoSiguiente.route && (
+        <SecondaryButton label={recommendation.cta} icon="explore" onPress={followRecommendation} />
+      )}
       <SecondaryButton label="VOLVER AL COMANDO" icon="dashboard" onPress={goToCommando} />
     </ConsequenceCard>
   );

@@ -96,6 +96,12 @@ export default function ModuleDetailScreen() {
     ? Math.round((completedCount / module.lessons.length) * 100)
     : 0;
 
+  // El módulo que sigue en el catálogo — lo usan el CTA del banner de
+  // completado y el teaser (ahora pulsable) del pie.
+  const currentModuleIdx = POLARIS_MODULES.findIndex((m) => m.id === module.id);
+  const siguiente = POLARIS_MODULES[currentModuleIdx + 1] ?? null;
+  const nextModule = siguiente && siguiente.status !== 'coming_soon' ? siguiente : null;
+
   return (
     <ScrollView
       style={sc.root}
@@ -242,17 +248,35 @@ export default function ModuleDetailScreen() {
       </View>
 
       {module.lessons.length > 0 && completedCount === module.lessons.length ? (
-        <View style={styles.completionBanner}>
-          <MaterialIcons name="emoji-events" size={20} color={palette.goldText} />
-          <View style={styles.completionCopy}>
-            <Text style={styles.completionTitle}>MÓDULO COMPLETADO</Text>
-            <Text style={styles.completionBody}>
-              {module.arquetipo
-                ? `Ya eres el ${module.arquetipo.toUpperCase()}. Eso no se puede desaprender.`
-                : 'Has absorbido este módulo. Lleva lo aprendido al siguiente nivel.'}
-            </Text>
+        <>
+          <View style={styles.completionBanner}>
+            <MaterialIcons name="emoji-events" size={20} color={palette.goldText} />
+            <View style={styles.completionCopy}>
+              <Text style={styles.completionTitle}>MÓDULO COMPLETADO</Text>
+              <Text style={styles.completionBody}>
+                {module.arquetipo
+                  ? `Ya eres el ${module.arquetipo.toUpperCase()}. Eso no se puede desaprender.`
+                  : 'Has absorbido este módulo. Lleva lo aprendido al siguiente nivel.'}
+              </Text>
+            </View>
           </View>
-        </View>
+          {/* Terminar un módulo entero era un callejón: el banner no era
+              pulsable y la única salida era "VOLVER". Un final es donde MÁS
+              hace falta el siguiente paso. */}
+          {nextModule ? (
+            <PrimaryButton
+              label={`SIGUIENTE MÓDULO: ${(nextModule.arquetipo ?? nextModule.title).toUpperCase()}`}
+              icon="arrow-forward"
+              onPress={() => router.push(`/module/${nextModule.id}` as never)}
+            />
+          ) : (
+            <PrimaryButton
+              label="VER TU PROGRESO"
+              icon="insights"
+              onPress={() => router.push('/(tabs)/progreso' as never)}
+            />
+          )}
+        </>
       ) : activeLesson ? (
         // `activeLesson` sale de `lessonsWithStatus[0]` (:65): en un módulo sin
         // lecciones propias es `undefined`, y esto reventaba con "Cannot read
@@ -268,21 +292,22 @@ export default function ModuleDetailScreen() {
         />
       ) : null}
 
-      {/* Next module anticipation strip */}
-      {(() => {
-        const currentIdx = POLARIS_MODULES.findIndex((m) => m.id === module.id);
-        const nextMod = POLARIS_MODULES[currentIdx + 1] ?? null;
-        if (!nextMod || nextMod.status === 'coming_soon') return null;
-        return (
-          <View style={styles.nextModuleTeaser}>
-            <MaterialIcons name="lock" size={12} color={palette.smoke} />
-            <View style={styles.nextModuleCopy}>
-              <Text style={styles.nextModuleLabel}>SIGUIENTE MÓDULO</Text>
-              <Text style={styles.nextModuleTitle}>{nextMod.title}</Text>
-            </View>
+      {/* Next module strip — pulsable, y sin candado: el catálogo está
+          abierto a propósito (quien paga entra donde quiera), así que un
+          candado aquí mentía y un teaser que no navegaba era un callejón. */}
+      {nextModule && (
+        <Pressable
+          onPress={() => router.push(`/module/${nextModule.id}` as never)}
+          accessibilityRole="button"
+          accessibilityLabel={`Siguiente módulo: ${nextModule.title}`}
+          style={({ pressed }) => [styles.nextModuleTeaser, pressed && { opacity: 0.8 }]}>
+          <MaterialIcons name="arrow-forward" size={12} color={palette.smoke} />
+          <View style={styles.nextModuleCopy}>
+            <Text style={styles.nextModuleLabel}>SIGUIENTE MÓDULO</Text>
+            <Text style={styles.nextModuleTitle}>{nextModule.title}</Text>
           </View>
-        );
-      })()}
+        </Pressable>
+      )}
 
       <SecondaryButton label="VOLVER" icon="arrow-back" onPress={() => router.back()} />
     </ScrollView>

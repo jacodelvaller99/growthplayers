@@ -38,8 +38,11 @@ import { selectTurno, type TurnoKind } from '@/lib/turnoLogic';
 import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
 import { clientSafeNarrative } from '@/lib/coachIntelligenceLogic';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { ArcHeader } from '@/components/narrative';
+import { ArcHeader, MilestoneToast } from '@/components/narrative';
+import { JornadaTracker } from '@/components/jornada';
 import { arcForDay } from '@/lib/narrativeLogic';
+import { checkMilestone } from '@/lib/milestoneCheck';
+import { useJornada } from '@/hooks/use-jornada';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useDashboardPrefs, DASHBOARD_MAX } from '@/hooks/use-dashboard-prefs';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
@@ -167,7 +170,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
-  const { state, protocolDay, todayCheckIn, latestCheckIn, userId } = useLifeFlow();
+  const { state, protocolDay, todayCheckIn, latestCheckIn, userId, isLoaded } = useLifeFlow();
   const { user: wellnessUser } = useWellnessStore();
   const { intelligence, engagementTier } = useUserIntelligence(userId);
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
@@ -263,6 +266,40 @@ export default function DashboardScreen() {
     return () => { cancelled = true; };
   }, [userId]);
 
+  // La jornada del día (LÉETE → EJECUTA → REGULA → CIERRA). `null` mientras
+  // el log local carga: selectTurno sin jornada se comporta como siempre, así
+  // que el arranque es el turno clásico y se refina al llegar el log.
+  const jornada = useJornada();
+
+  // Hito de calendario al montar — SOLO cuando el estado ya hidrató: evaluar
+  // con `checkIns` vacíos escribiría un snapshot de racha 0 encima del real y
+  // regalaría (o robaría) un cruce en el siguiente check-in.
+  const [milestone, setMilestone] = useState<import('@/lib/narrativeLogic').Milestone | null>(null);
+  useEffect(() => {
+    if (!isLoaded) return;
+    let cancelled = false;
+    (async () => {
+      const m = await checkMilestone(
+        { streak: computeStreak(state.checkIns), protocolDay },
+        { painPoint: state.profile.painPoint, purpose: state.northStar.purpose },
+      );
+      if (!cancelled && m) setMilestone(m);
+    })();
+    return () => { cancelled = true; };
+    // Una vez por sesión de pantalla, al hidratar: el cruce de calendario
+    // ocurre entre sesiones, no mientras se mira la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  // Deep link a la próxima lección para el paso EJECUTA — el turno lleva a la
+  // lección, no al catálogo. (nextLesson, más abajo, calcula más cosas para su
+  // tarjeta; aquí solo hace falta la ruta y el orden de declaración manda.)
+  const nextLessonRoute = useMemo(() => {
+    const done = new Set(state.completedLessons ?? []);
+    const lesson = ACTIVE_MODULE.lessons.find((l) => !done.has(l.id)) ?? ACTIVE_MODULE.lessons[0];
+    return lesson ? `/lesson/${lesson.id}` : null;
+  }, [state.completedLessons]);
+
   const turno = useMemo(() => selectTurno({
     narrative: coachNarrative?.narrative ?? null,
     kind: coachNarrative?.kind ?? null,
@@ -270,7 +307,9 @@ export default function DashboardScreen() {
       ? { energy: todayCheckIn.energy, clarity: todayCheckIn.clarity, stress: todayCheckIn.stress, sleep: todayCheckIn.sleep }
       : null,
     daysSinceLastCheckIn,
-  }), [coachNarrative, todayCheckIn, daysSinceLastCheckIn]);
+    jornada,
+    nextLessonRoute,
+  }), [coachNarrative, todayCheckIn, daysSinceLastCheckIn, jornada, nextLessonRoute]);
 
   // Wellness stats
   const totalWellnessSessions = (state.wellnessSessions ?? []).length;
@@ -359,14 +398,6 @@ export default function DashboardScreen() {
     return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
   }, [state.checkIns]);
 
-  // ── Mando de hoy — UNA sola decisión no-negociable, anclada arriba ──────────
-  // Prioridad: NBA accionable de la IA → recordatorio diario del Norte →
-  // propósito del Norte → fallback al check-in. Forward, no pasivo.
-  // El Mando es el titular del turno. El Norte deja de competir con él aquí:
-  // ya tiene su propia tira (`northAnchorStrip`) y antes lo desplazaba, así que
-  // el usuario leía su recordatorio en vez de qué hacer ahora.
-  const mandoDeHoy = turno.headline;
-
   // Today's coherence (0–10) — same formula as the check-in screen.
   const coherenceToday = checkIn
     ? Math.round((checkIn.energy + checkIn.clarity + (11 - checkIn.stress) + checkIn.sleep) / 4)
@@ -416,30 +447,18 @@ export default function DashboardScreen() {
 
   // ── Shared JSX blocks (idénticos en mobile y desktop) ─────────────────────
 
-  // EL TURNO — una sola tarjeta, una sola opinión, un solo destino.
-  //
-  // Había DOS, y las dos salían del MISMO objeto `turno`: esta (el titular a
-  // 26px) y `nbaBlock` (el verbo a 11px). O sea que la pantalla decía lo mismo
-  // dos veces con dos pesos distintos — y encima la grande, la que manda
-  // visualmente, navegaba a `/norte` mientras la chica llevaba a la acción de
-  // verdad. El usuario pulsaba lo que pesaba y acababa en otro sitio.
-  //
-  // Ahora el titular, el delta y el porqué viven juntos y van a `turno.route`.
+  // LA JORNADA — la evolución de EL TURNO: la misma tarjeta única con una
+  // sola opinión y un solo destino, ahora con la misión del día visible
+  // (LÉETE → EJECUTA → REGULA → CIERRA). El componente absorbe el titular,
+  // el delta y el porqué del turno — misma voz, un solo sitio
+  // (components/jornada.tsx), montado igual en móvil y desktop.
   const mandoStripBlock = (
-    <GoldAccentCard
-      onPress={() => router.push(turno.route as never)}
-      accessibilityRole="button"
-      accessibilityLabel={`${mandoDeHoy}. ${turno.why}`}>
-      <Text style={styles.mandoLabel}>TU TURNO</Text>
-      <Text style={styles.mandoText}>{mandoDeHoy}</Text>
-      {/* El delta primero: es lo único que el usuario no podía saber solo. */}
-      {turno.delta && <Text style={styles.mandoDelta}>{turno.delta}</Text>}
-      <Text style={styles.mandoCaption}>{turno.why}</Text>
-      <View style={styles.mandoCta}>
-        <Text style={styles.mandoCtaText}>{turno.verb}</Text>
-        <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
-      </View>
-    </GoldAccentCard>
+    <JornadaTracker
+      jornada={jornada}
+      turno={turno}
+      arcPhrase={arc.line}
+      onPressCta={() => router.push(turno.route as never)}
+    />
   );
 
   const anomalyBlock = intelligence.anomaly_detected && intelligence.anomaly_type && (
@@ -1211,6 +1230,7 @@ export default function DashboardScreen() {
         {intelligenceGreeting ? (
           <Text style={styles.deskHeroBody}>{intelligenceGreeting}</Text>
         ) : null}
+        <MilestoneToast milestone={milestone} />
         {mandoStripBlock}
         {/* El `PrimaryButton` de oro macizo que vivía aquí se quitó: el Mando
             de arriba YA es una tarjeta pulsable con su propio verbo y su
@@ -1340,6 +1360,10 @@ export default function DashboardScreen() {
               que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
               al eyebrow. El Mando sigue siendo lo único grande. */}
           <ArcHeader arc={arc} />
+          {/* El hito de calendario (día 30/90) se evalúa al montar: antes solo
+              lo evaluaba el guardado del check-in y se perdía si ese día no
+              había lectura. `milestone:v1` lo hace idempotente. */}
+          <MilestoneToast milestone={milestone} />
           {/* TENSIÓN — la única decisión de hoy. mandoStripBlock estaba escrito
               pero solo se montaba dentro de deskHero, así que el teléfono
               —donde se abre a diario— perdía la única pieza direccional. */}

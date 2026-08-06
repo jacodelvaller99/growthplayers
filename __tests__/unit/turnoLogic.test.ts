@@ -8,6 +8,7 @@
  * entradas en vez de fiarse de casos sueltos.
  */
 import { selectTurno, type TurnoCheckIn, type TurnoKind } from '@/lib/turnoLogic';
+import { deriveJornada, type JornadaLog } from '@/lib/jornadaLogic';
 
 const NARRATIVA = { headline: 'Esta semana vas hacia arriba.', why: 'Lo que haces funciona.' };
 const SANO: TurnoCheckIn = { energy: 7, clarity: 7, stress: 3, sleep: 7 };
@@ -203,5 +204,98 @@ describe('NINGUN peldaño manda a hacer la lectura que ya esta hecha', () => {
       daysSinceLastCheckIn: 9,
     });
     expect(t.route).toBe('/checkin');
+  });
+});
+
+describe('la jornada — el dia sano avanza de paso en paso', () => {
+  // El estado congelado a matar: tras el check-in, el turno decia "ABRIR EL
+  // PROTOCOLO" el resto del dia aunque el usuario ya hubiera ejecutado,
+  // regulado y escrito. Con `jornada`, las DOS ramas del dia sano (ventana
+  // alta y banda operativa) avanzan al paso actual. Alarmas y narrativa
+  // siguen mandando — mandan a regulacion, que ES un paso.
+  const HOY = '2026-08-06';
+  const jornadaDe = (opts: {
+    log?: JornadaLog | null; checkIn?: boolean; wellness?: boolean;
+  }) => deriveJornada({
+    today: HOY,
+    log: opts.log ?? null,
+    hasCheckInToday: opts.checkIn ?? true,
+    wellnessToday: opts.wellness ?? false,
+  });
+
+  it('sin jornada, el output es EXACTAMENTE el de siempre — cero regresion', () => {
+    const sin = selectTurno({ ...base, todayCheckIn: SANO });
+    const conUndefined = selectTurno({ ...base, todayCheckIn: SANO, jornada: undefined });
+    const conNull = selectTurno({ ...base, todayCheckIn: SANO, jornada: null });
+    expect(conUndefined).toEqual(sin);
+    expect(conNull).toEqual(sin);
+    expect(sin.route).toBe('/(tabs)/programas');
+  });
+
+  it('banda operativa + paso actual EJECUTA → a la leccion, con deep link si lo hay', () => {
+    const j = jornadaDe({ checkIn: true });
+    expect(j.current).toBe('ejecuta');
+    const t = selectTurno({ ...base, todayCheckIn: SANO, jornada: j, nextLessonRoute: '/lesson/l1' });
+    expect(t.route).toBe('/lesson/l1');
+    expect(t.verb).toBe('EJECUTAR LA LECCIÓN');
+    expect(t.delta).toContain('Paso 2 de 4');
+  });
+
+  it('sin deep link, EJECUTA cae al catalogo — nunca a una ruta rota', () => {
+    const t = selectTurno({ ...base, todayCheckIn: SANO, jornada: jornadaDe({}) });
+    expect(t.route).toBe('/(tabs)/programas');
+  });
+
+  it('leccion hecha → REGULA; regulado → CIERRA', () => {
+    const conLeccion = jornadaDe({ log: { date: HOY, done: ['ejecuta'] } });
+    expect(selectTurno({ ...base, todayCheckIn: SANO, jornada: conLeccion }).route)
+      .toBe('/bienestar/respiracion');
+
+    const regulado = jornadaDe({ log: { date: HOY, done: ['ejecuta'] }, wellness: true });
+    const t = selectTurno({ ...base, todayCheckIn: SANO, jornada: regulado });
+    expect(t.route).toBe('/bienestar/diario');
+    expect(t.verb).toBe('CERRAR LA JORNADA');
+    expect(t.delta).toContain('Paso 4 de 4');
+  });
+
+  it('jornada completa → progreso, sin pedir nada mas', () => {
+    const completa = jornadaDe({
+      log: { date: HOY, done: ['ejecuta', 'cierra'] }, wellness: true,
+    });
+    expect(completa.complete).toBe(true);
+    const t = selectTurno({ ...base, todayCheckIn: SANO, jornada: completa });
+    expect(t.route).toBe('/(tabs)/progreso');
+    expect(t.headline).toBe('Jornada completa.');
+  });
+
+  it('la ALARMA gana a la jornada: tension 8 manda a respirar aunque toque ejecutar', () => {
+    const t = selectTurno({
+      ...base,
+      todayCheckIn: { energy: 7, clarity: 7, stress: 8, sleep: 7 },
+      jornada: jornadaDe({}),
+      nextLessonRoute: '/lesson/l1',
+    });
+    expect(t.route).toBe('/bienestar/respiracion');
+    expect(t.delta).toContain('8/10'); // el dato de la alarma, no el paso
+  });
+
+  it('la NARRATIVA gana a la jornada: el ML afina por encima de la mision', () => {
+    const t = selectTurno({
+      ...base,
+      narrative: NARRATIVA, kind: 'confront',
+      todayCheckIn: SANO,
+      jornada: jornadaDe({}),
+    });
+    expect(t.source).toBe('narrative');
+    expect(t.route).toBe('/(tabs)/mentor');
+  });
+
+  it('la ventana alta tambien avanza por la jornada en vez de repetir el catalogo', () => {
+    const t = selectTurno({
+      ...base,
+      todayCheckIn: { energy: 9, clarity: 9, stress: 1, sleep: 9 },
+      jornada: jornadaDe({ log: { date: HOY, done: ['ejecuta'] } }),
+    });
+    expect(t.route).toBe('/bienestar/respiracion');
   });
 });

@@ -8,7 +8,10 @@ import React from 'react';
 
 let mockIsDesktop = false;
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ replace: jest.fn(), back: jest.fn() }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
+  useFocusEffect: () => {},
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));

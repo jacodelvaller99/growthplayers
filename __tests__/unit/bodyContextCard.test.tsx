@@ -5,7 +5,17 @@
 import { render } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+  useFocusEffect: () => {},
+}));
+// use-jornada arrastra use-lifeflow → lib/supabase (cliente real, pide env).
+// Este test es de la TARJETA, no de la jornada: con `null` el cierre cae al
+// destino clásico (diario), que es lo que las aserciones ya verifican.
+jest.mock('@/hooks/use-jornada', () => ({
+  useJornada: () => null,
+  logJornadaStep: jest.fn(),
+}));
 jest.mock('@/components/polaris', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const RN = require('react-native');

@@ -14,9 +14,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { JornadaCierre } from '@/components/jornada';
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
+import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { withStepDone, type Jornada } from '@/lib/jornadaLogic';
+import { checkMilestone } from '@/lib/milestoneCheck';
+import { arcForDay, deltaSince, type Milestone } from '@/lib/narrativeLogic';
 import { supabase } from '@/lib/supabase';
+import { computeStreak } from '@/lib/utils';
 
 type EntryType = 'reflection' | 'gratitude' | 'intention';
 
@@ -30,11 +37,18 @@ export default function DiarioScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { state, todayCheckIn, protocolDay } = useLifeFlow();
+  const jornada = useJornada();
   const [type, setType]       = useState<EntryType>('reflection');
   const [text, setText]       = useState('');
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // El fin de jornada: guardar la nota CIERRA el día. El diario era el
+  // sumidero del loop — todas las prácticas terminaban aquí y esta pantalla
+  // no devolvía nada. Ahora devuelve el cierre: pasos hechos, delta del día,
+  // frase del arco, y una sola salida al Comando.
+  const [cierre, setCierre] = useState<{ jornada: Jornada; milestone: Milestone | null } | null>(null);
 
   const current = ENTRY_TYPES.find((t) => t.id === type)!;
 
@@ -53,15 +67,56 @@ export default function DiarioScreen() {
         if (error) throw error;
       }
       setText('');
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      // SOLO en éxito: un guardado fallido no cierra nada.
+      void logJornadaStep('cierra');
+      if (jornada) {
+        const milestone = await checkMilestone(
+          { streak: computeStreak(state.checkIns), protocolDay },
+          { painPoint: state.profile.painPoint, purpose: state.northStar.purpose },
+        );
+        setCierre({ jornada: withStepDone(jornada, 'cierra'), milestone });
+      } else {
+        // Log local sin cargar (raro): el acuse clásico, nunca un hueco.
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      }
     } catch (err) {
       console.error('[Diario] Error al guardar entrada:', err);
       setSaveError('No se pudo guardar tu entrada. Intenta de nuevo.');
     } finally {
       setSaving(false);
     }
-  }, [text, type, saving]);
+  }, [text, type, saving, jornada, state.checkIns, state.profile.painPoint, state.northStar.purpose, protocolDay]);
+
+  // El delta del día y la frase del arco para el cierre.
+  const prevCheckIn = state.checkIns.find((c) => c.id !== todayCheckIn?.id) ?? null;
+  const deltaDia = todayCheckIn
+    ? deltaSince(
+        { energy: todayCheckIn.energy, clarity: todayCheckIn.clarity, stress: todayCheckIn.stress, sleep: todayCheckIn.sleep },
+        prevCheckIn,
+      )
+    : null;
+  const arcPhrase = arcForDay(protocolDay, {
+    painPoint: state.profile.painPoint,
+    purpose: state.northStar.purpose,
+    identity: state.northStar.identity,
+  }).line;
+
+  if (cierre) {
+    return (
+      <ScrollView
+        style={sc.root}
+        contentContainerStyle={[sc.content, { paddingTop: insets.top + 24, paddingBottom: 80 }]}>
+        <JornadaCierre
+          jornada={cierre.jornada}
+          delta={deltaDia}
+          arcPhrase={arcPhrase}
+          milestone={cierre.milestone}
+          onVolver={() => router.replace('/(tabs)/comando')}
+        />
+      </ScrollView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

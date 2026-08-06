@@ -9,7 +9,11 @@ import React from 'react';
 
 let mockIsDesktop = false;
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+  // use-jornada relee el log local al enfocar; en el smoke basta el no-op.
+  useFocusEffect: () => {},
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));

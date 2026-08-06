@@ -1176,6 +1176,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     // contra la racha de otra persona.
     await removeLocal('hero:v1');
     await removeLocal('milestone:v1');
+    await removeLocal('jornada:v1');
     setState(defaultState);
   }, []);
 

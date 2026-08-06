@@ -26,6 +26,9 @@
  * parámetro para que el resultado sea testeable y reproducible.
  */
 
+import { coherenceOf } from './narrativeLogic';
+import type { Jornada } from './jornadaLogic';
+
 /** Los 6 `kind` de `CoachNextAction` (lib/coachIntelligenceLogic.ts). */
 export type TurnoKind =
   | 'confront' | 'support' | 'celebrate' | 'investigate' | 'rest_signal' | 'reconnect';
@@ -53,6 +56,17 @@ export interface TurnoInput {
   todayCheckIn: TurnoCheckIn | null;
   /** Días desde la última lectura. null = nunca ha hecho una. */
   daysSinceLastCheckIn: number | null;
+  /**
+   * La jornada del día (lib/jornadaLogic.ts), si el consumidor la conoce.
+   * OPCIONAL a propósito: sin ella el turno se comporta byte a byte como
+   * antes (bienestar/index.tsx no la pasa y no cambia). Con ella, las dos
+   * ramas del día sano que decían "ABRIR EL PROTOCOLO" para siempre avanzan
+   * de paso en paso — que era exactamente el estado congelado a matar.
+   */
+  jornada?: Jornada | null;
+  /** Ruta profunda a la próxima lección, si el consumidor la conoce. El paso
+   *  'ejecuta' lleva AHÍ en vez de soltar al usuario en el catálogo. */
+  nextLessonRoute?: string | null;
 }
 
 export interface Turno {
@@ -69,8 +83,54 @@ export interface Turno {
   route: string;
 }
 
-const COHERENCE = (c: TurnoCheckIn): number =>
-  Math.round((c.energy + c.clarity + c.sleep + (11 - c.stress)) / 4);
+// La fórmula vive en narrativeLogic (`coherenceOf`) — estaba copiada a mano
+// aquí y en checkin.tsx; tres copias de un número que alimenta a Norman y al
+// score es cómo se divergen en silencio.
+const COHERENCE = coherenceOf;
+
+/**
+ * El turno según el paso ACTUAL de la jornada — el refinamiento del día sano.
+ * Solo se llama desde las dos ramas de `desdeCheckIn` que antes devolvían
+ * "ABRIR EL PROTOCOLO" a secas: las alarmas (tensión/sueño/energía) y el
+ * peldaño narrativo siguen ganando por encima de esto, porque mandan a
+ * regulación — que ES un paso de la jornada, así que la misión se marca sola.
+ */
+function desdeJornada(j: Jornada, nextLessonRoute: string | null | undefined): Turno {
+  const paso = `Paso ${Math.min(j.doneCount + 1, 4)} de 4 de tu jornada.`;
+
+  switch (j.current) {
+    case 'ejecuta':
+      return {
+        source: 'checkin', delta: paso,
+        headline: 'La lectura está. Ahora el protocolo.',
+        why: 'Una lección hoy — no el módulo entero. El avance pequeño y diario es lo que a 90 días se vuelve estructural.',
+        verb: 'EJECUTAR LA LECCIÓN',
+        route: nextLessonRoute ?? '/(tabs)/programas',
+      };
+    case 'regula':
+      return {
+        source: 'checkin', delta: paso,
+        headline: 'Ejecutaste. Ahora regula el sistema.',
+        why: 'Unos minutos de respiración consolidan lo que hiciste: bajar de revoluciones a propósito, no por agotamiento.',
+        verb: 'REGULAR EL SISTEMA', route: '/bienestar/respiracion',
+      };
+    case 'cierra':
+      return {
+        source: 'checkin', delta: paso,
+        headline: 'Último paso: cierra la jornada.',
+        why: 'Dos líneas en el diario y el día queda nombrado. Lo que se nombra se puede repetir.',
+        verb: 'CERRAR LA JORNADA', route: '/bienestar/diario',
+      };
+    default:
+      // Completa (current null) — el único estado que queda aquí.
+      return {
+        source: 'checkin', delta: '4 de 4 pasos hechos hoy.',
+        headline: 'Jornada completa.',
+        why: 'Los cuatro pasos del día están hechos. Mira el patrón que estás construyendo — o descansa, que también es parte.',
+        verb: 'VER TU PROGRESO', route: '/(tabs)/progreso',
+      };
+  }
+}
 
 /**
  * Destino por `kind`. `investigate` NO tiene ruta a propósito: significa que el
@@ -96,7 +156,17 @@ const RUTA_POR_KIND: Record<Exclude<TurnoKind, 'investigate'>, { route: string; 
  *  TOTAL a propósito: con lectura de hoy SIEMPRE devuelve turno. Devolvía
  *  `null` en el día normal y la escalera caía al peldaño 3, que pide la
  *  lectura que acaba de hacerse. */
-function desdeCheckIn(c: TurnoCheckIn): Turno {
+function desdeCheckIn(
+  c: TurnoCheckIn,
+  jornada?: Jornada | null,
+  nextLessonRoute?: string | null,
+): Turno {
+  // El refinamiento de jornada solo aplica al día SANO (las dos ramas de
+  // abajo que mandaban al catálogo). `current === 'leete'` sería un input
+  // inconsistente — aquí ya HAY lectura de hoy — así que se ignora y la
+  // rama clásica responde.
+  const jornadaActiva = jornada && jornada.current !== 'leete' ? jornada : null;
+
   if (c.stress >= 7) {
     return {
       source: 'checkin', delta: `Tensión ${c.stress}/10 en tu última lectura.`,
@@ -122,6 +192,9 @@ function desdeCheckIn(c: TurnoCheckIn): Turno {
     };
   }
   if (COHERENCE(c) >= 8) {
+    // Con jornada, la ventana alta no repite "abre el catálogo" todo el día:
+    // avanza al paso que toca. Sin jornada, comportamiento clásico intacto.
+    if (jornadaActiva) return desdeJornada(jornadaActiva, nextLessonRoute);
     return {
       source: 'checkin', delta: `Coherencia ${COHERENCE(c)}/10 — tu ventana alta.`,
       headline: 'Estás en ventana de alto rendimiento.',
@@ -132,6 +205,7 @@ function desdeCheckIn(c: TurnoCheckIn): Turno {
   // El día normal. No engancha ninguna alarma y tampoco es la ventana alta:
   // ni corregir ni celebrar — avanzar. Esta rama faltaba, y es el estado MÁS
   // frecuente de todos: un usuario sano que ya se leyó.
+  if (jornadaActiva) return desdeJornada(jornadaActiva, nextLessonRoute);
   return {
     source: 'checkin', delta: `Coherencia ${COHERENCE(c)}/10 — banda operativa.`,
     headline: 'Ya te leíste hoy. Ahora ejecuta.',
@@ -158,7 +232,7 @@ function fallback(dias: number | null): Turno {
 }
 
 export function selectTurno(input: TurnoInput): Turno {
-  const { narrative, kind, todayCheckIn, daysSinceLastCheckIn } = input;
+  const { narrative, kind, todayCheckIn, daysSinceLastCheckIn, jornada, nextLessonRoute } = input;
 
   // Peldaño 1 — lo más informado, cuando hay red + ML + consentimiento.
   //
@@ -186,7 +260,7 @@ export function selectTurno(input: TurnoInput): Turno {
   // Peldaño 2 — con la lectura de hoy basta para tener una opinión propia.
   // Sin `if (porCheckIn)`: `desdeCheckIn` ya no puede devolver null, y ese
   // hueco era justo por donde el día normal se escapaba al peldaño 3.
-  if (todayCheckIn) return desdeCheckIn(todayCheckIn);
+  if (todayCheckIn) return desdeCheckIn(todayCheckIn, jornada, nextLessonRoute);
 
   // Peldaño 3.
   return fallback(daysSinceLastCheckIn);
