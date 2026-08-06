@@ -1,18 +1,17 @@
 /**
  * BodyMap3D (nativo) — stub inalcanzable.
  *
- * `expo-gl` (el puente WebGL que necesita three.js en iOS/Android) solo
- * corre en un build nativo real, no en Expo Go ni en este sandbox — mismo
- * bloqueo ya documentado para HealthKit/Health Connect en
- * `lib/wearablesNative.ts`: hace falta `eas init` + `eas build` para
- * probarlo en dispositivo. `components/body-map.tsx` nunca importa este
- * módulo salvo en la rama `Platform.OS === 'web'`, así que este archivo
- * jamás se monta — solo existe para que Metro resuelva la extensión nativa
- * sin fallar el bundle.
+ * En nativo el mapa corporal sigue siendo el SVG 2D de `body-map.tsx`
+ * (`components/body-map.tsx` solo monta BodyMap3D en la rama
+ * `Platform.OS === 'web'`), así que este módulo jamás se renderiza — existe
+ * para que Metro resuelva la extensión nativa sin romper el bundle.
  *
- * Handoff: una vez exista un build nativo, este archivo pasa a tener el
- * mismo `<Canvas>` de `body-map-3d.web.tsx` pero con `expo-gl`'s `<GLView>`
- * en vez de un `<canvas>` de DOM.
+ * Handoff futuro: la versión web ya NO usa three.js/expo-gl — es la
+ * proyección pura `projectPoint` (lib/humanFigure3DLogic.ts) dibujada en un
+ * canvas 2D. El camino nativo es esa MISMA proyección sobre el canvas de
+ * Skia (`@shopify/react-native-skia`, ya instalado; el split nativo/web de
+ * `components/polaris.tsx` es el patrón a seguir). No requiere build EAS ni
+ * dependencias nuevas.
  */
 import type { BodyZone } from '@/lib/bodyMapLogic';
 

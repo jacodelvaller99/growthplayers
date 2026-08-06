@@ -70,3 +70,76 @@ export function generateFigure3D(opts: GenerateFigureOptions = {}): FigureDot3D[
     return { ...dot, z: (unit - 0.5) * 2 * depth };
   });
 }
+
+// ── Proyección en perspectiva ─────────────────────────────────────────────────
+//
+// El renderer web dibuja la nube con canvas 2D y ESTA función — no con
+// three.js. La cadena three/react-three-fiber acumuló tres fallos de
+// integración con Metro/Expo Web (import.meta, doble copia de three, canvas
+// vacío en el navegador real); para una nube de puntos, una proyección de
+// cámara son veinte líneas deterministas y testeables — exactamente lo que
+// three.js haría por dentro, sin el motor entero ni sus riesgos de bundler.
+
+export interface Camera {
+  /** Rotación alrededor del eje vertical, en radianes. */
+  yaw: number;
+  /** Rotación alrededor del eje horizontal, en radianes. */
+  pitch: number;
+  /** 1 = encuadre por defecto. */
+  zoom: number;
+  /** Tamaño del lienzo destino, en píxeles. */
+  w: number;
+  h: number;
+}
+
+export interface ProjectedPoint {
+  /** Posición en pantalla, en píxeles del lienzo. */
+  sx: number;
+  sy: number;
+  /** Factor para escalar el radio del punto (perspectiva: lejos = pequeño). */
+  scale: number;
+  /** Distancia a la cámara — ordenar DESCENDENTE para pintar de atrás
+   *  hacia adelante (algoritmo del pintor). */
+  depth: number;
+}
+
+/** Distancia de la cámara al origen y distancia focal — los mismos valores
+ *  con los que se validó visualmente el visor de la figura. */
+const CAM_DIST = 520;
+const FOCAL = 620;
+/** Divisor del encuadre: con el cuerpo centrado (~486 de alto), min(w,h)/340
+ *  lo deja completo en el lienzo con aire a los lados. */
+const FRAME = 340;
+
+/**
+ * Proyecta un punto del MUNDO (centrado en el origen, +y hacia arriba) al
+ * lienzo. Quien llama centra la figura antes:
+ *   wx = x - VIEWBOX.w/2 · wy = -(y - VIEWBOX.h/2) · wz = z
+ */
+export function projectPoint(
+  p: { x: number; y: number; z: number },
+  cam: Camera,
+): ProjectedPoint {
+  const cosY = Math.cos(cam.yaw);
+  const sinY = Math.sin(cam.yaw);
+  const cosX = Math.cos(cam.pitch);
+  const sinX = Math.sin(cam.pitch);
+
+  // Yaw (gira alrededor del eje vertical)…
+  const x1 = p.x * cosY - p.z * sinY;
+  const z1 = p.x * sinY + p.z * cosY;
+  // …luego pitch (inclina alrededor del eje horizontal).
+  const y2 = p.y * cosX - z1 * sinX;
+  const z2 = p.y * sinX + z1 * cosX;
+
+  const depth = z2 + CAM_DIST;
+  const f = FOCAL / depth;
+  const s = (Math.min(cam.w, cam.h) / FRAME) * cam.zoom;
+
+  return {
+    sx: cam.w / 2 + x1 * f * s,
+    sy: cam.h / 2 - y2 * f * s,
+    scale: f * s,
+    depth,
+  };
+}

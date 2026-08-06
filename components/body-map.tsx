@@ -80,9 +80,10 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
   return (
     <View style={s.root}>
       <View style={s.canvas} accessibilityRole="none">
-        {/* Web: la nube de partículas 3D real (three.js), validada contra el
-            prototipo de diseño aprobado. Nativo: sigue en SVG 2D hasta que
-            exista un build (`eas build`) que pueda correr `expo-gl` —
+        {/* Web: la nube de partículas 3D con proyección propia sobre canvas
+            2D (`projectPoint` en lib/humanFigure3DLogic.ts — sin three.js,
+            que acumuló tres fallos de bundler con Metro/Expo Web). Nativo:
+            sigue en SVG 2D; la misma proyección sobre Skia es el handoff —
             `BodyMap3D` nativo es un stub inalcanzable, ver
             `components/body-map-3d.tsx`. La zona se elige con el legend de
             abajo en ambos casos; el toque directo sobre el cuerpo es

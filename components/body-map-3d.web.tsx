@@ -1,107 +1,233 @@
 /**
- * BodyMap3D (web) — la nube de partículas real, con volumen y órbita.
+ * BodyMap3D (web) — la nube de partículas con volumen y órbita, SIN three.js.
  *
- * Nace del mismo `generateFigure3D` (lib/humanFigure3DLogic.ts) que ya
- * reusa la anatomía testeada de `humanFigureLogic.ts` — mismos x/y, mismas
- * 7 zonas, misma semilla. Aquí solo se renderiza con three.js en vez de SVG.
+ * La cadena three/react-three-fiber acumuló tres fallos de integración con
+ * Metro/Expo Web en una sola sesión (el `import.meta` de zustand vía el barrel
+ * de drei, dos copias de three empaquetadas a la vez, y aun tras arreglar
+ * ambas el canvas seguía vacío en el navegador real del dueño). Para una nube
+ * de puntos no hace falta el motor: la MISMA proyección en perspectiva que
+ * three.js aplicaría por dentro vive ahora en `projectPoint`
+ * (lib/humanFigure3DLogic.ts, pura y testeada) y aquí solo se dibuja con
+ * canvas 2D. Es el render exacto del visor con el que se validó visualmente
+ * la figura — 793 puntos, órbita con arrastre, zoom con rueda, oro por zona.
  *
- * La interacción sigue el patrón del propio prototipo de diseño validado
- * (Design → "Polaris - Cuerpo de Partículas 3D"): el lienzo se orbita con el
- * mouse pero la zona se elige con los botones/legend — NO haciendo raycast
- * sobre cada partícula. Picking punto-por-punto en una nube dispersa
- * necesitaría un radio de impacto por punto y complica la interacción sin
- * mejorarla; los botones ya son el gesto de 2 segundos que pide el check-in.
+ * Anatomía y profundidad vienen de `generateFigure3D` — misma semilla, mismo
+ * cuerpo testeado que el SVG nativo. La zona se elige con el legend de
+ * `body-map.tsx` (igual que con three.js: sin picking por partícula).
  *
- * ponytail: sin raycasting de partículas. Si algún día se quiere "tocar
- * directo en el cuerpo 3D", el punto de entrada es un `Raycaster` con
- * `params.Points.threshold` sobre esta misma nube.
+ * ponytail: sin inercia de arrastre ni picking 3D. Si algún día se quieren,
+ * el punto de entrada es este mismo draw(): la cámara ya vive en refs.
  */
-/* eslint-disable react/no-unknown-property -- react-three-fiber traduce
-   `attach`/`args`/`vertexColors`/`intensity` a propiedades reales de three.js,
-   no son props de DOM; el linter de React no conoce el árbol de r3f. */
-import { useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
-// Import directo al archivo, no al barrel `@react-three/drei` — el barrel
-// también re-exporta `KeyboardControls`, que importa `zustand/middleware`
-// (el devtools middleware usa `import.meta.env`); Metro lo empaqueta igual
-// como script clásico y la app entera revienta con "Cannot use 'import.meta'
-// outside a module" antes de montar nada. El archivo suelto no arrastra eso.
-import { OrbitControls } from '@react-three/drei/core/OrbitControls';
-import * as THREE from 'three';
+import { useEffect, useRef } from 'react';
 
 import { palette } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import type { BodyZone } from '@/lib/bodyMapLogic';
-import { generateFigure3D } from '@/lib/humanFigure3DLogic';
+import { generateFigure3D, projectPoint, type Camera } from '@/lib/humanFigure3DLogic';
 import { VIEWBOX } from '@/lib/humanFigureLogic';
 
-/** Semilla fija — el mismo activo de marca en cada sesión, como en la
- *  versión 2D. Se genera una sola vez a nivel de módulo. */
+/** Semilla fija — el mismo activo de marca en cada sesión, como en 2D. */
 const FIGURE_3D = generateFigure3D({ seed: 90417 });
 
-/** El viewBox 2D es 300×486 unidades; escalado a unidades de three.js
- *  razonables para la cámara (si no, la escena queda o absurdamente lejos
- *  o la cámara termina dentro del cuerpo). */
-const SCALE = 1 / 40;
+/** Los puntos en coordenadas de MUNDO (centrados, +y hacia arriba), listos
+ *  para `projectPoint`. Se calcula una vez a nivel de módulo. */
+const WORLD = FIGURE_3D.map((d) => ({
+  x: d.x - VIEWBOX.w / 2,
+  y: -(d.y - VIEWBOX.h / 2),
+  z: d.z,
+  r: d.r,
+  zone: d.zone,
+  edge: d.edge,
+}));
 
-function toWorld(x: number, y: number, z: number): [number, number, number] {
-  // La Y de pantalla crece hacia abajo; la Y de three.js crece hacia arriba.
-  return [(x - VIEWBOX.w / 2) * SCALE, -(y - VIEWBOX.h / 2) * SCALE, z * SCALE];
+/**
+ * En web `cv()` (constants/themeColors.ts) devuelve strings `var(--c-*)` para
+ * los tokens tematizables — y `canvas.fillStyle` NO entiende `var()`: pintaría
+ * negro en silencio. Se resuelve la variable real del documento, con el hex
+ * de fallback si aún no se inyectó el <style> del tema.
+ */
+function cssColor(value: string, fallback: string): string {
+  if (!value.startsWith('var(')) return value;
+  const name = value.slice(4, -1).trim();
+  const resolved = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return resolved || fallback;
 }
 
-function PointCloud({ selected }: { selected: BodyZone[] }) {
-  const { positions, colors } = useMemo(() => {
-    const positions = new Float32Array(FIGURE_3D.length * 3);
-    const colors = new Float32Array(FIGURE_3D.length * 3);
-    const gold = new THREE.Color(palette.gold);
-    const goldDim = new THREE.Color(palette.goldText);
-    const silver = new THREE.Color(palette.silhouette);
-    FIGURE_3D.forEach((dot, i) => {
-      const [x, y, z] = toWorld(dot.x, dot.y, dot.z);
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = z;
-      // Misma prioridad que en 2D: la primera zona tocada manda (oro macizo),
-      // el resto del recorrido queda tintado, lo no elegido queda en plata.
-      const idx = dot.zone ? selected.indexOf(dot.zone) : -1;
-      const c = idx === 0 ? gold : idx > 0 ? goldDim : silver;
-      colors[i * 3] = c.r;
-      colors[i * 3 + 1] = c.g;
-      colors[i * 3 + 2] = c.b;
-    });
-    return { positions, colors };
-  }, [selected]);
-
-  return (
-    <points>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.05} vertexColors sizeAttenuation transparent opacity={0.9} />
-    </points>
-  );
-}
+const AUTO_ROTATE_SPEED = 0.0022;
+const PITCH_MAX = 0.9;
+const ZOOM_MIN = 0.55;
+const ZOOM_MAX = 2.2;
 
 export interface BodyMap3DProps {
   selected: BodyZone[];
 }
 
 export function BodyMap3D({ selected }: BodyMap3DProps) {
-  // `height: '100%'`, NUNCA un `aspectRatio` propio: el `View` de RN que
-  // envuelve esto (`s.canvas` en body-map.tsx) ya fija su propio aspect-ratio
-  // (300×486, el VIEWBOX 2D). Dos aspect-ratio distintos anidados en la misma
-  // cadena hacían que el ResizeObserver de react-three-fiber midiera este div
-  // ANTES de que el `aspectRatio` del padre terminara de resolverse, y se
-  // quedaba pegado en esa medición intermedia: el canvas WebGL montaba con
-  // contexto válido pero a 300×150 en vez de 300×486 — la mitad de alto,
-  // "no se ve el cuerpo" aunque técnicamente sí estaba ahí.
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const reducedMotion = useReducedMotion();
+
+  // La cámara vive en refs: orbitar no debe re-renderizar React por frame.
+  const camRef = useRef({ yaw: 0.35, pitch: -0.05, zoom: 1 });
+  const selectedRef = useRef<BodyZone[]>(selected);
+  selectedRef.current = selected;
+  const interactedRef = useRef(false);
+  const dragRef = useRef<{ x: number; y: number } | null>(null);
+
+  const drawRef = useRef<() => void>(() => {});
+  drawRef.current = () => {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
+
+    const rect = wrap.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.round(rect.width * dpr);
+    const h = Math.round(rect.height * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, w, h);
+
+    const sel = selectedRef.current;
+    const gold = palette.gold; // hex constante de marca — directo.
+    const goldDim = cssColor(palette.goldText, '#FFC804');
+    const silver = cssColor(palette.silhouette, '#5F5F5F');
+
+    const cam: Camera = { ...camRef.current, w, h };
+
+    // Resplandor tras la zona primaria: UN gradiente grande y tenue debajo de
+    // todo — no shadowBlur por punto, que arrodilla el frame rate.
+    const primary = sel[0];
+    if (primary) {
+      const pts = WORLD.filter((d) => d.zone === primary && !d.edge);
+      if (pts.length) {
+        let cx = 0, cy = 0, cz = 0;
+        for (const d of pts) { cx += d.x; cy += d.y; cz += d.z; }
+        const centro = projectPoint(
+          { x: cx / pts.length, y: cy / pts.length, z: cz / pts.length },
+          cam,
+        );
+        const radio = 62 * centro.scale;
+        const glow = ctx.createRadialGradient(centro.sx, centro.sy, 0, centro.sx, centro.sy, radio);
+        glow.addColorStop(0, 'rgba(255, 200, 4, 0.14)');
+        glow.addColorStop(1, 'rgba(255, 200, 4, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(centro.sx, centro.sy, radio, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Proyectar, ordenar de atrás hacia adelante (pintor) y dibujar.
+    const projected = WORLD.map((d) => {
+      const p = projectPoint(d, cam);
+      const idx = d.zone ? sel.indexOf(d.zone) : -1;
+      // Misma semántica de color que el SVG 2D: la primera zona tocada manda.
+      const color = idx === 0 ? gold : idx > 0 ? goldDim : silver;
+      let alpha = idx === 0 ? (d.edge ? 0.55 : 1)
+        : idx > 0 ? (d.edge ? 0.35 : 0.8)
+        : d.edge ? 0.28 : 0.85;
+      // Atenuación por profundidad — lo trasero más tenue es lo que vende el
+      // volumen. depth ronda CAM_DIST(520) ± ~45.
+      alpha *= Math.max(0.5, Math.min(1, 1 - (p.depth - 520) / 190));
+      return { p, color, alpha, r: Math.max(0.4, d.r * p.scale * 0.62) };
+    });
+    projected.sort((a, b) => b.p.depth - a.p.depth);
+
+    for (const e of projected) {
+      ctx.globalAlpha = e.alpha;
+      ctx.fillStyle = e.color;
+      ctx.beginPath();
+      ctx.arc(e.p.sx, e.p.sy, e.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  // Primer frame SÍNCRONO al montar y redibujo en cada cambio de selección.
+  // No se depende de requestAnimationFrame para existir: en pestañas o paneles
+  // ocultos rAF no dispara y la figura debe estar pintada igual.
+  useEffect(() => {
+    drawRef.current();
+  }, [selected]);
+
+  // Tamaño reactivo + auto-rotación (hasta el primer gesto; nunca con
+  // reduce-motion — WCAG 2.3.3, mismo criterio que el resto de la app).
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+
+    const ro = new ResizeObserver(() => drawRef.current());
+    ro.observe(wrap);
+
+    let raf = 0;
+    if (!reducedMotion) {
+      const tick = () => {
+        if (!interactedRef.current) {
+          camRef.current.yaw += AUTO_ROTATE_SPEED;
+          drawRef.current();
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }
+
+    return () => {
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [reducedMotion]);
+
+  // Rueda = zoom. Listener manual porque React lo registra pasivo y aquí hay
+  // que preventDefault para no hacer scroll de la página al acercar el cuerpo.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      interactedRef.current = true;
+      const c = camRef.current;
+      c.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, c.zoom - e.deltaY * 0.001));
+      drawRef.current();
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, []);
+
   return (
-    <div style={{ width: '100%', height: '100%', background: palette.black }}>
-      <Canvas camera={{ position: [0, 0, 9], fov: 40 }}>
-        <ambientLight intensity={0.5} />
-        <PointCloud selected={selected} />
-        <OrbitControls enablePan={false} minDistance={5} maxDistance={16} />
-      </Canvas>
+    <div
+      ref={wrapRef}
+      style={{ width: '100%', height: '100%', background: 'transparent', cursor: 'grab' }}>
+      <canvas
+        ref={canvasRef}
+        role="img"
+        aria-label="Cuerpo de partículas — arrastra para orbitar"
+        style={{ display: 'block', width: '100%', height: '100%', touchAction: 'none' }}
+        onPointerDown={(e) => {
+          interactedRef.current = true;
+          dragRef.current = { x: e.clientX, y: e.clientY };
+          (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          const drag = dragRef.current;
+          if (!drag) return;
+          const dx = e.clientX - drag.x;
+          const dy = e.clientY - drag.y;
+          dragRef.current = { x: e.clientX, y: e.clientY };
+          const c = camRef.current;
+          c.yaw += dx * 0.008;
+          c.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, c.pitch - dy * 0.008));
+          drawRef.current();
+        }}
+        onPointerUp={() => { dragRef.current = null; }}
+        onPointerCancel={() => { dragRef.current = null; }}
+      />
     </div>
   );
 }
