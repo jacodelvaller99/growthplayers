@@ -47,13 +47,18 @@ export const ENV = {
 
   /**
    * Feature flag — El Círculo (red social interna: espacios, eventos con RSVP,
-   * conexiones, comentarios y reacciones). Default false: se enciende primero
-   * en Preview de Vercel y luego en Production. La capa IO en lib/circle.ts
-   * verifica este flag antes de cualquier query; las superficies nuevas solo
-   * se linkean desde la UI cuando está activo. El feed general y los DMs
-   * existentes NO dependen de este flag.
+   * conexiones, comentarios y reacciones). Default TRUE: verificado en vivo
+   * contra Supabase producción (curl a /rest/v1/community_spaces,
+   * community_events, space_members, event_rsvps, user_connections,
+   * post_comments, community_reactions — las 7 responden 200, la migración
+   * `20260621000000` ya está aplicada). Antes de esto el default era `false`
+   * justo porque no se podía confirmar eso sin acceso al dashboard; ya no es
+   * el caso. La capa IO en lib/circle.ts sigue verificando este flag antes de
+   * cualquier query. El feed general y los DMs existentes NO dependen de él.
+   * Interruptor de emergencia: `EXPO_PUBLIC_SOCIAL_SPACES_ENABLED=false` lo
+   * apaga entero sin desplegar código.
    */
-  socialSpacesEnabled: ((process.env.EXPO_PUBLIC_SOCIAL_SPACES_ENABLED ?? '').toLowerCase() === 'true') as boolean,
+  socialSpacesEnabled: ((process.env.EXPO_PUBLIC_SOCIAL_SPACES_ENABLED ?? 'true').toLowerCase() === 'true') as boolean,
 
   /**
    * Vendor del agregador universal de wearables: 'terra' (default, comercial,
