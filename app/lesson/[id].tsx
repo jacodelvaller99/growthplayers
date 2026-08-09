@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -61,7 +62,15 @@ function TextAreaField({
 }) {
   const focused = useSharedValue(0);
   const animStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focused.value, [0, 1], [palette.lineSoft, palette.gold]),
+    // El color de reposo va LITERAL, no `palette.lineSoft`. En web `cv()`
+    // devuelve `var(--c-border-soft)` y `interpolateColor` no sabe leer una
+    // variable CSS: lanzaba "Interpolation input and output ranges should
+    // contain at least two values" y el ErrorBoundary se comía la pantalla
+    // ENTERA de lección — el Protocolo completo estaba muerto en la PWA.
+    // El valor es el mismo fallback nativo de `cv('--c-border-soft', …)`;
+    // un separador extra-sutil que de todas formas no puede re-tematizarse
+    // a través del hilo de Reanimated. `palette.gold` sí es hex constante.
+    borderColor: interpolateColor(focused.value, [0, 1], ['rgba(255, 255, 255, 0.05)', palette.gold]),
   }));
 
   const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0;
@@ -850,15 +859,30 @@ export default function LessonScreen() {
 
         {/* ── Video Section (fullwidth banner) ── */}
         <View style={styles.videoBanner}>
-          {/* Los módulos 5–10 tienen el classroom de Skool a nivel de MÓDULO, no
-              por lección. Sin este fallback caían todos en "Video próximamente"
-              aunque el contenido existiera y estuviera publicado. */}
-          {(lesson.vimeoId || lesson.skoolUrl || mod.skoolUrl) ? (
-            <SkoolVideo
-              url={lesson.skoolUrl ?? mod.skoolUrl}
-              vimeoId={lesson.vimeoId}
-              height={232}
-            />
+          {/* Tres casos, y el del medio es el que importa:
+              1. La lección tiene SU video → se reproduce (módulos 0–4).
+              2. La lección NO lo tiene pero el módulo sí (5–7): antes se
+                 embebía el classroom del módulo bajo el título de la
+                 lección — las 8 lecciones del módulo 5 abrían el MISMO
+                 video con 8 títulos distintos. Eso es mentirle al usuario:
+                 ahora se dice dónde está el contenido de verdad.
+              3. Ni una ni otra → próximamente (hoy inalcanzable). */}
+          {lesson.vimeoId || lesson.skoolUrl ? (
+            <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} height={232} />
+          ) : mod.skoolUrl ? (
+            <View style={styles.videoComingSoon}>
+              <MaterialIcons name="school" size={24} color={palette.goldText} />
+              <Text style={styles.videoComingSoonText}>
+                Esta lección se ve en el classroom del módulo, no como video suelto.
+              </Text>
+              <Pressable
+                onPress={() => { void Linking.openURL(mod.skoolUrl as string); }}
+                accessibilityRole="button"
+                style={styles.classroomBtn}>
+                <MaterialIcons name="open-in-new" size={16} color={palette.ink} />
+                <Text style={styles.classroomBtnText}>ABRIR CLASSROOM</Text>
+              </Pressable>
+            </View>
           ) : (
             <View style={styles.videoComingSoon}>
               <Text style={styles.videoComingSoonIcon}>⏳</Text>
@@ -1107,6 +1131,24 @@ const styles = StyleSheet.create({
   },
   videoComingSoonIcon: {
     fontSize: 32,
+  },
+  classroomBtn: {
+    alignItems: 'center',
+    backgroundColor: palette.gold,
+    borderRadius: radii.sm,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    height: 36,
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+  },
+  classroomBtnText: {
+    color: palette.ink,
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   videoComingSoonText: {
     color: palette.smoke,
