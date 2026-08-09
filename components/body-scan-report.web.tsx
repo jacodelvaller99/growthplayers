@@ -13,23 +13,30 @@
  * adelante se pide vivo, `drawBodyScan` ya acepta `nowSec`/`reducedMotion`;
  * solo hay que envolver esta columna en el mismo rAF que ya tiene
  * `BodyMap3D`.
+ *
+ * El cuerpo pintado es el modelo 3D REAL del dueño (`particleBodyViewer.ts`,
+ * `public/models/cuerpo-particulas.glb`) — no la nube sintética de
+ * `bodyScanWorld`. `pickZone`/toque siguen viviendo en `BodyMap3D` sobre la
+ * nube sintética (picking por partícula sobre malla real es trabajo
+ * aparte); este reporte es solo visual.
  */
 import { useEffect, useRef } from 'react';
 
 import { Fonts, palette } from '@/constants/theme';
 import type { BodyZone } from '@/lib/bodyMapLogic';
-import { drawBodyScan } from '@/lib/bodyScanRender';
-import { VIEW_PRESETS, type Camera } from '@/lib/humanFigure3DLogic';
+import { VIEW_PRESETS } from '@/lib/humanFigure3DLogic';
+import { renderParticleView } from '@/lib/particleBodyViewer';
 
 export interface BodyScanReportProps {
   /** Zona que arde en oro — default 'pecho', la misma concentración que la
-   *  referencia (chest/columna alta). */
+   *  referencia (chest/columna alta). Reservado: el color por vértice del
+   *  modelo real ya viene fijo desde el GLB (no varía por zona todavía). */
   primaryZone?: BodyZone;
 }
 
-const CAM_ZOOM = 1.15; // el cuerpo llena la columna, como en la referencia.
+const CAM_ZOOM = 1.05; // el cuerpo llena la columna, como en la referencia.
 
-function ScanColumn({ preset, selected }: { preset: (typeof VIEW_PRESETS)[number]; selected: BodyZone[] }) {
+function ScanColumn({ preset }: { preset: (typeof VIEW_PRESETS)[number] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -38,29 +45,44 @@ function ScanColumn({ preset, selected }: { preset: (typeof VIEW_PRESETS)[number
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
 
+    let disposed = false;
+    let dispose: (() => void) | null = null;
+
     const draw = () => {
       const rect = wrap.getBoundingClientRect();
       if (rect.width < 2 || rect.height < 2) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.round(rect.width * dpr);
       const h = Math.round(rect.height * dpr);
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      const cam: Camera = { yaw: preset.yaw, pitch: preset.pitch, zoom: CAM_ZOOM, w, h };
-      // Estático a propósito — un reporte no titila. `nowSec: 0` +
-      // `reducedMotion: true` da el mismo frame siempre, verificable.
-      drawBodyScan(ctx, w, h, cam, { selected, reducedMotion: true });
+      if (canvas.width === w && canvas.height === h && dispose) return; // ya pintado a este tamaño.
+      canvas.width = w;
+      canvas.height = h;
+      renderParticleView(canvas, { yaw: preset.yaw, pitch: preset.pitch, zoom: CAM_ZOOM, w, h })
+        .then((d) => {
+          if (disposed) {
+            d();
+            return;
+          }
+          dispose?.();
+          dispose = d;
+        })
+        .catch((err) => {
+          // ponytail: sin fallback visual aquí a propósito — un canvas WebGL
+          // vacío en devtools ya es la señal (mismo patrón que `getImageData`
+          // en las verificaciones previas de este componente).
+          console.error('[BodyScanReport] modelo 3D no cargó:', err);
+        });
     };
 
     draw();
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
-    return () => ro.disconnect();
-  }, [preset, selected]);
+    return () => {
+      disposed = true;
+      ro.disconnect();
+      dispose?.();
+    };
+  }, [preset]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: '0 0 auto', width: 150 }}>
@@ -74,9 +96,7 @@ function ScanColumn({ preset, selected }: { preset: (typeof VIEW_PRESETS)[number
   );
 }
 
-export function BodyScanReport({ primaryZone = 'pecho' }: BodyScanReportProps) {
-  const selected: BodyZone[] = [primaryZone];
-
+export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScanReportProps) {
   return (
     <div
       style={{
@@ -134,7 +154,7 @@ export function BodyScanReport({ primaryZone = 'pecho' }: BodyScanReportProps) {
       {/* ── Las 6 vistas — scroll horizontal en pantallas angostas ── */}
       <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
         {VIEW_PRESETS.map((preset) => (
-          <ScanColumn key={preset.id} preset={preset} selected={selected} />
+          <ScanColumn key={preset.id} preset={preset} />
         ))}
       </div>
 
