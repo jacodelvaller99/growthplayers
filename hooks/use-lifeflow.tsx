@@ -1177,6 +1177,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     await removeLocal('hero:v1');
     await removeLocal('milestone:v1');
     await removeLocal('jornada:v1');
+    await removeLocal('ritual:v1');
     setState(defaultState);
   }, []);
 

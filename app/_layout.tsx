@@ -82,6 +82,7 @@ function MainStack() {
       <Stack.Protected guard={guard}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="checkin" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
+        <Stack.Screen name="ritual" options={{ headerShown: false }} />
         <Stack.Screen name="mentoria/index" options={{ headerShown: false }} />
         <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
         <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
