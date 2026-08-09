@@ -4,89 +4,80 @@
  * corchetes de esquina, mismas 6 vistas etiquetadas "01. VISTA FRONTAL" …
  * "06. 3/4 DERECHO". Es un REPORTE — estático, sin órbita ni toque — no el
  * widget interactivo del check-in (`BodyMap3D`, que sigue siendo el que se
- * toca). Comparten la misma nube de puntos y el mismo pintor
- * (`bodyScanWorld`/`bodyScanRender`) para que sea el MISMO cuerpo, no una
- * segunda figura que puede desalinearse.
+ * toca).
  *
  * ponytail: sin animación (ni shimmer, ni auto-rotate). Un reporte es un
- * frame fijo — la referencia misma es una composición estática. Si más
- * adelante se pide vivo, `drawBodyScan` ya acepta `nowSec`/`reducedMotion`;
- * solo hay que envolver esta columna en el mismo rAF que ya tiene
- * `BodyMap3D`.
+ * frame fijo — la referencia misma es una composición estática.
  *
  * El cuerpo pintado es el modelo 3D REAL del dueño (`particleBodyViewer.ts`,
- * `public/models/cuerpo-particulas.glb`) — no la nube sintética de
- * `bodyScanWorld`. `pickZone`/toque siguen viviendo en `BodyMap3D` sobre la
- * nube sintética (picking por partícula sobre malla real es trabajo
- * aparte); este reporte es solo visual.
+ * `public/models/cuerpo-particulas.glb`) con ~250k partículas en 3 capas y
+ * bloom. Las 6 vistas se renderizan de UNA en un solo renderer offscreen y
+ * llegan aquí como ImageBitmaps — sin 6 contextos WebGL vivos, que es lo que
+ * permite esta densidad. `pickZone`/toque siguen en `BodyMap3D` sobre la
+ * nube sintética (picking sobre malla real es trabajo aparte).
  */
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 import { Fonts, palette } from '@/constants/theme';
 import type { BodyZone } from '@/lib/bodyMapLogic';
 import { VIEW_PRESETS } from '@/lib/humanFigure3DLogic';
-import { renderParticleView } from '@/lib/particleBodyViewer';
+import { renderAllViews } from '@/lib/particleBodyViewer';
 
 export interface BodyScanReportProps {
   /** Zona que arde en oro — default 'pecho', la misma concentración que la
-   *  referencia (chest/columna alta). Reservado: el color por vértice del
-   *  modelo real ya viene fijo desde el GLB (no varía por zona todavía). */
+   *  referencia (chest/columna alta). Reservado: el gradiente vive en
+   *  `particleBodyGradient.ts` y hoy no varía por zona. */
   primaryZone?: BodyZone;
 }
 
 const CAM_ZOOM = 1.05; // el cuerpo llena la columna, como en la referencia.
+const COL_W = 220; // px CSS — la referencia respira; 150 apretaba el detalle.
+const RENDER_SCALE = 2.5; // supersample: el bloom y las fibras necesitan pixeles.
+const ASPECT = 300 / 486;
 
-function ScanColumn({ preset }: { preset: (typeof VIEW_PRESETS)[number] }) {
+/** Regleta de medición vertical — el detalle del HUD de la referencia entre
+ *  vista y vista. Decorativa: `aria-hidden`. */
+function Ruler() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        alignSelf: 'stretch',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        flex: '0 0 auto',
+        width: 10,
+        paddingBottom: 26,
+      }}>
+      {Array.from({ length: 9 }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            height: 1,
+            width: i % 4 === 0 ? 10 : 5,
+            background: i % 4 === 0 ? palette.lineGold : palette.line,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ScanColumn({ preset, bitmap }: { preset: (typeof VIEW_PRESETS)[number]; bitmap: ImageBitmap | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
-
-    let disposed = false;
-    let dispose: (() => void) | null = null;
-
-    const draw = () => {
-      const rect = wrap.getBoundingClientRect();
-      if (rect.width < 2 || rect.height < 2) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = Math.round(rect.width * dpr);
-      const h = Math.round(rect.height * dpr);
-      if (canvas.width === w && canvas.height === h && dispose) return; // ya pintado a este tamaño.
-      canvas.width = w;
-      canvas.height = h;
-      renderParticleView(canvas, { yaw: preset.yaw, pitch: preset.pitch, zoom: CAM_ZOOM, w, h })
-        .then((d) => {
-          if (disposed) {
-            d();
-            return;
-          }
-          dispose?.();
-          dispose = d;
-        })
-        .catch((err) => {
-          // ponytail: sin fallback visual aquí a propósito — un canvas WebGL
-          // vacío en devtools ya es la señal (mismo patrón que `getImageData`
-          // en las verificaciones previas de este componente).
-          console.error('[BodyScanReport] modelo 3D no cargó:', err);
-        });
-    };
-
-    draw();
-    const ro = new ResizeObserver(draw);
-    ro.observe(wrap);
-    return () => {
-      disposed = true;
-      ro.disconnect();
-      dispose?.();
-    };
-  }, [preset]);
+    if (!canvas || !bitmap) return;
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
+  }, [bitmap]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: '0 0 auto', width: 150 }}>
-      <div ref={wrapRef} style={{ width: '100%', aspectRatio: '300 / 486', position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: '0 0 auto', width: COL_W }}>
+      <div style={{ width: '100%', aspectRatio: '300 / 486', position: 'relative' }}>
         <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
       </div>
       <div style={{ fontFamily: Fonts.display, fontSize: 10, letterSpacing: 1, color: palette.smoke, whiteSpace: 'nowrap' }}>
@@ -97,6 +88,34 @@ function ScanColumn({ preset }: { preset: (typeof VIEW_PRESETS)[number] }) {
 }
 
 export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScanReportProps) {
+  const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let produced: ImageBitmap[] = [];
+    const w = Math.round(COL_W * RENDER_SCALE);
+    const h = Math.round(w / ASPECT);
+    renderAllViews(VIEW_PRESETS, w, h, CAM_ZOOM)
+      .then((bmps) => {
+        produced = bmps;
+        if (cancelled) {
+          bmps.forEach((b) => b.close());
+          return;
+        }
+        setBitmaps(bmps);
+      })
+      .catch((err) => {
+        // ponytail: sin fallback visual a propósito — un canvas vacío en
+        // devtools ya es la señal (mismo criterio que las verificaciones por
+        // píxel de este componente).
+        console.error('[BodyScanReport] modelo 3D no cargó:', err);
+      });
+    return () => {
+      cancelled = true;
+      produced.forEach((b) => b.close());
+    };
+  }, []);
+
   return (
     <div
       style={{
@@ -152,9 +171,12 @@ export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScan
       ))}
 
       {/* ── Las 6 vistas — scroll horizontal en pantallas angostas ── */}
-      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
-        {VIEW_PRESETS.map((preset) => (
-          <ScanColumn key={preset.id} preset={preset} />
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, alignItems: 'stretch' }}>
+        {VIEW_PRESETS.map((preset, i) => (
+          <Fragment key={preset.id}>
+            {i > 0 ? <Ruler /> : null}
+            <ScanColumn preset={preset} bitmap={bitmaps[i] ?? null} />
+          </Fragment>
         ))}
       </div>
 
