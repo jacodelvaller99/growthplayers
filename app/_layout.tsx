@@ -13,6 +13,7 @@ import { LifeFlowProvider, useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useSmartNotifications } from '@/hooks/use-smart-notifications';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { Colors, palette } from '@/constants/theme';
 import OfflineBanner from '@/components/OfflineBanner';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
@@ -65,9 +66,14 @@ function MainStack() {
   // (onboarding), legal, pricing y oauth callbacks quedan fuera del bloque.
   const { isLoaded, isAuthenticated, state } = useLifeFlow();
   const guard = !isLoaded || (isAuthenticated && state.onboardingCompleted);
+  // La app "respira": transiciones sobrias entre pantallas en vez del corte
+  // seco de siempre (WCAG 2.3.3 — 'none' con reduce-motion, cada pantalla
+  // sigue pudiendo pedir la suya vía `options.animation`, como ya hacen
+  // checkin/paywall con su slide_from_bottom de modal).
+  const reducedMotion = useReducedMotion();
 
   return (
-    <Stack>
+    <Stack screenOptions={{ animation: reducedMotion ? 'none' : 'fade_from_bottom' }}>
       {/* ── Públicas ── */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
