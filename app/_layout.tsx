@@ -21,6 +21,7 @@ import { ToastProvider } from '@/context/ToastContext';
 import { AppThemeProvider } from '@/hooks/use-app-theme';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { HeroMoments } from '@/components/hero-moments';
+import { TourButton } from '@/components/tour/TourButton';
 import { initCrashCapture } from '@/lib/crash';
 
 export const unstable_settings = {
@@ -274,6 +275,7 @@ export default function RootLayout() {
             <OfflineBanner />
             <PWAInstallBanner />
             <HeroMoments />
+            <TourButton />
             {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
             <AppShell />
             </ToastProvider>
