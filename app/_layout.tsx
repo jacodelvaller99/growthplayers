@@ -124,6 +124,7 @@ function MainStack() {
             exámenes médicos subidos por el usuario. Estar fuera de este bloque
             significa que un deep link sin sesión las renderiza. */}
         <Stack.Screen name="bienestar/movimiento" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/escaneo" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/internista" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/examenes" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />

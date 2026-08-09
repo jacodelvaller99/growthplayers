@@ -726,6 +726,15 @@ export default function CheckInScreen() {
           setBodyZones((prev) => (prev.includes(z) ? prev.filter((p) => p !== z) : [...prev, z]))
         }
       />
+
+      <Pressable
+        onPress={() => router.push('/bienestar/escaneo' as never)}
+        accessibilityRole="button"
+        accessibilityLabel="Ver el escaneo biométrico completo, las 6 vistas"
+        style={({ pressed }) => [styles.scanLink, pressed && { opacity: 0.7 }]}>
+        <MaterialIcons name="view-in-ar" size={16} color={palette.goldText} />
+        <Text style={styles.scanLinkText}>VER ESCANEO COMPLETO</Text>
+      </Pressable>
     </PremiumCard>
   );
 
@@ -1197,6 +1206,22 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: spacing.lg,
     textAlignVertical: 'top',
+  },
+
+  scanLink: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: spacing.sm,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
+  scanLinkText: {
+    color: palette.goldText,
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
 
   // Lectura interna opcional (toggle) + oferta post-guardado

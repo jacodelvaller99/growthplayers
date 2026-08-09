@@ -32,8 +32,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Fonts, palette } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import type { BodyZone } from '@/lib/bodyMapLogic';
+import { WORLD } from '@/lib/bodyScanWorld';
+import { drawBodyScan } from '@/lib/bodyScanRender';
 import {
-  generateFigure3D,
   pickZone,
   projectPoint,
   shortestYawDelta,
@@ -42,31 +43,6 @@ import {
   type ViewPreset,
   type ZoneCandidate,
 } from '@/lib/humanFigure3DLogic';
-import { VIEWBOX } from '@/lib/humanFigureLogic';
-
-/** Semilla fija — el mismo activo de marca en cada sesión. `cell: 3` es el
- *  "escaneo biométrico": ~5.5k puntos, la densidad de la referencia. */
-const FIGURE_3D = generateFigure3D({ seed: 90417, cell: 3 });
-
-/** Los puntos en coordenadas de MUNDO (centrados, +y hacia arriba), listos
- *  para `projectPoint`. Se calcula una vez a nivel de módulo. */
-const WORLD = FIGURE_3D.map((d) => ({
-  x: d.x - VIEWBOX.w / 2,
-  y: -(d.y - VIEWBOX.h / 2),
-  z: d.z,
-  r: d.r,
-  zone: d.zone,
-  edge: d.edge,
-}));
-
-/** Fase de shimmer por punto — determinista, calculada una vez. El brillo de
- *  cada partícula oscila con esta fase (no con su índice de dibujo, que
- *  cambiaría cada frame por el orden del pintor). */
-function hash01(n: number): number {
-  const s = Math.sin(n) * 43758.5453;
-  return s - Math.floor(s);
-}
-const PHASE = WORLD.map((d, i) => hash01(d.x * 12.9898 + d.y * 78.233 + i * 0.0013) * Math.PI * 2);
 
 /**
  * En web `cv()` (constants/themeColors.ts) devuelve strings `var(--c-*)` para
@@ -157,76 +133,13 @@ export function BodyMap3D({ selected, onToggleZone }: BodyMap3DProps) {
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, w, h);
-
-    const sel = selectedRef.current;
-    const gold = palette.gold; // hex constante de marca — directo.
-    const goldDim = cssColor(palette.goldText, '#FFC804');
-    const silver = cssColor(palette.silhouette, '#5F5F5F');
 
     const cam: Camera = { ...camRef.current, w, h };
-    const nowSec = performance.now() * 0.001;
-
-    // Resplandor tras la zona primaria: 3 pasadas ADITIVAS (`lighter`) en vez
-    // de un único gradiente — más densidad de "arde en oro" sin dibujar nada
-    // por punto, que es lo que arrodilla el frame rate.
-    const primary = sel[0];
-    if (primary) {
-      const pts = WORLD.filter((d) => d.zone === primary && !d.edge);
-      if (pts.length) {
-        let cx = 0, cy = 0, cz = 0;
-        for (const d of pts) { cx += d.x; cy += d.y; cz += d.z; }
-        const centro = projectPoint(
-          { x: cx / pts.length, y: cy / pts.length, z: cz / pts.length },
-          cam,
-        );
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        for (const pass of [
-          { r: 92, a: 0.09 },
-          { r: 62, a: 0.15 },
-          { r: 32, a: 0.22 },
-        ]) {
-          const radio = pass.r * centro.scale;
-          const glow = ctx.createRadialGradient(centro.sx, centro.sy, 0, centro.sx, centro.sy, radio);
-          glow.addColorStop(0, `rgba(255, 200, 4, ${pass.a})`);
-          glow.addColorStop(1, 'rgba(255, 200, 4, 0)');
-          ctx.fillStyle = glow;
-          ctx.beginPath();
-          ctx.arc(centro.sx, centro.sy, radio, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-      }
-    }
-
-    // Proyectar, ordenar de atrás hacia adelante (pintor) y dibujar.
-    const projected = WORLD.map((d, i) => {
-      const p = projectPoint(d, cam);
-      const idx = d.zone ? sel.indexOf(d.zone) : -1;
-      // Misma semántica de color que el SVG 2D: la primera zona tocada manda.
-      const color = idx === 0 ? gold : idx > 0 ? goldDim : silver;
-      let alpha = idx === 0 ? (d.edge ? 0.55 : 1)
-        : idx > 0 ? (d.edge ? 0.35 : 0.8)
-        : d.edge ? 0.28 : 0.85;
-      // Atenuación por profundidad — lo trasero más tenue es lo que vende el
-      // volumen. depth ronda CAM_DIST(520) ± ~45.
-      alpha *= Math.max(0.5, Math.min(1, 1 - (p.depth - 520) / 190));
-      // Shimmer vivo: brillo por punto oscila con una fase propia. Quieto con
-      // reduce-motion (WCAG 2.3.3) — el cuerpo sigue denso, solo no titila.
-      if (!reducedMotion) alpha *= 0.82 + 0.18 * Math.sin(nowSec * 1.6 + PHASE[i]);
-      return { p, color, alpha, r: Math.max(0.4, d.r * p.scale * 0.62) };
+    drawBodyScan(ctx, w, h, cam, {
+      selected: selectedRef.current,
+      nowSec: performance.now() * 0.001,
+      reducedMotion,
     });
-    projected.sort((a, b) => b.p.depth - a.p.depth);
-
-    for (const e of projected) {
-      ctx.globalAlpha = e.alpha;
-      ctx.fillStyle = e.color;
-      ctx.beginPath();
-      ctx.arc(e.p.sx, e.p.sy, e.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
   };
 
   // Primer frame SÍNCRONO al montar y redibujo en cada cambio de selección.

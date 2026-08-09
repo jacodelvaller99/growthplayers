@@ -192,12 +192,14 @@ export interface ViewPreset {
 
 const HALF_PI = Math.PI / 2;
 
+// Mismo orden que la referencia del dueño: frontal, posterior, los dos
+// perfiles, los dos 3/4.
 export const VIEW_PRESETS: readonly ViewPreset[] = [
   { id: '01', label: 'VISTA FRONTAL',      yaw: 0,               pitch: -0.05 },
-  { id: '02', label: 'PERFIL IZQUIERDO',   yaw: -HALF_PI,        pitch: -0.05 },
-  { id: '03', label: 'PERFIL DERECHO',     yaw: HALF_PI,         pitch: -0.05 },
-  { id: '04', label: '3/4 IZQUIERDO',      yaw: -HALF_PI / 2,    pitch: -0.05 },
-  { id: '05', label: 'VISTA POSTERIOR',    yaw: Math.PI,         pitch: -0.05 },
+  { id: '02', label: 'VISTA POSTERIOR',    yaw: Math.PI,         pitch: -0.05 },
+  { id: '03', label: 'PERFIL IZQUIERDO',   yaw: -HALF_PI,        pitch: -0.05 },
+  { id: '04', label: 'PERFIL DERECHO',     yaw: HALF_PI,         pitch: -0.05 },
+  { id: '05', label: '3/4 IZQUIERDO',      yaw: -HALF_PI / 2,    pitch: -0.05 },
   { id: '06', label: '3/4 DERECHO',        yaw: HALF_PI / 2,     pitch: -0.05 },
 ];
 
