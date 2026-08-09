@@ -4,14 +4,13 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Aura } from '@/components/aura';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { SLEEP_MUSIC } from '@/data/wellness';
 import { getSleepScript, sleepSegmentsToPhases } from '@/data/sleep';
 import { useBinauralEngine } from '@/hooks/useBinauralEngine';
-import { useWellnessStore } from '@/store/wellnessStore';
 
 /** Convert "5 min" → 300, "20 min" → 1200, etc. */
 function parseDurationSecs(dur: string): number {
@@ -25,7 +24,6 @@ interface SleepItem {
   title: string;
   duration: string;
   description: string;
-  isPremium: boolean;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
 }
 
@@ -45,7 +43,6 @@ const SLEEP_CATEGORIES: {
         title: 'Relajación de Emergencia',
         duration: '5 min',
         description: 'Lleva tu sistema nervioso a 0 en 5 minutos.',
-        isPremium: false,
         icon: 'emergency',
       },
       {
@@ -53,7 +50,6 @@ const SLEEP_CATEGORIES: {
         title: 'Body Scan Rápido',
         duration: '8 min',
         description: 'Relaja cada parte del cuerpo sistemáticamente.',
-        isPremium: true,
         icon: 'accessibility-new',
       },
     ],
@@ -68,7 +64,6 @@ const SLEEP_CATEGORIES: {
         title: 'El Bosque de las Secuoyas',
         duration: '20 min',
         description: 'Narración inmersiva en un bosque antiguo.',
-        isPremium: true,
         icon: 'park',
       },
       {
@@ -76,7 +71,6 @@ const SLEEP_CATEGORIES: {
         title: 'La Orilla del Mar Tranquilo',
         duration: '25 min',
         description: 'Déjate llevar por el ritmo de las olas.',
-        isPremium: true,
         icon: 'waves',
       },
       {
@@ -84,7 +78,6 @@ const SLEEP_CATEGORIES: {
         title: 'Cabaña en las Montañas',
         duration: '18 min',
         description: 'Nieve, silencio y calor de chimenea.',
-        isPremium: true,
         icon: 'cabin',
       },
     ],
@@ -99,7 +92,6 @@ const SLEEP_CATEGORIES: {
         title: 'Nidra Intro — 20 min',
         duration: '20 min',
         description: 'El estado entre vigilia y sueño. Restauración total.',
-        isPremium: false,
         icon: 'self-improvement',
       },
       {
@@ -107,7 +99,6 @@ const SLEEP_CATEGORIES: {
         title: 'Nidra Profundo — 40 min',
         duration: '40 min',
         description: 'Sesión completa de yoga nidra guiado.',
-        isPremium: true,
         icon: 'self-improvement',
       },
     ],
@@ -122,7 +113,6 @@ const SLEEP_CATEGORIES: {
         title: 'Relajación Muscular Progresiva',
         duration: '15 min',
         description: 'Técnica Jacobson para liberar tensión acumulada.',
-        isPremium: false,
         icon: 'fitness-center',
       },
       {
@@ -130,7 +120,6 @@ const SLEEP_CATEGORIES: {
         title: 'Coherencia Cardíaca Nocturna',
         duration: '10 min',
         description: 'Respiración 5-5 para calmar el sistema nervioso.',
-        isPremium: true,
         icon: 'favorite',
       },
     ],
@@ -141,9 +130,7 @@ export default function SuenoScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useWellnessStore();
   const engine = useBinauralEngine();
-  const isPremium = user.subscriptionTier !== 'free';
 
   function handlePlay(item: SleepItem, catId: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -205,76 +192,35 @@ export default function SuenoScreen() {
         body="Estas prácticas favorecen el descanso, pero no tratan el insomnio crónico, la apnea del sueño ni otros trastornos. Si tienes problemas de sueño persistentes, consulta a un profesional de la salud. No las uses mientras conduces u operas maquinaria."
       />
 
-      {/* Premium lock if free */}
-      {!isPremium && (
-        <PremiumCard style={styles.lockBanner}>
-          <MaterialIcons name="lock" size={18} color={palette.goldText} />
-          <Text style={styles.lockText}>
-            La mayoría del contenido de Sueño es Premium.
-            Activa tu cuenta para acceder sin límites.
-          </Text>
-        </PremiumCard>
-      )}
-
-      {/* Categories */}
+      {/* Categories — todo desbloqueado. */}
       {SLEEP_CATEGORIES.map((cat) => (
         <View key={cat.id}>
           <GoldDivider label={cat.label} />
-          {cat.items.map((item) => {
-            const locked = item.isPremium && !isPremium;
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => {
-                  // Bloqueado → llevar a planes (upsell) en vez de tap muerto.
-                  if (locked) { router.push('/pricing' as never); return; }
-                  handlePlay(item, cat.id);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.title}, ${item.duration}${locked ? ', premium — ver planes' : ''}`}
-                style={({ pressed }) => [
-                  styles.itemCard,
-                  pressed && { opacity: 0.75 },
-                ]}>
-                <View style={[styles.itemIcon, { backgroundColor: cat.color + '22' }]}>
-                  <MaterialIcons name={item.icon} size={22} color={locked ? palette.smoke : cat.color} />
-                </View>
-                <View style={styles.itemBody}>
-                  <Text style={[styles.itemTitle, locked && styles.itemLocked]}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.itemDuration}>{item.duration}</Text>
-                  <Text style={styles.itemDesc} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                </View>
-                {locked ? (
-                  <MaterialIcons name="lock" size={18} color={palette.smoke} />
-                ) : (
-                  <MaterialIcons name="play-circle" size={28} color={cat.color} />
-                )}
-              </Pressable>
-            );
-          })}
+          {cat.items.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => handlePlay(item, cat.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title}, ${item.duration}`}
+              style={({ pressed }) => [
+                styles.itemCard,
+                pressed && { opacity: 0.75 },
+              ]}>
+              <View style={[styles.itemIcon, { backgroundColor: cat.color + '22' }]}>
+                <MaterialIcons name={item.icon} size={22} color={cat.color} />
+              </View>
+              <View style={styles.itemBody}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Text style={styles.itemDuration}>{item.duration}</Text>
+                <Text style={styles.itemDesc} numberOfLines={2}>
+                  {item.description}
+                </Text>
+              </View>
+              <MaterialIcons name="play-circle" size={28} color={cat.color} />
+            </Pressable>
+          ))}
         </View>
       ))}
-
-      {/* Premium CTA */}
-      {!isPremium && (
-        <PremiumCard style={styles.premiumCta}>
-          <Text style={styles.premiumCtaTitle}>DESBLOQUEA TODO EL CONTENIDO</Text>
-          <Text style={styles.premiumCtaBody}>
-            Historias, Yoga Nidra, relajaciones guiadas y más con Polaris Premium.
-          </Text>
-          <Pressable
-            style={styles.premiumBtn}
-            onPress={() => router.push('/pricing' as never)}
-            accessibilityRole="button"
-            accessibilityLabel="Ver planes">
-            <Text style={styles.premiumBtnText}>VER PLANES</Text>
-          </Pressable>
-        </PremiumCard>
-      )}
 
       <View style={{ height: spacing.xxxl }} />
     </ScrollView>
@@ -309,15 +255,6 @@ const styles = StyleSheet.create({
   },
   bannerSub: { ...typography.caption, color: palette.smoke },
 
-  lockBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-    borderColor: palette.gold,
-  },
-  lockText: { ...typography.caption, color: palette.ash, flex: 1 },
-
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,22 +276,6 @@ const styles = StyleSheet.create({
   },
   itemBody: { flex: 1, gap: 2 },
   itemTitle: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 1.5 },
-  itemLocked: { color: palette.smoke },
   itemDuration: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   itemDesc: { ...typography.caption, color: palette.smoke, fontSize: 11 },
-
-  premiumCta: {
-    gap: spacing.md,
-    borderColor: palette.gold,
-    marginTop: spacing.lg,
-  },
-  premiumCtaTitle: { ...typography.section, color: palette.goldText, letterSpacing: 2 },
-  premiumCtaBody: { ...typography.body, color: palette.ash, fontSize: 13 },
-  premiumBtn: {
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  premiumBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
 });

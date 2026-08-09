@@ -183,7 +183,6 @@ export default function MentorScreen() {
     todayCheckIn,
     protocolDay,
     averages,
-    isSubscribed,
     addMentorMessages,
     loadMoreMentorMessages,
     userId,
@@ -328,12 +327,13 @@ export default function MentorScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [protocolDay]);
 
-  // Gate: ≥ 3 mensajes de usuario sin suscripción
+  // Norman ilimitado — el gate de 3 mensajes se quitó (decisión del dueño,
+  // loop Norman Capuozzo F4). `userMsgCount` sigue vivo: alimenta el
+  // messageCount/session_msg_count que ya se registraban.
   const userMsgCount = useMemo(
     () => state.mentorMessages.filter((m) => m.role === 'user').length,
     [state.mentorMessages],
   );
-  const isGated = !isSubscribed && userMsgCount >= 3;
 
   // Mensajes a mostrar = persistidos + mensaje de usuario pendiente
   const displayMessages = useMemo(() => {
@@ -360,13 +360,6 @@ export default function MentorScreen() {
   const submit = async (text = input) => {
     const clean = text.trim();
     if (!clean || isStreaming) return;
-
-    // Gate premium
-    if (isGated) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      router.push('/paywall');
-      return;
-    }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     analytics.chatMessage(clean.length);
@@ -702,20 +695,6 @@ export default function MentorScreen() {
             </View>
           ) : null}
         </PremiumCard>
-
-        {/* ── Paywall banner ── */}
-        {isGated && (
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push('/paywall');
-            }}
-            style={({ pressed }) => [styles.paywallBanner, pressed && { opacity: 0.85 }]}>
-            <MaterialIcons name="lock" size={16} color={palette.ink} />
-            <Text style={styles.paywallText}>DESBLOQUEAR MENTOR PREMIUM</Text>
-            <MaterialIcons name="chevron-right" size={16} color={palette.ink} />
-          </Pressable>
-        )}
 
         {/* ── Quick Prompts ── */}
         <GoldDivider label="CONSULTAS RAPIDAS" />
@@ -1064,25 +1043,6 @@ const styles = StyleSheet.create({
     color: palette.smoke,
     fontSize: 11,
     lineHeight: 16,
-  },
-
-  // Paywall banner
-  paywallBanner: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.md,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  paywallText: {
-    ...typography.section,
-    color: palette.ink,
-    flex: 1,
-    textAlign: 'center',
   },
 
   // Quick prompts
