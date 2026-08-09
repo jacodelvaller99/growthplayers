@@ -17,6 +17,7 @@ import type { BodyZone } from '@/lib/bodyMapLogic';
 
 export interface BodyMap3DProps {
   selected: BodyZone[];
+  onToggleZone?: (zone: BodyZone) => void;
 }
 
 export function BodyMap3D(_props: BodyMap3DProps) {

@@ -88,7 +88,7 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
             `components/body-map-3d.tsx`. La zona se elige con el legend de
             abajo en ambos casos; el toque directo sobre el cuerpo es
             exclusivo de la versión 2D. */}
-        {Platform.OS === 'web' && <BodyMap3D selected={selected} />}
+        {Platform.OS === 'web' && <BodyMap3D selected={selected} onToggleZone={onToggle} />}
         <Svg
           width="100%"
           height="100%"

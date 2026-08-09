@@ -1,7 +1,14 @@
 /**
  * humanFigure3DLogic — la profundidad añadida a la figura ya testeada.
  */
-import { generateFigure3D, projectPoint, type Camera } from '@/lib/humanFigure3DLogic';
+import {
+  generateFigure3D,
+  pickZone,
+  projectPoint,
+  shortestYawDelta,
+  VIEW_PRESETS,
+  type Camera,
+} from '@/lib/humanFigure3DLogic';
 import { generateFigure } from '@/lib/humanFigureLogic';
 
 describe('generateFigure3D — reusa la anatomía 2D y le da volumen', () => {
@@ -81,5 +88,56 @@ describe('projectPoint — la cámara del renderer web, sin three.js', () => {
     const centroDoble = projectPoint({ x: 0, y: 0, z: 0 }, { ...cam, zoom: 2 });
     expect(centroDoble.sx).toBeCloseTo(centroBase.sx, 5);
     expect(centroDoble.sy).toBeCloseTo(centroBase.sy, 5);
+  });
+});
+
+describe('pickZone — tocar las partículas directo en el cuerpo', () => {
+  const candidates = [
+    { sx: 100, sy: 100, zone: 'cabeza' as const },
+    { sx: 100, sy: 200, zone: 'pecho' as const },
+  ];
+
+  it('elige el candidato más cercano dentro del radio', () => {
+    expect(pickZone(candidates, 102, 98, 20)).toBe('cabeza');
+    expect(pickZone(candidates, 100, 205, 20)).toBe('pecho');
+  });
+
+  it('null si nada cae dentro de maxDist — un toque en el aire no selecciona', () => {
+    expect(pickZone(candidates, 100, 150, 20)).toBeNull();
+  });
+
+  it('lista vacía → null, no revienta', () => {
+    expect(pickZone([], 0, 0, 999)).toBeNull();
+  });
+});
+
+describe('VIEW_PRESETS — el HUD de 6 vistas', () => {
+  it('son exactamente 6, con id y label únicos', () => {
+    expect(VIEW_PRESETS).toHaveLength(6);
+    expect(new Set(VIEW_PRESETS.map((v) => v.id)).size).toBe(6);
+    expect(new Set(VIEW_PRESETS.map((v) => v.label)).size).toBe(6);
+  });
+});
+
+describe('shortestYawDelta — el tween nunca gira la vuelta larga', () => {
+  it('caso simple: de 0 a π/2 es +π/2', () => {
+    expect(shortestYawDelta(0, Math.PI / 2)).toBeCloseTo(Math.PI / 2, 5);
+  });
+
+  it('cruzando la costura: de 350° a 10° es +20°, no -340°', () => {
+    const from = (350 * Math.PI) / 180;
+    const to = (10 * Math.PI) / 180 + Math.PI * 2; // equivalente, ángulo "grande"
+    const delta = shortestYawDelta(from, to);
+    expect(Math.abs(delta)).toBeLessThan(Math.PI / 2);
+  });
+
+  it('el resultado siempre cae en (-π, π]', () => {
+    for (const from of [-10, -3, 0, 3, 10]) {
+      for (const to of [-10, -3, 0, 3, 10]) {
+        const d = shortestYawDelta(from, to);
+        expect(d).toBeGreaterThan(-Math.PI - 1e-9);
+        expect(d).toBeLessThanOrEqual(Math.PI + 1e-9);
+      }
+    }
   });
 });

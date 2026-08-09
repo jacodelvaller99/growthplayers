@@ -143,3 +143,72 @@ export function projectPoint(
     depth,
   };
 }
+
+// ── Toque directo sobre el cuerpo ───────────────────────────────────────────
+//
+// El dueño lo pidió explícito: "tocar las partículas directo en el cuerpo".
+// Sin picking por partícula, el único gesto tocable era el legend de abajo
+// (`body-map.tsx`) — la nube en sí era decorativa. `pickZone` cierra eso: el
+// candidato más cercano al toque, dentro de un radio, gana. Puro — quien
+// llama ya proyectó los puntos del frame actual.
+
+export interface ZoneCandidate {
+  sx: number;
+  sy: number;
+  zone: BodyZone;
+}
+
+/** El candidato tocable más cercano a (sx,sy), o `null` si ninguno cae dentro
+ *  de `maxDist` píxeles — un toque en el aire junto al cuerpo no debe
+ *  seleccionar la zona más próxima aunque esté a 80px. */
+export function pickZone(
+  candidates: ZoneCandidate[],
+  sx: number,
+  sy: number,
+  maxDist: number,
+): BodyZone | null {
+  let best: BodyZone | null = null;
+  let bestDistSq = maxDist * maxDist;
+  for (const c of candidates) {
+    const dx = c.sx - sx;
+    const dy = c.sy - sy;
+    const distSq = dx * dx + dy * dy;
+    if (distSq <= bestDistSq) {
+      bestDistSq = distSq;
+      best = c.zone;
+    }
+  }
+  return best;
+}
+
+// ── Vistas preset — el HUD "01. VISTA FRONTAL" … "06. 3/4 DERECHO" ─────────
+
+export interface ViewPreset {
+  id: string;
+  label: string;
+  yaw: number;
+  pitch: number;
+}
+
+const HALF_PI = Math.PI / 2;
+
+export const VIEW_PRESETS: readonly ViewPreset[] = [
+  { id: '01', label: 'VISTA FRONTAL',      yaw: 0,               pitch: -0.05 },
+  { id: '02', label: 'PERFIL IZQUIERDO',   yaw: -HALF_PI,        pitch: -0.05 },
+  { id: '03', label: 'PERFIL DERECHO',     yaw: HALF_PI,         pitch: -0.05 },
+  { id: '04', label: '3/4 IZQUIERDO',      yaw: -HALF_PI / 2,    pitch: -0.05 },
+  { id: '05', label: 'VISTA POSTERIOR',    yaw: Math.PI,         pitch: -0.05 },
+  { id: '06', label: '3/4 DERECHO',        yaw: HALF_PI / 2,     pitch: -0.05 },
+];
+
+const TAU = Math.PI * 2;
+
+/** El delta de yaw más corto de `from` a `to`, en (-π, π] — sin esto un tween
+ *  lineal de 350° a 10° gira "la vuelta larga" (por 340° en vez de 20°)
+ *  cada vez que la órbita libre del usuario cruza la costura de 2π. */
+export function shortestYawDelta(from: number, to: number): number {
+  let delta = (to - from) % TAU;
+  if (delta > Math.PI) delta -= TAU;
+  if (delta < -Math.PI) delta += TAU;
+  return delta;
+}
