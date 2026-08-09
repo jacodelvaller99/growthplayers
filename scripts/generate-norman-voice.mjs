@@ -43,6 +43,7 @@ import { STORY_SESSIONS } from '../data/sleep/stories.ts';
 import { NIDRA_SESSIONS } from '../data/sleep/nidra.ts';
 import { RELAX_SESSIONS } from '../data/sleep/relax.ts';
 import { BINAURAL_GUIDES } from '../data/binauralGuides.ts';
+import { TOUR_STEPS } from '../data/tour.ts';
 
 const OUT_DIR = path.resolve('.voice-out');
 const FORCE = process.argv.includes('--force');
@@ -93,7 +94,22 @@ function allNarratedSessions() {
     })),
   }));
 
-  const all = [...meditacion, ...sueno, ...binaural];
+  // El tour guiado (F2 del loop Norman Capuozzo) — un "id/audioId" por paso,
+  // sin sub-fases: `voiceUrlFor` en lib/tourLogic.ts pide exactamente
+  // `tour/<id>.mp3`, así que aquí `session.id = 'tour'` y `audioId = step.id`.
+  const tour = [{
+    id: 'tour',
+    phases: TOUR_STEPS.map((step) => ({
+      audioId: step.id,
+      text: step.why,
+      // Sin hueco visual que respetar (no hay animación esperando a la voz,
+      // el panel del tour ya se lee solo) — el presupuesto es solo para el
+      // reporte de "cabe/no cabe", generoso a propósito.
+      budget: Math.max(10, Math.ceil(step.why.length / 11)),
+    })),
+  }];
+
+  const all = [...meditacion, ...sueno, ...binaural, ...tour];
   return ONLY ? all.filter((s) => s.id.startsWith(ONLY)) : all;
 }
 
