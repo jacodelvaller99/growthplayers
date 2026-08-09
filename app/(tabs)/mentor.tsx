@@ -42,6 +42,7 @@ import { buildMentorMemoryContext } from '@/lib/memory';
 import { makeMinimalContext, summarizeConversation, updateProfileFromSummary } from '@/lib/memorySummarizer';
 import { suggestTasksFromCommitments } from '@/lib/mentorExecution';
 import { db2, intel } from '@/lib/supabase';
+import { computeStreak } from '@/lib/utils';
 import { useWearableConnections, useWearableDaily } from '@/lib/wearables';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
 
@@ -87,7 +88,7 @@ function getOpeningMessage(params: {
     return `Un mes completo, ${firstName}. Treinta días de datos, treinta días de decisiones, treinta días de construir quien eres en lugar de quien deberías ser. La mayoría nunca llega aquí. ¿Qué parte de ti de hace 30 días ya no existe?`;
   }
   if (protocolDay === 60) {
-    return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. Los estudios sobre formación de hábitos sugieren que un comportamiento tarda semanas en volverse automático. Estás construyendo el tuyo, día a día. ¿Qué quieres que sea automático en ti?`;
+    return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. Ya no decides cada día si aparecer: apareces. ¿Qué quieres que sea automático en ti?`;
   }
   if (protocolDay === 90) {
     return `${firstName}. Noventa días. Eres una persona diferente. No diferente en lo que dices — diferente en lo que haces cuando nadie mira. Eso es el protocolo funcionando. Una sola pregunta: comparado con quien eras en el Día 1 — ¿cuál es la diferencia más importante que has ganado?`;
@@ -103,28 +104,6 @@ function getOpeningMessage(params: {
     return `Energía en ${todayCheckIn.energy}/10 hoy, ${firstName}. Eso cambia el protocolo. Enfoque mínimo viable: una acción de alto impacto, sin desperdiciar recurso cognitivo. ¿Cuál es tu prioridad número uno ahora?`;
   }
   return `Día ${protocolDay} del protocolo. Estás en ${activeModuleTitle}. Energía ${todayCheckIn.energy}/10, claridad ${todayCheckIn.clarity}/10 — condiciones para ejecutar. ¿En qué trabajamos hoy, ${firstName}?`;
-}
-
-function computeStreak(checkIns: CheckIn[]): number {
-  if (!checkIns.length) return 0;
-  const sorted = [...checkIns].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let streak = 0;
-  let cursor = new Date(today);
-  for (const ci of sorted) {
-    const d = new Date(ci.date);
-    d.setHours(0, 0, 0, 0);
-    if (d.getTime() === cursor.getTime()) {
-      streak++;
-      cursor.setDate(cursor.getDate() - 1);
-    } else if (d.getTime() < cursor.getTime()) {
-      break;
-    }
-  }
-  return streak;
 }
 
 // ─── Prompt shortcuts por módulo ──────────────────────────────────────────────

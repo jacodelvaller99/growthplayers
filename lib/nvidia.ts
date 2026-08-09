@@ -1,12 +1,12 @@
 // ─── NVIDIA NIM – SSE Streaming ──────────────────────────────────────────────
-// Modelo: deepseek-ai/deepseek-v4-pro
-// Endpoint: https://integrate.api.nvidia.com/v1/chat/completions
-// thinking: false → respuestas directas sin chain-of-thought visible
+// Modelo: deepseek-ai/deepseek-v4-pro (fijado server-side en el ai-proxy)
+//
+// SOLO vía ai-proxy. La clave de NVIDIA es secret del servidor: no existe
+// camino directo client-side. El que había leía EXPO_PUBLIC_NVIDIA_API_KEY,
+// que se inlinea en el bundle web — la clave viajaba al navegador de cada
+// usuario y cualquiera podía copiarla desde devtools.
 
 import { ENV } from '@/app/config/env';
-
-const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
-const MODEL = 'deepseek-ai/deepseek-v4-pro';
 
 export type ChatMessage = { role: string; content: string };
 
@@ -72,9 +72,9 @@ export function createStreamGuard(
 }
 
 /**
- * Hace streaming de la respuesta NVIDIA NIM.
- * Con EXPO_PUBLIC_AI_PROXY_URL configurada, va por el ai-proxy (clave en el
- * servidor); si el proxy falla y hay clave client-side, cae al camino directo.
+ * Hace streaming de la respuesta NVIDIA NIM vía ai-proxy.
+ * Lanza si el proxy no está configurado — el caller (mentor.ts) cae al
+ * siguiente proveedor de la cadena.
  * @param messages  Array de mensajes en formato OpenAI.
  * @param onChunk   Callback invocado con cada fragmento de texto recibido.
  * @returns         Texto completo de la respuesta.
@@ -84,44 +84,13 @@ export async function streamNvidia(
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
+  if (!ENV.aiProxyUrl) {
+    throw new Error('NVIDIA requiere ai-proxy (EXPO_PUBLIC_AI_PROXY_URL no configurada).');
+  }
   const guard = createStreamGuard(signal);
   try {
-    if (ENV.aiProxyUrl) {
-      try {
-        const { proxyChatFetch } = await import('./aiProxy');
-        const response = await proxyChatFetch('nvidia', messages, guard.signal);
-        return await parseSSEStream(response, onChunk, guard.signal, guard.activity);
-      } catch (err) {
-        // Aborto (usuario o timeout) → no intentes el directo; el catch externo decide.
-        if (guard.signal.aborted || (err as Error)?.name === 'AbortError') throw err;
-        if (!ENV.nvidiaApiKey) throw err; // sin clave directa no hay fallback local
-        console.warn('[NVIDIA] proxy falló, usando llamada directa:', err);
-      }
-    }
-
-    const response = await fetch(`${NVIDIA_BASE}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${ENV.nvidiaApiKey}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages,
-        stream: true,
-        temperature: 1,
-        top_p: 0.95,
-        max_tokens: 16384,
-        chat_template_kwargs: { thinking: false },
-      }),
-      signal: guard.signal,
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      throw new Error(`NVIDIA API ${response.status}: ${body}`);
-    }
-
+    const { proxyChatFetch } = await import('./aiProxy');
+    const response = await proxyChatFetch('nvidia', messages, guard.signal);
     const text = await parseSSEStream(response, onChunk, guard.signal, guard.activity);
     if (guard.timedOut && !text) throw new Error('NVIDIA stream timeout (no data)');
     return text;

@@ -7,6 +7,7 @@ import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { PolarisLogo } from '@/components/PolarisLogo';
+import { computeStreak } from '@/lib/utils';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -54,8 +55,13 @@ export function DesktopSidebar() {
   const { state, protocolDay } = useLifeFlow();
   const { mode, setMode, canToggle } = useAppTheme();
 
-  const streak   = Math.max(state.checkIns.length, protocolDay);
-  const initial  = (state.profile.name ?? 'U')[0].toUpperCase();
+  // Racha real (días consecutivos con check-in). El `Math.max(..., protocolDay)`
+  // anterior crecía con el calendario aunque el usuario no registrara nada.
+  const streak   = computeStreak(state.checkIns);
+  // `?? 'U'` no atrapa `''` (perfil sin nombre aún, string vacío no es nullish):
+  // `''[0]` da `undefined` y `.toUpperCase()` revienta el sidebar entero antes
+  // de montar nada. Mismo patrón defensivo que ya usa `Avatar.tsx`.
+  const initial  = (state.profile.name?.trim()?.charAt(0) || 'U').toUpperCase();
   const tier     = TIER_LABEL[state.subscriptionTier] ?? 'OPERADOR';
 
   // Match by path segment (not substring) so '/mentoria' no activa 'mentor'.

@@ -5,9 +5,6 @@
 jest.mock('@/app/config/env', () => ({
   ENV: {
     isDev: false,
-    nvidiaApiKey: 'nv-test',
-    groqApiKey: 'gq-test',
-    openaiApiKey: 'sk-test',
     revenueCatApiKey: '',
     aiProxyUrl: 'https://proxy.test/functions/v1/ai-proxy',
   },

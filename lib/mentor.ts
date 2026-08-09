@@ -9,6 +9,7 @@ import { streamGroq } from './groq';
 import { streamOpenAI } from './openai';
 import type { CheckIn } from '@/types/lifeflow';
 import type { AssembledMentorMemory } from '@/lib/memoryLogic';
+import { ZONE_LABEL, type BodyZone } from '@/lib/bodyMapLogic';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,29 @@ function analyzeUserPatterns(ctx: MentorContext): string {
       `No es cansancio — es carga acumulada sin descarga. ` +
       `Pregunta: "¿Cuándo fue la última vez que hiciste algo sin ningún propósito productivo?" ` +
       `Herramienta recomendada: escritura terapéutica o binaural de recuperación antes del contenido.`,
+    );
+  }
+
+  // ── Zona del cuerpo que se repite ──────────────────────────────────────────
+  // Los cuatro deslizadores dan la MAGNITUD y ocultan el LUGAR: "tensión 8" no
+  // distingue una mandíbula apretada de un estómago cerrado. El mapa corporal
+  // del check-in captura el DÓNDE, y hasta aquí ese dato moría en la pantalla:
+  // Norman solo miraba stress/energy/sleep. La promesa escrita en la migración
+  // 20260804000000 —"cuarta vez esta semana en la mandíbula"— era falsa.
+  //
+  // Se cuenta sobre los 7 más recientes y solo se nombra la zona dominante:
+  // una lista de siete partes del cuerpo no es un dato, es ruido.
+  const zoneCounts = new Map<BodyZone, number>();
+  for (const c of sorted.slice(0, 7)) {
+    for (const z of c.zones ?? []) zoneCounts.set(z, (zoneCounts.get(z) ?? 0) + 1);
+  }
+  const [topZone, topCount] = [...zoneCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+  if (topZone && topCount >= 3) {
+    lines.push(
+      `PATRÓN CORPORAL: el operador señaló ${ZONE_LABEL[topZone]} ${topCount} veces en sus últimos ` +
+      `${Math.min(sorted.length, 7)} registros. Es el dato más concreto que tienes: no es "tu tensión sigue alta", ` +
+      `es un lugar del cuerpo que se repite. Cítalo literal —"${topCount} veces en ${ZONE_LABEL[topZone].toLowerCase()}"— ` +
+      `y pregunta qué pasa alrededor de ese momento. NO interpretes clínicamente ni nombres diagnósticos.`,
     );
   }
 
@@ -744,12 +768,15 @@ async function streamDevSimulation(
 /**
  * Envía un mensaje al mentor y hace streaming de la respuesta.
  *
+ * Toda la cadena pasa por el ai-proxy: las claves de los cuatro proveedores son
+ * secrets del servidor. Sin EXPO_PUBLIC_AI_PROXY_URL no hay NINGÚN proveedor.
+ *
  * Prioridad:
- * 1. Dev simulation (cuando isDev y sin ninguna clave de API)
- * 2. NVIDIA NIM    (si ENV.nvidiaApiKey está definida)
- * 3. Groq          (qwen/qwen3-32b — si ENV.groqApiKey está definida)
- * 4. OpenAI        (gpt-4o-mini — fallback final)
- * 5. Dev simulation (último recurso si todas las llamadas fallan)
+ * 1. Claude Sonnet 4.6 (primario)
+ * 2. NVIDIA NIM
+ * 3. Groq (llama-3.3-70b-versatile)
+ * 4. OpenAI (gpt-4o-mini — fallback final)
+ * 5. Dev simulation (sin proxy, o si las cuatro llamadas fallan)
  */
 export async function streamMentorResponse(
   ctx: MentorContext,
@@ -766,7 +793,11 @@ export async function streamMentorResponse(
   const isAbort = (err: unknown) =>
     signal?.aborted || (err as Error)?.name === 'AbortError';
 
-  if (ENV.isDev && !ENV.nvidiaApiKey && !ENV.groqApiKey && !ENV.openaiApiKey && !ENV.aiProxyUrl) {
+  // Sin ai-proxy no hay ningún proveedor: las claves de IA viven como secrets
+  // del servidor. Antes se leían de EXPO_PUBLIC_*, que se inlinean en el bundle
+  // web — cualquiera las sacaba de devtools y facturaba contra la cuenta del
+  // dueño. Sin proxy la única salida honesta es la simulación local.
+  if (!ENV.aiProxyUrl) {
     return streamDevSimulation(userMessage, onChunk);
   }
 
@@ -781,48 +812,23 @@ export async function streamMentorResponse(
     { role: 'user' as const, content: userMessage },
   ];
 
-  // ── 1. Claude Sonnet 4.6 — primario de Norman (solo vía ai-proxy) ──────────
-  // La clave de Anthropic vive en el servidor; sin EXPO_PUBLIC_AI_PROXY_URL este
-  // eslabón se salta y la cadena clásica corre idéntica.
-  if (ENV.aiProxyUrl) {
-    try {
-      return await streamAnthropic(messages, onChunk, signal);
-    } catch (err) {
-      if (isAbort(err)) throw err;
-      console.warn('[Mentor] Claude falló, cambiando a NVIDIA/Groq:', err);
-    }
-  }
+  // Cadena de fallback. Todos los eslabones van por el proxy, así que el gate
+  // por clave de cada proveedor desapareció: o hay proxy (los cuatro existen) o
+  // no lo hay (ya salimos arriba). NVIDIA tampoco necesita el gate de CORS —
+  // la llamada la hace el servidor.
+  const chain: [string, typeof streamAnthropic][] = [
+    ['Claude', streamAnthropic],
+    ['NVIDIA', streamNvidia],
+    ['Groq', streamGroq],
+    ['OpenAI', streamOpenAI],
+  ];
 
-  // NVIDIA NIM no soporta CORS desde el navegador — solo se usa desde un servidor.
-  // En web siempre se salta directamente a Groq u OpenAI… salvo con ai-proxy,
-  // que hace la llamada server-side y elimina la restricción CORS.
-  const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
-  if (ENV.aiProxyUrl || (ENV.nvidiaApiKey && !isWeb)) {
+  for (const [name, stream] of chain) {
     try {
-      return await streamNvidia(messages, onChunk, signal);
+      return await stream(messages, onChunk, signal);
     } catch (err) {
       if (isAbort(err)) throw err;
-      console.warn('[Mentor] NVIDIA falló, cambiando a Groq:', err);
-    }
-  }
-
-  if (ENV.groqApiKey || ENV.aiProxyUrl) {
-    try {
-      return await streamGroq(messages, onChunk, signal);
-    } catch (err) {
-      if (isAbort(err)) throw err;
-      console.warn('[Mentor] Groq falló, cambiando a OpenAI:', err);
-    }
-  }
-
-  // Guard: skip OpenAI if the key is clearly a Groq key (starts with 'gsk_').
-  // This prevents a 401 waste when EXPO_PUBLIC_OPENAI_API_KEY is misconfigured.
-  if ((ENV.openaiApiKey && !ENV.openaiApiKey.startsWith('gsk_')) || ENV.aiProxyUrl) {
-    try {
-      return await streamOpenAI(messages, onChunk, signal);
-    } catch (err) {
-      if (isAbort(err)) throw err;
-      console.warn('[Mentor] OpenAI falló, usando simulación:', err);
+      console.warn(`[Mentor] ${name} falló, siguiente proveedor:`, err);
     }
   }
 

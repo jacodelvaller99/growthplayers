@@ -8,7 +8,10 @@ import React from 'react';
 
 let mockIsDesktop = false;
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ replace: jest.fn(), back: jest.fn() }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
+  useFocusEffect: () => {},
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -64,5 +67,21 @@ describe('CheckInScreen — render smoke', () => {
   it('desktop renderiza sin throw', () => {
     mockIsDesktop = true;
     expect(() => render(<CheckInScreen />)).not.toThrow();
+  });
+});
+
+describe('el check-in no contesta por el usuario', () => {
+  // El invariante que faltaba cuando los deslizadores dejaron de venir
+  // pre-rellenados en 7/7/4/7. Sin esto, cualquiera puede devolver los
+  // defaults "para bajar la friccion" y el dato que alimenta a Norman, la
+  // racha y el score soberano vuelve a ser ficcion sin que nada falle.
+  it('abre sin valores puestos: no se puede guardar y no hay lectura', () => {
+    mockIsDesktop = false;
+    const { queryByText } = render(<CheckInScreen />);
+    // El boton dice lo que falta, no "guardar".
+    expect(queryByText('MARCA LOS CUATRO')).not.toBeNull();
+    expect(queryByText('GUARDAR CHECK-IN')).toBeNull();
+    // Y la lectura de capacidad no existe hasta que existan los cuatro.
+    expect(queryByText(/INDICE DE CAPACIDAD|ÍNDICE DE CAPACIDAD/)).toBeNull();
   });
 });

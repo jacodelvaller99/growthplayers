@@ -1,15 +1,19 @@
 // ─── lib/mentor.ts — cadena de fallback + contrato de honestidad/seguridad ────
 // Los proveedores se mockean en la frontera de I/O; la lógica de orquestación
 // (orden NVIDIA → Groq → OpenAI, corte por abort) se prueba real.
+//
+// Contrato nuevo: TODA la cadena pasa por el ai-proxy — las claves de IA ya no
+// existen client-side (un EXPO_PUBLIC_* se inlinea en el bundle web). Aquí el
+// proxy está activo y Claude falla en beforeEach, así que la cadena arranca en
+// NVIDIA; el caso "sin proxy" tiene su propio test al final.
+
+const PROXY = 'https://proxy.test/functions/v1/ai-proxy';
 
 jest.mock('@/app/config/env', () => ({
   ENV: {
     isDev: false,
-    nvidiaApiKey: 'nv-test',
-    groqApiKey: 'gq-test',
-    openaiApiKey: 'sk-test',
     revenueCatApiKey: '',
-    aiProxyUrl: '', // sin proxy → Claude se salta, cadena clásica intacta
+    aiProxyUrl: 'https://proxy.test/functions/v1/ai-proxy',
   },
 }));
 jest.mock('@/lib/anthropic', () => ({ streamAnthropic: jest.fn() }));
@@ -21,13 +25,21 @@ jest.mock('@/lib/groq', () => ({ streamGroq: jest.fn() }));
 jest.mock('@/lib/openai', () => ({ streamOpenAI: jest.fn() }));
 
 import { streamMentorResponse, buildSystemPrompt, modePromptBlock, MentorContext, MentorMode } from '@/lib/mentor';
+import { ENV } from '@/app/config/env';
+import { streamAnthropic } from '@/lib/anthropic';
 import { streamNvidia } from '@/lib/nvidia';
 import { streamGroq } from '@/lib/groq';
 import { streamOpenAI } from '@/lib/openai';
 
+const anthropicMock = streamAnthropic as jest.Mock;
 const nvidiaMock = streamNvidia as jest.Mock;
 const groqMock = streamGroq as jest.Mock;
 const openaiMock = streamOpenAI as jest.Mock;
+
+/** El ENV mockeado es un objeto plano: se puede apagar el proxy en un test. */
+const setProxy = (url: string) => {
+  (ENV as unknown as { aiProxyUrl: string }).aiProxyUrl = url;
+};
 
 const ctx: MentorContext = {
   userName: 'Ana',
@@ -50,6 +62,9 @@ const ctx: MentorContext = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  setProxy(PROXY);
+  // Claude encabeza la cadena; estos tests cubren los tres eslabones de abajo.
+  anthropicMock.mockRejectedValue(new Error('AI proxy 503'));
 });
 
 describe('streamMentorResponse — fallback chain', () => {
@@ -111,6 +126,30 @@ describe('streamMentorResponse — fallback chain', () => {
     const messages = nvidiaMock.mock.calls[0][0] as { role: string; content: string }[];
     expect(messages[0].role).toBe('system');
     expect(messages.at(-1)).toEqual({ role: 'user', content: '¿cómo cierro la semana?' });
+  });
+
+  // El invariante de seguridad de W2: sin ai-proxy NO hay proveedor. Antes cada
+  // eslabón tenía su propio camino directo con una clave EXPO_PUBLIC_*, que se
+  // inlinea en el bundle web — visible en devtools y facturable por cualquiera.
+  it('sin ai-proxy no llama a NINGÚN proveedor: cae a la simulación local', async () => {
+    setProxy('');
+    nvidiaMock.mockResolvedValue('no-deberia-usarse');
+    groqMock.mockResolvedValue('no-deberia-usarse');
+    openaiMock.mockResolvedValue('no-deberia-usarse');
+    jest.useFakeTimers();
+    try {
+      const p = streamMentorResponse(ctx, 'hola', [], () => {});
+      await jest.advanceTimersByTimeAsync(60000); // la simulación teclea a 18ms/carácter
+      const out = await p;
+      expect(out.length).toBeGreaterThan(0);
+      expect(out).not.toBe('no-deberia-usarse');
+      expect(anthropicMock).not.toHaveBeenCalled();
+      expect(nvidiaMock).not.toHaveBeenCalled();
+      expect(groqMock).not.toHaveBeenCalled();
+      expect(openaiMock).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 

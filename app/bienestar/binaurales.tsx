@@ -24,6 +24,7 @@ import {
   type AmbienceType,
   type BinauralPreset,
 } from '@/data/wellness';
+import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
@@ -640,8 +641,11 @@ export default function BinauralesScreen() {
   }
 
   return (
+    <View style={sc.root}>
+      {/* Enfocar. `reposo` es el gris neutro — aquí no se busca un estado, se sostiene la atención. */}
+      <Aura state="reposo" weight={0.8} />
     <ScrollView
-      style={sc.root}
+      style={styles.auraScroll}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}>
 
@@ -818,12 +822,15 @@ export default function BinauralesScreen() {
 
       <View style={{ height: spacing.xxxl }} />
     </ScrollView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // El ScrollView ya no es la raíz: el aura se ancla al viewport por encima.
+  auraScroll: { flex: 1 },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',

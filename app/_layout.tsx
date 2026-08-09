@@ -20,6 +20,7 @@ import { DesktopSidebar } from '@/components/DesktopSidebar';
 import { ToastProvider } from '@/context/ToastContext';
 import { AppThemeProvider } from '@/hooks/use-app-theme';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { HeroMoments } from '@/components/hero-moments';
 import { initCrashCapture } from '@/lib/crash';
 
 export const unstable_settings = {
@@ -81,6 +82,7 @@ function MainStack() {
       <Stack.Protected guard={guard}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="checkin" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
+        <Stack.Screen name="ritual" options={{ headerShown: false }} />
         <Stack.Screen name="mentoria/index" options={{ headerShown: false }} />
         <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
         <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
@@ -110,6 +112,13 @@ function MainStack() {
         <Stack.Screen name="comunidad/eventos/index" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/eventos/crear" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/eventos/[id]" options={{ headerShown: false }} />
+        {/* Cuatro que faltaban. `movimiento` es el destino de la práctica de
+            espalda del mapa corporal, e `internista`/`examenes` tocan PHI —
+            exámenes médicos subidos por el usuario. Estar fuera de este bloque
+            significa que un deep link sin sesión las renderiza. */}
+        <Stack.Screen name="bienestar/movimiento" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/internista" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/examenes" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/grito" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/tapping" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/consciencia" options={{ headerShown: false }} />
@@ -231,6 +240,12 @@ export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let sub: { remove: () => void } | null = null;
+    // `configureNotificationHandler` existía con CERO llamadores: sin él, una
+    // notificación que llega con la app en primer plano no se muestra (expo
+    // la entrega al handler, y sin handler configurado no hay banner). El
+    // recordatorio de las 7:00 se perdía justo para quien ya tenía la app
+    // abierta.
+    import('@/services/notifications').then((N) => { N.configureNotificationHandler(); });
     import('expo-notifications').then((N) => {
       sub = N.addNotificationResponseReceivedListener((response) => {
         const data = response?.notification?.request?.content?.data as
@@ -258,6 +273,7 @@ export default function RootLayout() {
             <SmartNotificationsInitializer />
             <OfflineBanner />
             <PWAInstallBanner />
+            <HeroMoments />
             {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
             <AppShell />
             </ToastProvider>

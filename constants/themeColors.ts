@@ -11,8 +11,11 @@
  *   Native (iOS/Android) keeps the real dark hex values (static StyleSheet),
  *   so native stays dark for now; the toggle is a web/desktop feature.
  *
- * Accent (gold) and status colors stay constant across themes (brand + the
- * 26 `palette.gold + 'NN'` opacity concatenations rely on real hex values).
+ * Accent (gold) and status FILL colors stay constant across themes (brand + the
+ * `palette.gold + 'NN'` / `palette.danger + 'NN'` opacity concatenations rely on
+ * real hex values — `var(--x)55` no es CSS válido). Cuando un color de marca
+ * necesita contraste distinto por tema, se añade una variante *-text separada
+ * (`goldText`, `dangerText`) y el token de relleno se queda intacto.
  */
 import { Platform } from 'react-native';
 
@@ -38,6 +41,16 @@ export const THEME_VARS: Record<'dark' | 'light', Record<string, string>> = {
     '--c-border-focus': 'rgba(255,255,255,0.20)',
     // gold AS TEXT/icon on a surface: bright gold reads great on dark…
     '--c-gold-text':    '#FFC804',
+    // rojo de error AS TEXT sobre superficie oscura. El #C0392B de palette.danger
+    // solo da 3.47:1 sobre #111111 — falla AA (4.5:1) en cada mensaje de error.
+    // Este tono aclarado da 5.18:1 sobre #111111 y 4.87:1 sobre #181818 (elevado).
+    '--c-danger-text':  '#E5564A',
+    // La silueta del mapa corporal y el borde de sus zonas. Estaban como hex
+    // crudos, asi que en tema claro la silueta gris quedaba sobre superficie
+    // blanca y el borde blanco al 38% desaparecia: la pieza estrella del
+    // producto tenia un modo donde no se veia.
+    '--c-silhouette':   '#5F5F5F',
+    '--c-zone-border':  'rgba(255,255,255,0.38)',
   },
   light: {
     '--c-bg':           '#F5F3EE',
@@ -59,6 +72,13 @@ export const THEME_VARS: Record<'dark' | 'light', Record<string, string>> = {
     // …but bright gold fails on cream. Deep amber keeps the brand warmth and
     // stays readable (AA-ish on #F5F3EE) for eyebrows/labels/timestamps.
     '--c-gold-text':    '#8A6500',
+    // En claro el rojo original SÍ pasa (4.90:1 sobre #F5F3EE, 5.44:1 sobre #FFFFFF):
+    // el aclarado del tema oscuro se vería lavado sobre crema. Se queda el original.
+    '--c-danger-text':  '#C0392B',
+    // En claro la silueta se oscurece (contra #FFFFFF de la tarjeta) y el borde
+    // pasa a negro translucido: mismo 3:1 de WCAG 1.4.11 en los dos temas.
+    '--c-silhouette':   '#B4B0A6',
+    '--c-zone-border':  'rgba(13,13,13,0.42)',
   },
 };
 

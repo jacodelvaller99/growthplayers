@@ -14,14 +14,16 @@ import { ACTIVE_MODULE } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { supabase, db } from '@/lib/supabase';
 import { ENV } from '@/app/config/env';
-import { calcProtocolDay } from '@/lib/utils';
+import { calcProtocolDay, computeStreak } from '@/lib/utils';
 import { enqueueWrite, initOfflineFlush } from '@/lib/offlineQueue';
 import { checkCriticalSchema } from '@/lib/schemaHealth';
 import { resolveEntitlement } from '@/lib/subscription';
+import { logSilentError } from '@/lib/observability';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import { useWellnessStore } from '@/store/wellnessStore';
 import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, UserProfile, WellnessSession } from '@/types/lifeflow';
+import type { BodyZone } from '@/lib/bodyMapLogic';
 
 // ─── Local cache key ──────────────────────────────────────────────────────────
 const STATE_KEY = 'state';
@@ -37,6 +39,19 @@ function isMissingClientIdColumn(err: unknown): boolean {
   // 42703 undefined_column · 42P10 no unique/exclusion constraint matching ON CONFLICT
   return msg.includes('client_id') || msg.includes('on conflict') ||
     msg.includes('42703') || msg.includes('42p10');
+}
+
+// ─── Degradación de `daily_checkins.zones` (migración 20260804000000) ────────
+// Mismo contrato que `_clientIdColMissing`: si la columna no está, el check-in
+// se guarda SIN ella en vez de perderse entero.
+let _zonesColMissing = false;
+
+function isMissingZonesColumn(err: unknown): boolean {
+  const e = err as { message?: string; code?: string } | null;
+  const msg = (e?.message ?? '').toLowerCase();
+  // PGRST204 = PostgREST no encontró la columna en su caché de esquema.
+  return e?.code === 'PGRST204' || msg.includes('pgrst204') ||
+    (msg.includes('zones') && (msg.includes('column') || msg.includes('columna')));
 }
 
 async function persistMentorMessages(
@@ -82,16 +97,56 @@ async function persistMentorMessages(
   }
 }
 
+// ─── Outbox de sesiones de bienestar (mismo patrón, ver migración 20260803000000) ─
+let _wellnessClientIdColMissing = false;
+
+async function persistWellnessSession(
+  uid: string,
+  row: Record<string, unknown>,
+  clientId: string,
+): Promise<void> {
+  const withCid = { ...row, client_id: clientId };
+  const sessions = () => (supabase as unknown as { from: (t: string) => any }).from('wellness_sessions');
+  const enqueue = () => enqueueWrite({ table: 'wellness_sessions', payload: withCid, onConflict: 'user_id,client_id' });
+
+  if (!_wellnessClientIdColMissing) {
+    try {
+      const { error } = await sessions().upsert(withCid, { onConflict: 'user_id,client_id' });
+      if (error) throw error;
+      return; // exactamente-una-vez (columna client_id presente)
+    } catch (e) {
+      if (isMissingClientIdColumn(e)) {
+        _wellnessClientIdColMissing = true; // pre-migración → insert simple desde ahora
+      } else {
+        await enqueue(); // sin red u otro fallo → outbox idempotente
+        return;
+      }
+    }
+  }
+  // Camino pre-migración: insert simple (comportamiento actual, sin client_id).
+  try {
+    const { error } = await sessions().insert(row);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[Supabase] saveWellnessSession (encolado para reintento):', e);
+    await enqueue();
+  }
+}
+
 // ─── Default values ──────────────────────────────────────────────────────────
+// VACÍOS a propósito. Antes venían rellenos ("Juan Carlos — Empresario" + un
+// Norte inventado) y el onboarding sembraba sus inputs desde aquí: el usuario
+// podía completar todo el flujo sin escribir una sola palabra propia, y la
+// ficción se persistía como si fuera su declaración. Peor: la condición que
+// persistía el obstáculo (painPoint) exigía `!purpose.trim()` — con el default
+// relleno era siempre false y el dolor del usuario se descartaba SIEMPRE.
+// El camino del héroe no puede empezar con la identidad de otro.
+// Los textos ejemplares viven ahora como `placeholder` en el onboarding.
 const defaultNorth: NorthStar = {
-  purpose: 'Construir una vida soberana, rentable y fisicamente impecable.',
-  identity: 'Soy un empresario que decide con calma, ejecuta con precision y protege su energia.',
-  nonNegotiables: [
-    'Entrenar o recuperar el cuerpo',
-    'Un bloque profundo antes de mensajeria',
-    'Cerrar una decision importante',
-  ],
-  dailyReminder: 'No negocio con el ruido. Hoy mando desde criterio, no desde urgencia.',
+  purpose: '',
+  identity: '',
+  nonNegotiables: [],
+  dailyReminder: '',
 };
 
 // Fixed epoch used in defaultState to ensure SSG output matches client hydration.
@@ -103,14 +158,14 @@ const defaultState: LifeFlowState = {
   protocolStartDate: DEFAULT_EPOCH,
   activeProgramId: 'protocolo-soberano',
   activeModuleId: ACTIVE_MODULE.id,
-  profile: { name: 'Juan Carlos', role: 'Empresario' },
+  profile: { name: '', role: '' },
   northStar: defaultNorth,
   checkIns: [],
   mentorMessages: [
     {
       id: 'seed-mentor',
       role: 'mentor',
-      text: 'Estoy leyendo tu protocolo. Haz check-in y te devuelvo una instruccion operativa para hoy.',
+      text: 'Estoy leyendo tu protocolo. Haz check-in y te devuelvo una instrucción operativa para hoy.',
       createdAt: DEFAULT_EPOCH,
     },
   ],
@@ -137,6 +192,9 @@ type LifeFlowContextValue = {
     profile: UserProfile;
     northStar: NorthStar;
     activeProgramId: string;
+    /** El obstáculo declarado en el umbral — el punto de partida del héroe.
+     *  Antes se capturaba y se descartaba; ahora siembra la historia de origen. */
+    painPoint?: string;
   }) => Promise<void>;
   updateProfile: (profile: UserProfile) => Promise<void>;
   updateNorthStar: (northStar: NorthStar) => Promise<void>;
@@ -251,6 +309,10 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     stress:     c.stress    ?? 5,
     sleep:      c.sleep     ?? 5,
     systemNeed: c.system_need ?? '',
+    // Las zonas se guardaban y no se volvían a leer: al recargar la app
+    // desaparecían, así que el patrón que Norman debe citar ("cuarta vez esta
+    // semana en la mandíbula") solo existía dentro de la sesión que lo escribió.
+    zones:      (c.zones as BodyZone[] | null) ?? undefined,
   }));
 
   // Rebuild completedTasks from DB rows
@@ -298,7 +360,10 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     activeModuleId:  ACTIVE_MODULE.id,
     profile: {
       name: profile.name ?? defaultState.profile.name,
-      role: defaultState.profile.role, // role is not stored in new schema
+      // `role` viaja a DB desde 20260801000000_hero_umbral.sql; antes se
+      // descartaba por diseño y lo que el usuario tecleaba se perdía en el
+      // primer refresh. Fallback '' si la columna aún no existe en prod.
+      role: (profile as { role?: string | null }).role ?? defaultState.profile.role,
     },
     northStar: {
       purpose:         profile.purpose        ?? defaultNorth.purpose,
@@ -597,13 +662,20 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   const completeOnboarding = useCallback(
-    async (payload: { profile: UserProfile; northStar: NorthStar; activeProgramId: string }) => {
+    async (payload: {
+      profile: UserProfile;
+      northStar: NorthStar;
+      activeProgramId: string;
+      painPoint?: string;
+    }) => {
       const now = new Date().toISOString();
       const next: LifeFlowState = {
         ...state,
         onboardingCompleted: true,
         protocolStartDate:   now,
-        profile:             payload.profile,
+        // El obstáculo entra al perfil, no solo a la memoria de Norman: el
+        // Umbral se lo cita de vuelta al cruzar.
+        profile:             { ...payload.profile, painPoint: payload.painPoint?.trim() || undefined },
         northStar:           payload.northStar,
         activeProgramId:     payload.activeProgramId,
       };
@@ -613,9 +685,15 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       if (!uid) return;
 
       try {
-        await db.profiles().upsert({
+        // `role` requiere la migración 20260801000000_hero_umbral.sql — la
+        // columna es nueva y el tipo generado no la conoce aún, de ahí el
+        // cast. Si la columna no existe todavía en prod, el upsert falla y
+        // cae al catch: el onboarding no se bloquea por eso.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (db.profiles() as any).upsert({
           user_id:             uid,
           name:                payload.profile.name,
+          role:                payload.profile.role || null,
           protocol_start_date: now.split('T')[0],
           purpose:             payload.northStar.purpose,
           identity:            payload.northStar.identity,
@@ -624,6 +702,23 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         }, { onConflict: 'user_id' });
       } catch (e) {
         console.warn('[Supabase] completeOnboarding:', e);
+      }
+
+      // La historia de origen: el dolor declarado + hacia dónde va. Es la
+      // primera entrada de su línea de tiempo y el ancla del arco — el día 60
+      // el usuario puede mirar atrás y leer desde dónde partió. Import
+      // dinámico y fire-and-forget: la memoria degrada, el onboarding no.
+      if (payload.painPoint?.trim() || payload.northStar.purpose.trim()) {
+        try {
+          const { seedHeroOrigin } = await import('@/lib/memory');
+          await seedHeroOrigin(uid, {
+            painPoint: payload.painPoint?.trim() || null,
+            purpose:   payload.northStar.purpose.trim() || null,
+            identity:  payload.northStar.identity.trim() || null,
+          });
+        } catch (e) {
+          logSilentError('onboarding.seedHeroOrigin', e);
+        }
       }
     },
     [persist, state],
@@ -693,19 +788,64 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         sleep:           checkIn.sleep,
         system_need:     checkIn.systemNeed,
         sovereign_score: newScore,
+        // Dónde lo sintió. Sin esto, lo que la persona señala en su propio
+        // cuerpo moría en el teléfono: no llegaba a Supabase, ni a Norman, ni
+        // al dossier del coach, y se perdía al reinstalar. La promesa de
+        // "cuarta vez esta semana en la mandíbula" era falsa sin esta línea.
+        // La columna la añade 20260804000000; el upsert degrada solo si aún
+        // no está aplicada (el catch de abajo lo encola igual).
+        zones:           checkIn.zones ?? null,
       };
       let syncStatus: 'synced' | 'queued' = 'synced';
+      // supabase-js v2 NO lanza en error de servidor: resuelve con `{ error }`.
+      // Mandar `zones` contra una base sin la migración 20260804000000 devuelve
+      // PGRST204, que rechaza la FILA ENTERA — no solo el campo. Sin leer
+      // `error`, el catch no se dispara, no se encola nada, `syncStatus` queda
+      // 'synced' y el usuario ve un check verde mientras su racha, su score y
+      // los datos que ve Norman se quedan en los de ayer. Un check-in perdido
+      // en silencio es el peor fallo posible en el loop central.
+      //
+      // Mismo patrón de degradación que `persistMentorMessages` (:36-84):
+      // detectar la columna ausente, marcarla, y reintentar sin ella.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const checkins = () => db.checkins() as any;
+      const upsertCheckIn = async (payload: Record<string, unknown>) => {
+        const { error } = await checkins().upsert(payload, { onConflict: 'user_id,date' });
+        if (error) throw error;
+      };
       try {
-        await db.checkins().upsert(checkInPayload, { onConflict: 'user_id,date' });
+        if (_zonesColMissing) {
+          const { zones: _drop, ...sinZonas } = checkInPayload;
+          await upsertCheckIn(sinZonas);
+        } else {
+          await upsertCheckIn(checkInPayload);
+        }
       } catch (e) {
-        console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
-        await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });
-        syncStatus = 'queued';
+        if (isMissingZonesColumn(e)) {
+          // Pre-migración: el resto del check-in NO puede perderse por un campo
+          // nuevo. Se reintenta sin `zones` y se recuerda para los siguientes.
+          _zonesColMissing = true;
+          const { zones: _drop, ...sinZonas } = checkInPayload;
+          try {
+            await upsertCheckIn(sinZonas);
+          } catch (e2) {
+            console.warn('[Supabase] saveCheckIn (encolado para reintento):', e2);
+            await enqueueWrite({ table: 'daily_checkins', payload: sinZonas, onConflict: 'user_id,date' });
+            syncStatus = 'queued';
+          }
+        } else {
+          console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
+          await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });
+          syncStatus = 'queued';
+        }
       }
 
       // Also update profile with latest score
       try {
-        const streak = next.checkIns.length; // simplified; mentor.tsx computes accurate streak
+        // Racha real. Era `next.checkIns.length` (total histórico), y este es el
+        // valor que el admin lee como proxy de "activo últimos 7 días"
+        // (lib/admin/queries.ts) — con el conteo total nunca volvía a 0.
+        const streak = computeStreak(next.checkIns, now);
         await db.profiles().upsert({
           user_id:         uid,
           sovereign_score: newScore,
@@ -859,18 +999,14 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       const uid = uidRef.current;
       if (!uid) return;
 
-      try {
-        await db.wellness().insert({
-          user_id:          uid,
-          type:             session.type,
-          session_name:     session.sessionName,
-          duration_seconds: session.durationSeconds,
-          completed_at:     session.completedAt,
-          metadata:         (session.metadata ?? null) as import('@/types/supabase').Json | null,
-        });
-      } catch (e) {
-        console.warn('[Supabase] saveWellnessSession:', e);
-      }
+      await persistWellnessSession(uid, {
+        user_id:          uid,
+        type:             session.type,
+        session_name:     session.sessionName,
+        duration_seconds: session.durationSeconds,
+        completed_at:     session.completedAt,
+        metadata:         (session.metadata ?? null) as import('@/types/supabase').Json | null,
+      }, id);
 
       // ── Wellness bonus for Score Soberano ─────────────────────────────────────
       const bonusMap: Record<string, number> = {
@@ -1034,6 +1170,14 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     applyUid(null);
     await removeLocal(STATE_KEY);
+    // Las claves narrativas también. Se quedaban, así que la SEGUNDA cuenta que
+    // entrara en este dispositivo heredaba el "ya te vi antes" de la primera:
+    // recibía "Bienvenido de nuevo" su día 0, y su primer check-in comparaba
+    // contra la racha de otra persona.
+    await removeLocal('hero:v1');
+    await removeLocal('milestone:v1');
+    await removeLocal('jornada:v1');
+    await removeLocal('ritual:v1');
     setState(defaultState);
   }, []);
 

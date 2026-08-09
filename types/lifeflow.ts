@@ -1,3 +1,5 @@
+import type { BodyZone } from '@/lib/bodyMapLogic';
+
 export type LessonStatus = 'completed' | 'active' | 'locked' | 'available';
 export type ModuleStatus = 'completed' | 'active' | 'locked' | 'coming_soon';
 
@@ -38,6 +40,19 @@ export type UserProfile = {
   mlConsent?: boolean;
   /** Expo push notification token */
   expoPushToken?: string | null;
+  /**
+   * Lo que el usuario declaró que se interpone en su camino, en sus palabras.
+   *
+   * El onboarding lo pregunta y hasta ahora solo lo mandaba a `seedHeroOrigin`:
+   * la respuesta más personal de todo el flujo no quedaba en ningún sitio que
+   * la app pudiera volver a leer. El Umbral la necesita — es la única confesión
+   * de las tres cosas que escribe.
+   *
+   * Solo local: no hay columna en `profiles`. El Umbral corre en la misma
+   * sesión en que se escribió, así que alcanza. En una reinstalación se pierde,
+   * y no importa: el Umbral no se vuelve a cruzar.
+   */
+  painPoint?: string;
 };
 
 export type CheckIn = {
@@ -48,6 +63,11 @@ export type CheckIn = {
   stress: number;
   sleep: number;
   systemNeed: string;
+  /** Dónde lo sintió, si lo señaló. Los números dan la magnitud; esto da el
+   *  lugar, que es lo que permite a Norman decir "cuarta vez esta semana en la
+   *  mandíbula" en vez de "tu tensión sigue alta". Opcional: nadie está
+   *  obligado a señalar. */
+  zones?: BodyZone[];
 };
 
 export type MentorMessage = {

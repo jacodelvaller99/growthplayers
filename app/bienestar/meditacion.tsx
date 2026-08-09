@@ -25,6 +25,7 @@ import {
 } from '@/data/wellness';
 import { createMeditationAudio } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
+import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
@@ -447,8 +448,15 @@ export default function MeditacionScreen() {
   }
 
   return (
+    <View style={sc.root}>
+      {/* Las prácticas son de los pocos momentos inmersivos donde la marca
+          permite color de fondo. Va FUERA del ScrollView y anclado al
+          viewport: dentro del `contentContainerStyle` (que es `maxWidth: 430`
+          centrado) se vería como una franja con costura contra el negro. */}
+      {/* Asentar. `recuperado` es el verde bajo en croma. */}
+      <Aura state="recuperado" weight={0.8} />
     <ScrollView
-      style={sc.root}
+      style={styles.auraScroll}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}>
 
@@ -517,12 +525,15 @@ export default function MeditacionScreen() {
 
       <View style={{ height: spacing.xxxl }} />
     </ScrollView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // El ScrollView ya no es la raíz: el aura se ancla al viewport por encima.
+  auraScroll: { flex: 1 },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,10 +7,11 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-        />
+        {/* Sin maximum-scale ni user-scalable: bloquear el zoom es una barrera dura
+            para baja visión (WCAG 1.4.4 Resize Text). El "beneficio" que se buscaba
+            —evitar el auto-zoom de iOS al enfocar un input— se resuelve con
+            font-size ≥16px en los inputs, no capando el gesto de pinza. */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
         {/* ── PWA / Theme ──────────────────────────────────────── */}
         <meta name="theme-color" content="#080808" />
@@ -36,6 +37,11 @@ export default function Root({ children }: PropsWithChildren) {
         {/* ── GrandisExtended preload — critical fonts first (reduces FOIT) ─── */}
         <link rel="preload" href="/assets/fonts/GrandisExtended-Bold.ttf"   as="font" type="font/ttf" crossOrigin="anonymous" />
         <link rel="preload" href="/assets/fonts/GrandisExtended-Medium.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+        {/* Light es la cara de `typography.statement` — el Umbral, el Mando y la
+            lectura del cuerpo. Sin precargar, la frase del usuario entra en la
+            tipografía de respaldo y CAMBIA DE CARA a mitad de lectura, que es
+            justo la frase que no debe parpadear. */}
+        <link rel="preload" href="/assets/fonts/GrandisExtended-Light.ttf"  as="font" type="font/ttf" crossOrigin="anonymous" />
 
         {/* ── Web Fonts: Inter + Space Mono (Google Fonts) ──────────────── */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

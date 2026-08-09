@@ -35,6 +35,7 @@ function emptyBundle(): CoachBundle {
     user_turns_7d: 0,
     user_turns_prev: 0,
     days_since_last_message: 0,
+    ever_wrote: true,
     overdue_count: 0,
     open_tasks_count: 0,
     completed_tasks_7d: 0,
@@ -275,5 +276,83 @@ describe('coachIntelligenceLogic — end to end', () => {
       computeRelationalDepth(emptyBundle()),
     );
     expect(n).toContain('10 días sin escribir');
+  });
+});
+
+describe('quien nunca escribio no se fue: no ha llegado', () => {
+  // POR QUE: `days_since_last_message` vale `Infinity` cuando el usuario nunca
+  // escribio a Norman — que es exactamente el usuario del dia 1
+  // (lib/coachIntelligence.ts:65 y :190). Sin guard, computeRelationalDepth da
+  // score 0 -> 'silent', selectNextAction da 'reconnect', y la unica decision
+  // primaria de Comando le dice al recien llegado que «lleva un tiempo fuera
+  // del sistema» y lo manda al check-in como si hubiera recaido. Ademas
+  // `Math.min(Infinity, 60)` es 60: el dossier le decia al coach que un
+  // usuario creado hoy lleva 60 dias en silencio, y el coach actua sobre eso.
+  const nuevo: CoachBundle = { ...emptyBundle(), days_since_last_message: Infinity, ever_wrote: false };
+
+  it('no cuenta 60 dias de silencio de un usuario que acaba de entrar', () => {
+    const r = computeRelationalDepth(nuevo);
+    expect(r.days_silent).toBe(0);
+    expect(r.label).toMatch(/no ha escrito/i);
+  });
+
+  it('y la accion sugerida no es reconectar con quien nunca se fue', () => {
+    const a = selectNextAction(
+      computeDrivers(nuevo), nuevo, computeMomentum(nuevo), computeRelationalDepth(nuevo),
+    );
+    expect(a.kind).not.toBe('reconnect');
+  });
+
+  it('pero con 9 dias reales de silencio SI reconecta', () => {
+    const ido: CoachBundle = { ...emptyBundle(), days_since_last_message: 9, ever_wrote: true };
+    const a = selectNextAction(
+      computeDrivers(ido), ido, computeMomentum(ido), computeRelationalDepth(ido),
+    );
+    expect(a.kind).toBe('reconnect');
+  });
+});
+
+describe('«nunca escribio» y «se esta yendo» son estados OPUESTOS', () => {
+  // POR QUE ESTE BLOQUE: el arreglo anterior dedujo «escribio alguna vez» de
+  // `Number.isFinite(days_since_last_message)`, y ese campo se calcula sobre
+  // una VENTANA DE 14 DIAS. O sea que `Infinity` significa «nada en 14 dias»,
+  // no «nunca». Con la inferencia, el que lleva 20 dias yendose quedaba
+  // clasificado como recien llegado y se caia de la reconexion — justo la
+  // poblacion para la que ese peldaño existe. Lo introdujo el propio arreglo;
+  // estos tests fijan que los dos estados no se vuelvan a confundir.
+  const ausente: CoachBundle = {
+    ...emptyBundle(), days_since_last_message: Infinity, ever_wrote: true,
+  };
+  const recien: CoachBundle = {
+    ...emptyBundle(), days_since_last_message: Infinity, ever_wrote: false,
+  };
+
+  it('quien escribio y lleva tiempo callado SI entra en reconexion', () => {
+    const a = selectNextAction(
+      computeDrivers(ausente), ausente, computeMomentum(ausente), computeRelationalDepth(ausente),
+    );
+    expect(a.kind).toBe('reconnect');
+  });
+
+  it('quien nunca escribio NO', () => {
+    const a = selectNextAction(
+      computeDrivers(recien), recien, computeMomentum(recien), computeRelationalDepth(recien),
+    );
+    expect(a.kind).not.toBe('reconnect');
+  });
+
+  it('y el dossier del dia 1 no inventa 60 dias de silencio', () => {
+    // `Infinity >= 5` era true, el peso salia al maximo (0.30 -> ordena
+    // primero) y la evidencia decia «60 dias sin escribirle al mentor» por
+    // `Math.min(Infinity, 60)`. El commit anterior arreglo `label` y
+    // `days_silent` y dejo ESTE consumidor: el coach seguia leyendo la cifra.
+    const drivers = computeDrivers(recien);
+    expect(drivers.some((d) => d.kind === 'mentor_silence')).toBe(false);
+    expect(JSON.stringify(drivers)).not.toContain('60 d');
+  });
+
+  it('pero al que de verdad lleva tiempo callado si se lo cuenta', () => {
+    const drivers = computeDrivers(ausente);
+    expect(drivers.some((d) => d.kind === 'mentor_silence')).toBe(true);
   });
 });

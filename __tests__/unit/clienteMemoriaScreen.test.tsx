@@ -47,6 +47,13 @@ jest.mock('@/lib/mentorExecutionLogic', () => ({
   clientSafeTasks: () => [],
   pendingAccountability: () => [],
 }));
+// La pantalla ahora también lee el motor de coaching para mostrar "cómo viene
+// tu semana". Es IO (toca Supabase en ámbito de módulo), así que se mockea como
+// el resto. `clientSafeNarrative` NO se mockea: es lógica pura y su contrato de
+// no-fuga se prueba de verdad en clientSafeNarrative.test.ts.
+jest.mock('@/lib/coachIntelligence', () => ({
+  fetchCoachIntelligence: jest.fn().mockResolvedValue(null),
+}));
 jest.mock('@/lib/biometric', () => ({
   // La pantalla usa `refreshAndFetchInsight` (recalcula desde el wearable y
   // después lee), no la lectura pura: `computeAndPersistInsight` no tenía

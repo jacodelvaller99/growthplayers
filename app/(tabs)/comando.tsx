@@ -33,8 +33,16 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
-import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
+import { selectTurno, type TurnoKind } from '@/lib/turnoLogic';
+import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
+import { clientSafeNarrative } from '@/lib/coachIntelligenceLogic';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { ArcHeader, MilestoneToast } from '@/components/narrative';
+import { JornadaTracker } from '@/components/jornada';
+import { arcForDay } from '@/lib/narrativeLogic';
+import { checkMilestone } from '@/lib/milestoneCheck';
+import { useJornada } from '@/hooks/use-jornada';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useDashboardPrefs, DASHBOARD_MAX } from '@/hooks/use-dashboard-prefs';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
@@ -43,7 +51,7 @@ import { stripMarkdownLite } from '@/lib/markdownLite';
 import { logSilentError } from '@/lib/observability';
 import { generateWeeklySessionIfNeeded } from '@/lib/weekly-session-generator';
 import { useWearableConnections } from '@/lib/wearables';
-import { LIVE_SESSION, getNextSession, formatSessionDate } from '@/data/live-sessions';
+import { LIVE_SESSION, LIVE_SESSION_READY, getNextSession, formatSessionDate } from '@/data/live-sessions';
 import { db2, supabase } from '@/lib/supabase';
 
 function greeting() {
@@ -69,16 +77,22 @@ function ScoreRing({
   size = 132,
   stroke = 8,
   sub,
+  empty = false,
 }: {
   value: number;
   max?: number;
   size?: number;
   stroke?: number;
   sub?: string;
+  /** Sin una sola lectura no hay score que enseñar. `averages` mete
+   *  `stress: 5` por defecto y, como el término va invertido, eso son 25
+   *  puntos fabricados en el anillo de oro el día 1. Un vacío honesto vale
+   *  más que un número inventado. */
+  empty?: boolean;
 }) {
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const pct = Math.max(0, Math.min(1, value / max));
+  const pct = empty ? 0 : Math.max(0, Math.min(1, value / max));
 
   const progress = useSharedValue(0);
   useEffect(() => {
@@ -114,8 +128,16 @@ function ScoreRing({
         />
       </Svg>
       <View style={ringStyles.center}>
-        <AnimatedNumber value={value} delay={120} style={ringStyles.big} />
-        {sub ? <Text style={ringStyles.sub}>{sub}</Text> : null}
+        {empty ? (
+          <Text style={ringStyles.big}>—</Text>
+        ) : (
+          <AnimatedNumber value={value} delay={120} style={ringStyles.big} />
+        )}
+        {empty ? (
+          <Text style={ringStyles.sub}>SIN LECTURAS</Text>
+        ) : sub ? (
+          <Text style={ringStyles.sub}>{sub}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -148,10 +170,20 @@ export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
-  const { state, protocolDay, todayCheckIn, latestCheckIn, userId } = useLifeFlow();
+  const { state, protocolDay, todayCheckIn, latestCheckIn, userId, isLoaded } = useLifeFlow();
   const { user: wellnessUser } = useWellnessStore();
   const { intelligence, engagementTier } = useUserIntelligence(userId);
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
+  // SETUP del arco: dónde está el usuario en la historia de 90 días.
+  // La voz vive en lib/narrativeLogic para que Comando, Progreso y Check-in
+  // hablen igual sin copiar strings.
+  // Con sus palabras: el arco es la voz diaria, y sin esto le hablaba a
+  // cualquiera. `state.profile.painPoint` lo escribe `completeOnboarding`.
+  const arc = arcForDay(protocolDay, {
+    painPoint: state.profile.painPoint,
+    purpose: state.northStar.purpose,
+    identity: state.northStar.identity,
+  });
   const checkIn = todayCheckIn ?? latestCheckIn;
 
   const { isConnected: isWearableConnected } = useWearableConnections();
@@ -185,18 +217,99 @@ export default function DashboardScreen() {
     return null;
   })();
 
-  // Next best action card
-  const nextActionConfig = (() => {
-    if (!intelligence.next_action) return null;
-    const configs: Record<string, { icon: React.ComponentProps<typeof MaterialIcons>['name']; label: string; screen: string }> = {
-      complete_checkin: { icon: 'assignment', label: 'REGISTRAR CHECK-IN', screen: '/checkin' },
-      continue_lesson:  { icon: 'play-arrow', label: 'CONTINUAR LECCIÓN', screen: `/module/${ACTIVE_MODULE.id}` },
-      try_binaural:     { icon: 'headphones', label: 'SESIÓN BINAURAL', screen: '/bienestar' },
-      journal:          { icon: 'edit', label: 'ESCRIBIR EN DIARIO', screen: '/bienestar' },
-      talk_to_mentor:   { icon: 'forum', label: 'CONSULTAR MENTOR', screen: '/(tabs)/mentor' },
-    };
-    return configs[intelligence.next_action] ?? null;
-  })();
+  // ── EL TURNO — la única opinión de la app sobre qué toca ahora ──────────────
+  // Antes esto era `nextActionConfig`, y era SIEMPRE null: indexaba un mapa de
+  // slugs (`complete_checkin`) con lo que `calculate-intelligence` escribe, que
+  // son frases en español ("Haz tu check-in de hoy"). Ninguna frase coincide
+  // con una llave, así que la tarjeta de próxima acción no se renderizó nunca y
+  // el Mando caía a una constante. Ahora ambos leen `selectTurno`, que además
+  // trae el destino real — el texto y la ruta salen del mismo cómputo y no
+  // pueden volver a contradecirse.
+  //
+  // El peldaño 1 SÍ está cableado: `fetchCoachIntelligence` se llama unas
+  // líneas más abajo y su `kind` entra en `selectTurno`. Este comentario decía
+  // lo contrario, y por creerlo la ronda anterior arregló los peldaños 2 y 3 y
+  // dejó intacto el 1 —que es el que manda en cuanto hay ML—, donde el mismo
+  // defecto seguía vivo. Los peldaños 2 y 3 son la degradación (sin ML, sin
+  // red, sin consentimiento): el ML afina, no habilita.
+  const daysSinceLastCheckIn = useMemo(() => {
+    if (todayCheckIn) return 0;
+    if (!latestCheckIn?.date) return null;
+    const ms = Date.now() - new Date(latestCheckIn.date).getTime();
+    return Math.max(0, Math.floor(ms / 86_400_000));
+  }, [todayCheckIn, latestCheckIn?.date]);
+
+  // Peldaño 1: la narrativa de coaching. `fetchCoachIntelligence` degrada a
+  // vacío por su cuenta (sin red, sin datos, sin ML), así que un fallo aquí
+  // simplemente deja la escalera en los peldaños 2 y 3 — nunca en blanco.
+  const [coachNarrative, setCoachNarrative] = useState<{
+    narrative: { headline: string; why: string };
+    kind: TurnoKind;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!userId) { setCoachNarrative(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { ci } = await fetchCoachIntelligence(userId);
+        if (cancelled) return;
+        const safe = clientSafeNarrative(ci);
+        setCoachNarrative({
+          narrative: { headline: safe.headline, why: safe.why },
+          kind: ci.next_action.kind,
+        });
+      } catch (e) {
+        logSilentError('comando.coachNarrative', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // La jornada del día (LÉETE → EJECUTA → REGULA → CIERRA). `null` mientras
+  // el log local carga: selectTurno sin jornada se comporta como siempre, así
+  // que el arranque es el turno clásico y se refina al llegar el log.
+  const jornada = useJornada();
+
+  // Hito de calendario al montar — SOLO cuando el estado ya hidrató: evaluar
+  // con `checkIns` vacíos escribiría un snapshot de racha 0 encima del real y
+  // regalaría (o robaría) un cruce en el siguiente check-in.
+  const [milestone, setMilestone] = useState<import('@/lib/narrativeLogic').Milestone | null>(null);
+  useEffect(() => {
+    if (!isLoaded) return;
+    let cancelled = false;
+    (async () => {
+      const m = await checkMilestone(
+        { streak: computeStreak(state.checkIns), protocolDay },
+        { painPoint: state.profile.painPoint, purpose: state.northStar.purpose },
+      );
+      if (!cancelled && m) setMilestone(m);
+    })();
+    return () => { cancelled = true; };
+    // Una vez por sesión de pantalla, al hidratar: el cruce de calendario
+    // ocurre entre sesiones, no mientras se mira la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  // Deep link a la próxima lección para el paso EJECUTA — el turno lleva a la
+  // lección, no al catálogo. (nextLesson, más abajo, calcula más cosas para su
+  // tarjeta; aquí solo hace falta la ruta y el orden de declaración manda.)
+  const nextLessonRoute = useMemo(() => {
+    const done = new Set(state.completedLessons ?? []);
+    const lesson = ACTIVE_MODULE.lessons.find((l) => !done.has(l.id)) ?? ACTIVE_MODULE.lessons[0];
+    return lesson ? `/lesson/${lesson.id}` : null;
+  }, [state.completedLessons]);
+
+  const turno = useMemo(() => selectTurno({
+    narrative: coachNarrative?.narrative ?? null,
+    kind: coachNarrative?.kind ?? null,
+    todayCheckIn: todayCheckIn
+      ? { energy: todayCheckIn.energy, clarity: todayCheckIn.clarity, stress: todayCheckIn.stress, sleep: todayCheckIn.sleep }
+      : null,
+    daysSinceLastCheckIn,
+    jornada,
+    nextLessonRoute,
+  }), [coachNarrative, todayCheckIn, daysSinceLastCheckIn, jornada, nextLessonRoute]);
 
   // Wellness stats
   const totalWellnessSessions = (state.wellnessSessions ?? []).length;
@@ -215,6 +328,10 @@ export default function DashboardScreen() {
   const engagementBarStyle = useAnimatedStyle(() => ({
     width: `${engagementWidth.value}%` as unknown as number,
   }));
+
+  // Racha real = días consecutivos con check-in. Antes era
+  // `Math.max(checkIns.length, protocolDay)`, que solo mide calendario.
+  const checkinStreak = useMemo(() => computeStreak(state.checkIns), [state.checkIns]);
 
   // ── Sovereign Score (real) + tier + weekly delta ─────────────────────────────
   const averages = useMemo(() => {
@@ -244,16 +361,19 @@ export default function DashboardScreen() {
         clarity:          averages.clarity,
         stress:           averages.stress,
         sleep:            averages.sleep,
-        streak:           state.checkIns.length,
+        streak:           checkinStreak,
         completedLessons: (state.completedLessons ?? []).length,
         completedTasks:   Object.keys(state.completedTasks ?? {}).length,
         wellnessMeditation: wellnessByType.meditation,
         wellnessBreathing:  wellnessByType.breathing,
         wellnessBinaural:   wellnessByType.binaural,
       }),
-    [averages, state.checkIns.length, state.completedLessons, state.completedTasks, wellnessByType],
+    [averages, checkinStreak, state.completedLessons, state.completedTasks, wellnessByType],
   );
   const sovereignTier = calcSovereignTier(sovereignScore);
+  /** Sin una sola lectura el score no mide nada: los 25 puntos que salían el
+   *  día 1 venían del `stress: 5` por defecto de `averages`. */
+  const sinLecturas = state.checkIns.length === 0;
 
   // Weekly score gain — real contribution from check-ins logged in the last 7 days.
   // Each check-in adds its coherence-derived points to the composite score.
@@ -277,21 +397,6 @@ export default function DashboardScreen() {
     const oldest = Math.min(...state.checkIns.map((c) => new Date(c.date).getTime()));
     return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
   }, [state.checkIns]);
-
-  // ── Mando de hoy — UNA sola decisión no-negociable, anclada arriba ──────────
-  // Prioridad: NBA accionable de la IA → recordatorio diario del Norte →
-  // propósito del Norte → fallback al check-in. Forward, no pasivo.
-  const mandoDeHoy = useMemo(() => {
-    if (nextActionConfig && intelligence.next_action_urgency !== 'low') {
-      return intelligence.next_action_reason?.trim() || nextActionConfig.label;
-    }
-    if (state.northStar.dailyReminder?.trim()) return state.northStar.dailyReminder.trim();
-    if (state.northStar.purpose?.trim()) return state.northStar.purpose.trim();
-    return todayCheckIn
-      ? 'Convierte tu lectura de hoy en una sola acción de alto impacto.'
-      : 'Calibra tu sistema con el check-in y define tu objetivo único del día.';
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intelligence.next_action, intelligence.next_action_urgency, intelligence.next_action_reason, state.northStar.dailyReminder, state.northStar.purpose, todayCheckIn]);
 
   // Today's coherence (0–10) — same formula as the check-in screen.
   const coherenceToday = checkIn
@@ -342,18 +447,18 @@ export default function DashboardScreen() {
 
   // ── Shared JSX blocks (idénticos en mobile y desktop) ─────────────────────
 
-  // Mando de hoy — una sola decisión, ancla forward del día (hero desktop)
+  // LA JORNADA — la evolución de EL TURNO: la misma tarjeta única con una
+  // sola opinión y un solo destino, ahora con la misión del día visible
+  // (LÉETE → EJECUTA → REGULA → CIERRA). El componente absorbe el titular,
+  // el delta y el porqué del turno — misma voz, un solo sitio
+  // (components/jornada.tsx), montado igual en móvil y desktop.
   const mandoStripBlock = (
-    <GoldAccentCard
-      onPress={() => router.push('/(tabs)/norte')}
-      accessibilityRole="button"
-      accessibilityLabel="Tu mando de hoy">
-      <Text style={styles.mandoLabel}>TU MANDO DE HOY</Text>
-      <Text style={styles.mandoText}>{mandoDeHoy}</Text>
-      <Text style={styles.mandoCaption}>
-        Tu única decisión no-negociable de hoy — sale de tu Norte y tu lectura del check-in.
-      </Text>
-    </GoldAccentCard>
+    <JornadaTracker
+      jornada={jornada}
+      turno={turno}
+      arcPhrase={arc.line}
+      onPressCta={() => router.push(turno.route as never)}
+    />
   );
 
   const anomalyBlock = intelligence.anomaly_detected && intelligence.anomaly_type && (
@@ -374,26 +479,6 @@ export default function DashboardScreen() {
         </Text>
       </View>
       <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
-    </HoverCard>
-  );
-
-  const nbaBlock = nextActionConfig && intelligence.next_action_urgency !== 'low' && (
-    <HoverCard
-      onPress={() => router.push(nextActionConfig.screen as never)}
-      accessibilityRole="button"
-      accessibilityLabel={`Próxima acción recomendada: ${nextActionConfig.label}`}
-      style={styles.nbaCard}>
-      <View style={styles.nbaBadge}>
-        <MaterialIcons name={nextActionConfig.icon} size={18} color={palette.ink} />
-      </View>
-      <View style={styles.nbaTextBlock}>
-        <Text style={styles.nbaLabel}>PRÓXIMA ACCIÓN RECOMENDADA</Text>
-        <Text style={styles.nbaAction}>{nextActionConfig.label}</Text>
-        {intelligence.next_action_reason && (
-          <Text style={styles.nbaReason}>{intelligence.next_action_reason}</Text>
-        )}
-      </View>
-      <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
     </HoverCard>
   );
 
@@ -433,9 +518,9 @@ export default function DashboardScreen() {
   const metricCatalog: Record<string, MetricDef> = {
     racha: {
       label: 'Racha',
-      value: `${Math.max(state.checkIns.length, protocolDay)}`,
-      numericValue: Math.max(state.checkIns.length, protocolDay),
-      meta: 'días de protocolo',
+      value: `${checkinStreak}`,
+      numericValue: checkinStreak,
+      meta: checkinStreak === 1 ? 'día seguido con check-in' : 'días seguidos con check-in',
       icon: 'local-fire-department',
       route: '/checkin',
     },
@@ -466,7 +551,7 @@ export default function DashboardScreen() {
     },
     score: {
       label: 'Score',
-      value: `${sovereignScore}`,
+      value: sinLecturas ? '—' : `${sovereignScore}`,
       numericValue: sovereignScore,
       meta: sovereignTier.toLowerCase(),
       icon: 'military-tech',
@@ -600,18 +685,15 @@ export default function DashboardScreen() {
           <StateMeter label="Estrés" value={checkIn.stress} inverted />
         </PremiumCard>
       ) : (
-        <HoverCard
-          onPress={() => router.push('/checkin')}
-          accessibilityRole="button"
-          accessibilityLabel="Registrar check-in de hoy"
-          style={styles.estadoEmpty}>
+        /* Informativo, no pulsable: era el CUARTO control a /checkin en el
+           mismo scroll. Dice lo que falta; quien manda ahí es el Mando. */
+        <View style={styles.estadoEmpty}>
           <MaterialIcons name="assignment" size={20} color={palette.smoke} />
           <View style={{ flex: 1 }}>
             <Text style={styles.estadoEmptyTitle}>SIN LECTURA HOY</Text>
             <Text style={styles.estadoEmptySub}>Registra tu check-in para calibrar el sistema</Text>
           </View>
-          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-        </HoverCard>
+        </View>
       )}
       {!hasWearable && protocolDay >= 3 && (
         <HoverCard
@@ -811,8 +893,11 @@ export default function DashboardScreen() {
   );
 
   // ── Live Session Card ────────────────────────────────────────────────────────
+  // No se monta con el `joinUrl` de marcador de posición: la cuenta atrás es
+  // real y el botón AGENDAR llevaba a un 404 de Zoom. Vuelve sola en cuanto
+  // haya enlace (`LIVE_SESSION_READY`).
   const liveSession = getNextSession(LIVE_SESSION);
-  const liveSessionBlock = (
+  const liveSessionBlock = !LIVE_SESSION_READY ? null : (
     <HoverCard
       style={[styles.liveCard, liveSession.isOngoing && styles.liveCardOngoing]}
       onPress={() => {
@@ -950,10 +1035,26 @@ export default function DashboardScreen() {
   // Score Soberano — ring + eyebrow + descripción + delta semanal
   const mScoreCard = (
     <View style={mob.scoreCard}>
-      <ScoreRing value={sovereignScore} max={1000} size={132} stroke={8} sub={`/ ${sovereignTier}`} />
+      <ScoreRing
+        value={sovereignScore}
+        max={1000}
+        size={96}
+        stroke={7}
+        sub={`/ ${sovereignTier}`}
+        empty={sinLecturas}
+      />
       <View style={{ flex: 1 }}>
         <Text style={mob.eyebrow}>SCORE SOBERANO</Text>
-        <Text style={mob.scoreDesc}>Capacidad operativa compuesta de los últimos 14 días.</Text>
+        {/* El copy decía "últimos 14 días" y era falso: `averages` promedia TODO
+            el historial y 800 de los 1000 puntos son contadores vitalicios
+            (lecciones, tareas, bonus) — el score no puede bajar. Se corrige el
+            texto, no la fórmula: cambiarla movería el score de todos los
+            usuarios y rompería el ranking admin. */}
+        <Text style={mob.scoreDesc}>
+          {sinLecturas
+            ? 'Falta 1 check-in para encender el score. Se calcula sobre tus lecturas: sin ninguna, no hay nada que medir.'
+            : 'Acumulado de todo tu historial: promedio de tus check-ins + lecciones y tareas completadas. No baja — el movimiento reciente lo marca el delta.'}
+        </Text>
         <View style={mob.deltaWrap}>
           <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
         </View>
@@ -968,6 +1069,11 @@ export default function DashboardScreen() {
   );
 
   // Check-in: hecho → COHERENCIA DE HOY · pendiente → CALIBRAR SISTEMA HOY
+  //
+  // La variante PENDIENTE no se monta si el Mando ya lleva ahí: sería el
+  // tercer control al mismo destino en la misma pantalla. La variante HECHO se
+  // queda siempre — da la coherencia del día, un dato que el Mando no da.
+  const checkinDuplicaAlMando = !todayCheckIn && turno.route === '/checkin';
   const mCheckinCard = todayCheckIn ? (
     <HoverCard
       onPress={() => router.push('/checkin')}
@@ -987,7 +1093,7 @@ export default function DashboardScreen() {
         <View style={[mob.trackFill, { width: `${coherenceToday * 10}%` }]} />
       </View>
     </HoverCard>
-  ) : (
+  ) : checkinDuplicaAlMando ? null : (
     <HoverCard
       onPress={() => router.push('/checkin')}
       accessibilityRole="button"
@@ -1099,7 +1205,14 @@ export default function DashboardScreen() {
       entering={FadeInDown.springify().damping(20).stiffness(180)}
       style={[styles.deskHeroBand, deskHeroGlow]}>
       <View style={styles.deskScoreCol}>
-        <ScoreRing value={sovereignScore} max={1000} size={180} stroke={10} sub={`/ ${sovereignTier}`} />
+        <ScoreRing
+          value={sovereignScore}
+          max={1000}
+          size={180}
+          stroke={10}
+          sub={`/ ${sovereignTier}`}
+          empty={sinLecturas}
+        />
         <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
         {weeklyScoreDelta > 0 && (
           <View style={styles.deskDeltaRow}>
@@ -1109,18 +1222,23 @@ export default function DashboardScreen() {
         )}
       </View>
       <View style={styles.deskHeroCenter}>
-        <Text style={styles.deskHeroEyebrow}>{`DÍA ${protocolDay} · PROTOCOLO SOBERANO · ${todayLabel()}`}</Text>
+        {/* Sin `DÍA N ·`: lo dice el eyebrow del ArcHeader tres líneas abajo
+            («ACTO II · PROFUNDIDAD · DÍA 45 · 90»), y decirlo dos veces en la
+            misma banda es ruido. El arco es el dueño de dónde estás. */}
+        <Text style={styles.deskHeroEyebrow}>{`PROTOCOLO SOBERANO · ${todayLabel()}`}</Text>
         <Text style={styles.deskHeroTitle}>{`${greeting()},\n${state.profile.name}.`}</Text>
         {intelligenceGreeting ? (
           <Text style={styles.deskHeroBody}>{intelligenceGreeting}</Text>
         ) : null}
+        <MilestoneToast milestone={milestone} />
         {mandoStripBlock}
+        {/* El `PrimaryButton` de oro macizo que vivía aquí se quitó: el Mando
+            de arriba YA es una tarjeta pulsable con su propio verbo y su
+            flecha, y en el día normal los dos apuntaban a /checkin. Dos CTA de
+            oro en la misma banda es exactamente el «nada es primero» que este
+            trabajo vino a matar. La afordancia sobrevive en la tarjeta de
+            check-in, a la derecha del hero. */}
         <View style={styles.deskHeroActions}>
-          <PrimaryButton
-            label={todayCheckIn ? 'REVISAR CHECK-IN' : 'HACER CHECK-IN'}
-            icon="assignment"
-            onPress={() => router.push('/checkin')}
-          />
           <Text style={styles.time} numberOfLines={1}>
             {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })}
           </Text>
@@ -1150,6 +1268,16 @@ export default function DashboardScreen() {
            DESKTOP LAYOUT — "Cockpit Polaris": hero + command grid 3/5/3
            ══════════════════════════════════════════════════════════ */
         <>
+          {/* SETUP — el mismo arco que en móvil. El hero ya trae "DÍA N" en su
+              eyebrow, pero no la línea narrativa: es la única voz de la app y
+              vivía enterrada en la pestaña Progreso. */}
+          {/* SIN `compact`. Con él, la frase que cita al usuario no se pintaba
+              en ninguna parte: los cuatro consumidores lo pasaban, así que el
+              arco personalizado vivía solo en el `accessibilityLabel`. El
+              problema real era el PÁRRAFO de tres oraciones, no la línea — así
+              que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
+              al eyebrow. El Mando sigue siendo lo único grande. */}
+          <ArcHeader arc={arc} />
           {northAnchorStrip}
 
           {/* ZONA 1 — hero cinematográfico full-width */}
@@ -1183,7 +1311,6 @@ export default function DashboardScreen() {
               entering={FadeInDown.delay(280).springify().damping(20).stiffness(180)}
               style={styles.deskColAccion}>
               {anomalyBlock}
-              {nbaBlock}
               <GoldDivider label="HOY EN TU PROTOCOLO" />
               {mNextLessonBlock}
             </Animated.View>
@@ -1224,13 +1351,29 @@ export default function DashboardScreen() {
         <>
           {/* Núcleo del diseño */}
           {mHeader}
+          {/* SETUP — día y acto. El móvil no tenía NINGÚN marcador de posición
+              en el protocolo: el "Día N de 90" solo existía en la rama desktop. */}
+          {/* SIN `compact`. Con él, la frase que cita al usuario no se pintaba
+              en ninguna parte: los cuatro consumidores lo pasaban, así que el
+              arco personalizado vivía solo en el `accessibilityLabel`. El
+              problema real era el PÁRRAFO de tres oraciones, no la línea — así
+              que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
+              al eyebrow. El Mando sigue siendo lo único grande. */}
+          <ArcHeader arc={arc} />
+          {/* El hito de calendario (día 30/90) se evalúa al montar: antes solo
+              lo evaluaba el guardado del check-in y se perdía si ese día no
+              había lectura. `milestone:v1` lo hace idempotente. */}
+          <MilestoneToast milestone={milestone} />
+          {/* TENSIÓN — la única decisión de hoy. mandoStripBlock estaba escrito
+              pero solo se montaba dentro de deskHero, así que el teléfono
+              —donde se abre a diario— perdía la única pieza direccional. */}
+          {mandoStripBlock}
           {mScoreCard}
           {mCheckinCard}
 
           {/* Señales en tiempo real (solo cuando aplican) */}
           {northAnchorStrip}
           {anomalyBlock}
-          {nbaBlock}
 
           {/* Norman */}
           {mNormanCard}
@@ -1515,16 +1658,39 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase' as const,
   },
   mandoText: {
-    ...typography.body,
+    // La ÚNICA frase directiva de la app: qué toca ahora. Si algo merece el
+    // tamaño grande en el cockpit, es esto.
+    //
+    // Pasó por dos versiones malas. `typography.body` a 15px: copy de párrafo
+    // compitiendo con un anillo de 132px. Y luego `typography.title`, que es
+    // uppercase — pero `turno.headline` son oraciones con punto final, así que
+    // salía "BAJA LA CARGA ANTES DE EJECUTAR." Una instrucción gritada en
+    // versalitas no es autoridad, es un rótulo mal usado.
+    ...typography.statement,
     color: palette.ivory,
-    fontSize: 15,
-    lineHeight: 21,
   },
   mandoCaption: {
     ...typography.body,
     color: palette.smoke,
     fontSize: 12,
     lineHeight: 17,
+  },
+  // El delta es lo único que el usuario no podía deducir solo: va en oro-texto,
+  // por encima del porqué.
+  mandoDelta: {
+    ...typography.body,
+    color: palette.goldText,
+    fontSize: 13,
+  },
+  mandoCta: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
+  },
+  mandoCtaText: {
+    ...typography.section,
+    color: palette.goldText,
   },
 
   // ── Shared ────────────────────────────────────────────────────────────────
@@ -1743,50 +1909,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Next best action card ───────────────────────────────────────────────────
-  nbaCard: {
-    alignItems: 'center',
-    backgroundColor: palette.charcoal,
-    borderColor: palette.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  nbaBadge: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  nbaTextBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  nbaLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  nbaAction: {
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: palette.ivory,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase' as const,
-    lineHeight: 16,
-  },
-  nbaReason: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 11,
-  },
 
   // ── Engagement bar ──────────────────────────────────────────────────────────
   engagementRow: {

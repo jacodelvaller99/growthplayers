@@ -59,17 +59,25 @@ interface MessageStats {
   user_turns_7d: number;
   user_turns_prev: number;
   days_since_last_message: number;
+  /**
+   * Si el usuario escribió a Norman ALGUNA VEZ. Es un dato aparte y no se
+   * deduce de `days_since_last_message === Infinity`: ese campo se calcula
+   * sobre una ventana de 14 días, así que `Infinity` significa «nada en 14
+   * días», no «nunca». Deducirlo hacía que el que lleva 20 días yéndose
+   * quedara clasificado como recién llegado — justo al revés.
+   */
+  ever_wrote: boolean;
 }
 
 async function fetchMessageStats(userId: string, nowMs: number): Promise<MessageStats> {
-  const empty: MessageStats = { user_turns_7d: 0, user_turns_prev: 0, days_since_last_message: Infinity };
+  const empty: MessageStats = { user_turns_7d: 0, user_turns_prev: 0, days_since_last_message: Infinity, ever_wrote: false };
   try {
     const since14 = isoDaysAgo(14, nowMs);
     // mentor_messages es la fuente principal, pero el bug histórico de persistencia
     // (índice parcial 42P10) dejó la tabla vacía para sesiones viejas. Los resúmenes
     // de mentor_conversations sí se guardaron siempre → se usan como señal de
     // actividad adicional para no reportar "N días sin escribir" a un usuario activo.
-    const [msgsRes, convRes] = await Promise.all([
+    const [msgsRes, convRes, everRes] = await Promise.all([
       anyClient
         .from('mentor_messages')
         .select('role, created_at')
@@ -83,6 +91,15 @@ async function fetchMessageStats(userId: string, nowMs: number): Promise<Message
         .select('created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
+        .limit(1),
+      // SIN ventana y sin traer filas: solo «¿existe alguna?». Es la única
+      // forma honesta de distinguir «nunca escribió» de «lleva tiempo sin
+      // escribir», y las dos llevan a acciones opuestas.
+      anyClient
+        .from('mentor_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('role', 'user')
         .limit(1),
     ]);
     if (msgsRes.error) { logSilentError('coach.messageStats', msgsRes.error); return empty; }
@@ -103,7 +120,13 @@ async function fetchMessageStats(userId: string, nowMs: number): Promise<Message
     const lastConvMs = Date.parse((convRes.data?.[0] as { created_at?: string } | undefined)?.created_at ?? '');
     if (!Number.isNaN(lastConvMs) && lastConvMs > lastMs) lastMs = lastConvMs;
     const daysSince = lastMs > 0 ? Math.floor((nowMs - lastMs) / MS_PER_DAY) : Infinity;
-    return { user_turns_7d: turns7, user_turns_prev: turnsPrev, days_since_last_message: daysSince };
+    // `lastMs > 0` cubre el caso en que la conversación es más vieja que la
+    // ventana: si hay rastro, escribió. El count lo confirma cuando no lo hay.
+    const everWrote = lastMs > 0 || (everRes.count ?? 0) > 0;
+    return {
+      user_turns_7d: turns7, user_turns_prev: turnsPrev,
+      days_since_last_message: daysSince, ever_wrote: everWrote,
+    };
   } catch (e) {
     logSilentError('coach.messageStats', e);
     return empty;
@@ -188,6 +211,7 @@ export async function assembleCoachBundle(
       checkin_energy_7d: null, checkin_energy_prev: null,
       checkin_count_7d: 0, checkin_count_prev: 0, current_streak_days: 0,
       user_turns_7d: 0, user_turns_prev: 0, days_since_last_message: Infinity,
+      ever_wrote: false,
       overdue_count: 0, open_tasks_count: 0,
       completed_tasks_7d: 0, completed_tasks_prev: 0,
     };
@@ -258,6 +282,7 @@ export async function assembleCoachBundle(
     user_turns_7d: messageStats.user_turns_7d,
     user_turns_prev: messageStats.user_turns_prev,
     days_since_last_message: messageStats.days_since_last_message,
+    ever_wrote: messageStats.ever_wrote,
     overdue_count: overdue,
     open_tasks_count: openTasks,
     completed_tasks_7d: comp7,

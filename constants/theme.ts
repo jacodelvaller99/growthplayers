@@ -43,6 +43,11 @@ export const palette = {
   ivory:          cv('--c-text',       '#EBEBEB'),   // primary text
   ivoryWarm:      cv('--c-text-warm',  '#F0EBE0'),   // warm off-white for special headings
   ivoryDim:       cv('--c-text-dim',   'rgba(235, 235, 235, 0.55)'), // dimmed text
+  // Mapa corporal: la silueta y el borde de sus zonas tactiles. Son tokens y
+  // no hex porque en tema claro la silueta se oscurece y el borde se invierte
+  // -- con los valores del tema oscuro, en claro no se veia ninguno de los dos.
+  silhouette:     cv('--c-silhouette',  '#5F5F5F'),
+  zoneBorder:     cv('--c-zone-border', 'rgba(255,255,255,0.38)'),
   ash:            cv('--c-text-2',     '#AAAAAA'),   // secondary text
   smoke:          cv('--c-text-3',     '#888888'),   // tertiary/placeholder text — 5.5:1 sobre graphite (WCAG AA en texto normal). Antes #666666 fallaba (3.3:1).
   muted:          cv('--c-text-faint', '#444444'),   // disabled, locked states
@@ -58,8 +63,15 @@ export const palette = {
   // ── Semantic ─────────────────────────────────────────────────────────────────
   success:        '#52A878',
   successMuted:   'rgba(82, 168, 120, 0.15)',
+  // danger = CONSTANTE. Es el token de RELLENO/borde/icono: umbral 3:1 que #C0392B
+  // ya cumple, y hay call sites que concatenan opacidad (`palette.danger + '55'`),
+  // lo que un `var(--c-danger)` rompería silenciosamente. No lo tematices.
   danger:         '#C0392B',
   dangerMuted:    'rgba(192, 57, 43, 0.15)',
+  // danger AS TEXT — themeable, mismo patrón que goldText. #C0392B sobre la tarjeta
+  // oscura (#111111) da 3.47:1 y falla AA (4.5:1) en TODO mensaje de error; el tono
+  // del tema oscuro sube a 5.18:1. En claro pasa de sobra, así que ahí no cambia.
+  dangerText:     cv('--c-danger-text', '#E5564A'),
   warning:        '#D4A017',
   info:           '#3D8FC0',
 
@@ -139,6 +151,31 @@ export const typography = {
     fontWeight: '900' as const,
     letterSpacing: 2.0,
     textTransform: 'uppercase' as const,
+  },
+  // La frase que le pertenece al usuario — su lectura, su acto, su compromiso.
+  //
+  // POR QUÉ EXISTE: la jerarquía estaba invertida. Las etiquetas administrativas
+  // ("¿DÓNDE LO SIENTES?", "LECTURA DEL SISTEMA") gritaban en versalitas
+  // rastreadas, y la frase que la app le devuelve sobre su propio cuerpo se
+  // susurraba en `body` a 14px — el mismo tamaño que un pie de tarjeta. Lo
+  // administrativo mandaba sobre lo íntimo.
+  //
+  // NO es uppercase, a diferencia del resto de la escala display: es una frase,
+  // no un rótulo. Versalitas a este tamaño se leen como un grito y GrandisExtended
+  // ya es una tipografía ancha. Light (300) por lo mismo — el peso lo da el
+  // tamaño, no la tinta.
+  //
+  // 26px es el techo real dentro de una tarjeta a 375px. Medido en el navegador
+  // con esta misma cara y tracking: 11.3px por carácter → 26 caracteres por
+  // línea dentro de la tarjeta, 28 a ancho de pantalla. A los 44px que pedía la
+  // primera propuesta caen a 15 por línea, y ahí una frase de dos oraciones se
+  // parte en cuatro renglones rotos.
+  statement: {
+    fontFamily: Fonts.displayLight,
+    fontSize:   26,
+    lineHeight: 34,
+    fontWeight: '300' as const,
+    letterSpacing: -0.2,
   },
   // Major screen title (header bars)
   title: {

@@ -18,25 +18,32 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
-// A module is unlocked when either:
-//  - It is the first active module (static status 'active')
-//  - All lessons of the previous module have been completed
+/**
+ * El catálogo está ABIERTO. Quien paga, entra donde quiera.
+ *
+ * Antes: cada módulo exigía tener completadas TODAS las lecciones del
+ * anterior. Un cliente recién llegado veía únicamente Onboarding, y para
+ * alcanzar el Módulo 1 tenía que marcar sus 7 lecciones; para el 2, las 7 del
+ * 1; y así hasta 41. El programa entero detrás de una cadena.
+ *
+ * Y había un defecto encima: el comentario de esta función prometía que un
+ * módulo con `status: 'active'` estaba abierto, y el código NUNCA leía ese
+ * campo. Los módulos 5, 6, 7, 8, 9 y Sesiones Semanales están marcados
+ * 'active' en `data/modules.ts` —alguien los abrió a propósito— y seguían
+ * cerrados igual. Marcar un módulo como abierto no hacía absolutamente nada.
+ *
+ * `coming_soon` sigue cerrando, y eso no es una excepción al principio: esos
+ * módulos no tienen contenido detrás. Abrirlos sería prometer una pantalla
+ * vacía, que es peor que un candado honesto. Hoy no hay ninguno en el
+ * catálogo — el guard existe para cuando se añada uno.
+ */
 export function isModuleUnlocked(
   modules: typeof POLARIS_MODULES,
   moduleIndex: number,
-  completedLessons: string[],
+  _completedLessons: string[],
 ): boolean {
   // exportada para test — ver __tests__/unit/programasScreen.test.tsx
-  const mod = modules[moduleIndex];
-  if (mod.status === 'coming_soon') return false;
-  if (moduleIndex === 0) return true;
-  const prev = modules[moduleIndex - 1];
-  if (prev.status === 'coming_soon') return false;
-  // Un módulo SIN lecciones (los que enlazan directo a su classroom de Skool)
-  // no tiene nada que completar, así que no puede bloquear al siguiente —
-  // antes dejaba el resto de la ruta cerrado para siempre.
-  // `every` sobre un array vacío ya devuelve true; no hace falta caso especial.
-  return prev.lessons.every((l) => completedLessons.includes(l.id));
+  return modules[moduleIndex].status !== 'coming_soon';
 }
 
 // "Por qué importa" — el peso del módulo en el camino, no su contenido literal.

@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useWearableConnections, useWearableDaily, recoveryLabel } from '@/lib/wearables';
+import { selectTurno } from '@/lib/turnoLogic';
 
 // ─── Daily phrases (stoic / logotherapy) ─────────────────────────────────────
 const DAILY_PHRASES = [
@@ -241,7 +242,7 @@ export default function BienestarHub() {
   const { isDesktop } = useBreakpoint();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state } = useLifeFlow();
+  const { state, todayCheckIn } = useLifeFlow();
 
   const [journalText, setJournalText] = useState('');
   const [saving, setSaving] = useState(false);
@@ -309,8 +310,31 @@ export default function BienestarHub() {
 
   // Hub más liviano: "HOY" enfocado arriba + el resto detrás de "Ver todo".
   const [showAll, setShowAll] = useState(false);
-  // "HOY" — sugerencia simple por momento del día (no es claim clínico, solo un punto de partida).
+  // "HOY" — antes era SOLO el reloj de pared: `new Date().getHours()` y tres
+  // ramas fijas, con `useMemo(…, [])`. Cero señal del usuario. Daba lo mismo
+  // venir reventado de estrés que en tu mejor día: el hub proponía lo mismo.
+  //
+  // Ahora pregunta primero al turno (lib/turnoLogic.ts), que es la única
+  // opinión de la app. Si el turno apunta a una práctica de este hub, esa es
+  // LA propuesta — una sola, con su porqué real. Si apunta a otro sitio
+  // (check-in, Norman, protocolo), no lo forzamos aquí: el reloj vuelve como
+  // punto de partida honesto, que es lo que siempre fue.
+  const turno = useMemo(() => selectTurno({
+    narrative: null,
+    kind: null,
+    todayCheckIn: todayCheckIn
+      ? { energy: todayCheckIn.energy, clarity: todayCheckIn.clarity, stress: todayCheckIn.stress, sleep: todayCheckIn.sleep }
+      : null,
+    daysSinceLastCheckIn: todayCheckIn ? 0 : null,
+  }), [todayCheckIn]);
+
+  const turnoBlock = useMemo(
+    () => BLOCKS.find((b) => b.route === turno.route) ?? null,
+    [turno.route],
+  );
+
   const todayPicks = useMemo<Block[]>(() => {
+    if (turnoBlock) return [turnoBlock];
     const hour = new Date().getHours();
     const byType = (t: Block['type']) => BLOCKS.find((b) => b.type === t);
     const order: Block['type'][] =
@@ -318,7 +342,10 @@ export default function BienestarHub() {
       : hour >= 20 ? ['sleep', 'meditation']
       : ['meditation', 'breathing'];
     return order.map(byType).filter((b): b is Block => Boolean(b));
-  }, []);
+  }, [turnoBlock]);
+
+  /** El porqué real cuando el turno manda; si no, el texto de siempre. */
+  const todayHint = turnoBlock ? turno.why : 'Para tu momento del día. Empieza por aquí.';
   const extraCount = BLOCKS_EXTENDED.length + BLOCKS_EMOCIONAL.length;
 
   // ── Desktop layout ──────────────────────────────────────────────────────────
@@ -355,7 +382,7 @@ export default function BienestarHub() {
 
               {/* HOY — enfocado */}
               <GoldDivider label="HOY" />
-              <Text style={desktopStyles.todayHint}>Para tu momento del día. Empieza por aquí.</Text>
+              <Text style={desktopStyles.todayHint}>{todayHint}</Text>
               <View style={desktopStyles.blocksGrid}>
                 {todayPicks.map((block) => (
                   <Pressable
@@ -551,7 +578,7 @@ export default function BienestarHub() {
 
       {/* ── HOY — enfocado (1-2 prácticas para tu momento) ── */}
       <GoldDivider label="HOY" />
-      <Text style={styles.todayHint}>Para tu momento del día. Empieza por aquí.</Text>
+      <Text style={styles.todayHint}>{todayHint}</Text>
       <View style={styles.grid}>
         {todayPicks.map((b) => (
           <HubTile key={`hoy-${b.route}`} icon={b.icon} label={b.label} sub={b.sub} gold onPress={() => router.push(b.route as never)} />

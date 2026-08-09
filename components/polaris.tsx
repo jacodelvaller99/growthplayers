@@ -502,16 +502,16 @@ function SparklineNativeSkia({ label, values, color = palette.gold }: SparklineP
   );
 }
 
-// ─── Achievement Badge ───────────────────────────────────────────────────────
-
-export function AchievementBadge({ icon, label, earned }: { icon: IconName; label: string; earned: boolean }) {
-  return (
-    <View style={[styles.badge, !earned && styles.badgeEarned]}>
-      <MaterialIcons name={icon} size={22} color={earned ? palette.ink : palette.smoke} />
-      <Text style={[styles.badgeLabel, !earned && styles.badgeLabelDim]}>{label}</Text>
-    </View>
-  );
-}
+// ─── Achievement Badge — BORRADO ─────────────────────────────────────────────
+//
+// Era una ficha de 22% de ancho que se rellenaba de oro macizo al ganarse, con
+// icono de copa o medalla. Sus unicos consumidores eran las ocho baldosas de
+// LOGROS en Progreso, que es la "badge-as-toy mechanic" que PRODUCT.md nombra
+// como anti-referencia. Sin ellas, este componente no tiene a quien servir: un
+// primitivo de premio en el sistema de diseño es una invitacion a que vuelva.
+//
+// El reconocimiento del cruce vive en `MilestoneToast` (components/narrative),
+// que es sobrio y cita las palabras del usuario.
 
 // ─── State Meter ─────────────────────────────────────────────────────────────
 
@@ -542,7 +542,8 @@ export function ScaleSelector({
   icon,
 }: {
   label: string;
-  value: number;
+  /** `null` = el usuario todavía no ha elegido. NO es lo mismo que un 5. */
+  value: number | null;
   onChange: (value: number) => void;
   icon?: IconName;
 }) {
@@ -561,17 +562,31 @@ export function ScaleSelector({
             key={item}
             accessibilityLabel={`${label} ${item}`}
             accessibilityRole="button"
+            // Eran 10 botones sin decir cuál está elegido: el lector de pantalla
+            // leía "Energía 1 … Energía 10" sin marcar el valor actual.
+            accessibilityState={{ selected: item === value }}
             onPress={() => {
               Haptics.selectionAsync();
               onChange(item);
             }}
             style={({ pressed }) => [
               styles.scaleStep,
-              item <= value && styles.scaleStepActive,
+              // Oro MACIZO solo en el paso elegido; el recorrido va tintado.
+              //
+              // Antes `item <= value` rellenaba de #FFC804 sólido todo lo que
+              // quedaba por debajo: con los valores por defecto (7/7/4/7) el
+              // check-in abría con 25 de 40 celdas de oro macizo, sin que el
+              // usuario hubiera tocado nada. El oro de esta marca se GANA, y
+              // ahí lo regalaba una barra de progreso. Además dejaba sin efecto
+              // las dos cosas que sí deben brillar: el botón de guardar y la
+              // zona del cuerpo que uno señala.
+              // `value === null` = sin elegir: ninguna celda encendida.
+              value !== null && item < value && styles.scaleStepFilled,
+              item === value && styles.scaleStepActive,
               item === value && styles.scaleStepGlow,
               pressed && { transform: [{ scale: 0.88 }] },
             ]}>
-            <Text style={[styles.scaleStepText, item <= value && styles.scaleStepTextActive]}>
+            <Text style={[styles.scaleStepText, item === value && styles.scaleStepTextActive]}>
               {item}
             </Text>
           </Pressable>
@@ -628,6 +643,11 @@ export function PrimaryButton({ label, icon, onPress, disabled }: { label: strin
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
+        // `disabled` solo bajaba la opacidad: el lector de pantalla anunciaba como
+        // accionable un CTA que no lo era, y el Pressable seguía disparando eventos.
+        // El guard de handlePress no basta — la promesa tiene que llegar al árbol.
+        disabled={disabled}
+        accessibilityState={{ disabled: !!disabled }}
         onPress={handlePress}
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
@@ -674,7 +694,7 @@ export function DangerButton({ label, icon, onPress }: { label: string; icon?: I
       onPress={onPress}
       style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}>
       <Text style={styles.dangerButtonText}>{label}</Text>
-      {icon ? <MaterialIcons name={icon} color={palette.danger} size={18} /> : null}
+      {icon ? <MaterialIcons name={icon} color={palette.dangerText} size={18} /> : null}
     </Pressable>
   );
 }
@@ -1132,27 +1152,6 @@ const styles = StyleSheet.create({
   },
 
   // Achievement badge
-  badge: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    gap: 6,
-    padding: spacing.md,
-    width: '22%',
-  },
-  badgeEarned: {
-    backgroundColor: palette.graphite,
-    borderColor: palette.lineSoft,
-    borderWidth: 1,
-  },
-  badgeLabel: {
-    ...typography.label,
-    color: palette.ink,
-    textAlign: 'center',
-  },
-  badgeLabelDim: {
-    color: palette.smoke,
-  },
 
   // Progress
   progressCard: {
@@ -1203,8 +1202,16 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: 2,
   },
+  // Con flex:1 puro los 10 pasos se repartían el ancho disponible: 26.7px por paso
+  // a 375px de pantalla y 21.2px a 320px — muy por debajo de los 44pt de la regla
+  // del proyecto. Son 4 selectores × 10 pasos = 40 objetivos que el usuario toca a
+  // diario, y un toque errado ensucia el dato que alimenta a Norman.
+  // minWidth pone el suelo y flexWrap deja que baje de fila en vez de encogerse;
+  // en escritorio (≥476px de contenido) los 10 siguen cabiendo en una sola fila.
   scaleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
     gap: 4,
   },
   scaleStep: {
@@ -1212,13 +1219,26 @@ const styles = StyleSheet.create({
     backgroundColor: palette.charcoal,
     borderColor: palette.lineSoft,
     borderWidth: 1,
-    flex: 1,
+    // SIN `flex: 1`. Con flexWrap, a 301px de ancho util `flex: 1` estiraba las
+    // 4 celdas de la segunda fila a ~73pt contra los 47pt de arriba: la escala
+    // 1-10 se veia como dos escalas distintas.
+    //
+    // `flexBasis: 18%` fuerza 5+5 en vez de 6+4 — dos filas iguales se leen
+    // como rejilla; 6+4 se lee como desbordamiento. A 320px de pantalla siguen
+    // saliendo 44.6pt, asi que el piso tactil aguanta.
+    flexBasis: '18%',
     height: 44,
     justifyContent: 'center',
+    minWidth: 44,
   },
   scaleStepActive: {
     backgroundColor: palette.gold,
     borderColor: palette.gold,
+  },
+  // El recorrido hasta el valor: se lee como camino, no como premio.
+  scaleStepFilled: {
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
   },
   scaleStepGlow: {
     shadowColor: palette.gold,
@@ -1230,7 +1250,9 @@ const styles = StyleSheet.create({
   scaleStepText: {
     color: palette.ash,
     fontFamily: Fonts.mono,
-    fontSize: 10,
+    // 11 es el piso del proyecto para cualquier etiqueta visible, y estos son
+    // los diez numeros que hay que leer para calibrarse.
+    fontSize: 11,
   },
   scaleStepTextActive: {
     color: palette.ink,
@@ -1285,7 +1307,7 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: {
     ...typography.section,
-    color: palette.danger,
+    color: palette.dangerText,   // etiqueta a 11pt: necesita 4.5:1, no 3:1
     fontSize: 11,
   },
 

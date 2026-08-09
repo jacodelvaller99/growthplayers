@@ -78,7 +78,12 @@ const CAP = {
   blockers: 6,
   patterns: 6,
   risks: 6,
-  wins: 8,
+  // 8 confundía dos límites distintos: cuánto entra al PROMPT de Norman (ya
+  // acotado aparte a 4 en `assembleMentorMemory`) y cuánto dura un logro antes
+  // de desaparecer para siempre de "MIS AVANCES" del cliente. El camino del
+  // héroe pide que esos momentos "perduren" — 20 les da meses de vida real
+  // sin que el perfil crezca sin límite.
+  wins: 20,
   commitmentsCompleted: 25,
   text: 600, // longitud máx. de campos de texto sintetizados
 } as const;
@@ -268,6 +273,40 @@ export function clientSafeProfile(profile: MemoryProfile | null | undefined): Me
     commitments_completed: p.commitments_completed ?? [],
     mentorship_focus:      p.mentorship_focus ?? null,
   };
+}
+
+// ─── El umbral — la historia de origen del camino del héroe ──────────────────────
+export interface HeroOrigin {
+  painPoint: string | null;
+  purpose: string | null;
+  identity: string | null;
+}
+
+/**
+ * "Desde dónde → hacia dónde", con las palabras del propio usuario. Devuelve
+ * '' si no hay nada que sembrar (onboarding con todo vacío) — el llamador IO
+ * no escribe si el resultado es vacío.
+ */
+export function transformationGoalFromOrigin(origin: HeroOrigin): string {
+  const { painPoint, purpose } = origin;
+  if (painPoint && purpose) return `Desde: ${painPoint} → Hacia: ${purpose}`;
+  if (purpose) return purpose;
+  if (painPoint) return `Salir de: ${painPoint}`;
+  return '';
+}
+
+/**
+ * La primera entrada de la línea de tiempo del usuario — "Día 0, el umbral".
+ * En sus palabras, no en jerga de sistema, para que el día 60 pueda releer
+ * desde dónde partió.
+ */
+export function heroOriginSummary(origin: HeroOrigin): string {
+  const { painPoint, purpose, identity } = origin;
+  const parts: string[] = ['Día 0 — el umbral.'];
+  if (painPoint) parts.push(`Lo que se interpone hoy: "${painPoint}".`);
+  if (purpose)   parts.push(`El norte declarado: "${purpose}".`);
+  if (identity)  parts.push(`Quién decide ser: "${identity}".`);
+  return parts.join(' ');
 }
 
 // ─── 4. assembleMentorMemory — contexto compacto para Norman ─────────────────────

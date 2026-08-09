@@ -131,6 +131,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 13,
     letterSpacing: 2,
-    color: palette.black,
+    // Va sobre `palette.gold` (botón, arriba). `palette.black` es THEME-AWARE:
+    // en modo claro se aclara y dejaba el label ilegible sobre el oro. `ink` es
+    // la constante #0A0A0A justo para texto sobre oro/superficie clara — la
+    // regla está escrita en CLAUDE.md ("Color rules"). Peor sitio posible para
+    // el bug: es el botón de recuperar la app después de un crash.
+    color: palette.ink,
   },
 });

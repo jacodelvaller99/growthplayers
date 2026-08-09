@@ -8,7 +8,6 @@ import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AchievementBadge,
   AppHeader,
   DangerButton,
   GoldDivider,
@@ -29,10 +28,12 @@ import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { arcForDay } from '@/lib/narrativeLogic';
+import { ArcHeader } from '@/components/narrative';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
-import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta } from '@/lib/utils';
+import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
 import {
   requestNotificationPermissions,
   scheduleCheckinReminder,
@@ -524,13 +525,19 @@ export default function ProgresoScreen() {
     return streak;
   }, [wellnessSessions]);
 
+  // Racha real de check-ins (días consecutivos hacia atrás desde hoy).
+  const checkinStreak = useMemo(() => computeStreak(state.checkIns), [state.checkIns]);
+
+  /** Sin lecturas el score no mide nada — ver el comentario en su render. */
+  const sinLecturas = state.checkIns.length === 0;
+
   // Sovereign Score v2 — includes wellness bonus
   const score = calcSovereignScore({
     energy:            averages.energy ?? 0,
     clarity:           averages.clarity ?? 0,
     stress:            averages.stress ?? 5,
     sleep:             averages.sleep ?? 0,
-    streak:            state.checkIns.length,
+    streak:            checkinStreak,
     completedLessons:  (state.completedLessons ?? []).length,
     completedTasks:    Object.keys(state.completedTasks ?? {}).length,
     wellnessMeditation,
@@ -594,33 +601,25 @@ export default function ProgresoScreen() {
     };
   }, [state.checkIns]);
 
-  // Real check-in streak (consecutive days back from today with a check-in)
-  const checkinStreak = useMemo(() => {
-    if (!state.checkIns.length) return 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const set = new Set(state.checkIns.map((c) => c.date.slice(0, 10)));
-    let s = 0;
-    const day = new Date(today);
-    while (s < 365) {
-      if (!set.has(day.toISOString().slice(0, 10))) break;
-      s++;
-      day.setDate(day.getDate() - 1);
-    }
-    return s;
-  }, [state.checkIns]);
-
-  // Achievements
-  const achievements = [
-    { icon: 'local-fire-department' as const, label: 'RACHA\n7D', earned: protocolDay >= 7 },
-    { icon: 'verified' as const, label: 'PRIMER\nMES', earned: protocolDay >= 30 },
-    { icon: 'bolt' as const, label: 'ENERGÍA\n8+', earned: (averages.energy ?? 0) >= 8 },
-    { icon: 'stars' as const, label: 'SCORE\n600', earned: score >= 600 },
-    { icon: 'fact-check' as const, label: '10 CHECK\nINS', earned: state.checkIns.length >= 10 },
-    { icon: 'emoji-events' as const, label: 'ELITE\n800', earned: score >= 800 },
-    { icon: 'psychology' as const, label: 'CLARIDAD\n8+', earned: (averages.clarity ?? 0) >= 8 },
-    { icon: 'workspace-premium' as const, label: 'SOBERANO\n90D', earned: protocolDay >= 90 },
-  ];
+  // SIN VITRINA DE TROFEOS. Aqui vivia un array de ocho fichas de 22% de ancho
+  // que se rellenaban de oro macizo al ganarse, con iconos de copa, estrellas y
+  // medalla, y etiquetas "ELITE 800" / "SOBERANO 90D".
+  //
+  // Es, literal, la anti-referencia que PRODUCT.md nombra: "badge-as-toy
+  // mechanics". Y rompia el principio del oro —se gana, no decora— de la forma
+  // mas directa posible: el oro como ficha-premio. El propio repo ya lo sabia:
+  // `components/narrative.tsx` quito UN icono `military-tech` del hito citando
+  // esta misma regla, mientras a dos archivos de distancia seguia el estante
+  // entero.
+  //
+  // El coste narrativo era el peor: la app contaba dos historias incompatibles
+  // sobre que es un logro. En el check-in, "hace una semana dijiste que lo que
+  // se interponia era X, y llevas siete dias apareciendo". En Progreso, una
+  // copa dorada que dice ELITE 800. La segunda le quita autoridad a la primera.
+  //
+  // Lo que queda ya cubre "donde estoy": el score soberano, el delta, y la
+  // tarjeta TU HISTORIA. Y el cruce de un hito lo reconoce `MilestoneToast`,
+  // que es sobrio y cita las palabras del usuario.
 
   // Archetype badges — earned by completing all lessons in a module with an arquetipo
   const archetypes = useMemo(() => {
@@ -656,6 +655,17 @@ export default function ProgresoScreen() {
     return { totalModules, completedModules, activePct, locked };
   }, [state.completedLessons]);
 
+  // Las palabras del usuario, para que el arco lo cite en vez de hablarle a
+  // cualquiera. Objeto estable: se recalcula solo si cambia lo que escribio.
+  const arcoSuyas = useMemo(
+    () => ({
+      painPoint: state.profile.painPoint,
+      purpose: state.northStar.purpose,
+      identity: state.northStar.identity,
+    }),
+    [state.profile.painPoint, state.northStar.purpose, state.northStar.identity],
+  );
+
   // Transformation narrative
   const narrativeBlock = useMemo(() => {
     const completedLessonCount = (state.completedLessons ?? []).length;
@@ -664,22 +674,11 @@ export default function ProgresoScreen() {
 
     const lines: string[] = [];
 
-    if (protocolDay <= 3) {
-      lines.push(`Llevas ${protocolDay} día${protocolDay === 1 ? '' : 's'} en el protocolo. Esto acaba de comenzar — la mayoría abandona en los primeros 7 días. Tú no eres la mayoría.`);
-    } else if (protocolDay <= 7) {
-      lines.push(`${protocolDay} días. Estás cruzando la primera zona de filtro. Cada check-in es una declaración de quién eres — no de lo que sientes.`);
-    } else if (protocolDay <= 14) {
-      lines.push(`Día ${protocolDay}. Superaste el punto donde la mayoría desaparece. El hábito ya está grabándose en tu sistema nervioso.`);
-    } else if (protocolDay <= 30) {
-      lines.push(`${protocolDay} días. Los estudios sobre formación de hábitos sugieren que, alrededor de esta etapa, una conducta empieza a volverse automática. Ya cruzaste ese umbral.`);
-    } else if (protocolDay <= 60) {
-      lines.push(`Día ${protocolDay} de 90. Estás en el arco de profundidad — donde los cambios dejan de ser visibles y empiezan a ser estructurales.`);
-    } else {
-      lines.push(`Día ${protocolDay} de 90. Eso no es disciplina — es quién eres ahora. El protocolo ya vive en ti.`);
-    }
-
     if (state.northStar.identity && protocolDay >= 7) {
-      lines.push(`Tu identidad declarada: "${state.northStar.identity.slice(0, 100)}". Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);
+      // «» y no comillas rectas: es la cita del mismo usuario que el
+      // ArcHeader de tres líneas más arriba pinta con «» en oro. Dos juegos de
+      // comillas en la misma tarjeta era la gramática contradiciéndose sola.
+      lines.push(`Tu identidad declarada: «${state.northStar.identity.slice(0, 100)}». Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);
     } else if (completedLessonCount > 0) {
       lines.push(`${completedLessonCount} lección${completedLessonCount === 1 ? '' : 'es'} completada${completedLessonCount === 1 ? '' : 's'}. Cada una reconfiguró algo — aunque no lo hayas notado todavía.`);
     }
@@ -845,14 +844,24 @@ export default function ProgresoScreen() {
           <AppHeader title="PROGRESO" />
           <SovereignScore score={score} />
           <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
-          {narrativeBlock.length > 0 && (
-            <View style={styles.narrativeCard}>
+          {/* El arco FUERA del condicional: `narrativeBlock` exige identidad
+              con día>=7, o lecciones, o tareas, así que el usuario de los días
+              1 a 6 no veía dónde estaba — justo cuando más importa. Dónde
+              estás no depende de cuánta historia haya que contar.
+              Y `compact` pasa a ser condicional: se puso para no repetir la
+              frase encima de tres párrafos. Sin párrafos no hay repetición. */}
+          <View style={styles.narrativeCard}>
+            <ArcHeader
+              arc={arcForDay(protocolDay, arcoSuyas)}
+              compact={narrativeBlock.length > 0}
+            />
+            {narrativeBlock.length > 0 && (
               <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-              {narrativeBlock.map((line, i) => (
-                <Text key={i} style={styles.narrativeLine}>{line}</Text>
-              ))}
-            </View>
-          )}
+            )}
+            {narrativeBlock.map((line, i) => (
+              <Text key={i} style={styles.narrativeLine}>{line}</Text>
+            ))}
+          </View>
 
           {/* ── ZONA 2: Middle two-column row ── */}
           <View style={deskStyles.desktopMiddle}>
@@ -863,8 +872,8 @@ export default function ProgresoScreen() {
               <View style={styles.grid}>
                 <MetricCard
                   label="Racha"
-                  value={`${Math.max(state.checkIns.length, protocolDay)}`}
-                  meta="dias activos"
+                  value={`${checkinStreak}`}
+                  meta="dias seguidos"
                   icon="local-fire-department"
                 />
                 <MetricCard
@@ -906,12 +915,6 @@ export default function ProgresoScreen() {
                 )}
               </PremiumCard>
 
-              <GoldDivider label="LOGROS" />
-              <View style={styles.achievementsGrid}>
-                {achievements.map((a) => (
-                  <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
-                ))}
-              </View>
 
               <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
               <View style={styles.archetypeList}>
@@ -920,7 +923,10 @@ export default function ProgresoScreen() {
                     key={arch.id}
                     style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
                     <MaterialIcons
-                      name={arch.earned ? 'military-tech' : 'lock'}
+                      // Sin condecoracion: `military-tech` es la misma medalla que se quito del
+                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
+                      // de comprobado, no con un galardon.
+                      name={arch.earned ? 'check-circle-outline' : 'lock'}
                       size={18}
                       color={arch.earned ? palette.goldText : palette.smoke}
                     />
@@ -1157,7 +1163,11 @@ export default function ProgresoScreen() {
           <View>
             <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
             <View style={styles.scoreNumberRow}>
-              <Text style={styles.scoreNumber}>{score}</Text>
+              {/* Sin una sola lectura el score no mide nada: los 25 puntos que
+                  salían el día 1 venían del `stress ?? 5` de arriba, con el
+                  término invertido. Comando ya lo resolvió así; esta pestaña
+                  se quedó con el número inventado. */}
+              <Text style={styles.scoreNumber}>{sinLecturas ? '—' : score}</Text>
               {analytics.scoreDelta !== 0 && (
                 <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
                   {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
@@ -1165,10 +1175,13 @@ export default function ProgresoScreen() {
               )}
             </View>
           </View>
-          <Text style={styles.scoreCaption}>ÚLTIMOS{'\n'}14 DÍAS</Text>
         </View>
         {analytics.score14.length >= 2 && (
           <View style={styles.scoreSpark}>
+            {/* «ÚLTIMOS 14 DÍAS» estaba arriba, etiquetando el número — que es
+                VITALICIO y no baja. El mismo copy falso que ya se corrigió en
+                Comando, vivo aquí. Baja a la gráfica, que sí son 14 días. */}
+            <Text style={styles.scoreCaption}>ÚLTIMOS 14 DÍAS</Text>
             <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
           </View>
         )}
@@ -1187,14 +1200,24 @@ export default function ProgresoScreen() {
       </Pressable>
 
       {/* ── Transformation Narrative ── */}
-      {narrativeBlock.length > 0 && (
-        <View style={styles.narrativeCard}>
+      {/* `compact` SOLO cuando hay historia debajo: encima de tres párrafos
+          de "TU HISTORIA" la frase del arco diría lo mismo una cuarta vez,
+          pero sin ellos no hay nada que repetir y el usuario del día 3 se
+          quedaba sin ver su propia frase en esta pantalla. La tarjeta ya no
+          cuelga de `narrativeBlock`: dónde estás no depende de cuánta historia
+          haya que contar. */}
+      <View style={styles.narrativeCard}>
+        <ArcHeader
+          arc={arcForDay(protocolDay, arcoSuyas)}
+          compact={narrativeBlock.length > 0}
+        />
+        {narrativeBlock.length > 0 && (
           <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-          {narrativeBlock.map((line, i) => (
-            <Text key={i} style={styles.narrativeLine}>{line}</Text>
-          ))}
-        </View>
-      )}
+        )}
+        {narrativeBlock.map((line, i) => (
+          <Text key={i} style={styles.narrativeLine}>{line}</Text>
+        ))}
+      </View>
 
       {/* ── Protocol Progress ── */}
       <ProgressCard
@@ -1248,8 +1271,8 @@ export default function ProgresoScreen() {
           <View style={styles.grid}>
             <MetricCard
               label="Racha"
-              value={`${Math.max(state.checkIns.length, protocolDay)}`}
-              meta="dias activos"
+              value={`${checkinStreak}`}
+              meta="dias seguidos"
               icon="local-fire-department"
             />
             <MetricCard
@@ -1376,14 +1399,6 @@ export default function ProgresoScreen() {
         </>
       )}
 
-      {/* ── Achievements ── */}
-      <GoldDivider label="LOGROS" />
-      <View style={styles.achievementsGrid}>
-        {achievements.map((a) => (
-          <AchievementBadge key={a.label} icon={a.icon} label={a.label} earned={a.earned} />
-        ))}
-      </View>
-
       {/* ── Archetype badges ── */}
       <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
       <View style={styles.archetypeList}>
@@ -1392,7 +1407,10 @@ export default function ProgresoScreen() {
             key={arch.id}
             style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
             <MaterialIcons
-              name={arch.earned ? 'military-tech' : 'lock'}
+              // Sin condecoracion: `military-tech` es la misma medalla que se quito del
+                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
+                      // de comprobado, no con un galardon.
+                      name={arch.earned ? 'check-circle-outline' : 'lock'}
               size={18}
               color={arch.earned ? palette.goldText : palette.smoke}
             />
@@ -1712,8 +1730,8 @@ export default function ProgresoScreen() {
 const styles = StyleSheet.create({
   // Transformation narrative
   narrativeCard: {
-    backgroundColor: 'rgba(179,141,60,0.06)',
-    borderColor: 'rgba(179,141,60,0.2)',
+    backgroundColor: palette.goldGlow,
+    borderColor: palette.lineGold,
     borderRadius: 8,
     borderWidth: 1,
     gap: 10,
@@ -1729,8 +1747,9 @@ const styles = StyleSheet.create({
   narrativeLine: {
     color: palette.ash,
     fontFamily: Fonts.sans,
-    fontSize: 13,
-    lineHeight: 20,
+    // Es la historia del usuario, no un pie de tabla: `body` (14/22).
+    fontSize: 14,
+    lineHeight: 22,
   },
 
   // Profile header (design: avatar · name · día de protocolo · racha chip)
@@ -1885,11 +1904,6 @@ const styles = StyleSheet.create({
   },
 
   // Achievements
-  achievementsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
 
   // Archetype badges
   archetypeList: {

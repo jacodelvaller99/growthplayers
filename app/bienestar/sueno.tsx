@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
+import { Aura } from '@/components/aura';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { SLEEP_MUSIC } from '@/data/wellness';
 import { getSleepScript, sleepSegmentsToPhases } from '@/data/sleep';
@@ -172,8 +173,11 @@ export default function SuenoScreen() {
   }
 
   return (
+    <View style={sc.root}>
+      {/* Dormir. `noche` es el único estado azul de la paleta. */}
+      <Aura state="noche" weight={0.85} />
     <ScrollView
-      style={sc.root}
+      style={styles.auraScroll}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}>
 
@@ -274,11 +278,14 @@ export default function SuenoScreen() {
 
       <View style={{ height: spacing.xxxl }} />
     </ScrollView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  // El ScrollView ya no es la raíz: el aura se ancla al viewport por encima.
+  auraScroll: { flex: 1 },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',

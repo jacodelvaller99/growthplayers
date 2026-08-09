@@ -121,8 +121,14 @@ export interface CoachBundle {
   /** Turnos del usuario con Norman 7d / 7–14d. */
   user_turns_7d: number;
   user_turns_prev: number;
-  /** Días desde el último mensaje del usuario (Infinity si nunca). */
+  /**
+   * Días desde el último mensaje del usuario, sobre una ventana de 14 días.
+   * `Infinity` significa «nada en la ventana», NO «nunca escribió» — para eso
+   * está `ever_wrote`, que es un dato aparte a propósito.
+   */
   days_since_last_message: number;
+  /** Si escribió a Norman alguna vez. Separa «no ha llegado» de «se está yendo». */
+  ever_wrote: boolean;
   /** Tareas vencidas y abiertas (Mentor Execution / mentorship_tasks). */
   overdue_count: number;
   open_tasks_count: number;
@@ -163,7 +169,13 @@ export function computeDrivers(bundle: CoachBundle): ChurnDriver[] {
   }
 
   // 2. Silencio con Norman (cliente firmó canal de chat — su ausencia es señal).
-  if (bundle.days_since_last_message >= 5) {
+  //
+  // `ever_wrote` primero: sin él, `Infinity >= 5` es true, el peso sale al
+  // máximo (0.30 → ordena primero) y la evidencia dice «60 días sin escribirle
+  // al mentor» —`Math.min(Infinity, 60)`— en el dossier de un usuario creado
+  // hoy. El commit anterior arregló `label` y `days_silent` y dejó este
+  // consumidor, así que el coach seguía leyendo la cifra inventada.
+  if (bundle.ever_wrote && bundle.days_since_last_message >= 5) {
     out.push({
       kind: 'mentor_silence',
       weight: clamp(0.10 + (bundle.days_since_last_message - 5) * 0.04, 0, 0.30),
@@ -332,17 +344,22 @@ export function computeRelationalDepth(bundle: CoachBundle): RelationalDepth {
   else if (score >= 45) state = 'open';
   else if (score >= 20) state = 'transactional';
 
+  // `Infinity` = nunca escribió. `Math.min(Infinity, 60)` da 60, así que el
+  // dossier le decía al coach que un usuario creado hoy lleva "60 días sin
+  // escribir" — y el coach actúa sobre eso.
+  const nuncaEscribio = !bundle.ever_wrote;
+
   const stateLabel: Record<RelationalDepth['state'], string> = {
     deep: 'Conversación profunda y honesta',
     open: 'Relación activa, con apertura',
     transactional: 'Contacto puntual, poca profundidad',
-    silent: 'En silencio — reconectar',
+    silent: nuncaEscribio ? 'Aún no ha escrito — no es silencio, es el principio' : 'En silencio — reconectar',
   };
 
   return {
     score,
     state,
-    days_silent: bundle.days_since_last_message,
+    days_silent: nuncaEscribio ? 0 : bundle.days_since_last_message,
     turns_7d: turns,
     open_commitments: open,
     label: stateLabel[state],
@@ -373,7 +390,21 @@ export function selectNextAction(
   }
 
   // 1. Silencio → reconectar con calor humano, no presión.
-  if (relational.state === 'silent' || bundle.days_since_last_message >= 7) {
+  //
+  // `ever_wrote` NO es defensivo. Sin este guard el recién llegado entra por
+  // aquí —`relational.state` sale 'silent' con score 0— y la app le dice que
+  // lleva un tiempo fuera del sistema al que acaba de terminar el onboarding.
+  //
+  // Es `ever_wrote` y no `Number.isFinite(days_since_last_message)`, que fue
+  // el primer intento: ese campo se calcula sobre una ventana de 14 días, así
+  // que `Infinity` significa «nada en la ventana». Con la inferencia, el que
+  // lleva 20 días yéndose se clasificaba como recién llegado y se quedaba
+  // fuera de la reconexión — justo la población para la que existe.
+  //
+  // Quien nunca escribió no se fue: no ha llegado. Cae a los peldaños de
+  // abajo y termina en `investigate`, que `selectTurno` excluye a propósito
+  // para dejar decidir a la lectura de hoy.
+  if (bundle.ever_wrote && (relational.state === 'silent' || bundle.days_since_last_message >= 7)) {
     return {
       kind: 'reconnect',
       what_to_say: `Lleva ${pluralDays(Math.min(bundle.days_since_last_message, 60))} sin escribir. Mándale un mensaje corto preguntando cómo va el cuerpo y el sueño — no le pidas resultados.`,
@@ -489,4 +520,77 @@ export function computeCoachIntelligence(bundle: CoachBundle): CoachIntelligence
     next_action: next,
     narrative,
   };
+}
+
+// ─── Vista cliente ────────────────────────────────────────────────────────────
+
+export interface ClientNarrative {
+  /** Cómo viene la semana, en estado crudo (para estilar, no para mostrar). */
+  momentum: MomentumState;
+  /** Titular en SEGUNDA persona. Le habla al usuario, no sobre él. */
+  headline: string;
+  /** Por qué importa hoy. Sin cifras de riesgo, sin jerga de coaching. */
+  why: string;
+}
+
+/**
+ * Lo único de la inteligencia de coaching que puede ver el propio usuario.
+ *
+ * POR QUÉ NO ES UN PASSTHROUGH: `next_action.what_to_say` y `why_now` están
+ * escritos en TERCERA persona y dirigidos al coach ("Lleva 5 días sin
+ * escribir", "Pregúntale qué pasó con su semana"), y en la rama de biometría
+ * `why_now` llega a incrustar `coach_safe_summary` — que es explícitamente
+ * material de mentor. Reenviarlos al cliente sería a la vez una fuga y un
+ * texto que se lee como vigilancia. Por eso aquí se REDACTA de nuevo a partir
+ * de `kind` + `momentum.state`, las dos únicas señales sin contenido sensible.
+ *
+ * Whitelist estricta, igual que `clientSafeProfile` (memoryLogic.ts:260) y
+ * `clientSafeTasks` (mentorExecutionLogic.ts:371). NUNCA salen de aquí:
+ * `churn_risk`, `composite_score`, `drivers`, `narrative`, `relational`,
+ * `what_to_say` ni `why_now`.
+ */
+export function clientSafeNarrative(ci: CoachIntelligence): ClientNarrative {
+  const momentum = ci.momentum.state;
+
+  // El `kind` manda sobre el momentum: si el cuerpo pide descanso, celebrar el
+  // ascenso sería empujar a alguien que justo necesita frenar.
+  switch (ci.next_action.kind) {
+    case 'rest_signal':
+      return {
+        momentum,
+        headline: 'Tu cuerpo está pidiendo bajar carga.',
+        why: 'Hoy no toca empujar. Mueve tu tarea más exigente un par de días y protege el descanso — eso también es ejecutar.',
+      };
+    case 'celebrate':
+      return {
+        momentum,
+        headline: 'Esta semana vas hacia arriba.',
+        why: 'Lo que estás haciendo está funcionando. Vale la pena que nombres qué cambió: lo que se nombra se puede repetir.',
+      };
+    case 'confront':
+      return {
+        momentum,
+        headline: 'Hay algo que dijiste y quedó abierto.',
+        why: 'No es un reproche: un compromiso sin cerrar consume atención en segundo plano. Ciérralo o cámbialo, pero sácalo del limbo.',
+      };
+    case 'reconnect':
+      return {
+        momentum,
+        headline: 'Llevas un tiempo fuera del sistema.',
+        why: 'Volver no exige ponerte al día con nada. Un check-in de hoy vale más que reconstruir la semana que pasó.',
+      };
+    case 'support':
+      return {
+        momentum,
+        headline: 'Tienes más frentes abiertos de los que caben.',
+        why: 'La sobrecarga se parece a la falta de disciplina, pero no lo es. Elige uno y suelta el resto sin culpa.',
+      };
+    case 'investigate':
+    default:
+      return {
+        momentum,
+        headline: momentum === 'rising' ? 'Vas sostenido.' : 'Semana en curso.',
+        why: 'Sin señales fuertes en ningún sentido. Es buen momento para avanzar en lo que ya tenías planeado.',
+      };
+  }
 }

@@ -22,6 +22,10 @@ const DAILY_MESSAGES = [
   'La consistencia no se siente heroica. Se ve en el historial. Check-in.',
 ];
 
+/** Etiqueta del recordatorio diario de check-in, para poder cancelarlo sin
+ *  arrastrar los recordatorios de hábitos que agenda otra parte de la app. */
+const CHECKIN_REMINDER_KIND = 'checkin-daily';
+
 // ─── Config del handler ───────────────────────────────────────────────────────
 export function configureNotificationHandler(): void {
   Notifications.setNotificationHandler({
@@ -53,7 +57,18 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 export async function scheduleCheckinReminder(protocolDay = 1): Promise<string | null> {
   if (Platform.OS === 'web') return null;
   try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    // ANTES: `cancelAllScheduledNotificationsAsync()`. Borraba TODO lo agendado,
+    // incluidos los recordatorios de hábitos de `scheduleDailyRoutineReminder`
+    // (app/bienestar/habitos.tsx:188). El usuario configuraba sus rutinas de
+    // mañana y noche, activaba el recordatorio de check-in en Progreso, y sus
+    // hábitos desaparecían en silencio — `getScheduledRemindersByHabit` (:181)
+    // lee el SO como fuente de verdad, así que al recargar los toggles salían
+    // apagados sin explicación.
+    //
+    // Ahora se cancela SOLO este recordatorio, identificándolo por su propio
+    // `data.kind` — el mismo patrón de etiquetar-y-filtrar que ya usa el mapa
+    // por `habitId`.
+    await cancelCheckinReminders();
 
     const msgIndex = (protocolDay - 1) % DAILY_MESSAGES.length;
     const body = DAILY_MESSAGES[msgIndex];
@@ -63,6 +78,18 @@ export async function scheduleCheckinReminder(protocolDay = 1): Promise<string |
         title: 'PROTOCOLO SOBERANO',
         body,
         sound: true,
+        // Sin `data` el listener de app/_layout.tsx no encontraba ni `route` ni
+        // `screen` y caía SIEMPRE a su fallback. Acertaba de casualidad porque
+        // el fallback es /checkin, que es justo el destino de este recordatorio
+        // — pero el canal era incapaz de apuntar a ningún otro sitio.
+        //
+        // El cuerpo se queda genérico A PROPÓSITO: esto es un DAILY que se
+        // agenda una vez y se repite, así que cualquier dato de hoy ("Tensión
+        // 8/10") quedaría congelado y mintiendo mañana. La notificación
+        // personalizada con el porqué del día es la del servidor
+        // (supabase/functions/smart-notifications), que sí recalcula en cada
+        // corrida.
+        data: { route: '/checkin', kind: CHECKIN_REMINDER_KIND },
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -75,6 +102,22 @@ export async function scheduleCheckinReminder(protocolDay = 1): Promise<string |
   } catch (err) {
     console.warn('[Notifications] scheduleCheckinReminder error:', err);
     return null;
+  }
+}
+
+/** Cancela solo los recordatorios de check-in, dejando intactos los de hábitos. */
+export async function cancelCheckinReminders(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const n of scheduled) {
+      const kind = (n.content?.data as { kind?: string } | undefined)?.kind;
+      if (kind === CHECKIN_REMINDER_KIND) {
+        await Notifications.cancelScheduledNotificationAsync(n.identifier);
+      }
+    }
+  } catch {
+    // ignore
   }
 }
 

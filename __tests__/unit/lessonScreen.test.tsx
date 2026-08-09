@@ -9,6 +9,7 @@ import React from 'react';
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
   useRouter: () => ({ back: jest.fn(), replace: jest.fn() }),
+  useFocusEffect: () => {},
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   useLocalSearchParams: () => ({ id: require('@/data/modules').POLARIS_MODULES[0].lessons[0].id }),
 }));

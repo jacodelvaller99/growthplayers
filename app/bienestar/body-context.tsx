@@ -16,6 +16,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PremiumCard } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useJornada } from '@/hooks/use-jornada';
 import { useWearableDaily, type WearableDaily } from '@/lib/wearables';
 
 // ─── Contexto del cuerpo HOY (pre-práctica) ───────────────────────────────────
@@ -101,24 +102,48 @@ function fmt(n: number | null): string {
   return String(Math.round(n));
 }
 
-// ─── Cierre (post-práctica): invita a registrar cómo se siente ────────────────
+// ─── Cierre (post-práctica): el siguiente paso de la jornada ──────────────────
 
 /**
- * Cierre honesto tras terminar. No abre tablas nuevas: enlaza al diario, donde
- * el cliente ya registra cómo se siente.
+ * Cierre honesto tras terminar. Era el sumidero del loop: TODAS las prácticas
+ * morían aquí con un único botón al diario, y el diario no devolvía a nada.
+ * Ahora el botón sigue a la JORNADA (lib/jornadaLogic.ts): terminar la
+ * práctica marca REGULA (derivado de la sesión recién guardada) y el cierre
+ * ofrece el paso que falta — normalmente cerrar en el diario, pero si aún no
+ * ejecutaste, la lección. Sin jornada (log cargando), el destino clásico.
  */
 export function PracticeClose({ message }: { message: string }) {
   const router = useRouter();
+  const jornada = useJornada();
+
+  const destino = (() => {
+    switch (jornada?.current) {
+      case 'leete':
+        return { label: 'HACER MI CHECK-IN', route: '/checkin', icon: 'monitor-heart' as const };
+      case 'ejecuta':
+        return { label: 'EJECUTAR LA LECCIÓN', route: '/(tabs)/programas', icon: 'play-arrow' as const };
+      case null:
+        // Jornada completa: la práctica fue extra. Salida serena.
+        return jornada
+          ? { label: 'VER TU PROGRESO', route: '/(tabs)/progreso', icon: 'insights' as const }
+          : { label: 'REGISTRAR CÓMO TE SIENTES', route: '/bienestar/diario', icon: 'edit-note' as const };
+      default:
+        // 'cierra', 'regula' (sesión aún no reflejada) o jornada sin cargar:
+        // el diario, que era y sigue siendo el cierre natural de una práctica.
+        return { label: 'REGISTRAR CÓMO TE SIENTES', route: '/bienestar/diario', icon: 'edit-note' as const };
+    }
+  })();
+
   return (
     <PremiumCard style={styles.closeCard}>
       <Text style={styles.closeText}>{message}</Text>
       <Pressable
-        onPress={() => router.push('/bienestar/diario')}
+        onPress={() => router.push(destino.route as never)}
         style={styles.closeBtn}
         accessibilityRole="button"
-        accessibilityLabel="Registrar cómo te sientes">
-        <MaterialIcons name="edit-note" size={18} color={palette.ink} />
-        <Text style={styles.closeBtnText}>REGISTRAR CÓMO TE SIENTES</Text>
+        accessibilityLabel={destino.label}>
+        <MaterialIcons name={destino.icon} size={18} color={palette.ink} />
+        <Text style={styles.closeBtnText}>{destino.label}</Text>
       </Pressable>
     </PremiumCard>
   );

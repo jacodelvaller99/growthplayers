@@ -40,7 +40,10 @@ export type EventType =
   | 'connection_requested'
   | 'connection_accepted'
   | 'comment_created'
-  | 'post_reaction';
+  | 'post_reaction'
+  // Camino del héroe — Motor de Momentos (Fase 2)
+  | 'hero_moment_shown'
+  | 'hero_moment_dismissed';
 
 interface QueuedEvent {
   event_type: EventType;

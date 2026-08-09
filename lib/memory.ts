@@ -12,7 +12,11 @@ import { mem, intel } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
 import {
   assembleMentorMemory,
+  heroOriginSummary,
+  mergeMemoryProfile,
+  transformationGoalFromOrigin,
   type AssembledMentorMemory,
+  type HeroOrigin,
   type MemoryProfile,
   type MemorySnippet,
   type MemorySummaryRow,
@@ -137,6 +141,47 @@ export async function insertSummary(row: MemorySummaryRow & { user_id: string })
   } catch {
     return false;
   }
+}
+
+// ─── La historia de origen — el umbral del camino del héroe ───────────────────────
+/**
+ * Siembra el punto de partida del usuario al completar el onboarding.
+ *
+ * Dos escrituras, ambas sobre columnas/valores que EXISTÍAN sin escritor:
+ *  1. `user_memory_profile.transformation_goal` — columna presente desde la
+ *     migración del Memory OS, renderizada en la síntesis del cliente
+ *     ("Transformación: …") y en el contexto de Norman, y hasta hoy siempre
+ *     vacía porque nadie la escribía.
+ *  2. `memory_summaries` con `source_type: 'manual'` — presente en el CHECK
+ *     desde el día uno, sin escritor. Esta fila es la PRIMERA entrada de la
+ *     línea de tiempo del usuario: el día 60 puede mirar atrás y leer desde
+ *     dónde partió. Eso es el arco, no un adorno.
+ *
+ * Degrada en silencio: si las tablas no existen o falla la red, el onboarding
+ * no se entera (el llamador ya envuelve en try/catch con logSilentError).
+ */
+export async function seedHeroOrigin(userId: string, origin: HeroOrigin): Promise<void> {
+  if (!userId) return;
+
+  // 1. transformation_goal — "desde dónde → hacia dónde", con las palabras del usuario.
+  const goal = transformationGoalFromOrigin(origin);
+  if (goal) {
+    const existing = await fetchMemoryProfile(userId);
+    const merged = mergeMemoryProfile(existing ?? {}, { transformation_goal: goal });
+    await upsertMemoryProfile(userId, merged);
+  }
+
+  // 2. La historia de origen — en sus palabras, no en jerga de sistema.
+  await insertSummary({
+    user_id:              userId,
+    source_type:          'manual',
+    summary:              heroOriginSummary(origin),
+    key_topics:           ['origen', ...(origin.painPoint ? ['obstáculo'] : [])],
+    commitments:          [],
+    unresolved_questions: [],
+    emotional_tone:       '',
+    suggested_next_focus: '',
+  });
 }
 
 // ─── Briefings de admin (admin-only por RLS) ───────────────────────────────────────

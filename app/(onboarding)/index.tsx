@@ -115,14 +115,13 @@ export default function OnboardingScreen() {
     setStep(1); // → intro de valor (skippable)
   };
 
-  // El obstáculo (painPoint) sigue pre-poblando north.purpose si el usuario no lo definió.
-  // Ahora el obstáculo va DESPUÉS del Norte (paso 3) → al avanzar al código de acceso.
-  const goFromObstacleToCode = () => {
-    if (painPoint.trim() && !north.purpose.trim()) {
-      setNorth((n) => ({ ...n, purpose: painPoint.trim() }));
-    }
-    setStep(5);
-  };
+  // El obstáculo ya NO se disfraza de propósito. Antes se copiaba a
+  // north.purpose "si el usuario no lo definió" — condición que era siempre
+  // false porque el default venía relleno — y el dolor se descartaba SIEMPRE.
+  // Ahora painPoint viaja por derecho propio en finish() y siembra la
+  // historia de origen (transformation_goal + primera entrada de la línea
+  // de tiempo). Un dolor no es un propósito; no se mezclan.
+  const goFromObstacleToCode = () => setStep(5);
 
   // Chips de ejemplo para arrancar el obstáculo sin enfrentar un textarea en blanco.
   const obstacleChip = (text: string) => () => setPainPoint(text);
@@ -161,8 +160,15 @@ export default function OnboardingScreen() {
         profile: { name: name.trim(), role: role.trim() },
         activeProgramId: 'protocolo-soberano',
         northStar: north,
+        // El punto de partida del héroe: siembra transformation_goal y la
+        // historia de origen en la línea de tiempo del Memory OS.
+        painPoint: painPoint.trim() || undefined,
       });
-      router.replace('/(tabs)/comando');
+      // Al Umbral, no al tablero. Acaba de escribir qué se interpone en su
+      // vida y quién decide ser; caer directo en una rejilla de métricas era
+      // gastar el momento con más carga del producto en una transición de
+      // router. El Umbral se lo lee de vuelta y de ahí entra a Comando.
+      router.replace('/(onboarding)/umbral');
     } catch (e) {
       // Si falla el cierre, re-habilita para reintentar (no dejamos el botón muerto)
       // y lo decimos: es el último paso del onboarding, fallar en silencio aquí
@@ -194,6 +200,10 @@ export default function OnboardingScreen() {
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <View key={i} style={[styles.stepSeg, i <= step && styles.stepSegActive]} />
         ))}
+        {/* La barra es la ÚNICA que numera. Las píldoras de cada pantalla
+            decían "PASO 1" sobre el paso 3 de 6 —contaban solo los pasos con
+            formulario— y dejaban al usuario con dos cuentas distintas de dónde
+            está. Ahora nombran la sección y no compiten con el contador. */}
         <Text style={styles.stepCounter}>{step + 1}/{TOTAL_STEPS}</Text>
       </View>
 
@@ -324,7 +334,7 @@ export default function OnboardingScreen() {
       {/* ─────────────────────────────────────────── STEP 2 — IDENTIDAD ── */}
       {step === 2 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 1 · IDENTIDAD" />
+          <StatusPill label="IDENTIDAD" />
           <Text style={styles.stepSubtitle}>Cuéntame quién eres</Text>
           <Text style={styles.stepTitle}>OPERADOR{'\n'}SOBERANO.</Text>
           <Text style={styles.stepBody}>
@@ -368,7 +378,7 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────────────────── STEP 3 — MI NORTE ── */}
       {step === 3 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 2 · MI NORTE" tone="gold" dot />
+          <StatusPill label="MI NORTE" tone="gold" dot />
           <Text style={styles.stepSubtitle}>Tu propósito para los próximos 90 días</Text>
           <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
@@ -381,7 +391,7 @@ export default function OnboardingScreen() {
             <PremiumInput
               value={north.purpose}
               onChangeText={(purpose) => setNorth({ ...north, purpose })}
-              placeholder="¿Por que operas a este nivel?"
+              placeholder='Ej.: "Construir una vida soberana, rentable y físicamente impecable."'
               multiline
               style={styles.textArea}
               accessibilityLabel="Proposito principal"
@@ -392,7 +402,7 @@ export default function OnboardingScreen() {
             <PremiumInput
               value={north.identity}
               onChangeText={(identity) => setNorth({ ...north, identity })}
-              placeholder="Soy alguien que..."
+              placeholder='Ej.: "Decido con calma, ejecuto con precisión y protejo mi energía."'
               multiline
               style={styles.textArea}
               accessibilityLabel="Declaracion de identidad"
@@ -403,7 +413,7 @@ export default function OnboardingScreen() {
             <PremiumInput
               value={north.dailyReminder}
               onChangeText={(dailyReminder) => setNorth({ ...north, dailyReminder })}
-              placeholder="La frase que te ancla cada mañana..."
+              placeholder='Ej.: "No negocio con el ruido. Hoy mando desde criterio."'
               multiline
               style={styles.textArea}
               accessibilityLabel="Recordatorio diario"
@@ -419,7 +429,7 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────────────────── STEP 4 — OBSTÁCULO ── */}
       {step === 4 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 3 · TU SITUACIÓN" />
+          <StatusPill label="TU SITUACIÓN" />
           <Text style={styles.stepSubtitle}>Qué cambia todo — opcional</Text>
           <Text style={styles.stepTitle}>NOMBRA EL{'\n'}OBSTÁCULO.</Text>
           <Text style={styles.stepBody}>
@@ -478,7 +488,7 @@ export default function OnboardingScreen() {
       {/* ──────────────────────────────── STEP 5 — CÓDIGO DE ACCESO ── */}
       {step === 5 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="PASO 4 · MEMBRESÍA" />
+          <StatusPill label="MEMBRESÍA" />
           <Text style={styles.stepSubtitle}>Tu código de acceso, si tienes</Text>
           <Text style={styles.stepTitle}>ACTIVA TU{'\n'}MEMBRESÍA.</Text>
           <Text style={styles.stepBody}>
@@ -711,9 +721,6 @@ const styles = StyleSheet.create({
 
   // ── Step cards
   formCard: {
-    gap: spacing.lg,
-  },
-  stack: {
     gap: spacing.lg,
   },
   stepTitle: {

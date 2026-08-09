@@ -5,7 +5,10 @@
 import { render } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn() }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ back: jest.fn(), replace: jest.fn() }),
+  useFocusEffect: () => {},
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -14,6 +17,26 @@ jest.mock('@/lib/supabase', () => ({
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) },
     from: () => ({ insert: () => Promise.resolve({ error: null }) }),
   },
+}));
+// El diario ahora cierra la JORNADA: lee estado global (delta del día, frase
+// del arco) y el log local. El smoke no monta provider, así que ambos hooks
+// se stubbean — el flujo real del cierre lo cubren jornadaTracker.test.tsx y
+// jornadaLogic.test.ts.
+jest.mock('@/hooks/use-lifeflow', () => ({
+  useLifeFlow: () => ({
+    state: {
+      checkIns: [],
+      wellnessSessions: [],
+      profile: { painPoint: '' },
+      northStar: { purpose: '', identity: '' },
+    },
+    todayCheckIn: null,
+    protocolDay: 1,
+  }),
+}));
+jest.mock('@/hooks/use-jornada', () => ({
+  useJornada: () => null,
+  logJornadaStep: jest.fn(),
 }));
 jest.mock('@/components/polaris', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports

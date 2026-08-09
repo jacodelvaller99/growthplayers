@@ -26,7 +26,9 @@ import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
 import { analytics } from '@/lib/analytics';
+import { withStepDone } from '@/lib/jornadaLogic';
 import type { TaskField } from '@/types/lifeflow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -684,6 +686,7 @@ export default function LessonScreen() {
   const router = useRouter();
   const { id: lessonId } = useLocalSearchParams<{ id: string }>();
   const { state, saveLessonTask, markLessonComplete } = useLifeFlow();
+  const jornada = useJornada();
 
   const meta = useMemo(() => findLessonMeta(lessonId), [lessonId]);
   const task = LESSON_TASKS[lessonId] ?? null;
@@ -771,6 +774,9 @@ export default function LessonScreen() {
   const handleCompleteLesson = async () => {
     if (!canComplete) return;
     await markLessonComplete(lessonId);
+    // Completar una lección ES el paso EJECUTA de la jornada. Fire-and-forget:
+    // perder el log no puede costar la lección (la jornada guía, no bloquea).
+    void logJornadaStep('ejecuta');
     analytics.lessonComplete(lessonId, Date.now() - lessonStartMs.current);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -783,22 +789,30 @@ export default function LessonScreen() {
     }
   };
 
+  // Sin siguiente lección, el "SIGUIENTE →" del modal seguía la escalera al
+  // catálogo — un menú, no un paso. Ahora sigue a la JORNADA: normalmente
+  // REGULA (respiración); si ya regulaste, CIERRA (diario). El catálogo queda
+  // como último recurso cuando el log aún no cargó.
+  const rutaTrasEjecutar = (): string => {
+    if (meta?.next) return `/lesson/${meta.next.id}`;
+    const despues = jornada ? withStepDone(jornada, 'ejecuta') : null;
+    switch (despues?.current) {
+      case 'leete':  return '/checkin';
+      case 'regula': return '/bienestar/respiracion';
+      case 'cierra': return '/bienestar/diario';
+      case null:     return despues ? '/(tabs)/progreso' : '/(tabs)/programas';
+      default:       return '/(tabs)/programas';
+    }
+  };
+
   const handleCelebrationContinue = () => {
     setShowCelebration(false);
-    if (meta?.next) {
-      router.replace(`/lesson/${meta.next.id}` as never);
-    } else {
-      router.replace('/(tabs)/programas' as never);
-    }
+    router.replace(rutaTrasEjecutar() as never);
   };
 
   const handleArchetypeContinue = () => {
     setShowArchetype(false);
-    if (meta?.next) {
-      router.replace(`/lesson/${meta.next.id}` as never);
-    } else {
-      router.replace('/(tabs)/programas' as never);
-    }
+    router.replace(rutaTrasEjecutar() as never);
   };
 
   if (!meta) {
@@ -986,15 +1000,23 @@ export default function LessonScreen() {
           )}
         </View>
 
-        {/* ── Next lesson anticipation teaser ── */}
+        {/* ── Next lesson teaser — PULSABLE. Era un View inerte: mostraba la
+            próxima lección sin llevar a ella, así que quien volvía a una
+            lección ya completada veía el botón principal deshabilitado y un
+            teaser que no hacía nada — un callejón. Mismo destino que el
+            modal de celebración. ── */}
         {isLessonCompleted && meta.next && (
-          <View style={styles.nextLessonTeaser}>
+          <Pressable
+            onPress={() => router.replace(`/lesson/${meta.next!.id}` as never)}
+            accessibilityRole="button"
+            accessibilityLabel={`Próxima lección: ${meta.next.title}`}
+            style={({ pressed }) => [styles.nextLessonTeaser, pressed && { opacity: 0.8 }]}>
             <Text style={styles.nextLessonLabel}>PRÓXIMA LECCIÓN</Text>
             <Text style={styles.nextLessonTitle}>{meta.next.title}</Text>
             {meta.next.duration ? (
               <Text style={styles.nextLessonMeta}>{meta.next.duration}</Text>
             ) : null}
-          </View>
+          </Pressable>
         )}
 
         {/* ── Complete Button ── */}

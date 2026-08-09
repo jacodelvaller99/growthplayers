@@ -7,6 +7,7 @@ import {
   calcSovereignTier,
   calcSovereignBaseline,
   calcSovereignDelta,
+  computeStreak,
   type SovereignCheckIn,
 } from '@/lib/utils';
 
@@ -213,5 +214,60 @@ describe('calcSovereignDelta', () => {
     expect(delta.hasBaseline).toBe(true);
     expect(delta.state).toBe('stable');
     expect(delta.deltaPct).toBeCloseTo(0);
+  });
+});
+
+// ─── computeStreak — la racha no puede mentir ────────────────────────────────
+//
+// Invariante que fija este bloque: la racha mide días CONSECUTIVOS con check-in,
+// no días de calendario. El bug original (`Math.max(checkIns.length, protocolDay)`)
+// le mostraba "Racha 47" a alguien que abandonó el día 3.
+//
+// `today` se pasa explícito → determinista, sin fake timers. Las claves de día
+// son UTC (igual que computeStreak), así que el test no depende de la zona
+// horaria de la máquina que lo corre.
+describe('computeStreak', () => {
+  const TODAY = new Date('2026-07-31T12:00:00.000Z');
+  /** Check-in con clave de día UTC a n días de TODAY. Formato ISO completo. */
+  const at = (daysAgo: number) => ({
+    date: new Date(TODAY.getTime() - daysAgo * DAY_MS).toISOString(),
+  });
+
+  it('sin check-ins la racha es 0', () => {
+    expect(computeStreak([], TODAY)).toBe(0);
+  });
+
+  it('días consecutivos cuentan', () => {
+    expect(computeStreak([at(0), at(1), at(2), at(3)], TODAY)).toBe(4);
+  });
+
+  it('un hueco corta la racha — solo cuenta hasta el hueco', () => {
+    // hoy, ayer, [hueco en -2], anteanteayer y anteriores: la racha es 2.
+    expect(computeStreak([at(0), at(1), at(3), at(4), at(5)], TODAY)).toBe(2);
+  });
+
+  it('quien dejó de registrar hace 10 días NO tiene racha', () => {
+    // EL invariante del producto: 40 check-ins seguidos, abandonados hace 10 días.
+    const abandonado = Array.from({ length: 40 }, (_, i) => at(i + 10));
+    expect(computeStreak(abandonado, TODAY)).toBe(0);
+  });
+
+  it('la racha no crece con el calendario: 3 check-ins al inicio del protocolo siguen siendo 0 el día 47', () => {
+    const tresDiasHace47 = [at(47), at(46), at(45)];
+    expect(computeStreak(tresDiasHace47, TODAY)).toBe(0);
+  });
+
+  it('acepta el DATE plano de Supabase ("YYYY-MM-DD") además del ISO completo', () => {
+    const mezcla = [{ date: '2026-07-31' }, { date: '2026-07-30T09:00:00.000Z' }, { date: '2026-07-29' }];
+    expect(computeStreak(mezcla, TODAY)).toBe(3);
+  });
+
+  it('un check-in duplicado el mismo día no infla la racha', () => {
+    expect(computeStreak([at(0), at(0), at(1)], TODAY)).toBe(2);
+  });
+
+  it('sin check-in de hoy la racha es 0 aunque ayer sí lo hubiera', () => {
+    // La racha se rompe al no registrar; no se "mantiene" a la espera.
+    expect(computeStreak([at(1), at(2), at(3)], TODAY)).toBe(0);
   });
 });
