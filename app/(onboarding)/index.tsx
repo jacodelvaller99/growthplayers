@@ -47,13 +47,14 @@ const VALUE_BULLETS: { icon: 'military-tech' | 'psychology' | 'insights'; title:
 ];
 
 // Consent gate — Términos, Privacidad y Descargo de Salud (compliance de lanzamiento)
-type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation';
+type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation' | 'softwareLearning';
 
 const CONSENT_ITEMS: { key: ConsentKey; label: string; route: '/legal/terminos' | '/legal/privacidad' | '/legal/salud' }[] = [
-  { key: 'terms',         label: 'Términos y Condiciones',                                   route: '/legal/terminos' },
-  { key: 'privacy',       label: 'Política de Privacidad (RGPD)',                            route: '/legal/privacidad' },
-  { key: 'health',        label: 'Descargo de Salud y Bienestar',                            route: '/legal/salud' },
-  { key: 'confrontation', label: 'Norman puede confrontarme con datos registrados del sistema cuando mis acciones no coincidan con lo que declaré', route: '/legal/privacidad' },
+  { key: 'terms',             label: 'Términos y Condiciones',                                   route: '/legal/terminos' },
+  { key: 'privacy',           label: 'Política de Privacidad (RGPD)',                            route: '/legal/privacidad' },
+  { key: 'health',            label: 'Descargo de Salud y Bienestar',                            route: '/legal/salud' },
+  { key: 'confrontation',     label: 'Norman puede confrontarme con datos registrados del sistema cuando mis acciones no coincidan con lo que declaré', route: '/legal/privacidad' },
+  { key: 'softwareLearning',  label: 'Acepto el tratamiento de mis datos para el aprendizaje y mejora del software', route: '/legal/privacidad' },
 ];
 
 export default function OnboardingScreen() {
@@ -79,8 +80,10 @@ export default function OnboardingScreen() {
     privacy: false,
     health: false,
     confrontation: false,
+    softwareLearning: false,
   });
-  const allConsented = consents.terms && consents.privacy && consents.health && consents.confrontation;
+  const allConsented =
+    consents.terms && consents.privacy && consents.health && consents.confrontation && consents.softwareLearning;
   // ml_consent es OPT-IN explícito y OPCIONAL (RGPD): default false, no bloquea el gate.
   const [mlConsent, setMlConsent] = useState(false);
 
@@ -102,6 +105,7 @@ export default function OnboardingScreen() {
             privacy:                 { accepted: true, at: now },
             health:                  { accepted: true, at: now },
             confrontation_with_data: { accepted: true, at: now },
+            software_learning:       { accepted: true, at: now },
           },
           terms_accepted_at: now,
           ml_consent: mlConsent,

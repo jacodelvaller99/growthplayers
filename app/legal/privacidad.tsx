@@ -104,6 +104,14 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    heading: '10.ter Tratamiento de datos y aprendizaje del software',
+    body: [
+      'Al otorgar este consentimiento, usted autoriza que sus interacciones con la App (mensajes a Norman, check-ins, uso de prácticas) se procesen para mejorar el funcionamiento del software: depuración de errores, ajuste de los modelos de personalización descritos en la sección 7, y desarrollo de nuevas funciones.',
+      'Esto NO significa que sus datos se usen para entrenar modelos de lenguaje de terceros (Anthropic, NVIDIA, Groq, OpenAI) más allá del procesamiento de su propia solicitud en el momento en que la envía — cada proveedor opera bajo sus términos de API, no de entrenamiento con datos de clientes.',
+      'Puede retirar este consentimiento en cualquier momento desde Perfil → Privacidad y Datos, sin que afecte su acceso al Protocolo, al contenido educativo ni a las prácticas de bienestar — sí puede degradar la calidad de la personalización de Norman, que depende en parte de este aprendizaje continuo.',
+    ],
+  },
+  {
     heading: '11. Menores de edad',
     body: [
       'La App no está dirigida a menores de 18 años y no recopilamos conscientemente sus datos. Si detectamos una cuenta de un menor, la eliminaremos.',
