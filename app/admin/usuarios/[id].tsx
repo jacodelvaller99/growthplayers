@@ -8,7 +8,7 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -138,6 +138,15 @@ function timeAgo(iso: string) {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// El dueño lo pidió literal: "un cuadro enorme en cada persona EXACTAMENTE
+// que le pregunto a la IA". `timeAgo` ("hace 3h") sirve para ojear, no para
+// auditar — la fecha y hora exactas son las que hacen el cuadro accionable.
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('es-CO', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
 }
 
 // action_plan es jsonb heterogéneo (strings u objetos {title|task|text}) — normalizar
@@ -288,6 +297,9 @@ export default function UserDetailScreen() {
   const [showNorman, setShowNorman] = useState(false);
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [expandedConv, setExpandedConv] = useState<string | null>(null);
+  // "Exactamente qué le pregunta a la IA" — el turno del usuario solo, sin el
+  // mentor mezclado, para el cuadro de auditoría F.bis.
+  const questions = useMemo(() => conversations.filter((c) => c.role === 'user'), [conversations]);
 
   // Editar identidad (nombre + etiqueta/rol)
   const [editOpen, setEditOpen] = useState(false);
@@ -354,7 +366,7 @@ export default function UserDetailScreen() {
     const [userDetail, evts, convs, cis, ment, audit, memo, exec, bioSnap, act, frix] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
-      fetchMentorConversations(userId, 30),
+      fetchMentorConversations(userId, 100),
       fetchUserCheckIns(userId),
       fetchUserMentorship(userId),
       fetchUserAuditLog(userId),
@@ -974,7 +986,24 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* F. CONVERSACIONES CON MENTOR */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label={`F. CONVERSACIONES (${conversations.length})`} />
+        {/* "Un cuadro enorme, EXACTAMENTE qué le pregunta a la IA" — solo el
+            turno del usuario, texto literal completo, fecha y hora exactas.
+            `timeAgo` de abajo sirve para ojear el hilo; esto es para auditar. */}
+        <GoldDivider label={`F. QUÉ LE PREGUNTA A LA IA (${questions.length})`} />
+        <PremiumCard style={s.card}>
+          {questions.length === 0 ? (
+            <Text style={s.emptyText}>Sin preguntas registradas</Text>
+          ) : (
+            questions.map((q) => (
+              <View key={q.id} style={s.questionRow}>
+                <Text style={s.questionTime}>{formatDateTime(q.created_at)}</Text>
+                <Text style={s.questionText}>{q.content}</Text>
+              </View>
+            ))
+          )}
+        </PremiumCard>
+
+        <GoldDivider label={`F.bis HILO COMPLETO (${conversations.length})`} />
         <PremiumCard style={s.card}>
           {conversations.length === 0 ? (
             <Text style={s.emptyText}>Sin conversaciones</Text>
@@ -1576,6 +1605,15 @@ const s = StyleSheet.create({
   evtType: { fontFamily: Fonts.sans, fontSize: 12, color: palette.ivory, flex: 1, textTransform: 'capitalize' },
   evtScreen: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   evtTime: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+
+  questionRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: palette.line,
+    paddingVertical: spacing.sm,
+    gap: 2,
+  },
+  questionTime: { ...typography.mono, color: palette.goldText, fontSize: 10 },
+  questionText: { ...typography.caption, color: palette.ivory, lineHeight: 18 },
 
   convBubble: { borderRadius: radii.sm, padding: spacing.sm, marginBottom: spacing.sm },
   bubbleLeft: { backgroundColor: palette.overlay, alignSelf: 'flex-start', maxWidth: '90%' },
