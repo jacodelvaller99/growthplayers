@@ -95,7 +95,7 @@ export default function PaywallScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Error en la compra',
-        err?.message ?? 'Inténtalo de nuevo o contacta soporte.',
+        err?.message ?? 'Inténtalo de nuevo o escribe a info@polarisgrowthinstitute.com.',
       );
     } finally {
       setPurchasing(false);
