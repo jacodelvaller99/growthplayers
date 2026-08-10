@@ -19,7 +19,7 @@ import { ENV } from '@/app/config/env';
 const supa: any = supabase;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-export type WearableProvider = 'oura' | 'whoop' | 'apple_health' | 'health_connect' | 'aggregator';
+export type WearableProvider = 'oura' | 'whoop' | 'polar' | 'strava' | 'apple_health' | 'health_connect' | 'aggregator';
 
 /** ¿Es este provider OAuth web (Oura/WHOOP) o nativo (HealthKit/Health Connect)? */
 export function isNativeProvider(p: WearableProvider): p is 'apple_health' | 'health_connect' {
@@ -53,7 +53,7 @@ const REDIRECT_BASE = Platform.OS !== 'web'
     : WEB_ORIGIN;
 
 /** Solo los providers OAuth web (apple_health/health_connect leen on-device, no usan OAuth). */
-export type OAuthProvider = 'oura' | 'whoop';
+export type OAuthProvider = 'oura' | 'whoop' | 'polar' | 'strava';
 export const OAUTH_URLS: Record<OAuthProvider, (state: string) => string> = {
   oura: (state) => {
     const params = new URLSearchParams({
@@ -79,6 +79,33 @@ export const OAUTH_URLS: Record<OAuthProvider, (state: string) => string> = {
       state,
     });
     return `https://api.prod.whoop.com/oauth/oauth2/auth?${params}`;
+  },
+  // Polar AccessLink. A diferencia de Oura/WHOOP, el intercambio de código usa
+  // HTTP Basic Auth (no client_secret en el body) y requiere un registro de
+  // usuario extra tras el token — ver connectPolar en sync-wearables.
+  polar: (state) => {
+    const params = new URLSearchParams({
+      client_id:     process.env.EXPO_PUBLIC_POLAR_CLIENT_ID ?? '',
+      redirect_uri:  `${REDIRECT_BASE}/oauth/polar/callback`,
+      response_type: 'code',
+      scope:         'accesslink.read_all',
+      state,
+    });
+    return `https://flow.polar.com/oauth2/authorization?${params}`;
+  },
+  // Strava — mismo shape de token que Oura/WHOOP (client_secret en el body).
+  // approval_prompt=force evita que un usuario que ya autorizó otra app Strava
+  // se salte la pantalla de consentimiento de scopes.
+  strava: (state) => {
+    const params = new URLSearchParams({
+      client_id:        process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID ?? '',
+      redirect_uri:     `${REDIRECT_BASE}/oauth/strava/callback`,
+      response_type:    'code',
+      approval_prompt:  'force',
+      scope:            'activity:read_all',
+      state,
+    });
+    return `https://www.strava.com/oauth/authorize?${params}`;
   },
 };
 

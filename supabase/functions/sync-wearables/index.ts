@@ -19,6 +19,10 @@ const OURA_CLIENT_ID     = Deno.env.get('OURA_CLIENT_ID')!;
 const OURA_CLIENT_SECRET = Deno.env.get('OURA_CLIENT_SECRET')!;
 const WHOOP_CLIENT_ID    = Deno.env.get('WHOOP_CLIENT_ID')!;
 const WHOOP_CLIENT_SECRET = Deno.env.get('WHOOP_CLIENT_SECRET')!;
+const POLAR_CLIENT_ID    = Deno.env.get('POLAR_CLIENT_ID')!;
+const POLAR_CLIENT_SECRET = Deno.env.get('POLAR_CLIENT_SECRET')!;
+const STRAVA_CLIENT_ID    = Deno.env.get('STRAVA_CLIENT_ID')!;
+const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET')!;
 const SUPABASE_URL       = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -26,7 +30,7 @@ const SERVICE_ROLE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 interface WearableConnection {
   id: string;
   user_id: string;
-  provider: 'oura' | 'whoop';
+  provider: 'oura' | 'whoop' | 'polar' | 'strava';
   access_token: string;
   refresh_token: string;
   token_expires_at: string | null;
@@ -138,6 +142,54 @@ async function refreshWhoopToken(conn: WearableConnection): Promise<string> {
   return data.access_token;
 }
 
+async function refreshPolarToken(conn: WearableConnection): Promise<string> {
+  const basicAuth = btoa(`${POLAR_CLIENT_ID}:${POLAR_CLIENT_SECRET}`);
+  const res = await fetch('https://polarremote.com/v2/oauth2/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/x-www-form-urlencoded',
+      Authorization:   `Basic ${basicAuth}`,
+    },
+    body: new URLSearchParams({
+      grant_type:    'refresh_token',
+      refresh_token: conn.refresh_token,
+    }),
+  });
+  if (!res.ok) throw new Error(`Polar token refresh failed: ${res.status}`);
+  const data = await res.json();
+  const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
+  await adminSupabase.from('wearable_connections').update({
+    access_token:     data.access_token,
+    refresh_token:    data.refresh_token ?? conn.refresh_token,
+    token_expires_at: expiresAt,
+  }).eq('id', conn.id);
+  return data.access_token;
+}
+
+async function refreshStravaToken(conn: WearableConnection): Promise<string> {
+  const res = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type:    'refresh_token',
+      client_id:     STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      refresh_token: conn.refresh_token,
+    }),
+  });
+  if (!res.ok) throw new Error(`Strava token refresh failed: ${res.status}`);
+  const data = await res.json();
+  // Strava siempre rota el refresh_token — a diferencia de Oura/WHOOP donde a
+  // veces viene null y hay que conservar el anterior, aquí SIEMPRE hay uno nuevo.
+  const expiresAt = new Date(data.expires_at * 1000).toISOString();
+  await adminSupabase.from('wearable_connections').update({
+    access_token:     data.access_token,
+    refresh_token:    data.refresh_token,
+    token_expires_at: expiresAt,
+  }).eq('id', conn.id);
+  return data.access_token;
+}
+
 async function getValidToken(conn: WearableConnection): Promise<string> {
   if (conn.token_expires_at) {
     const expiresAt = new Date(conn.token_expires_at).getTime();
@@ -148,8 +200,10 @@ async function getValidToken(conn: WearableConnection): Promise<string> {
       // sus credenciales y su endpoint. Silencioso mientras solo hubiera dos
       // proveedores; una bomba en cuanto se añadiera un tercero.
       switch (conn.provider) {
-        case 'oura':  return refreshOuraToken(conn);
-        case 'whoop': return refreshWhoopToken(conn);
+        case 'oura':   return refreshOuraToken(conn);
+        case 'whoop':  return refreshWhoopToken(conn);
+        case 'polar':  return refreshPolarToken(conn);
+        case 'strava': return refreshStravaToken(conn);
         default:
           throw new Error(`getValidToken: proveedor sin refresh registrado: ${conn.provider}`);
       }
@@ -449,6 +503,149 @@ async function syncWhoop(userId: string, conn: WearableConnection): Promise<void
   console.log(`[sync-wearables] WHOOP synced for ${userId}: ${dailyRecords.length} days`);
 }
 
+// ─── Polar AccessLink helpers ─────────────────────────────────────────────────
+// Basado en la documentación pública de AccessLink (no validado aún contra un
+// payload real — mismo riesgo que Terra en WEARABLES_ACTIVATION.md). Duraciones
+// vienen en formato ISO 8601 ("PT7H32M"); se parsean a minutos.
+function parseIsoDurationMin(iso: string | undefined): number | undefined {
+  if (!iso) return undefined;
+  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso);
+  if (!m) return undefined;
+  const h = Number(m[1] ?? 0), min = Number(m[2] ?? 0), s = Number(m[3] ?? 0);
+  return Math.round(h * 60 + min + s / 60);
+}
+
+async function fetchPolar(path: string, token: string) {
+  const res = await fetch(`https://www.polaraccesslink.com/v3/${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    console.error(`Polar API ${path} failed: ${res.status}`);
+    return null;
+  }
+  return res.json();
+}
+
+async function syncPolar(userId: string, conn: WearableConnection): Promise<void> {
+  const token = await getValidToken(conn);
+
+  const [sleepData, rechargeData] = await Promise.all([
+    fetchPolar('users/sleep', token),
+    fetchPolar('users/nightly-recharge', token),
+  ]);
+
+  const byDate: Record<string, DailyRecord> = {};
+
+  // Sueño
+  if (sleepData?.nights) {
+    for (const n of sleepData.nights) {
+      const d = n.date;
+      if (!d) continue;
+      byDate[d] = {
+        ...byDate[d],
+        user_id:            userId,
+        provider:           'polar',
+        date:               d,
+        sleep_score:        n.sleep_score,
+        sleep_duration_min: parseIsoDurationMin(n.total_sleep),
+        rem_min:            parseIsoDurationMin(n.rem_sleep),
+        deep_min:           parseIsoDurationMin(n.deep_sleep),
+        light_min:          parseIsoDurationMin(n.light_sleep),
+      };
+    }
+  }
+
+  // Recuperación nocturna (Nightly Recharge) — recovery_score se deja fuera a
+  // propósito: ans_charge no es una escala 0-100 comparable a Oura/WHOOP y
+  // fabricar esa conversión sería un dato inventado (ver principio de
+  // honestidad del proyecto). hrv/FC reposo sí son directamente comparables.
+  if (rechargeData?.recharges) {
+    for (const r of rechargeData.recharges) {
+      const d = r.date;
+      if (!d) continue;
+      byDate[d] = {
+        ...byDate[d],
+        user_id:    userId,
+        provider:   'polar',
+        date:       d,
+        hrv_ms:     r.hrv_avg,
+        resting_hr: r.heart_rate_avg,
+      };
+    }
+  }
+
+  for (const d of Object.keys(byDate)) {
+    byDate[d].raw_payload = {
+      sleep:    sleepData?.nights?.find((n: any) => n.date === d),
+      recharge: rechargeData?.recharges?.find((r: any) => r.date === d),
+    };
+  }
+
+  const dailyRecords = Object.values(byDate);
+  await mergeDaily(dailyRecords);
+
+  await adminSupabase
+    .from('wearable_connections')
+    .update({ last_synced_at: new Date().toISOString() })
+    .eq('id', conn.id);
+
+  console.log(`[sync-wearables] Polar synced for ${userId}: ${dailyRecords.length} days`);
+}
+
+// ─── Strava helpers ───────────────────────────────────────────────────────────
+// Strava es actividad/ejercicio, no sueño/recuperación — no rellena
+// recovery_score/hrv_ms/sleep_score (fabricar esos sería el mismo problema de
+// honestidad que en Polar). Solo alimenta las columnas de actividad reales.
+async function fetchStrava(path: string, token: string, params?: Record<string, string>) {
+  const url = new URL(`https://www.strava.com/api/v3/${path}`);
+  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    console.error(`Strava API ${path} failed: ${res.status}`);
+    return null;
+  }
+  return res.json();
+}
+
+async function syncStrava(userId: string, conn: WearableConnection): Promise<void> {
+  const token = await getValidToken(conn);
+  const after = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+
+  const activities = await fetchStrava('athlete/activities', token, {
+    after:    String(after),
+    per_page: '100',
+  });
+
+  const byDate: Record<string, DailyRecord> = {};
+  if (Array.isArray(activities)) {
+    for (const a of activities) {
+      const d = (a.start_date_local ?? a.start_date ?? '').substring(0, 10);
+      if (!d) continue;
+      const prev = byDate[d];
+      byDate[d] = {
+        user_id:         userId,
+        provider:        'strava',
+        date:            d,
+        calories_active: (prev?.calories_active ?? 0) + Math.round(a.kilojoules ? a.kilojoules * 0.239 : 0),
+        active_min:      (prev?.active_min ?? 0) + Math.round((a.moving_time ?? 0) / 60),
+        raw_payload:      { activities: [...(prev?.raw_payload?.activities ?? []), a] },
+      };
+    }
+  }
+
+  const dailyRecords = Object.values(byDate);
+  await mergeDaily(dailyRecords);
+
+  await adminSupabase
+    .from('wearable_connections')
+    .update({ last_synced_at: new Date().toISOString() })
+    .eq('id', conn.id);
+
+  console.log(`[sync-wearables] Strava synced for ${userId}: ${dailyRecords.length} days`);
+}
+
 // ─── Trigger ML recalculation ─────────────────────────────────────────────────
 async function triggerIntelligence(userId: string): Promise<void> {
   try {
@@ -487,6 +684,10 @@ async function syncUser(userId: string, providerFilter?: string): Promise<void> 
         await syncOura(userId, conn);
       } else if (conn.provider === 'whoop') {
         await syncWhoop(userId, conn);
+      } else if (conn.provider === 'polar') {
+        await syncPolar(userId, conn);
+      } else if (conn.provider === 'strava') {
+        await syncStrava(userId, conn);
       }
     } catch (e) {
       console.error(`[sync-wearables] Error syncing ${conn.provider} for ${userId}:`, e);
@@ -569,6 +770,90 @@ async function connectWhoop(userId: string, code: string): Promise<void> {
   }, { onConflict: 'user_id,provider' });
 }
 
+async function connectPolar(userId: string, code: string): Promise<void> {
+  const redirectUri = `${Deno.env.get('EXPO_PUBLIC_APP_URL') ?? 'https://growthplayers.vercel.app'}/oauth/polar/callback`;
+  const basicAuth = btoa(`${POLAR_CLIENT_ID}:${POLAR_CLIENT_SECRET}`);
+  const res = await fetch('https://polarremote.com/v2/oauth2/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization:  `Basic ${basicAuth}`,
+    },
+    body: new URLSearchParams({
+      grant_type:   'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Polar token exchange failed: ${res.status} ${err}`);
+  }
+  const data = await res.json();
+  const expiresAt = data.expires_in
+    ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+    : null;
+
+  await adminSupabase.from('wearable_connections').upsert({
+    user_id:          userId,
+    provider:         'polar',
+    access_token:     data.access_token,
+    refresh_token:    data.refresh_token ?? '',
+    token_expires_at: expiresAt,
+    is_active:        true,
+    connected_at:     new Date().toISOString(),
+    scope:            data.scope ? data.scope.split(' ') : null,
+  }, { onConflict: 'user_id,provider' });
+
+  // Paso extra de Polar (no existe en Oura/WHOOP/Strava): el token no sirve
+  // para leer datos hasta registrar el usuario en AccessLink. 409 = ya
+  // registrado en una conexión previa — no es un error real.
+  const regRes = await fetch('https://www.polaraccesslink.com/v3/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization:  `Bearer ${data.access_token}`,
+    },
+    body: JSON.stringify({ 'member-id': userId }),
+  });
+  if (!regRes.ok && regRes.status !== 409) {
+    const err = await regRes.text();
+    console.error(`[sync-wearables] Polar user registration failed: ${regRes.status} ${err}`);
+  }
+}
+
+async function connectStrava(userId: string, code: string): Promise<void> {
+  const res = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type:    'authorization_code',
+      client_id:     STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      code,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Strava token exchange failed: ${res.status} ${err}`);
+  }
+  const data = await res.json();
+  const expiresAt = data.expires_at
+    ? new Date(data.expires_at * 1000).toISOString()
+    : null;
+
+  await adminSupabase.from('wearable_connections').upsert({
+    user_id:          userId,
+    provider:         'strava',
+    access_token:     data.access_token,
+    refresh_token:    data.refresh_token ?? '',
+    token_expires_at: expiresAt,
+    is_active:        true,
+    connected_at:     new Date().toISOString(),
+    scope:            null, // Strava no devuelve el scope concedido en el token exchange.
+  }, { onConflict: 'user_id,provider' });
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -603,6 +888,10 @@ Deno.serve(async (req: Request) => {
         await connectOura(authedUserId, code);
       } else if (provider === 'whoop') {
         await connectWhoop(authedUserId, code);
+      } else if (provider === 'polar') {
+        await connectPolar(authedUserId, code);
+      } else if (provider === 'strava') {
+        await connectStrava(authedUserId, code);
       } else {
         return json({ error: 'Unknown provider' }, 400);
       }
