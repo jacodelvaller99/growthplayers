@@ -18,7 +18,7 @@ const SECTIONS: Section[] = [
   {
     heading: '1. Es para bienestar y educación, no atención médica',
     body: [
-      'La aplicación LifeFlow / Polaris y todo su contenido (programa, mentor de IA, herramientas de bienestar, interpretaciones de datos biométricos, seguimiento de hábitos, ayuno, suplementación y mediciones) tienen una finalidad exclusivamente informativa, educativa y de desarrollo personal.',
+      'La aplicación Polaris y todo su contenido (programa, mentor de IA, herramientas de bienestar, interpretaciones de datos biométricos, seguimiento de hábitos, ayuno, suplementación y mediciones) tienen una finalidad exclusivamente informativa, educativa y de desarrollo personal.',
       'La App NO es un dispositivo médico, no presta servicios de salud, no realiza diagnósticos y no sustituye la consulta, el examen, el diagnóstico ni el tratamiento de un profesional de la salud cualificado.',
     ],
   },

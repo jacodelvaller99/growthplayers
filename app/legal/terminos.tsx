@@ -172,7 +172,7 @@ export default function TerminosScreen() {
 
       <Text style={styles.eyebrow}>TÉRMINOS Y CONDICIONES DE USO</Text>
       <Text style={styles.lead}>
-        Al crear una cuenta o usar la App LifeFlow / Polaris, usted acepta estos Términos. Si no está de acuerdo, no use la App.
+        Al crear una cuenta o usar la App Polaris, usted acepta estos Términos. Si no está de acuerdo, no use la App.
       </Text>
 
       {/* Meta block */}
