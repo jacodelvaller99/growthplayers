@@ -355,14 +355,21 @@ export async function renderAllViews(
   // threshold ALTO (0.72): solo lo que ya está caliente — el oro del pecho —
   // florece; la plata queda fría, como en la referencia. Con threshold bajo
   // el cuerpo entero brillaba y el halo llegaba a las esquinas del lienzo.
-  // TRES INTENTOS reales de subir bloom (radius 0.55, radius 0.4, strength
-  // 0.62): los tres, medidos por bbox real de píxeles pintados, terminaron
-  // tocando el borde del lienzo (bbox [0,0,w,h] en vez del margen negro
-  // original ~20px) — la cobertura subía de 68% a 91-100%. UnrealBloomPass
-  // opera sobre una pirámide de mip-downsamples del FRAME COMPLETO, no en
-  // píxeles absolutos, y a 550×891 cualquier subida ya cubre casi todo el
-  // ancho. Devuelto a los valores originales verificados — el halo más
-  // visible se deja para una resolución de render mayor, no para esta.
+  // CUATRO intentos reales de agrandar el halo, dos ejes distintos:
+  // (1) A 550×891: radius 0.55, radius 0.4, strength 0.62 — los tres tocaban
+  //     el borde del lienzo (bbox [0,0,w,h], cobertura 68%->91-100%).
+  // (2) Subir RENDER_SCALE a 3.2 (canvas 704×1140) + strength 0.65/radius
+  //     0.35: el halo dejó de tapar los huecos entre partículas de polvo —
+  //     el tamaño de partícula (`size` en PointsMaterial) está en UNIDADES
+  //     DE MUNDO, no en píxeles, así que a más resolución cada partícula
+  //     ocupa MENOS fracción del lienzo y los huecos entre ellas se
+  //     agrandan en píxeles. Medido: cobertura CAYÓ de 68% a 12-52% —  el
+  //     polvo se leía más ralo, no más sólido. Subir resolución sin
+  //     también subir el tamaño de partícula empeora, no mejora.
+  // Revertido a los valores verificados y ya en producción — retocar esto
+  // de verdad exige re-tunear tamaño de partícula Y bloom juntos, no uno
+  // solo, y no a ciegas sin poder ver el render (el panel del Browser no
+  // compone frames para screenshot en esta sesión).
   const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.3, 0.72);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());

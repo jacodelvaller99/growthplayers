@@ -32,6 +32,11 @@ export interface BodyScanReportProps {
 
 const CAM_ZOOM = 1.05; // el cuerpo llena la columna, como en la referencia.
 const COL_W = 220; // px CSS — la referencia respira; 150 apretaba el detalle.
+// Probado 2.5 -> 3.2 para darle margen al bloom (ver particleBodyViewer.ts):
+// el tamaño de partícula está en unidades de mundo, no en píxeles, así que
+// subir solo la resolución hizo que el polvo se viera MÁS ralo (cobertura
+// 68% -> 12-52%, medido), no más sólido. Revertido — hace falta re-tunear
+// tamaño de partícula junto con el bloom, no uno solo.
 const RENDER_SCALE = 2.5; // supersample: el bloom y las fibras necesitan pixeles.
 const ASPECT = 300 / 486;
 
