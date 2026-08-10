@@ -1,27 +1,56 @@
 /**
- * BodyScanReport — el reporte de 6 vistas, calcado de la referencia que
- * mandó el dueño: mismo rótulo, misma leyenda con los hex literales, mismos
- * corchetes de esquina, mismas 6 vistas etiquetadas "01. VISTA FRONTAL" …
- * "06. 3/4 DERECHO". Es un REPORTE — estático, sin órbita ni toque — no el
- * widget interactivo del check-in (`BodyMap3D`, que sigue siendo el que se
- * toca).
+ * BodyScanReport — el reporte de 6 vistas. Calcado de la referencia original
+ * del dueño (rótulo, leyenda con hex literales, corchetes de esquina) y
+ * AHORA TAMBIÉN de la referencia nueva (video generado por IA, "loop
+ * animado en vivo" — decisión explícita del dueño, ver plan
+ * `ESCANEO VIVO`): pulso del pecho, red de líneas entre articulaciones con
+ * retículas, fondo grid+starfield, insignia "ESCANEO COMPLETO", HUD con
+ * datos REALES del pipeline (no cifras inventadas — ver honestidad abajo).
  *
- * ponytail: sin animación (ni shimmer, ni auto-rotate). Un reporte es un
- * frame fijo — la referencia misma es una composición estática.
+ * Lo que NO se intenta replicar, a propósito: piel fotoreal con reflejos
+ * (necesita un motor PBR, no es un ajuste), una malla 3D literal de corazón
+ * anatómico (no hay ese asset — se aproxima con densidad/calidez de
+ * partículas vía `heartClusterColor`), o un fondo que cambia de estilo
+ * (grilla → nebulosa → matrix rain) como el video de referencia — ahí no
+ * hay una escena 3D coherente detrás, es un artefacto de generación por IA.
+ * Un solo fondo, consistente.
+ *
+ * Es un REPORTE — no el widget interactivo del check-in (`BodyMap3D`, que
+ * sigue siendo el que se toca). `pickZone`/toque siguen ahí sobre la nube
+ * sintética (picking sobre malla real es trabajo aparte).
+ *
+ * Animación: TODA vía CSS (`@keyframes` + `prefers-reduced-motion`), no un
+ * loop de `requestAnimationFrame` en JS — nada que cancelar al desmontar,
+ * nada que recalcule en cada frame. Es la misma razón por la que no se
+ * re-renderiza la escena de three.js por frame (costaría 6 cámaras × ~118k
+ * partículas × 60fps — ya congeló la pestaña una vez en el muestreo). El
+ * cuerpo 3D sigue siendo UN batch estático (`renderAllViews`, sin cambios);
+ * el pulso/las líneas/el fondo son overlays 2D baratos encima.
+ *
+ * Honestidad: las tiras "waveform" del pie son decorativas (chrome visual,
+ * igual que los corchetes de esquina) — CERO cifras ni unidades inventadas
+ * (nada de "72 BPM"). Los ÚNICOS números que se muestran son reales del
+ * propio pipeline: partículas totales (`PARTICLE_TOTAL`) y vistas cargadas.
+ * Mismo principio que ya se aplicó en "Honestidad" al filtro de
+ * testimonios verificados — no fabricar datos que no existen.
  *
  * El cuerpo pintado es el modelo 3D REAL del dueño (`particleBodyViewer.ts`,
- * `public/models/cuerpo-particulas.glb`) con ~250k partículas en 3 capas y
- * bloom. Las 6 vistas se renderizan de UNA en un solo renderer offscreen y
- * llegan aquí como ImageBitmaps — sin 6 contextos WebGL vivos, que es lo que
- * permite esta densidad. `pickZone`/toque siguen en `BodyMap3D` sobre la
- * nube sintética (picking sobre malla real es trabajo aparte).
+ * `public/models/cuerpo-particulas.glb`). Las 6 vistas se renderizan de UNA
+ * en un solo renderer offscreen y llegan aquí como ImageBitmaps — sin 6
+ * contextos WebGL vivos, que es lo que permite esta densidad.
  */
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Fonts, palette } from '@/constants/theme';
 import type { BodyZone } from '@/lib/bodyMapLogic';
 import { VIEW_PRESETS } from '@/lib/humanFigure3DLogic';
-import { renderAllViews } from '@/lib/particleBodyViewer';
+import {
+  PARTICLE_TOTAL,
+  projectChestCenter,
+  projectJointsForView,
+  renderAllViews,
+  type ProjectedJoint,
+} from '@/lib/particleBodyViewer';
 
 export interface BodyScanReportProps {
   /** Zona que arde en oro — default 'pecho', la misma concentración que la
@@ -39,6 +68,65 @@ const COL_W = 220; // px CSS — la referencia respira; 150 apretaba el detalle.
 // tamaño de partícula junto con el bloom, no uno solo.
 const RENDER_SCALE = 2.5; // supersample: el bloom y las fibras necesitan pixeles.
 const ASPECT = 300 / 486;
+
+/** Pares de articulaciones que se conectan con una línea — el "esqueleto"
+ *  de la red del HUD. Incluye dos líneas al pecho para atar el pulso al
+ *  resto de la red (como en la referencia: el brillo del pecho se conecta
+ *  a los hombros). */
+const JOINT_LINKS: readonly [string, string][] = [
+  ['shoulderL', 'shoulderR'],
+  ['shoulderL', 'elbowL'],
+  ['shoulderR', 'elbowR'],
+  ['shoulderL', 'hipL'],
+  ['shoulderR', 'hipR'],
+  ['hipL', 'hipR'],
+  ['hipL', 'kneeL'],
+  ['hipR', 'kneeR'],
+  ['chest', 'shoulderL'],
+  ['chest', 'shoulderR'],
+];
+
+let stylesInjected = false;
+/** Inyecta las animaciones CSS una sola vez (mismo patrón que
+ *  `injectThemeVars` en `constants/themeColors.ts`). Todo vía `@keyframes` +
+ *  `prefers-reduced-motion` — nada de `requestAnimationFrame` en JS. */
+function injectScanAnimationStyles(): void {
+  if (stylesInjected || typeof document === 'undefined') return;
+  if (document.getElementById('polaris-scan-anim')) {
+    stylesInjected = true;
+    return;
+  }
+  const style = document.createElement('style');
+  style.id = 'polaris-scan-anim';
+  style.textContent = `
+    @keyframes polarisScanPulse {
+      0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.88); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.14); }
+    }
+    @keyframes polarisScanReticle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.85; }
+    }
+    @keyframes polarisScanLine {
+      0%, 100% { opacity: 0.25; }
+      50% { opacity: 0.65; }
+    }
+    @keyframes polarisScanDash {
+      from { stroke-dashoffset: 0; }
+      to { stroke-dashoffset: -32; }
+    }
+    @keyframes polarisScanDrift {
+      from { background-position: 0 0; }
+      to { background-position: -120px -120px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .polaris-scan-pulse, .polaris-scan-reticle, .polaris-scan-line,
+      .polaris-scan-waveform, .polaris-scan-starfield { animation: none !important; }
+    }
+  `;
+  document.head.appendChild(style);
+  stylesInjected = true;
+}
 
 /** Regleta de medición vertical — el detalle del HUD de la referencia entre
  *  vista y vista. Decorativa: `aria-hidden`. */
@@ -69,6 +157,84 @@ function Ruler() {
   );
 }
 
+/** Insignia de estado — mismo lenguaje visual que `StatusPill` de
+ *  `components/polaris.tsx`, reimplementada en `<div>` plano porque este
+ *  archivo es puro HTML/CSS-in-JS (sin componentes RN) por rendimiento del
+ *  compositing del canvas; mezclar paradigmas ahí sí sería inconsistente. */
+function ScanBadge({ complete }: { complete: boolean }) {
+  const color = complete ? palette.success : palette.smoke;
+  return (
+    <span
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        border: `1px solid ${color}`, borderRadius: 999, padding: '3px 10px',
+        fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 1, color,
+      }}>
+      <span style={{ width: 6, height: 6, borderRadius: 3, background: color, display: 'inline-block' }} />
+      {complete ? 'ESCANEO COMPLETO' : 'ESCANEANDO…'}
+    </span>
+  );
+}
+
+/** Retícula circular en una articulación — anillo delgado + punto central,
+ *  el lenguaje visual de la referencia. */
+function JointReticle({ joint, delay }: { joint: ProjectedJoint; delay: number }) {
+  const cx = joint.x * 100;
+  const cy = joint.y * 100;
+  return (
+    <g className="polaris-scan-reticle" style={{ animation: `polarisScanReticle 2.8s ease-in-out ${delay}s infinite` }}>
+      <circle cx={cx} cy={cy} r={1.8} fill="none" stroke={palette.goldText} strokeWidth={0.25} />
+      <circle cx={cx} cy={cy} r={0.5} fill={palette.goldText} />
+    </g>
+  );
+}
+
+/** Overlay SVG de la red de articulaciones + el pulso del pecho, superpuesto
+ *  al canvas del cuerpo. `viewBox` en porcentaje (0-100) para no depender
+ *  del tamaño en píxeles de la columna. */
+function JointNetworkOverlay({ preset }: { preset: (typeof VIEW_PRESETS)[number] }) {
+  const joints = useMemo(
+    () => projectJointsForView(preset.yaw, preset.pitch, CAM_ZOOM, ASPECT),
+    [preset],
+  );
+  const chest = useMemo(
+    () => projectChestCenter(preset.yaw, preset.pitch, CAM_ZOOM, ASPECT),
+    [preset],
+  );
+  const byId = useMemo(() => {
+    const map = new Map<string, { x: number; y: number }>(joints.map((j) => [j.id, j]));
+    map.set('chest', chest);
+    return map;
+  }, [joints, chest]);
+
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+      {JOINT_LINKS.map(([fromId, toId], i) => {
+        const a = byId.get(fromId);
+        const b = byId.get(toId);
+        if (!a || !b) return null;
+        return (
+          <line
+            key={`${fromId}-${toId}`}
+            className="polaris-scan-line"
+            x1={a.x * 100} y1={a.y * 100} x2={b.x * 100} y2={b.y * 100}
+            stroke={palette.lineGold} strokeWidth={0.3}
+            strokeDasharray="2.5 1.5"
+            style={{ animation: `polarisScanLine 3.2s ease-in-out ${i * 0.12}s infinite, polarisScanDash 6s linear infinite` }}
+          />
+        );
+      })}
+      {joints.map((j, i) => (
+        <JointReticle key={j.id} joint={j} delay={i * 0.15} />
+      ))}
+    </svg>
+  );
+}
+
 function ScanColumn({ preset, bitmap }: { preset: (typeof VIEW_PRESETS)[number]; bitmap: ImageBitmap | null }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -80,10 +246,40 @@ function ScanColumn({ preset, bitmap }: { preset: (typeof VIEW_PRESETS)[number];
     canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
   }, [bitmap]);
 
+  const chest = useMemo(
+    () => projectChestCenter(preset.yaw, preset.pitch, CAM_ZOOM, ASPECT),
+    [preset],
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: '0 0 auto', width: COL_W }}>
       <div style={{ width: '100%', aspectRatio: '300 / 486', position: 'relative' }}>
         <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+        {bitmap ? (
+          <>
+            {/* Pulso del pecho — radial-gradient sobre la posición proyectada
+                real del pecho (mismo CHEST_Y que colorea las partículas),
+                mixBlendMode 'screen' para que se funda con el brillo del
+                canvas de abajo en vez de taparlo con un círculo plano. */}
+            <div
+              aria-hidden
+              className="polaris-scan-pulse"
+              style={{
+                position: 'absolute',
+                left: `${chest.x * 100}%`,
+                top: `${chest.y * 100}%`,
+                width: '38%',
+                aspectRatio: '1 / 1',
+                borderRadius: '50%',
+                background: `radial-gradient(circle, ${palette.goldText} 0%, rgba(255,200,4,0.35) 45%, transparent 72%)`,
+                mixBlendMode: 'screen',
+                pointerEvents: 'none',
+                animation: 'polarisScanPulse 2.4s ease-in-out infinite',
+              }}
+            />
+            <JointNetworkOverlay preset={preset} />
+          </>
+        ) : null}
       </div>
       <div style={{ fontFamily: Fonts.display, fontSize: 10, letterSpacing: 1, color: palette.smoke, whiteSpace: 'nowrap' }}>
         {preset.id}. {preset.label}
@@ -92,8 +288,63 @@ function ScanColumn({ preset, bitmap }: { preset: (typeof VIEW_PRESETS)[number];
   );
 }
 
+/** Tira "waveform" decorativa — trazo SVG determinístico (mismo patrón de
+ *  ruido shader-like que `humanFigure3DLogic.hash`, copiado aquí porque esa
+ *  función no está exportada), animado por `stroke-dashoffset`. Puro chrome
+ *  visual: SIN cifras ni unidades — no pretende ser un dato biométrico real. */
+function hash(n: number): number {
+  const s = Math.sin(n) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+function Waveform({ seed }: { seed: number }) {
+  const points = useMemo(() => {
+    const n = 28;
+    return Array.from({ length: n }, (_, i) => {
+      const x = (i / (n - 1)) * 100;
+      const y = 50 + (hash(seed + i * 12.9898) - 0.5) * 70;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  }, [seed]);
+  return (
+    <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: 28, display: 'block' }}>
+      <polyline
+        className="polaris-scan-waveform"
+        points={points}
+        fill="none"
+        stroke={palette.goldText}
+        strokeWidth={2}
+        strokeDasharray="6 4"
+        style={{ animation: 'polarisScanDash 3.4s linear infinite', opacity: 0.55 }}
+      />
+    </svg>
+  );
+}
+
+/** Barra de progreso simple — reusa el lenguaje visual de `StateMeter`
+ *  (`components/polaris.tsx`) en `<div>` plano por el mismo motivo que
+ *  `ScanBadge`. `value` es una fracción real [0,1], no una cifra inventada. */
+function HudGauge({ label, value }: { label: string; value: number }) {
+  const percent = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 90 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: Fonts.mono, fontSize: 8, letterSpacing: 0.5, color: palette.smoke }}>
+        <span>{label}</span>
+        <span>{percent}%</span>
+      </div>
+      <div style={{ height: 3, borderRadius: 2, background: palette.lineSoft, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${percent}%`, background: palette.gold, borderRadius: 2 }} />
+      </div>
+    </div>
+  );
+}
+
 export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScanReportProps) {
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
+
+  useEffect(() => {
+    injectScanAnimationStyles();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,17 +372,35 @@ export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScan
     };
   }, []);
 
+  const loaded = bitmaps.length === VIEW_PRESETS.length;
+
   return (
     <div
       style={{
-        background: palette.black,
+        background: `${palette.black} linear-gradient(${palette.line} 1px, transparent 1px), linear-gradient(90deg, ${palette.line} 1px, transparent 1px)`,
+        backgroundSize: '100% 100%, 28px 28px, 28px 28px',
         border: `1px solid ${palette.line}`,
         borderRadius: 4,
         padding: 20,
         position: 'relative',
+        overflow: 'hidden',
       }}>
-      {/* ── Cabecera: rótulo + título + leyenda ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+      {/* Starfield sutil — un solo fondo consistente, no tres estilos como
+          en el video de referencia (grilla → nebulosa → matrix rain: eso es
+          un artefacto de generación por IA, no una escena 3D coherente). */}
+      <div
+        aria-hidden
+        className="polaris-scan-starfield"
+        style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.18,
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1.5px)',
+          backgroundSize: '46px 46px',
+          animation: 'polarisScanDrift 70s linear infinite',
+        }}
+      />
+
+      {/* ── Cabecera: rótulo + título + leyenda + insignia de estado ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20, position: 'relative' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ color: palette.goldText, fontSize: 12 }}>◆</span>
@@ -139,8 +408,11 @@ export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScan
               ESCANEO BIOMÉTRICO
             </span>
           </div>
-          <div style={{ fontFamily: Fonts.display, fontWeight: 800, fontSize: 26, letterSpacing: 1, color: palette.ivory, marginTop: 4 }}>
-            CUERPO DE PARTÍCULAS
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
+            <span style={{ fontFamily: Fonts.display, fontWeight: 800, fontSize: 26, letterSpacing: 1, color: palette.ivory }}>
+              CUERPO DE PARTÍCULAS
+            </span>
+            <ScanBadge complete={loaded} />
           </div>
         </div>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -176,7 +448,7 @@ export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScan
       ))}
 
       {/* ── Las 6 vistas — scroll horizontal en pantallas angostas ── */}
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, alignItems: 'stretch' }}>
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, alignItems: 'stretch', position: 'relative' }}>
         {VIEW_PRESETS.map((preset, i) => (
           <Fragment key={preset.id}>
             {i > 0 ? <Ruler /> : null}
@@ -185,12 +457,17 @@ export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScan
         ))}
       </div>
 
-      {/* ── Pie ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, gap: 12 }}>
+      {/* ── Pie: HUD con datos reales del pipeline + waveforms decorativos ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, gap: 16, flexWrap: 'wrap', position: 'relative' }}>
         <span style={{ fontFamily: Fonts.mono, fontSize: 9, letterSpacing: 1, color: palette.smoke }}>
-          MODELO 3D · ESCANEO BIOMÉTRICO · CUERPO DE PARTÍCULAS
+          MODELO 3D · ESCANEO BIOMÉTRICO · CUERPO DE PARTÍCULAS · {PARTICLE_TOTAL.toLocaleString('es')} PARTÍCULAS
         </span>
-        <span style={{ color: palette.smoke, fontSize: 12 }}>＋</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <HudGauge label="VISTAS" value={bitmaps.length / VIEW_PRESETS.length} />
+          <div style={{ width: 70 }}><Waveform seed={3.7} /></div>
+          <div style={{ width: 70 }}><Waveform seed={11.2} /></div>
+          <span style={{ color: palette.smoke, fontSize: 12 }}>＋</span>
+        </div>
       </div>
     </div>
   );

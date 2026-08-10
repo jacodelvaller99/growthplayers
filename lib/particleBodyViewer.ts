@@ -24,7 +24,7 @@
  * (`./examples/jsm/*` incluido) y este módulo es el ÚNICO importador de
  * "three" del repo. Imports dinámicos: cero peso en el bundle principal.
  */
-import { GOLD, goldIntensity, heightGradientColor } from './particleBodyGradient';
+import { GOLD, heartClusterColor, heartClusterIntensity } from './particleBodyGradient';
 
 const MODEL_URL = '/models/cuerpo-particulas.glb';
 /** Del metadata.json del paquete actual: altura 1.80m, origen suelo-centro. */
@@ -46,6 +46,9 @@ const SPARK_COUNT = 12000; // chispas: el granulado brillante.
 // muestreo aleatorio entre recargas, no una subida real) — dentro del
 // margen seguro.
 const FIBER_COUNT = 16000; // fibras internas: solo banda dorada.
+/** Total real de partículas — lo muestra el HUD del reporte (dato real del
+ *  propio pipeline, no una cifra inventada). */
+export const PARTICLE_TOTAL = DUST_COUNT + SPARK_COUNT + FIBER_COUNT;
 /** Cada cuántas partículas se le devuelve el hilo al navegador. Sin esto el
  *  muestreo es un bloque síncrono largo y la pestaña se congela. */
 const YIELD_EVERY = 12000;
@@ -57,7 +60,7 @@ const FLOAT_LAYER_FRACTION = 0.12; // capa flotante sutil del polvo.
 const FLOAT_LAYER_MAX = 0.018; // metros.
 const SKIN_HUG_MAX = 0.003;
 const FIBER_DEPTH = 0.02; // las fibras van hacia ADENTRO.
-const GOLD_BAND_MIN = 0.35; // goldIntensity mínima para aceptar una fibra.
+const GOLD_BAND_MIN = 0.35; // heartClusterIntensity mínima para aceptar una fibra.
 
 interface Layer {
   positions: Float32Array;
@@ -224,7 +227,12 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
         dust.positions[idx] = pt.x + pt.nx * off;
         dust.positions[idx + 1] = pt.y + pt.ny * off;
         dust.positions[idx + 2] = pt.z + pt.nz * off;
-        const [r, g, b] = heightGradientColor((dust.positions[idx + 1] - minY) / heightSpan);
+        // heartClusterColor (no heightGradientColor): además de la altura, pesa
+        // la normal Z (pt.nz) para que el oro se concentre en la cara que mira
+        // a la cámara -- un cúmulo en el pecho, no una banda alrededor de todo
+        // el torso (verificado antes: el "oro" se veía igual de fuerte de
+        // perfil que de frente).
+        const [r, g, b] = heartClusterColor((dust.positions[idx + 1] - minY) / heightSpan, pt.nz);
         dust.colors[idx] = r;
         dust.colors[idx + 1] = g;
         dust.colors[idx + 2] = b;
@@ -243,7 +251,7 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
         sparks.positions[idx] = pt.x + pt.nx * off;
         sparks.positions[idx + 1] = pt.y + pt.ny * off;
         sparks.positions[idx + 2] = pt.z + pt.nz * off;
-        const [r, g, b] = heightGradientColor((sparks.positions[idx + 1] - minY) / heightSpan);
+        const [r, g, b] = heartClusterColor((sparks.positions[idx + 1] - minY) / heightSpan, pt.nz);
         // Las chispas van un paso más brillantes — es lo que el bloom recoge.
         sparks.colors[idx] = Math.min(1, r * 1.35);
         sparks.colors[idx + 1] = Math.min(1, g * 1.35);
@@ -261,7 +269,7 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
         if (guard % YIELD_EVERY === 0) await yieldToBrowser();
         samplePoint(pos, indices, cdf, totalArea, pt);
         const normY = (pt.y - minY) / heightSpan;
-        if (goldIntensity(normY) < GOLD_BAND_MIN) continue;
+        if (heartClusterIntensity(normY, pt.nz) < GOLD_BAND_MIN) continue;
         // Adentro de la piel, con estría: el ruido agrupa las partículas en
         // vetas en vez de repartirlas parejo — se leen como fibras/venas.
         const vein = fiberNoise(pt.x * 30, pt.y * 30, pt.z * 30);
@@ -413,4 +421,117 @@ export async function renderAllViews(
   renderer.dispose();
 
   return bitmaps;
+}
+
+// ── Proyección de articulaciones — para la red de líneas del HUD ──────────
+//
+// Matemática de cámara PURA (sin `THREE`, sin WebGL): replica a mano la
+// misma fórmula de posición/mirada que usa `renderAllViews` arriba, para que
+// el overlay 2D (SVG) que dibuja `body-scan-report.web.tsx` caiga EXACTO
+// sobre el cuerpo ya renderizado, sin depender de cargar three.js solo para
+// proyectar 8 puntos. Testeable en Jest sin canvas/WebGL.
+
+interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+function sub(a: Vec3, b: Vec3): Vec3 {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+}
+function cross(a: Vec3, b: Vec3): Vec3 {
+  return { x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x };
+}
+function dot(a: Vec3, b: Vec3): number {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+function normalize(a: Vec3): Vec3 {
+  const len = Math.sqrt(dot(a, a)) || 1;
+  return { x: a.x / len, y: a.y / len, z: a.z / len };
+}
+
+const VERTICAL_FOV_DEG = 30; // mismo campo de visión que `PerspectiveCamera(30, ...)` arriba.
+
+/** Proyecta un punto del mundo a coordenadas de pantalla normalizadas [0,1]
+ *  (x: 0=izquierda…1=derecha, y: 0=arriba…1=abajo) para la MISMA cámara que
+ *  usa `renderAllViews` con ese `yaw`/`pitch`/`zoom`. `aspect` es w/h del
+ *  lienzo (constante en `body-scan-report.web.tsx`: `ASPECT = 300/486`). */
+export function projectPoint(
+  point: Vec3,
+  yaw: number,
+  pitch: number,
+  zoom: number,
+  aspect: number,
+): { x: number; y: number } {
+  const dist = 3.9 / zoom;
+  const centerY = MODEL_HEIGHT / 2;
+  const eye: Vec3 = {
+    x: Math.sin(yaw) * Math.cos(pitch) * dist,
+    y: centerY + Math.sin(pitch) * dist,
+    z: Math.cos(yaw) * Math.cos(pitch) * dist,
+  };
+  const target: Vec3 = { x: 0, y: centerY, z: 0 };
+
+  // Misma convención que `Object3D.lookAt`: la cámara mira por su -Z local.
+  const backward = normalize(sub(eye, target)); // eje +Z local de la cámara.
+  const worldUp: Vec3 = { x: 0, y: 1, z: 0 };
+  const right = normalize(cross(worldUp, backward));
+  const up = cross(backward, right);
+
+  const rel = sub(point, eye);
+  const depth = -dot(rel, backward); // positivo = delante de la cámara.
+  const safeDepth = Math.max(1e-4, depth);
+
+  const halfV = Math.tan((VERTICAL_FOV_DEG * Math.PI) / 180 / 2);
+  const viewHalfHeight = safeDepth * halfV;
+  const viewHalfWidth = viewHalfHeight * aspect;
+
+  const ndcX = dot(rel, right) / viewHalfWidth;
+  const ndcY = dot(rel, up) / viewHalfHeight;
+
+  return {
+    x: (ndcX + 1) / 2,
+    y: 1 - (ndcY + 1) / 2, // pantalla crece hacia abajo; NDC crece hacia arriba.
+  };
+}
+
+/** Articulaciones aproximadas en fracción de `MODEL_HEIGHT` (proporciones
+ *  humanas estándar: hombro ~0.82, codo ~0.63, cadera ~0.52, rodilla ~0.28).
+ *  No hay picking real sobre la malla nueva todavía (ver comentario en
+ *  `particleBodyGradient.ts`/CLAUDE.md) — esto es una aproximación visual
+ *  para el overlay del HUD, no una lectura anatómica exacta del asset. */
+const JOINTS: readonly { id: string; x: number; y: number; z: number }[] = [
+  { id: 'shoulderL', x: -0.16, y: 0.82, z: 0.02 },
+  { id: 'shoulderR', x: 0.16, y: 0.82, z: 0.02 },
+  { id: 'elbowL', x: -0.19, y: 0.63, z: 0.01 },
+  { id: 'elbowR', x: 0.19, y: 0.63, z: 0.01 },
+  { id: 'hipL', x: -0.09, y: 0.52, z: 0 },
+  { id: 'hipR', x: 0.09, y: 0.52, z: 0 },
+  { id: 'kneeL', x: -0.06, y: 0.28, z: 0.02 },
+  { id: 'kneeR', x: 0.06, y: 0.28, z: 0.02 },
+];
+
+export interface ProjectedJoint {
+  id: string;
+  x: number;
+  y: number;
+}
+
+/** Las ~8 articulaciones proyectadas a [0,1] para una vista. Puro,
+ *  determinístico — mismo `yaw`/`pitch` que `VIEW_PRESETS`. */
+export function projectJointsForView(yaw: number, pitch: number, zoom: number, aspect: number): ProjectedJoint[] {
+  return JOINTS.map((j) => ({
+    id: j.id,
+    ...projectPoint({ x: j.x * MODEL_HEIGHT, y: j.y * MODEL_HEIGHT, z: j.z * MODEL_HEIGHT }, yaw, pitch, zoom, aspect),
+  }));
+}
+
+/** El punto del pecho donde "arde" el oro (mismo `CHEST_Y` que
+ *  `particleBodyGradient.ts`), proyectado a pantalla — lo usa el overlay del
+ *  pulso para saber dónde centrar el radial-gradient. */
+export function projectChestCenter(yaw: number, pitch: number, zoom: number, aspect: number): { x: number; y: number } {
+  const CHEST_Y_FRACTION = 0.72; // debe coincidir con CHEST_Y de particleBodyGradient.ts.
+  const CHEST_DEPTH = 0.13; // metros hacia adelante desde el eje central — pecho real, no la espalda.
+  return projectPoint({ x: 0, y: CHEST_Y_FRACTION * MODEL_HEIGHT, z: CHEST_DEPTH }, yaw, pitch, zoom, aspect);
 }
