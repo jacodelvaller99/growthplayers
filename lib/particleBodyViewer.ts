@@ -68,7 +68,19 @@ let cloudPromise: Promise<ParticleCloud> | null = null;
 
 /** CDF acumulada de áreas de triángulo — sin esto, triángulos grandes
  *  (torso) quedarían tan poblados como los diminutos (dedos): huecos en el
- *  cuerpo y grumos en las manos. */
+ *  cuerpo y grumos en las manos.
+ *
+ *  NO SELLES LOS AGUJEROS DE LA MALLA. Auditada en Blender 5.2: tiene 2.266
+ *  bordes de contorno en 12 bucles — cráneo abierto por arriba, plantas de
+ *  los pies, entrepierna. Parecen un defecto y no lo son: son aberturas que
+ *  nunca se ven. `bmesh.ops.holes_fill` las cierra con tapones grandes y
+ *  alabeados que, YA TRIANGULADOS (que es lo que se renderiza), suman +41%
+ *  de área: 1,84 → 2,60 m², cuando 1,84 m² ya es la superficie correcta de
+ *  un cuerpo de 1,80 m. Como este muestreo es proporcional al ÁREA, ~29% de
+ *  las partículas acabarían sobre superficie inventada — el tapón mayor cae
+ *  a altura relativa 0,90, un disco plano sobre la cabeza. Medido, no
+ *  supuesto. Los agujeros no producen huecos visibles justamente porque el
+ *  muestreo recorre los triángulos que existen. */
 function buildTriangleCDF(
   pos: Float32Array,
   indices: Uint32Array | Uint16Array,
