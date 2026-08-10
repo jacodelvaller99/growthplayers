@@ -325,6 +325,18 @@ export async function renderAllViews(
   // que se ve es la SUMA — a 0.35 el cuerpo entero se quemaba a blanco y el
   // bloom bañaba hasta las esquinas (verificado por píxel: esquina 134,125,47
   // en vez de negro). El brillo aquí sale de la acumulación, no del alpha.
+  // Probado dust 0.0016->0.0022 (+37%) y sparks 0.0042->0.0052 (+24%),
+  // pensando que partículas más grandes cerrarían los huecos del polvo sin
+  // depender del blur del bloom. Medido en las 6 vistas a la resolución
+  // actual: cobertura 63.5-92% — dentro del ruido de muestreo aleatorio del
+  // baseline (57.8-91.1%), sin cambio real. Combinado con RENDER_SCALE 3.2
+  // (probado también): cobertura BAJÓ más aún (13-42%) — el tamaño de
+  // partícula no es la variable que estaba faltando; algo en cómo
+  // `sizeAttenuation` calcula el tamaño en pantalla al subir resolución no
+  // se comporta como la teoría predice (debería mantener la fracción de
+  // pantalla constante). Sin poder ver el render real esta sesión (el panel
+  // del Browser no compone frames), no hay forma responsable de seguir
+  // ajustando esto a ciegas — revertido a los valores ya verificados.
   const layerSpecs: { layer: Layer; size: number; opacity: number }[] = [
     { layer: cloud.dust, size: 0.0016, opacity: 0.13 },
     { layer: cloud.sparks, size: 0.0042, opacity: 0.5 },
