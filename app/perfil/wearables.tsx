@@ -55,6 +55,8 @@ const supa: any = supabase;
 const PROVIDER_NAME: Record<WearableProvider, string> = {
   whoop:          'WHOOP',
   oura:           'Oura Ring',
+  polar:          'Polar',
+  strava:         'Strava',
   apple_health:   'Apple Salud',
   health_connect: 'Google Health Connect',
   aggregator:     'Cualquier reloj',
@@ -72,11 +74,12 @@ const PROVIDER_NAME: Record<WearableProvider, string> = {
 // 2026-09-30 (migración forzada a Google Health con re-consentimiento de todos los
 // usuarios) — no vale la pena que un cliente conecte algo que muere en semanas.
 // Withings tampoco aparece: Open Wearables no lo cubre en su matriz oficial.
+// Polar y Strava salieron de esta lista: ahora tienen tarjeta OAuth directa
+// propia (ver ALL_PROVIDERS) que no depende de ningún vendor externo — dejarlos
+// aquí también habría creado dos botones "Polar" con dos caminos distintos.
 const OW_PROVIDERS: { id: string; label: string; gated?: boolean }[] = [
-  { id: 'polar',      label: 'Polar' },
   { id: 'whoop',      label: 'WHOOP' },
   { id: 'oura',       label: 'Oura' },
-  { id: 'strava',     label: 'Strava' },
   { id: 'garmin',     label: 'Garmin',     gated: true },
   { id: 'suunto',     label: 'Suunto',     gated: true },
   { id: 'ultrahuman', label: 'Ultrahuman', gated: true },
@@ -157,6 +160,22 @@ const ALL_PROVIDERS: ProviderMeta[] = [
     description: 'El anillo Oura mide readiness, calidad de sueño y frecuencia cardíaca en reposo con alta precisión para dispositivos de consumo.',
     icon:        'circle',
     metrics:     ['Readiness', 'HRV', 'Sueño', 'FC Reposo'],
+  },
+  {
+    id:          'polar',
+    name:        'Polar',
+    subtitle:    'Sueño · Nightly Recharge · HRV',
+    description: 'Conecta tu reloj Polar (AccessLink) para leer tu sueño y las métricas de recuperación nocturna que calibran tu protocolo.',
+    icon:        'watch',
+    metrics:     ['Sueño', 'HRV', 'FC Reposo'],
+  },
+  {
+    id:          'strava',
+    name:        'Strava',
+    subtitle:    'Actividad · Calorías · Tiempo activo',
+    description: 'Conecta Strava para que tus entrenamientos registrados (running, ciclismo y más) alimenten tu carga de actividad diaria.',
+    icon:        'directions-run',
+    metrics:     ['Actividad', 'Calorías', 'Min. activos'],
   },
 ];
 
@@ -609,9 +628,8 @@ export default function WearablesScreen() {
   // Handle OAuth callback params (?connected=whoop or ?error=...)
   useEffect(() => {
     if (params.connected) {
-      const name = params.connected === 'whoop' ? 'WHOOP'
-        : params.connected === 'aggregator' ? 'Tu reloj'
-        : 'Oura Ring';
+      const name = params.connected === 'aggregator' ? 'Tu reloj'
+        : PROVIDER_NAME[params.connected as WearableProvider] ?? 'Tu dispositivo';
       setBanner({ type: 'success', msg: `${name} conectado exitosamente ✓` });
       reload();
       // Clean URL params
