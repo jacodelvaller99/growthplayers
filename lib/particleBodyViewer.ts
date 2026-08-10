@@ -367,22 +367,23 @@ export async function renderAllViews(
   // threshold ALTO (0.72): solo lo que ya está caliente — el oro del pecho —
   // florece; la plata queda fría, como en la referencia. Con threshold bajo
   // el cuerpo entero brillaba y el halo llegaba a las esquinas del lienzo.
-  // CUATRO intentos reales de agrandar el halo, dos ejes distintos:
-  // (1) A 550×891: radius 0.55, radius 0.4, strength 0.62 — los tres tocaban
-  //     el borde del lienzo (bbox [0,0,w,h], cobertura 68%->91-100%).
-  // (2) Subir RENDER_SCALE a 3.2 (canvas 704×1140) + strength 0.65/radius
-  //     0.35: el halo dejó de tapar los huecos entre partículas de polvo —
-  //     el tamaño de partícula (`size` en PointsMaterial) está en UNIDADES
-  //     DE MUNDO, no en píxeles, así que a más resolución cada partícula
-  //     ocupa MENOS fracción del lienzo y los huecos entre ellas se
-  //     agrandan en píxeles. Medido: cobertura CAYÓ de 68% a 12-52% —  el
-  //     polvo se leía más ralo, no más sólido. Subir resolución sin
-  //     también subir el tamaño de partícula empeora, no mejora.
-  // Revertido a los valores verificados y ya en producción — retocar esto
-  // de verdad exige re-tunear tamaño de partícula Y bloom juntos, no uno
-  // solo, y no a ciegas sin poder ver el render (el panel del Browser no
-  // compone frames para screenshot en esta sesión).
-  const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.3, 0.72);
+  //
+  // DIAGNÓSTICO CORREGIDO: los primeros intentos de subir `radius` (0.4,
+  // 0.55) parecían tocar el borde del lienzo (cobertura 68%->91-100%), pero
+  // esas mediciones estaban CONTAMINADAS — FIBER_COUNT estaba en 22000 (ya
+  // descartado, ver arriba) al mismo tiempo. Aislado de verdad —
+  // FIBER_COUNT en el valor seguro (16000), solo `radius` variando — el
+  // halo crece GRADUAL, no de golpe: 0.30(base)->0.32->0.36->0.45->0.55,
+  // cobertura sube suave (68-93% -> 86-96%) y las esquinas se quedan casi
+  // negras en las seis vistas (máx. 20/255) en todo el barrido. 0.45 es el
+  // punto elegido: halo visiblemente más ancho que el original sin acercarse
+  // al techo real (probado hasta 0.55 sin quiebre).
+  //
+  // Referencia visual para elegir el objetivo: prototipo offline en Blender
+  // (threshold+blur gaussiano+screen-blend sobre el render de Cycles ya
+  // tuneado) — el halo bueno es ceñido al cuerpo, no una nube difusa; eso
+  // fue lo que guió a subir radius con pasos chicos en vez de saltos grandes.
+  const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.45, 0.72);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
