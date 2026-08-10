@@ -39,7 +39,13 @@ const MODEL_HEIGHT = 1.8;
 // anterior) y el hilo respira gracias al `yieldToBrowser` de abajo.
 const DUST_COUNT = 90000; // polvo fino: la silueta sólida.
 const SPARK_COUNT = 12000; // chispas: el granulado brillante.
-const FIBER_COUNT = 12000; // fibras internas: solo banda dorada.
+// 12k -> 22k (+83%) medido por píxel: cobertura 68-71% -> 90%, más
+// partículas emisivas dentro de la banda dorada empujan MÁS área por
+// encima del umbral de bloom, no solo donde ya ardía — demasiado.
+// 12k -> 16k (+33%) medido: cobertura se mantiene en 70-71% (ruido de
+// muestreo aleatorio entre recargas, no una subida real) — dentro del
+// margen seguro.
+const FIBER_COUNT = 16000; // fibras internas: solo banda dorada.
 /** Cada cuántas partículas se le devuelve el hilo al navegador. Sin esto el
  *  muestreo es un bloque síncrono largo y la pestaña se congela. */
 const YIELD_EVERY = 12000;
@@ -349,6 +355,14 @@ export async function renderAllViews(
   // threshold ALTO (0.72): solo lo que ya está caliente — el oro del pecho —
   // florece; la plata queda fría, como en la referencia. Con threshold bajo
   // el cuerpo entero brillaba y el halo llegaba a las esquinas del lienzo.
+  // TRES INTENTOS reales de subir bloom (radius 0.55, radius 0.4, strength
+  // 0.62): los tres, medidos por bbox real de píxeles pintados, terminaron
+  // tocando el borde del lienzo (bbox [0,0,w,h] en vez del margen negro
+  // original ~20px) — la cobertura subía de 68% a 91-100%. UnrealBloomPass
+  // opera sobre una pirámide de mip-downsamples del FRAME COMPLETO, no en
+  // píxeles absolutos, y a 550×891 cualquier subida ya cubre casi todo el
+  // ancho. Devuelto a los valores originales verificados — el halo más
+  // visible se deja para una resolución de render mayor, no para esta.
   const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.3, 0.72);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
