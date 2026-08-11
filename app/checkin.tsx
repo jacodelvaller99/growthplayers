@@ -30,7 +30,10 @@ import { selectTurno } from '@/lib/turnoLogic';
 import { useJornada } from '@/hooks/use-jornada';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { BodyMap } from '@/components/body-map';
+import { BodyFocusCard } from '@/components/body-focus-card';
 import { readBody, ZONE_AURA_ORIGIN, type BodyZone } from '@/lib/bodyMapLogic';
+import { parseBodyPoints, toggleBodyPoint, zonesFromBodyPoints, type BodyPoint } from '@/lib/bodyPointLogic';
+import { energyFocusForBodyPoint, needsChestSafety } from '@/lib/energyFocusLogic';
 import { Aura } from '@/components/aura';
 import { auraFromCheckIn } from '@/lib/auraLogic';
 import { logSilentError } from '@/lib/observability';
@@ -312,6 +315,7 @@ export default function CheckInScreen() {
   // null` encima de lo que habías señalado por la mañana, y erosionaba en
   // silencio el detector de Norman, que pide 3 apariciones en 7 registros.
   const [bodyZones, setBodyZones]   = useState<BodyZone[]>(todayCheckIn?.zones ?? []);
+  const [bodyPoints, setBodyPoints] = useState<BodyPoint[]>(parseBodyPoints(todayCheckIn?.bodyPoints));
 
   // Real-time coherence score — 0 mientras falte algún valor (la tarjeta que lo
   // muestra no se renderiza hasta que `listo`, así que nunca se ve ese 0).
@@ -350,6 +354,7 @@ export default function CheckInScreen() {
         sleep: sleep!,
         systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
         zones: bodyZones.length ? bodyZones : undefined,
+        bodyPoints: bodyPoints.length ? bodyPoints : undefined,
       });
       analytics.checkinSubmit(energy, clarity, stress, sleep);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -386,7 +391,12 @@ export default function CheckInScreen() {
   // el mejor UX que ha visto— no movía el fondo ni un píxel, y mover un número
   // administrativo sí. Ahora la primera zona señalada decide el estado y el
   // ORIGEN del resplandor: tocas el pecho y la pantalla se ilumina ahí.
-  const auraOrigin = bodyZones.length ? ZONE_AURA_ORIGIN[bodyZones[0]] : undefined;
+  const auraOrigin = bodyPoints.length
+    ? {
+        x: `${bodyPoints[0].x * 100}%` as `${number}%`,
+        y: `${bodyPoints[0].y * 100}%` as `${number}%`,
+      }
+    : bodyZones.length ? ZONE_AURA_ORIGIN[bodyZones[0]] : undefined;
   const auraState = listo
     ? auraFromCheckIn({ stress: stress!, energy: energy!, hour: new Date().getHours() })
     : bodyZones.length ? 'tension'
@@ -401,7 +411,26 @@ export default function CheckInScreen() {
   // mandíbula apretada de un estómago cerrado, y se regulan distinto. Tocar la
   // silueta cuesta dos segundos y da una señal que ningún número da.
   // Opcional a propósito: el camino mínimo del check-in sigue siendo 30s.
-  const bodyInsight = readBody({ zones: bodyZones, stress });
+  const bodyInsight = readBody({ zones: bodyZones, points: bodyPoints, stress });
+  const lastBodyPoint = bodyPoints[bodyPoints.length - 1];
+  const meditationFocus = lastBodyPoint ? energyFocusForBodyPoint(lastBodyPoint) : null;
+  const showChestSafety = bodyPoints.some(needsChestSafety);
+
+  const toggleZone = (zone: BodyZone) => {
+    const removing = bodyZones.includes(zone);
+    setBodyZones((current) => (
+      removing ? current.filter((item) => item !== zone) : [...current, zone]
+    ));
+    if (removing) setBodyPoints((current) => current.filter((point) => point.zone !== zone));
+  };
+
+  const toggleExactPoint = (point: BodyPoint) => {
+    const nextPoints = toggleBodyPoint(bodyPoints, point);
+    const previousPointZones = new Set(zonesFromBodyPoints(bodyPoints));
+    const manualZones = bodyZones.filter((zone) => !previousPointZones.has(zone));
+    setBodyPoints(nextPoints);
+    setBodyZones([...new Set([...manualZones, ...zonesFromBodyPoints(nextPoints)])]);
+  };
 
   // ── Recomendación accionable post-guardado ──────────────────────────────────
   // Lógica local determinista, priorizando el sistema más comprometido.
@@ -722,10 +751,14 @@ export default function CheckInScreen() {
 
       <BodyMap
         selected={bodyZones}
-        onToggle={(z) =>
-          setBodyZones((prev) => (prev.includes(z) ? prev.filter((p) => p !== z) : [...prev, z]))
-        }
+        points={bodyPoints}
+        onToggle={toggleZone}
+        onPointToggle={toggleExactPoint}
       />
+
+      {meditationFocus ? (
+        <BodyFocusCard focus={meditationFocus} showChestSafety={showChestSafety} />
+      ) : null}
 
       <Pressable
         onPress={() => router.push('/bienestar/escaneo' as never)}

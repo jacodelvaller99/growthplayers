@@ -1,14 +1,16 @@
 {
   "expo": {
     "name": "Polaris OS",
-    "slug": "polaris-os",
+    "slug": "polaris",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "polaris",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "runtimeVersion": { "policy": "appVersion" },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.polarisgrowthinstitute.lifeflow",
@@ -94,8 +96,10 @@
     "extra": {
       "privacyPolicyUrl": "https://polarisgrowthinstitute.com/privacidad",
       "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
-      }
-    }
+        "projectId": "179177f9-64f9-4a29-ab8a-4e9fa9f4f52a"
+      },
+      "router": {}
+    },
+    "owner": "polaris-growth-institute"
   }
 }

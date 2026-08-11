@@ -12,6 +12,7 @@ import {
   ZONE_LABEL,
   type BodyZone,
 } from '@/lib/bodyMapLogic';
+import { bodyPointAt } from '@/lib/bodyPointLogic';
 
 describe('joinZones — lenguaje natural, sin comas colgando', () => {
   it('una zona', () => {
@@ -73,10 +74,17 @@ describe('readBody — la primera zona manda', () => {
   it('stress no numérico no rompe la lectura', () => {
     expect(() => readBody({ zones: ['pecho'], stress: NaN })).not.toThrow();
   });
+
+  it('cuando hay coordenadas nombra la parte y el lado exactos', () => {
+    const point = bodyPointAt(0.4, 0.735)!;
+    const out = readBody({ zones: ['piernas'], points: [point], stress: 5 });
+    expect(out.reading).toContain('rodilla izquierda');
+    expect(out.practice?.route).toBe('/bienestar/movimiento');
+  });
 });
 
 describe('cobertura y línea roja clínica', () => {
-  it('las 7 zonas tienen etiqueta y práctica con ruta real', () => {
+  it('todas las zonas tienen etiqueta y práctica con ruta real', () => {
     for (const z of BODY_ZONES) {
       expect(ZONE_LABEL[z]).toBeTruthy();
       const out = readBody({ zones: [z], stress: 5 });

@@ -7,9 +7,12 @@
  * bundle nativo.
  */
 import type { BodyZone } from '@/lib/bodyMapLogic';
+import type { EnergyFocusId } from '@/lib/energyFocusLogic';
 
 export interface BodyScanReportProps {
   primaryZone?: BodyZone;
+  activeFocus?: EnergyFocusId;
+  onFocusSelect?: (focus: EnergyFocusId) => void;
 }
 
 export function BodyScanReport(_props: BodyScanReportProps) {

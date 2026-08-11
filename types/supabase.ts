@@ -79,6 +79,8 @@ export type Database = {
           sovereign_score: number | null;
           // Migracion 20260804000000. NULL = no quiso decir; [] = miro y no marco.
           zones: string[] | null;
+          // Migracion 20260810000000. Coordenadas normalizadas sobre el cuerpo frontal.
+          body_points: Json | null;
           created_at: string | null;
         };
         Insert: {
@@ -92,6 +94,7 @@ export type Database = {
           system_need?: string | null;
           sovereign_score?: number | null;
           zones?: string[] | null;
+          body_points?: Json | null;
           created_at?: string | null;
         };
         Update: {
@@ -105,6 +108,7 @@ export type Database = {
           system_need?: string | null;
           sovereign_score?: number | null;
           zones?: string[] | null;
+          body_points?: Json | null;
           created_at?: string | null;
         };
         Relationships: [];

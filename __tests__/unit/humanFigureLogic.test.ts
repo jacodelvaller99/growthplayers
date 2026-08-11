@@ -7,7 +7,7 @@
  * cualquier otra — sin depender de que un comentario describa correctamente
  * lo que el código hace.
  */
-import { BODY_ZONES, type BodyZone } from '@/lib/bodyMapLogic';
+import { BODY_ZONE_SHORTCUTS, type BodyZone } from '@/lib/bodyMapLogic';
 import {
   computeTouchRegions,
   expandToTouchTarget,
@@ -48,7 +48,7 @@ describe('generateFigure — determinista y dentro del lienzo', () => {
 
   it('cada una de las 7 zonas tiene al menos un punto', () => {
     const dots = generateFigure();
-    for (const zone of BODY_ZONES) {
+    for (const zone of BODY_ZONE_SHORTCUTS) {
       expect(dots.some((d) => d.zone === zone)).toBe(true);
     }
   });
@@ -94,7 +94,7 @@ describe('computeTouchRegions + expandToTouchTarget — el piso táctil real', (
 
   it('hay al menos una región por cada una de las 7 zonas', () => {
     const zonas = new Set(regions.map((r) => r.zone));
-    for (const z of BODY_ZONES) expect(zonas.has(z)).toBe(true);
+    for (const z of BODY_ZONE_SHORTCUTS) expect(zonas.has(z)).toBe(true);
   });
 
   it('`manos` da DOS regiones — el brazo izquierdo y el derecho', () => {
