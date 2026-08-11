@@ -1,9 +1,19 @@
-import { projectChestCenter, projectJointsForView, projectPoint } from '@/lib/particleBodyViewer';
+import {
+  PARTICLE_TOTAL,
+  projectChestCenter,
+  projectEnergyFociForView,
+  projectJointsForView,
+  projectPoint,
+} from '@/lib/particleBodyViewer';
 
 const MODEL_HEIGHT = 1.8; // debe coincidir con la constante interna del módulo.
 const ASPECT = 300 / 486; // misma que body-scan-report.web.tsx.
 const ZOOM = 1.05;
 const PITCH = -0.05; // mismo pitch que VIEW_PRESETS.
+
+it('publica el total real de las cuatro capas del visor', () => {
+  expect(PARTICLE_TOTAL).toBe(156000);
+});
 
 describe('projectPoint', () => {
   it('proyecta el punto de mira (target) exactamente al centro de pantalla, sin importar yaw/pitch/zoom', () => {
@@ -77,5 +87,36 @@ describe('projectChestCenter', () => {
   it('cae por encima del centro vertical de pantalla (CHEST_Y=0.72 > 0.5 de altura)', () => {
     const { y } = projectChestCenter(0, PITCH, ZOOM, ASPECT);
     expect(y).toBeLessThan(0.5);
+  });
+});
+
+describe('projectEnergyFociForView', () => {
+  it('proyecta los 7 focos contemplativos esperados', () => {
+    const foci = projectEnergyFociForView(0, PITCH, ZOOM, ASPECT);
+    expect(foci.map((focus) => focus.id)).toEqual([
+      'frente', 'garganta', 'pecho', 'plexo', 'abdomen', 'base', 'arraigo',
+    ]);
+  });
+
+  it('los centra lateralmente y conserva su orden vertical en la vista frontal', () => {
+    const foci = projectEnergyFociForView(0, PITCH, ZOOM, ASPECT);
+    const byId = (id: (typeof foci)[number]['id']) => foci.find((focus) => focus.id === id)!;
+
+    for (const focus of foci) expect(focus.x).toBeCloseTo(0.5, 5);
+    expect(byId('frente').y).toBeLessThan(byId('pecho').y);
+    expect(byId('pecho').y).toBeLessThan(byId('abdomen').y);
+    expect(byId('abdomen').y).toBeLessThan(byId('base').y);
+    expect(byId('base').y).toBeLessThan(byId('arraigo').y);
+  });
+
+  it('mantiene los focos dentro del encuadre en las seis orientaciones', () => {
+    for (const yaw of [0, Math.PI, Math.PI / 2, -Math.PI / 2, Math.PI / 4, -Math.PI / 4]) {
+      for (const focus of projectEnergyFociForView(yaw, PITCH, ZOOM, ASPECT)) {
+        expect(focus.x).toBeGreaterThanOrEqual(0);
+        expect(focus.x).toBeLessThanOrEqual(1);
+        expect(focus.y).toBeGreaterThanOrEqual(0);
+        expect(focus.y).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });

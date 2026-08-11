@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BodyFocusCard } from '@/components/body-focus-card';
 import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { EvidenceBadge } from '@/components/EvidenceBadge';
@@ -29,6 +30,7 @@ import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
+import { energyFocusById, parseEnergyFocusId } from '@/lib/energyFocusLogic';
 import { BodyContextCard, PracticeClose } from './body-context';
 
 function haptic(type: 'light' | 'medium' | 'success') {
@@ -411,9 +413,12 @@ function MeditationPlayer({
 export default function MeditacionScreen() {
   const sc = useScreen();
   const router = useRouter();
+  const { focus: focusParam } = useLocalSearchParams<{ focus?: string | string[] }>();
   const insets = useSafeAreaInsets();
   const { saveWellnessSession, state } = useLifeFlow();
   const [active, setActive] = useState<MeditationSession | null>(null);
+  const contextualFocusId = parseEnergyFocusId(focusParam);
+  const contextualFocus = contextualFocusId ? energyFocusById(contextualFocusId) : null;
 
   const completedIds = new Set(
     (state.wellnessSessions ?? [])
@@ -475,6 +480,16 @@ export default function MeditacionScreen() {
       <SafetyWarning
         body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria. Si durante la práctica aumenta la angustia, sientes desconexión de tu cuerpo o del entorno, o aparece miedo intenso, detén la sesión y abre los ojos: parar es la respuesta correcta, no algo que haya que atravesar."
       />
+
+      {contextualFocus ? (
+        <View style={styles.focusCard}>
+          <BodyFocusCard
+            focus={contextualFocus}
+            showChestSafety={contextualFocus.id === 'pecho'}
+            showMeditationAction={false}
+          />
+        </View>
+      ) : null}
 
       {/* Contexto biométrico del día (honesto, no en vivo) */}
       <BodyContextCard frame="Medita para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
@@ -553,6 +568,7 @@ const styles = StyleSheet.create({
     color: palette.ash,
     marginBottom: spacing.lg,
   },
+  focusCard: { marginBottom: spacing.lg },
   card: { marginBottom: spacing.md },
   cardPressed: { opacity: 0.8 },
   cardInner: { gap: spacing.sm },

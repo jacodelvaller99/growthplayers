@@ -16,18 +16,32 @@
  * `lib/biometricLogic.ts` y el internista educativo.
  */
 
-/** Las 7 zonas de la silueta. Deliberadamente pocas: más zonas dan falsa
- *  precisión y convierten un gesto de 2 segundos en un formulario. */
+import { joinBodyPointLabels, type BodyPoint } from '@/lib/bodyPointLogic';
+
+/** Zonas semánticas amplias usadas para patrones y recomendaciones. La
+ * precisión fina (p. ej. rodilla izquierda) vive en `BodyPoint`. */
 export type BodyZone =
   | 'cabeza'
   | 'mandibula'
   | 'garganta'
+  | 'hombros'
   | 'pecho'
   | 'estomago'
   | 'espalda'
-  | 'manos';
+  | 'brazos'
+  | 'manos'
+  | 'cadera'
+  | 'piernas'
+  | 'pies';
 
 export const BODY_ZONES: BodyZone[] = [
+  'cabeza', 'mandibula', 'garganta', 'hombros', 'pecho', 'estomago',
+  'espalda', 'brazos', 'manos', 'cadera', 'piernas', 'pies',
+];
+
+/** Atajos visibles. El toque continuo cubre las demás partes sin convertir
+ * el check-in en una lista larga. */
+export const BODY_ZONE_SHORTCUTS: BodyZone[] = [
   'cabeza', 'mandibula', 'garganta', 'pecho', 'estomago', 'espalda', 'manos',
 ];
 
@@ -35,10 +49,15 @@ export const ZONE_LABEL: Record<BodyZone, string> = {
   cabeza:    'La cabeza',
   mandibula: 'La mandíbula',
   garganta:  'La garganta',
+  hombros:   'Los hombros',
   pecho:     'El pecho',
   estomago:  'El estómago',
   espalda:   'La espalda',
+  brazos:    'Los brazos',
   manos:     'Las manos',
+  cadera:    'La cadera',
+  piernas:   'Las piernas',
+  pies:      'Los pies',
 };
 
 /**
@@ -57,15 +76,22 @@ export const ZONE_AURA_ORIGIN: Record<BodyZone, { x: `${number}%`; y: `${number}
   cabeza:    { x: '50%', y: '12%' },
   mandibula: { x: '50%', y: '19%' },
   garganta:  { x: '50%', y: '27%' },
+  hombros:   { x: '50%', y: '31%' },
   pecho:     { x: '50%', y: '42%' },
   estomago:  { x: '50%', y: '62%' },
   espalda:   { x: '34%', y: '52%' },
+  brazos:    { x: '26%', y: '48%' },
   manos:     { x: '10%', y: '67%' },
+  cadera:    { x: '50%', y: '67%' },
+  piernas:   { x: '50%', y: '78%' },
+  pies:      { x: '50%', y: '94%' },
 };
 
 export interface BodyReading {
   /** Lo que el usuario ubicó. Vacío = no quiso decirlo, y está bien. */
   zones: BodyZone[];
+  /** Puntos exactos sobre el cuerpo; opcionales para registros anteriores. */
+  points?: BodyPoint[];
   /** Tensión declarada en el check-in, 0-10. */
   /** `null` = todavía no lo ha dicho. NO es lo mismo que 0. */
   stress: number | null;
@@ -101,6 +127,11 @@ const ZONE_PRACTICE: Record<BodyZone, { label: string; route: string; why: strin
     route: '/bienestar/respiracion',
     why: 'Alargar la exhalación abre la garganta más rápido que intentar relajarla.',
   },
+  hombros: {
+    label: 'Flow de recuperación',
+    route: '/bienestar/movimiento',
+    why: 'Los hombros suelen pedir descargar postura y recuperar amplitud con movimiento suave.',
+  },
   pecho: {
     label: 'Suspiro fisiológico',
     route: '/bienestar/respiracion',
@@ -116,10 +147,30 @@ const ZONE_PRACTICE: Record<BodyZone, { label: string; route: string; why: strin
     route: '/bienestar/movimiento',
     why: 'La espalda carga la postura del día. Pide movimiento, no quietud.',
   },
+  brazos: {
+    label: 'Flow de recuperación',
+    route: '/bienestar/movimiento',
+    why: 'Mover y soltar los brazos baja la carga acumulada sin forzar el cuerpo.',
+  },
   manos: {
     label: 'Meditación guiada',
     route: '/bienestar/meditacion',
     why: 'Las manos delatan la activación. Un ancla de atención las suelta.',
+  },
+  cadera: {
+    label: 'Flow de recuperación',
+    route: '/bienestar/movimiento',
+    why: 'La cadera responde mejor a movilidad gradual y respiración sin prisa.',
+  },
+  piernas: {
+    label: 'Flow de recuperación',
+    route: '/bienestar/movimiento',
+    why: 'Las piernas piden circulación y movimiento suave antes que más exigencia.',
+  },
+  pies: {
+    label: 'Meditación guiada',
+    route: '/bienestar/meditacion',
+    why: 'Sentir el apoyo de los pies devuelve la atención al presente y ayuda a bajar el ritmo.',
   },
 };
 
@@ -150,17 +201,18 @@ export function joinZones(zones: BodyZone[]): string {
  */
 export function readBody(input: BodyReading): BodyInsight {
   const zones = input.zones.filter((z) => BODY_ZONES.includes(z));
+  const points = input.points ?? [];
   const stress = input.stress === null || !Number.isFinite(input.stress) ? null : input.stress;
 
-  if (zones.length === 0) {
+  if (zones.length === 0 && points.length === 0) {
     return {
       reading: 'Toca donde lo sientes. No hay respuesta correcta — y está bien no señalar nada.',
       practice: null,
     };
   }
 
-  const donde = joinZones(zones);
-  const primary = zones[0];
+  const donde = points.length ? joinBodyPointLabels(points) : joinZones(zones);
+  const primary = points[0]?.zone ?? zones[0];
 
   // El adjetivo sale de la tensión declarada, no de la zona: la zona dice DÓNDE,
   // el número dice CUÁNTO. Mezclarlos sería inventar intensidad por ubicación.

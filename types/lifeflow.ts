@@ -1,4 +1,5 @@
 import type { BodyZone } from '@/lib/bodyMapLogic';
+import type { BodyPoint } from '@/lib/bodyPointLogic';
 
 export type LessonStatus = 'completed' | 'active' | 'locked' | 'available';
 export type ModuleStatus = 'completed' | 'active' | 'locked' | 'coming_soon';
@@ -68,6 +69,9 @@ export type CheckIn = {
    *  mandíbula" en vez de "tu tensión sigue alta". Opcional: nadie está
    *  obligado a señalar. */
   zones?: BodyZone[];
+  /** Coordenadas exactas sobre la figura frontal. `zones` se mantiene como
+   * resumen semántico compatible con registros y recomendaciones anteriores. */
+  bodyPoints?: BodyPoint[];
 };
 
 export type MentorMessage = {

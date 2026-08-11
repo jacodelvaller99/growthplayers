@@ -23,7 +23,7 @@ export interface FigureDot3D extends FigureDot {
  *  bastante más ancho que hondo), no medido — no hay una referencia exacta
  *  que clonar, y no hace falta: solo tiene que leerse como un cuerpo, no
  *  como una tarjeta. */
-const ZONE_DEPTH: Record<BodyZone, number> = {
+const ZONE_DEPTH: Partial<Record<BodyZone, number>> = {
   cabeza: 30,
   mandibula: 22,
   garganta: 16,
@@ -37,7 +37,7 @@ const ZONE_DEPTH: Record<BodyZone, number> = {
 const DECORATIVE_DEPTH = 17;
 
 function zoneDepth(zone: BodyZone | null): number {
-  return zone ? ZONE_DEPTH[zone] : DECORATIVE_DEPTH;
+  return zone ? (ZONE_DEPTH[zone] ?? DECORATIVE_DEPTH) : DECORATIVE_DEPTH;
 }
 
 /** Hash determinista de un número a [0, 1) — sin estado, sin `Math.random`.

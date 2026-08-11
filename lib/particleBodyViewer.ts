@@ -1,15 +1,14 @@
 /**
  * particleBodyViewer — el cuerpo de partículas al NIVEL DE LA REFERENCIA del
- * dueño: ~250k partículas en 3 capas sobre la malla real, bloom real en el
- * oro, textura fibrosa interna en la banda del pecho. No es la nube
+ * dueño: partículas multiescala sobre la malla real, una piel translúcida
+ * translúcida, bloom real en el oro y textura nerviosa interna. No es la nube
  * sintética de `bodyScanWorld`.
  *
  * Pipeline (plan "NIVEL REFERENCIA" aprobado):
  *   1. MUESTREO baricéntrico área-ponderado sobre los triángulos de la malla
  *      — cualquier densidad sin depender de cuántos vértices trajo el
- *      artista. Tres capas: polvo fino (silueta sólida), chispas brillantes
- *      (la textura granulada), fibras internas (las "venas" doradas de la
- *      referencia, solo en la banda del pecho).
+ *      artista. Cuatro capas: polvo fino (silueta sólida), chispas brillantes
+ *      (textura granulada), fibras internas y una red anatómica ramificada.
  *   2. Color por GRADIENTE de altura local (`particleBodyGradient.ts`), NO
  *      color horneado en el GLB — el próximo asset limpio del dueño (prompt
  *      sin color) funciona sin tocar este archivo.
@@ -25,6 +24,7 @@
  * "three" del repo. Imports dinámicos: cero peso en el bundle principal.
  */
 import { GOLD, heartClusterColor, heartClusterIntensity } from './particleBodyGradient';
+import { ENERGY_FOCI, type ProjectedEnergyFocus } from './energyFocusLogic';
 
 const MODEL_URL = '/models/cuerpo-particulas.glb';
 /** Del metadata.json del paquete actual: altura 1.80m, origen suelo-centro. */
@@ -35,20 +35,19 @@ const MODEL_HEIGHT = 1.8;
 // El plan pedía ~250k. Medido en el navegador real: a esa cifra el muestreo
 // (búsqueda binaria + trigonometría por partícula, en el hilo principal)
 // congelaba la pestaña más de 60s — la página dejaba de responder incluso a
-// un `querySelectorAll`. A ~110k la silueta ya se lee sólida (7× la densidad
-// anterior) y el hilo respira gracias al `yieldToBrowser` de abajo.
-const DUST_COUNT = 90000; // polvo fino: la silueta sólida.
-const SPARK_COUNT = 12000; // chispas: el granulado brillante.
-// 12k -> 22k (+83%) medido por píxel: cobertura 68-71% -> 90%, más
-// partículas emisivas dentro de la banda dorada empujan MÁS área por
-// encima del umbral de bloom, no solo donde ya ardía — demasiado.
-// 12k -> 16k (+33%) medido: cobertura se mantiene en 70-71% (ruido de
-// muestreo aleatorio entre recargas, no una subida real) — dentro del
-// margen seguro.
-const FIBER_COUNT = 16000; // fibras internas: solo banda dorada.
+// un `querySelectorAll`. 138k muestras de superficie + 18k de red procedural
+// conservan detalle en cara/manos/pies sin volver al bloqueo de 250k; el hilo
+// respira gracias al `yieldToBrowser` de abajo.
+const DUST_COUNT = 105000; // polvo fino: la silueta sólida.
+const SPARK_COUNT = 15000; // chispas: el granulado brillante.
+const FIBER_COUNT = 18000; // fibras internas: solo banda dorada.
+/** Red anatómica estructurada: columna, cuello, clavículas y ramificaciones
+ *  del pecho. No hace búsqueda sobre triángulos, así que añade detalle sin
+ *  repetir el coste que congeló el navegador al probar 250k muestras. */
+const ANATOMY_COUNT = 18000;
 /** Total real de partículas — lo muestra el HUD del reporte (dato real del
  *  propio pipeline, no una cifra inventada). */
-export const PARTICLE_TOTAL = DUST_COUNT + SPARK_COUNT + FIBER_COUNT;
+export const PARTICLE_TOTAL = DUST_COUNT + SPARK_COUNT + FIBER_COUNT + ANATOMY_COUNT;
 /** Cada cuántas partículas se le devuelve el hilo al navegador. Sin esto el
  *  muestreo es un bloque síncrono largo y la pestaña se congela. */
 const YIELD_EVERY = 12000;
@@ -67,13 +66,33 @@ interface Layer {
   colors: Float32Array;
 }
 
+interface SurfaceMesh {
+  positions: Float32Array;
+  normals: Float32Array;
+  indices: Uint32Array | Uint16Array;
+}
+
 interface ParticleCloud {
   dust: Layer;
   sparks: Layer;
   fibers: Layer;
+  anatomy: Layer;
+  surface: SurfaceMesh;
 }
 
 let cloudPromise: Promise<ParticleCloud> | null = null;
+
+/** PRNG determinístico: la verificación por píxel necesita que dos cargas
+ *  del mismo GLB produzcan exactamente la misma nube. `Math.random()` hacía
+ *  variar el granulado y el bloom entre capturas aun sin cambiar el código. */
+let randomState = 0x50_4f_4c_41;
+function randomUnit(): number {
+  randomState = (randomState + 0x6d2b79f5) | 0;
+  let value = randomState;
+  value = Math.imul(value ^ (value >>> 15), value | 1);
+  value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+  return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+}
 
 /** CDF acumulada de áreas de triángulo — sin esto, triángulos grandes
  *  (torso) quedarían tan poblados como los diminutos (dedos): huecos en el
@@ -145,13 +164,13 @@ function samplePoint(
   totalArea: number,
   out: SampledPoint,
 ): void {
-  const t = pickTriangle(cdf, Math.random() * totalArea);
+  const t = pickTriangle(cdf, randomUnit() * totalArea);
   const i0 = indices[t * 3] * 3;
   const i1 = indices[t * 3 + 1] * 3;
   const i2 = indices[t * 3 + 2] * 3;
 
-  const r1 = Math.sqrt(Math.random());
-  const r2 = Math.random();
+  const r1 = Math.sqrt(randomUnit());
+  const r2 = randomUnit();
   const w0 = 1 - r1;
   const w1 = r1 * (1 - r2);
   const w2 = r1 * r2;
@@ -182,6 +201,121 @@ function fiberNoise(x: number, y: number, z: number): number {
   return s - Math.floor(s);
 }
 
+type CurvePoint = readonly [number, number, number];
+interface AnatomyPath {
+  p0: CurvePoint;
+  p1: CurvePoint;
+  p2: CurvePoint;
+  p3: CurvePoint;
+  width: number;
+  weight: number;
+}
+
+/** Curvas dentro del torso, en metros. Son estructura, no datos clínicos:
+ *  una columna central y ramificaciones bilaterales que dan la lectura
+ *  nerviosa/vascular de la referencia sin depender de una textura horneada. */
+function createAnatomyPaths(): readonly AnatomyPath[] {
+  const paths: AnatomyPath[] = [
+    // Troncos: cuello, esternón y columna posterior.
+    { p0: [0, 1.62, 0.01], p1: [-0.015, 1.50, 0.055], p2: [0.012, 1.39, 0.085], p3: [0, 1.29, 0.085], width: 0.004, weight: 1.4 },
+    { p0: [0, 1.31, 0.075], p1: [0.012, 1.18, 0.055], p2: [-0.01, 1.02, 0.025], p3: [0, 0.86, 0], width: 0.0035, weight: 1.2 },
+    { p0: [0, 1.60, -0.065], p1: [0.012, 1.38, -0.075], p2: [-0.012, 1.08, -0.065], p3: [0, 0.82, -0.035], width: 0.003, weight: 1.25 },
+  ];
+
+  // Arcos costales finos. Muchos ramales delgados leen como red nerviosa,
+  // no como el abanico geométrico de seis líneas de la primera iteración.
+  for (let level = 0; level < 8; level++) {
+    const y = 1.13 + level * 0.041;
+    const reach = 0.155 + level * 0.008;
+    for (const side of [-1, 1] as const) {
+      paths.push({
+        p0: [side * 0.008, y + 0.016, 0.075],
+        p1: [side * (0.045 + level * 0.002), y + 0.045, 0.09 - level * 0.004],
+        p2: [side * (reach * 0.76), y + 0.018 - level * 0.003, 0.055],
+        p3: [side * reach, y - 0.03, 0.005 + (level % 2) * 0.012],
+        width: 0.0018 + (level % 3) * 0.00035,
+        weight: 0.38 + level * 0.025,
+      });
+    }
+  }
+
+  // Plexo del pecho: ramificaciones asimétricas y a distinta profundidad.
+  for (let branch = 0; branch < 12; branch++) {
+    const side = branch % 2 === 0 ? -1 : 1;
+    const lane = Math.floor(branch / 2);
+    const endY = 1.16 + lane * 0.055;
+    const endX = side * (0.10 + (lane % 3) * 0.035);
+    const endZ = 0.015 + (branch % 4) * 0.018;
+    paths.push({
+      p0: [side * 0.012, 1.305 + (branch % 3) * 0.009, 0.09],
+      p1: [side * (0.025 + lane * 0.006), 1.34 - lane * 0.008, 0.105 - lane * 0.006],
+      p2: [endX * 0.62, endY + (branch % 3 - 1) * 0.038, endZ + 0.028],
+      p3: [endX, endY, endZ],
+      width: 0.0016 + (branch % 3) * 0.0003,
+      weight: 0.32 + (branch % 4) * 0.035,
+    });
+  }
+
+  // Clavículas, cuello lateral y continuación corta hacia brazos.
+  for (const side of [-1, 1] as const) {
+    paths.push(
+      { p0: [side * 0.015, 1.36, 0.075], p1: [side * 0.08, 1.43, 0.075], p2: [side * 0.16, 1.47, 0.035], p3: [side * 0.235, 1.43, 0], width: 0.0024, weight: 0.7 },
+      { p0: [side * 0.03, 1.37, 0.065], p1: [side * 0.055, 1.45, 0.045], p2: [side * 0.06, 1.54, 0.02], p3: [side * 0.065, 1.62, -0.005], width: 0.002, weight: 0.48 },
+      { p0: [side * 0.205, 1.43, 0.005], p1: [side * 0.245, 1.36, 0.012], p2: [side * 0.27, 1.28, 0.006], p3: [side * 0.285, 1.18, 0], width: 0.0018, weight: 0.42 },
+      { p0: [side * 0.17, 1.38, 0.03], p1: [side * 0.215, 1.32, 0.055], p2: [side * 0.25, 1.24, 0.035], p3: [side * 0.27, 1.15, 0.005], width: 0.0015, weight: 0.34 },
+    );
+  }
+
+  return paths;
+}
+
+const ANATOMY_PATHS = createAnatomyPaths();
+
+function cubicBezier(path: AnatomyPath, t: number): [number, number, number] {
+  const oneMinus = 1 - t;
+  const a = oneMinus * oneMinus * oneMinus;
+  const b = 3 * oneMinus * oneMinus * t;
+  const c = 3 * oneMinus * t * t;
+  const d = t * t * t;
+  return [
+    path.p0[0] * a + path.p1[0] * b + path.p2[0] * c + path.p3[0] * d,
+    path.p0[1] * a + path.p1[1] * b + path.p2[1] * c + path.p3[1] * d,
+    path.p0[2] * a + path.p1[2] * b + path.p2[2] * c + path.p3[2] * d,
+  ];
+}
+
+function buildAnatomyLayer(): Layer {
+  const anatomy: Layer = {
+    positions: new Float32Array(ANATOMY_COUNT * 3),
+    colors: new Float32Array(ANATOMY_COUNT * 3),
+  };
+  const totalWeight = ANATOMY_PATHS.reduce((sum, path) => sum + path.weight, 0);
+  let cursor = 0;
+  for (let pathIndex = 0; pathIndex < ANATOMY_PATHS.length; pathIndex++) {
+    const path = ANATOMY_PATHS[pathIndex];
+    const remaining = ANATOMY_COUNT - cursor;
+    const count = pathIndex === ANATOMY_PATHS.length - 1
+      ? remaining
+      : Math.min(remaining, Math.round((ANATOMY_COUNT * path.weight) / totalWeight));
+    for (let point = 0; point < count; point++) {
+      const t = Math.min(1, Math.max(0, (point + randomUnit()) / Math.max(1, count - 1)));
+      const [x, y, z] = cubicBezier(path, t);
+      const angle = randomUnit() * Math.PI * 2;
+      const radius = Math.sqrt(randomUnit()) * path.width;
+      const idx = cursor * 3;
+      anatomy.positions[idx] = x + Math.cos(angle) * radius;
+      anatomy.positions[idx + 1] = y + (randomUnit() - 0.5) * path.width * 0.8;
+      anatomy.positions[idx + 2] = z + Math.sin(angle) * radius;
+      const heat = 0.78 + randomUnit() * 0.32;
+      anatomy.colors[idx] = Math.min(1, GOLD[0] * heat);
+      anatomy.colors[idx + 1] = Math.min(1, GOLD[1] * heat);
+      anatomy.colors[idx + 2] = Math.min(1, GOLD[2] * heat);
+      cursor++;
+    }
+  }
+  return anatomy;
+}
+
 async function loadParticleCloud(): Promise<ParticleCloud> {
   if (!cloudPromise) {
     cloudPromise = (async () => {
@@ -197,9 +331,16 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
       const geo = (mesh as import('three').Mesh).geometry;
       const posAttr = geo.attributes.position as import('three').BufferAttribute;
       const pos = posAttr.array as Float32Array;
+      if (!geo.attributes.normal) geo.computeVertexNormals();
+      const normalAttr = geo.attributes.normal as import('three').BufferAttribute;
       const indices = geo.index
         ? (geo.index.array as Uint32Array | Uint16Array)
         : Uint32Array.from({ length: pos.length / 3 }, (_, i) => i);
+      const surface: SurfaceMesh = {
+        positions: pos.slice(),
+        normals: (normalAttr.array as Float32Array).slice(),
+        indices: indices.slice() as Uint32Array | Uint16Array,
+      };
 
       const { cdf, triCount } = buildTriangleCDF(pos, indices);
       const totalArea = cdf[triCount - 1];
@@ -221,8 +362,8 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
       for (let p = 0; p < DUST_COUNT; p++) {
         if (p % YIELD_EVERY === 0) await yieldToBrowser();
         samplePoint(pos, indices, cdf, totalArea, pt);
-        const isFloating = Math.random() < FLOAT_LAYER_FRACTION;
-        const off = isFloating ? Math.random() * FLOAT_LAYER_MAX : Math.random() * SKIN_HUG_MAX;
+        const isFloating = randomUnit() < FLOAT_LAYER_FRACTION;
+        const off = isFloating ? randomUnit() * FLOAT_LAYER_MAX : randomUnit() * SKIN_HUG_MAX;
         const idx = p * 3;
         dust.positions[idx] = pt.x + pt.nx * off;
         dust.positions[idx + 1] = pt.y + pt.ny * off;
@@ -246,7 +387,7 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
       for (let p = 0; p < SPARK_COUNT; p++) {
         if (p % YIELD_EVERY === 0) await yieldToBrowser();
         samplePoint(pos, indices, cdf, totalArea, pt);
-        const off = Math.random() * SKIN_HUG_MAX * 2;
+        const off = randomUnit() * SKIN_HUG_MAX * 2;
         const idx = p * 3;
         sparks.positions[idx] = pt.x + pt.nx * off;
         sparks.positions[idx + 1] = pt.y + pt.ny * off;
@@ -286,7 +427,8 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
         placed++;
       }
 
-      return { dust, sparks, fibers };
+      const anatomy = buildAnatomyLayer();
+      return { dust, sparks, fibers, anatomy, surface };
     })();
   }
   return cloudPromise;
@@ -295,6 +437,34 @@ async function loadParticleCloud(): Promise<ParticleCloud> {
 export interface ViewAngle {
   yaw: number;
   pitch: number;
+}
+
+/** Sprite radial blanco: `PointsMaterial` sin mapa dibuja cuadrados. A esta
+ *  escala se leían como ruido digital grueso; el borde suave circular deja
+ *  ver dedos, rostro y fibras finas sin aumentar el conteo de la malla. */
+function createParticleTexture(THREE: typeof import('three')): import('three').DataTexture {
+  const size = 32;
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const nx = ((x + 0.5) / size) * 2 - 1;
+      const ny = ((y + 0.5) / size) * 2 - 1;
+      const distance = Math.sqrt(nx * nx + ny * ny);
+      const edge = Math.min(1, Math.max(0, (distance - 0.2) / 0.8));
+      const falloff = 1 - edge * edge * (3 - 2 * edge);
+      const index = (y * size + x) * 4;
+      data[index] = 255;
+      data[index + 1] = 255;
+      data[index + 2] = 255;
+      data[index + 3] = Math.round(falloff * 255);
+    }
+  }
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.UnsignedByteType);
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 /**
@@ -329,28 +499,40 @@ export async function renderAllViews(
   renderer.setClearColor(0x000000, 1); // el reporte vive sobre negro — fondo opaco.
 
   const scene = new THREE.Scene();
-  // Opacidades BAJAS a propósito: con blending aditivo y 250k partículas, lo
-  // que se ve es la SUMA — a 0.35 el cuerpo entero se quemaba a blanco y el
-  // bloom bañaba hasta las esquinas (verificado por píxel: esquina 134,125,47
-  // en vez de negro). El brillo aquí sale de la acumulación, no del alpha.
-  // Probado dust 0.0016->0.0022 (+37%) y sparks 0.0042->0.0052 (+24%),
-  // pensando que partículas más grandes cerrarían los huecos del polvo sin
-  // depender del blur del bloom. Medido en las 6 vistas a la resolución
-  // actual: cobertura 63.5-92% — dentro del ruido de muestreo aleatorio del
-  // baseline (57.8-91.1%), sin cambio real. Combinado con RENDER_SCALE 3.2
-  // (probado también): cobertura BAJÓ más aún (13-42%) — el tamaño de
-  // partícula no es la variable que estaba faltando; algo en cómo
-  // `sizeAttenuation` calcula el tamaño en pantalla al subir resolución no
-  // se comporta como la teoría predice (debería mantener la fracción de
-  // pantalla constante). Sin poder ver el render real esta sesión (el panel
-  // del Browser no compone frames), no hay forma responsable de seguir
-  // ajustando esto a ciegas — revertido a los valores ya verificados.
+  const particleTexture = createParticleTexture(THREE);
+  // Una piel translúcida da continuidad a cara, dedos y pies; el wireframe
+  // ultrafino añade microestructura sin colorear el GLB.
+  const surfaceGeometry = new THREE.BufferGeometry();
+  surfaceGeometry.setAttribute('position', new THREE.BufferAttribute(cloud.surface.positions, 3));
+  surfaceGeometry.setAttribute('normal', new THREE.BufferAttribute(cloud.surface.normals, 3));
+  surfaceGeometry.setIndex(new THREE.BufferAttribute(cloud.surface.indices, 1));
+  const shellMaterial = new THREE.MeshBasicMaterial({
+    color: 0xb4b4b8,
+    transparent: true,
+    opacity: 0.024,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    blending: THREE.AdditiveBlending,
+  });
+  const wireMaterial = new THREE.MeshBasicMaterial({
+    color: 0xb4b4b8,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.022,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  scene.add(new THREE.Mesh(surfaceGeometry, shellMaterial));
+  scene.add(new THREE.Mesh(surfaceGeometry, wireMaterial));
+  // Cuatro escalas visuales: superficie, destellos, fibra superficial y red
+  // anatómica interna. La suma aditiva conserva negro puro fuera del cuerpo.
   const layerSpecs: { layer: Layer; size: number; opacity: number }[] = [
-    { layer: cloud.dust, size: 0.0016, opacity: 0.13 },
-    { layer: cloud.sparks, size: 0.0042, opacity: 0.5 },
-    { layer: cloud.fibers, size: 0.0022, opacity: 0.3 },
+    { layer: cloud.dust, size: 0.0022, opacity: 0.22 },
+    { layer: cloud.sparks, size: 0.0039, opacity: 0.44 },
+    { layer: cloud.fibers, size: 0.002, opacity: 0.31 },
+    { layer: cloud.anatomy, size: 0.0016, opacity: 0.46 },
   ];
-  const disposables: { dispose(): void }[] = [];
+  const disposables: { dispose(): void }[] = [particleTexture, surfaceGeometry, shellMaterial, wireMaterial];
   for (const spec of layerSpecs) {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(spec.layer.positions, 3));
@@ -358,8 +540,10 @@ export async function renderAllViews(
     const material = new THREE.PointsMaterial({
       size: spec.size,
       vertexColors: true,
+      map: particleTexture,
       transparent: true,
       opacity: spec.opacity,
+      alphaTest: 0.015,
       sizeAttenuation: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -372,26 +556,11 @@ export async function renderAllViews(
   const composer = new EffectComposer(renderer);
   composer.setSize(w, h);
   composer.addPass(new RenderPass(scene, camera));
-  // threshold ALTO (0.72): solo lo que ya está caliente — el oro del pecho —
+  // Threshold alto (0.74): solo lo que ya está caliente — el oro del pecho —
   // florece; la plata queda fría, como en la referencia. Con threshold bajo
-  // el cuerpo entero brillaba y el halo llegaba a las esquinas del lienzo.
-  //
-  // DIAGNÓSTICO CORREGIDO: los primeros intentos de subir `radius` (0.4,
-  // 0.55) parecían tocar el borde del lienzo (cobertura 68%->91-100%), pero
-  // esas mediciones estaban CONTAMINADAS — FIBER_COUNT estaba en 22000 (ya
-  // descartado, ver arriba) al mismo tiempo. Aislado de verdad —
-  // FIBER_COUNT en el valor seguro (16000), solo `radius` variando — el
-  // halo crece GRADUAL, no de golpe: 0.30(base)->0.32->0.36->0.45->0.55,
-  // cobertura sube suave (68-93% -> 86-96%) y las esquinas se quedan casi
-  // negras en las seis vistas (máx. 20/255) en todo el barrido. 0.45 es el
-  // punto elegido: halo visiblemente más ancho que el original sin acercarse
-  // al techo real (probado hasta 0.55 sin quiebre).
-  //
-  // Referencia visual para elegir el objetivo: prototipo offline en Blender
-  // (threshold+blur gaussiano+screen-blend sobre el render de Cycles ya
-  // tuneado) — el halo bueno es ceñido al cuerpo, no una nube difusa; eso
-  // fue lo que guió a subir radius con pasos chicos en vez de saltos grandes.
-  const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.45, 0.72);
+  // el cuerpo entero brillaba y el halo teñía el negro. Radio 0.24 mantiene
+  // el resplandor ceñido al torso incluso en los perfiles.
+  const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.42, 0.24, 0.74);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
@@ -402,6 +571,21 @@ export async function renderAllViews(
   // los cuatro lados (verificado: bbox [11,0,537,890] en un canvas 550×891).
   const dist = 3.9 / zoom;
   const bitmaps: ImageBitmap[] = [];
+  // Se calienta una vez el composer y solo después se capturan las seis
+  // vistas reales; evita devolver un buffer aún no inicializado en ciertos
+  // drivers WebGL.
+  if (views.length > 0) {
+    const first = views[0];
+    camera.position.set(
+      Math.sin(first.yaw) * Math.cos(first.pitch) * dist,
+      centerY + Math.sin(first.pitch) * dist,
+      Math.cos(first.yaw) * Math.cos(first.pitch) * dist,
+    );
+    camera.lookAt(0, centerY, 0);
+    await renderer.compileAsync(scene, camera);
+    composer.render();
+    await yieldToBrowser();
+  }
   for (const view of views) {
     camera.position.set(
       Math.sin(view.yaw) * Math.cos(view.pitch) * dist,
@@ -524,6 +708,25 @@ export function projectJointsForView(yaw: number, pitch: number, zoom: number, a
   return JOINTS.map((j) => ({
     id: j.id,
     ...projectPoint({ x: j.x * MODEL_HEIGHT, y: j.y * MODEL_HEIGHT, z: j.z * MODEL_HEIGHT }, yaw, pitch, zoom, aspect),
+  }));
+}
+
+/** Proyecta los focos contemplativos sobre exactamente la misma cámara y
+ * modelo que las seis vistas. Son anclas de interfaz, no mediciones internas
+ * ni puntos anatómicos clínicos. */
+export function projectEnergyFociForView(
+  yaw: number,
+  pitch: number,
+  zoom: number,
+  aspect: number,
+): ProjectedEnergyFocus[] {
+  return ENERGY_FOCI.map((focus) => ({
+    id: focus.id,
+    ...projectPoint({
+      x: focus.model.x * MODEL_HEIGHT,
+      y: focus.model.y * MODEL_HEIGHT,
+      z: focus.model.z * MODEL_HEIGHT,
+    }, yaw, pitch, zoom, aspect),
   }));
 }
 

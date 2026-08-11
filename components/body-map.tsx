@@ -7,140 +7,86 @@
  * señal que ningún deslizador da.
  *
  * El significado vive en `lib/bodyMapLogic.ts` (puro, testeado, con el filtro
- * anti-lenguaje-clínico). La GEOMETRÍA del cuerpo vive en
- * `lib/humanFigureLogic.ts` (también puro y testeado): una figura humana real
- * —cabeza, cuello, hombros, brazos, piernas— descrita con elipses y cápsulas
- * y renderizada como una nube de puntos, no como siete rectángulos con borde.
- * Aquí solo vive el SVG y el tacto.
+ * anti-lenguaje-clínico). La base visual es un único escaneo frontal de alta
+ * fidelidad (`BodyFrontScan`) compartido por web/iOS/Android. Aquí solo viven
+ * el tacto continuo y los siete atajos accesibles.
  *
- * El punto se ve pequeño; el objetivo tiene que ser grande. Los puntos
- * dibujan el cuerpo, pero lo que se toca es un rectángulo invisible bastante
- * más generoso que el racimo de puntos de esa zona — calculado por
- * `computeTouchRegions`/`expandToTouchTarget` a partir de la figura real, no
- * a mano: en react-native-web, `hitSlop` no existe, así que el rectángulo
- * invisible ES el área de toque completa.
+ * El gesto se normaliza a 0..1 sobre el mismo bitmap. Así una rodilla sigue
+ * siendo la misma rodilla en una pantalla pequeña, web o un móvil grande, y
+ * el fondo negro nunca se registra como parte del cuerpo.
  */
-import { useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import { useRef } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { BodyMap3D } from '@/components/body-map-3d';
+import { BODY_FRONT_ASPECT, BodyFrontScan } from '@/components/body-front-scan';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
-import { BODY_ZONES, ZONE_LABEL, type BodyZone } from '@/lib/bodyMapLogic';
-import {
-  computeTouchRegions,
-  expandToTouchTarget,
-  generateFigure,
-  VIEWBOX,
-  type FigureDot,
-} from '@/lib/humanFigureLogic';
+import { BODY_ZONE_SHORTCUTS, ZONE_LABEL, type BodyZone } from '@/lib/bodyMapLogic';
+import { bodyPointAt, type BodyPoint } from '@/lib/bodyPointLogic';
 
 export interface BodyMapProps {
   selected: BodyZone[];
   onToggle: (zone: BodyZone) => void;
+  points?: readonly BodyPoint[];
+  onPointToggle?: (point: BodyPoint) => void;
+  /** El check-in usa 320; la vista dedicada puede ampliar el mismo asset. */
+  maxBodyWidth?: number;
 }
 
-/** Semilla fija: la figura es la misma en cada sesión, en cada dispositivo —
- *  es un activo de marca, no un efecto aleatorio en pantalla. */
-const FIGURE = generateFigure({ seed: 90417 });
-const TOUCH_REGIONS = expandToTouchTarget(computeTouchRegions(FIGURE));
+export function BodyMap({
+  selected,
+  onToggle,
+  points = [],
+  onPointToggle,
+  maxBodyWidth = 320,
+}: BodyMapProps) {
+  const canvasSize = useRef({ width: 0, height: 0 });
 
-function dotColor(dot: FigureDot, selected: BodyZone[]): { fill: string; opacity: number } {
-  const idx = dot.zone ? selected.indexOf(dot.zone) : -1;
-  if (idx === 0) {
-    // La primera zona tocada manda (`readBody` enruta por `zones[0]`): oro
-    // macizo, la misma gramática que el resto de la marca usa para "lo
-    // elegido" — nunca un borde de más, un relleno sólido.
-    return { fill: palette.gold, opacity: dot.edge ? 0.55 : 1 };
-  }
-  if (idx > 0) {
-    // Zonas señaladas después de la primera: oro, pero tintado — recorrido,
-    // no elegido.
-    return { fill: palette.goldText, opacity: dot.edge ? 0.3 : 0.75 };
-  }
-  return { fill: palette.silhouette, opacity: dot.edge ? 0.35 : 0.85 };
-}
-
-export function BodyMap({ selected, onToggle }: BodyMapProps) {
-  // El resplandor detrás de la zona primaria: unos puntos dorados grandes y
-  // muy tenues DEBAJO de la figura, no un filtro de blur — `react-native-svg`
-  // soporta `<filter>` de forma desigual entre nativo y web, y esta ronda no
-  // vuelve a meter esa clase de trampa cruzada de plataforma.
-  const glow = useMemo(() => {
-    const primary = selected[0];
-    if (!primary) return null;
-    const pts = FIGURE.filter((d) => d.zone === primary && !d.edge);
-    if (!pts.length) return null;
-    const cx = pts.reduce((s, d) => s + d.x, 0) / pts.length;
-    const cy = pts.reduce((s, d) => s + d.y, 0) / pts.length;
-    return { cx, cy };
-  }, [selected]);
+  const handleBodyPress = (event: GestureResponderEvent) => {
+    const { width, height } = canvasSize.current;
+    if (width <= 0 || height <= 0) return;
+    // React Native entrega locationX/Y dentro de nativeEvent. RN Web 0.21 los
+    // expone en el evento respondedor de nivel superior (ver
+    // createResponderEvent.js); soportamos ambos contratos.
+    const webEvent = event as unknown as { locationX?: number; locationY?: number };
+    const domNativeEvent = event.nativeEvent as unknown as { offsetX?: number; offsetY?: number };
+    const locationX = Number.isFinite(event.nativeEvent.locationX)
+      ? event.nativeEvent.locationX
+      : Number.isFinite(webEvent.locationX) ? webEvent.locationX : domNativeEvent.offsetX;
+    const locationY = Number.isFinite(event.nativeEvent.locationY)
+      ? event.nativeEvent.locationY
+      : Number.isFinite(webEvent.locationY) ? webEvent.locationY : domNativeEvent.offsetY;
+    if (!Number.isFinite(locationX) || !Number.isFinite(locationY)) return;
+    const point = bodyPointAt(locationX! / width, locationY! / height);
+    if (!point) return;
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (onPointToggle) onPointToggle(point);
+    else onToggle(point.zone);
+  };
 
   return (
     <View style={s.root}>
-      <View style={s.canvas} accessibilityRole="none">
-        {/* Web: la nube de partículas 3D con proyección propia sobre canvas
-            2D (`projectPoint` en lib/humanFigure3DLogic.ts — sin three.js,
-            que acumuló tres fallos de bundler con Metro/Expo Web). Nativo:
-            sigue en SVG 2D; la misma proyección sobre Skia es el handoff —
-            `BodyMap3D` nativo es un stub inalcanzable, ver
-            `components/body-map-3d.tsx`. La zona se elige con el legend de
-            abajo en ambos casos; el toque directo sobre el cuerpo es
-            exclusivo de la versión 2D. */}
-        {Platform.OS === 'web' && <BodyMap3D selected={selected} onToggleZone={onToggle} />}
-        <Svg
-          width="100%"
-          height="100%"
-          viewBox={`0 0 ${VIEWBOX.w} ${VIEWBOX.h}`}
-          style={[StyleSheet.absoluteFillObject as never, Platform.OS === 'web' && { display: 'none' }]}>
-          {glow && (
-            <Circle cx={glow.cx} cy={glow.cy} r={46} fill={palette.gold} opacity={0.1} />
-          )}
-          {FIGURE.map((dot, i) => {
-            const { fill, opacity } = dotColor(dot, selected);
-            return <Circle key={i} cx={dot.x} cy={dot.y} r={dot.r} fill={fill} opacity={opacity} />;
-          })}
-        </Svg>
-
-        {Platform.OS !== 'web' && TOUCH_REGIONS.map((region, i) => {
-          const on = selected.includes(region.zone);
-          const { x0, y0, x1, y1 } = region.bounds;
-          return (
-            <Pressable
-              key={`${region.zone}-${i}`}
-              onPress={() => {
-                // El gesto más corporal de la app era el único sin háptica,
-                // mientras el resto de la pantalla vibra. Tocarte y que el
-                // teléfono no responda rompe justo la sensación que buscamos.
-                if (Platform.OS !== 'web') {
-                  if (on) Haptics.selectionAsync();
-                  else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                onToggle(region.zone);
-              }}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: on }}
-              accessibilityLabel={ZONE_LABEL[region.zone]}
-              // La silueta y la lista repiten las 7 zonas: sin esto, un lector
-              // de pantalla lee catorce casillas con el mismo nombre.
-              accessibilityHint="En la silueta"
-              style={{
-                position: 'absolute',
-                left: `${(x0 / VIEWBOX.w) * 100}%`,
-                top: `${(y0 / VIEWBOX.h) * 100}%`,
-                width: `${((x1 - x0) / VIEWBOX.w) * 100}%`,
-                height: `${((y1 - y0) / VIEWBOX.h) * 100}%`,
-              }}
-            />
-          );
-        })}
+      <View
+        style={[s.canvas, { maxWidth: maxBodyWidth }]}
+        accessibilityRole="none"
+        onLayout={(event) => {
+          canvasSize.current = event.nativeEvent.layout;
+        }}>
+        <BodyFrontScan selected={selected} points={points} />
+        <Pressable
+          testID="body-touch-surface"
+          onPress={handleBodyPress}
+          accessibilityRole="button"
+          accessibilityLabel="Señalar un punto exacto del cuerpo"
+          accessibilityHint="Toca la parte de la figura donde lo sientes"
+          style={StyleSheet.absoluteFillObject}
+        />
       </View>
 
       {/* Las etiquetas viven fuera de la silueta: dentro competirían con el
           gesto y obligarían a tipografía de 8px sobre un área táctil. */}
       <View style={s.legend}>
-        {BODY_ZONES.map((zone) => {
+        {BODY_ZONE_SHORTCUTS.map((zone) => {
           const on = selected.includes(zone);
           return (
             <Pressable
@@ -173,13 +119,13 @@ export function BodyMap({ selected, onToggle }: BodyMapProps) {
 
 const s = StyleSheet.create({
   root: { gap: spacing.lg },
-  // El aspecto sigue al viewBox real (300×486) para que la figura no se
-  // distorsione — con `width:'100%'` escala igual en cualquier ancho.
+  // El aspecto sigue al bitmap real para no deformar la anatomía.
   canvas: {
     alignSelf: 'center',
     width: '100%',
-    maxWidth: 300,
-    aspectRatio: VIEWBOX.w / VIEWBOX.h,
+    aspectRatio: BODY_FRONT_ASPECT,
+    backgroundColor: '#000000',
+    overflow: 'hidden',
     position: 'relative',
   },
   legend: {

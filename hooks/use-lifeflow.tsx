@@ -24,6 +24,7 @@ import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import { useWellnessStore } from '@/store/wellnessStore';
 import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, UserProfile, WellnessSession } from '@/types/lifeflow';
 import type { BodyZone } from '@/lib/bodyMapLogic';
+import { parseBodyPoints, type BodyPoint } from '@/lib/bodyPointLogic';
 
 // ─── Local cache key ──────────────────────────────────────────────────────────
 const STATE_KEY = 'state';
@@ -50,8 +51,21 @@ function isMissingZonesColumn(err: unknown): boolean {
   const e = err as { message?: string; code?: string } | null;
   const msg = (e?.message ?? '').toLowerCase();
   // PGRST204 = PostgREST no encontró la columna en su caché de esquema.
-  return e?.code === 'PGRST204' || msg.includes('pgrst204') ||
-    (msg.includes('zones') && (msg.includes('column') || msg.includes('columna')));
+  return msg.includes('zones') && (
+    e?.code === 'PGRST204' || msg.includes('pgrst204') || msg.includes('column') || msg.includes('columna')
+  );
+}
+
+// Coordenadas exactas del cuerpo (migración 20260810000000). Es independiente
+// de `zones`: cada columna puede faltar mientras se despliega la migración.
+let _bodyPointsColMissing = false;
+
+function isMissingBodyPointsColumn(err: unknown): boolean {
+  const e = err as { message?: string; code?: string } | null;
+  const msg = (e?.message ?? '').toLowerCase();
+  return msg.includes('body_points') && (
+    e?.code === 'PGRST204' || msg.includes('pgrst204') || msg.includes('column') || msg.includes('columna')
+  );
 }
 
 async function persistMentorMessages(
@@ -313,6 +327,7 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
     // desaparecían, así que el patrón que Norman debe citar ("cuarta vez esta
     // semana en la mandíbula") solo existía dentro de la sesión que lo escribió.
     zones:      (c.zones as BodyZone[] | null) ?? undefined,
+    bodyPoints: parseBodyPoints(c.body_points as BodyPoint[] | null),
   }));
 
   // Rebuild completedTasks from DB rows
@@ -795,6 +810,9 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         // La columna la añade 20260804000000; el upsert degrada solo si aún
         // no está aplicada (el catch de abajo lo encola igual).
         zones:           checkIn.zones ?? null,
+        // Hasta seis coordenadas normalizadas con región y lado. JSONB permite
+        // conservar precisión sin convertir cada toque en una tabla hija.
+        body_points:     checkIn.bodyPoints ?? null,
       };
       let syncStatus: 'synced' | 'queued' = 'synced';
       // supabase-js v2 NO lanza en error de servidor: resuelve con `{ error }`.
@@ -813,31 +831,42 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         const { error } = await checkins().upsert(payload, { onConflict: 'user_id,date' });
         if (error) throw error;
       };
-      try {
+      const availablePayload = (): Record<string, unknown> => {
+        let payload: Record<string, unknown> = checkInPayload;
         if (_zonesColMissing) {
-          const { zones: _drop, ...sinZonas } = checkInPayload;
-          await upsertCheckIn(sinZonas);
-        } else {
-          await upsertCheckIn(checkInPayload);
+          const { zones: _drop, ...rest } = payload;
+          payload = rest;
+        }
+        if (_bodyPointsColMissing) {
+          const { body_points: _drop, ...rest } = payload;
+          payload = rest;
+        }
+        return payload;
+      };
+      try {
+        // Las dos migraciones pueden desplegarse en momentos distintos. Cada
+        // PGRST204 elimina solo la columna ausente y reintenta la fila completa.
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            await upsertCheckIn(availablePayload());
+            break;
+          } catch (e) {
+            if (!_zonesColMissing && isMissingZonesColumn(e)) {
+              _zonesColMissing = true;
+              continue;
+            }
+            if (!_bodyPointsColMissing && isMissingBodyPointsColumn(e)) {
+              _bodyPointsColMissing = true;
+              continue;
+            }
+            throw e;
+          }
         }
       } catch (e) {
-        if (isMissingZonesColumn(e)) {
-          // Pre-migración: el resto del check-in NO puede perderse por un campo
-          // nuevo. Se reintenta sin `zones` y se recuerda para los siguientes.
-          _zonesColMissing = true;
-          const { zones: _drop, ...sinZonas } = checkInPayload;
-          try {
-            await upsertCheckIn(sinZonas);
-          } catch (e2) {
-            console.warn('[Supabase] saveCheckIn (encolado para reintento):', e2);
-            await enqueueWrite({ table: 'daily_checkins', payload: sinZonas, onConflict: 'user_id,date' });
-            syncStatus = 'queued';
-          }
-        } else {
-          console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
-          await enqueueWrite({ table: 'daily_checkins', payload: checkInPayload, onConflict: 'user_id,date' });
-          syncStatus = 'queued';
-        }
+        const payload = availablePayload();
+        console.warn('[Supabase] saveCheckIn (encolado para reintento):', e);
+        await enqueueWrite({ table: 'daily_checkins', payload, onConflict: 'user_id,date' });
+        syncStatus = 'queued';
       }
 
       // Also update profile with latest score

@@ -1,21 +1,58 @@
-/**
- * El escaneo biométrico completo — las 6 vistas del cuerpo de partículas,
- * calcadas de la referencia del dueño. Reporte, no widget: el toque directo
- * sigue viviendo en el check-in (`BodyMap3D`); aquí se mira, no se toca.
- */
+/** Escaneo frontal interactivo sobre el asset exacto aprobado por el dueño. */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BodyScanReport } from '@/components/body-scan-report';
+import { BodyFocusCard } from '@/components/body-focus-card';
+import { BodyMap } from '@/components/body-map';
 import { screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
+import type { BodyZone } from '@/lib/bodyMapLogic';
+import {
+  joinBodyPointLabels,
+  parseBodyPoints,
+  toggleBodyPoint,
+  zonesFromBodyPoints,
+  type BodyPoint,
+} from '@/lib/bodyPointLogic';
+import { energyFocusForBodyPoint, needsChestSafety } from '@/lib/energyFocusLogic';
 
 export default function EscaneoScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { state } = useLifeFlow();
+  const latestCheckIn = state.checkIns[0];
+  const hydratedCheckInId = useRef<string | null>(null);
+  const [scanPoints, setScanPoints] = useState<BodyPoint[]>([]);
+  const [scanZones, setScanZones] = useState<BodyZone[]>([]);
+
+  useEffect(() => {
+    if (!latestCheckIn || hydratedCheckInId.current === latestCheckIn.id) return;
+    hydratedCheckInId.current = latestCheckIn.id;
+    const points = parseBodyPoints(latestCheckIn.bodyPoints);
+    setScanPoints(points);
+    setScanZones(points.length ? zonesFromBodyPoints(points) : latestCheckIn.zones ?? []);
+  }, [latestCheckIn]);
+
+  const activePoint = scanPoints.at(-1);
+  const activeFocus = activePoint ? energyFocusForBodyPoint(activePoint) : null;
+  const selectionLabel = joinBodyPointLabels(scanPoints);
+
+  const handlePointToggle = (point: BodyPoint) => {
+    const next = toggleBodyPoint(scanPoints, point);
+    setScanPoints(next);
+    setScanZones(zonesFromBodyPoints(next));
+  };
+
+  const handleZoneToggle = (zone: BodyZone) => {
+    setScanZones((current) => current.includes(zone)
+      ? current.filter((candidate) => candidate !== zone)
+      : [...current, zone]);
+  };
 
   return (
     <View style={sc.root}>
@@ -34,21 +71,34 @@ export default function EscaneoScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {Platform.OS === 'web' ? (
-          <BodyScanReport />
-        ) : (
-          <View style={styles.nativeNotice}>
-            <MaterialIcons name="desktop-windows" size={22} color={palette.smoke} />
-            <Text style={styles.nativeNoticeText}>
-              El reporte de 6 vistas está disponible en la versión web por ahora — sigue el mismo motor
-              que el mapa corporal del check-in, que aquí en la app sí puedes tocar.
-            </Text>
+        <View style={styles.instruction} accessibilityLiveRegion="polite">
+          <MaterialIcons name="touch-app" size={18} color={palette.goldText} />
+          <Text style={styles.instructionText}>
+            {selectionLabel ? `SEÑALADO · ${selectionLabel.toUpperCase()}` : 'TOCA EXACTAMENTE DONDE LO SIENTES'}
+          </Text>
+        </View>
+
+        <BodyMap
+          selected={scanZones}
+          points={scanPoints}
+          onToggle={handleZoneToggle}
+          onPointToggle={handlePointToggle}
+          maxBodyWidth={480}
+        />
+
+        {activeFocus ? (
+          <View style={styles.focusCardWrap}>
+            <BodyFocusCard
+              focus={activeFocus}
+              showChestSafety={scanPoints.some(needsChestSafety)}
+            />
           </View>
-        )}
+        ) : null}
 
         <Text style={styles.caption}>
-          Cada vista es el mismo cuerpo de partículas — la zona en oro es la que señalaste en tu último
-          check-in. Nada de esto reemplaza un diagnóstico médico: es una lectura de coaching, no clínica.
+          Esta es la imagen frontal exacta del check-in, animada sin alterar su anatomía. Cada toque se
+          representa como coordenada proporcional sobre la misma figura. La reflexión posterior es simbólica:
+          no determina la causa del dolor, no diagnostica y no reemplaza atención médica.
         </Text>
       </ScrollView>
     </View>
@@ -74,21 +124,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 1,
   },
-  nativeNotice: {
-    alignItems: 'flex-start',
-    backgroundColor: palette.graphite,
-    borderColor: palette.line,
-    borderRadius: 12,
+  instruction: {
+    alignItems: 'center',
+    borderColor: palette.lineGold,
+    borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.lg,
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    minHeight: 46,
+    paddingHorizontal: spacing.lg,
   },
-  nativeNoticeText: {
-    ...typography.caption,
-    color: palette.ash,
-    flex: 1,
-    lineHeight: 20,
+  instructionText: {
+    color: palette.goldText,
+    flexShrink: 1,
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+  },
+  focusCardWrap: {
+    marginTop: spacing.lg,
   },
   caption: {
     ...typography.caption,

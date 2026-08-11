@@ -15,14 +15,14 @@
  * hay una escena 3D coherente detrás, es un artefacto de generación por IA.
  * Un solo fondo, consistente.
  *
- * Es un REPORTE — no el widget interactivo del check-in (`BodyMap3D`, que
- * sigue siendo el que se toca). `pickZone`/toque siguen ahí sobre la nube
- * sintética (picking sobre malla real es trabajo aparte).
+ * Es el REPORTE visual del `BodyMap`: el check-in conserva el punto anatómico
+ * continuo y estas seis vistas permiten recorrer siete focos contemplativos
+ * proyectados sobre la misma cámara. No son puntos clínicos ni diagnósticos.
  *
  * Animación: TODA vía CSS (`@keyframes` + `prefers-reduced-motion`), no un
  * loop de `requestAnimationFrame` en JS — nada que cancelar al desmontar,
  * nada que recalcule en cada frame. Es la misma razón por la que no se
- * re-renderiza la escena de three.js por frame (costaría 6 cámaras × ~118k
+ * re-renderiza la escena de three.js por frame (costaría 6 cámaras × ~156k
  * partículas × 60fps — ya congeló la pestaña una vez en el muestreo). El
  * cuerpo 3D sigue siendo UN batch estático (`renderAllViews`, sin cambios);
  * el pulso/las líneas/el fondo son overlays 2D baratos encima.
@@ -43,10 +43,12 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Fonts, palette } from '@/constants/theme';
 import type { BodyZone } from '@/lib/bodyMapLogic';
+import { energyFocusById, type EnergyFocusId } from '@/lib/energyFocusLogic';
 import { VIEW_PRESETS } from '@/lib/humanFigure3DLogic';
 import {
   PARTICLE_TOTAL,
   projectChestCenter,
+  projectEnergyFociForView,
   projectJointsForView,
   renderAllViews,
   type ProjectedJoint,
@@ -57,6 +59,10 @@ export interface BodyScanReportProps {
    *  referencia (chest/columna alta). Reservado: el gradiente vive en
    *  `particleBodyGradient.ts` y hoy no varía por zona. */
   primaryZone?: BodyZone;
+  /** Foco contemplativo activo, compartido con el punto exacto del check-in. */
+  activeFocus?: EnergyFocusId;
+  /** Convierte las anclas proyectadas de las seis vistas en controles reales. */
+  onFocusSelect?: (focus: EnergyFocusId) => void;
 }
 
 const CAM_ZOOM = 1.05; // el cuerpo llena la columna, como en la referencia.
@@ -235,7 +241,87 @@ function JointNetworkOverlay({ preset }: { preset: (typeof VIEW_PRESETS)[number]
   );
 }
 
-function ScanColumn({ preset, bitmap }: { preset: (typeof VIEW_PRESETS)[number]; bitmap: ImageBitmap | null }) {
+/** Siete anclas contemplativas proyectadas con la misma cámara que el GLB.
+ * Son controles de atención/meditación; no representan anatomía clínica. */
+function EnergyFocusOverlay({
+  preset,
+  activeFocus,
+  onFocusSelect,
+}: {
+  preset: (typeof VIEW_PRESETS)[number];
+  activeFocus: EnergyFocusId;
+  onFocusSelect?: (focus: EnergyFocusId) => void;
+}) {
+  const projected = useMemo(
+    () => projectEnergyFociForView(preset.yaw, preset.pitch, CAM_ZOOM, ASPECT),
+    [preset],
+  );
+
+  return (
+    <div
+      role="group"
+      aria-label={`Focos de atención en ${preset.label}`}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      {projected.map((candidate) => {
+        const focus = energyFocusById(candidate.id);
+        const active = candidate.id === activeFocus;
+        return (
+          <button
+            key={candidate.id}
+            type="button"
+            aria-label={`Seleccionar ${focus.label} en ${preset.label}`}
+            aria-pressed={active}
+            onClick={() => onFocusSelect?.(candidate.id)}
+            title={focus.label}
+            style={{
+              appearance: 'none',
+              background: active ? 'rgba(255,200,4,0.16)' : 'rgba(180,180,184,0.05)',
+              border: `1px solid ${active ? palette.goldText : 'rgba(180,180,184,0.48)'}`,
+              borderRadius: '50%',
+              boxShadow: active
+                ? '0 0 8px rgba(255,200,4,0.95), 0 0 20px rgba(255,200,4,0.45)'
+                : '0 0 5px rgba(180,180,184,0.28)',
+              cursor: onFocusSelect ? 'pointer' : 'default',
+              height: active ? 30 : 22,
+              left: `${candidate.x * 100}%`,
+              padding: 0,
+              pointerEvents: 'auto',
+              position: 'absolute',
+              top: `${candidate.y * 100}%`,
+              transform: 'translate(-50%, -50%)',
+              transition: 'height 160ms ease, width 160ms ease, border-color 160ms ease',
+              width: active ? 30 : 22,
+              zIndex: 3,
+            }}>
+            <span
+              aria-hidden
+              style={{
+                background: active ? palette.goldText : '#B4B4B8',
+                borderRadius: '50%',
+                display: 'block',
+                height: active ? 6 : 4,
+                margin: 'auto',
+                width: active ? 6 : 4,
+              }}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ScanColumn({
+  preset,
+  bitmap,
+  activeFocus,
+  onFocusSelect,
+}: {
+  preset: (typeof VIEW_PRESETS)[number];
+  bitmap: ImageBitmap | null;
+  activeFocus: EnergyFocusId;
+  onFocusSelect?: (focus: EnergyFocusId) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -278,6 +364,11 @@ function ScanColumn({ preset, bitmap }: { preset: (typeof VIEW_PRESETS)[number];
               }}
             />
             <JointNetworkOverlay preset={preset} />
+            <EnergyFocusOverlay
+              preset={preset}
+              activeFocus={activeFocus}
+              onFocusSelect={onFocusSelect}
+            />
           </>
         ) : null}
       </div>
@@ -339,7 +430,11 @@ function HudGauge({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScanReportProps) {
+export function BodyScanReport({
+  primaryZone: _primaryZone = 'pecho',
+  activeFocus = 'pecho',
+  onFocusSelect,
+}: BodyScanReportProps) {
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
 
   useEffect(() => {
@@ -414,6 +509,9 @@ export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScan
             </span>
             <ScanBadge complete={loaded} />
           </div>
+          <div style={{ fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 1.2, color: palette.goldText, marginTop: 8 }}>
+            TOCA UN FOCO · {energyFocusById(activeFocus).label.toUpperCase()}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: Fonts.mono, fontSize: 11, color: palette.smoke }}>
@@ -452,7 +550,12 @@ export function BodyScanReport({ primaryZone: _primaryZone = 'pecho' }: BodyScan
         {VIEW_PRESETS.map((preset, i) => (
           <Fragment key={preset.id}>
             {i > 0 ? <Ruler /> : null}
-            <ScanColumn preset={preset} bitmap={bitmaps[i] ?? null} />
+            <ScanColumn
+              preset={preset}
+              bitmap={bitmaps[i] ?? null}
+              activeFocus={activeFocus}
+              onFocusSelect={onFocusSelect}
+            />
           </Fragment>
         ))}
       </div>
