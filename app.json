@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.polarisgrowthinstitute.lifeflow",
-      "versionCode": 1,
+      "versionCode": 3,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.health.READ_HEART_RATE",
@@ -86,6 +86,14 @@
           "isClinicalDataEnabled": false,
           "healthSharePermission": "Polaris lee tus métricas de sueño, recuperación, FC y actividad desde Apple Salud para personalizar tu protocolo.",
           "healthUpdatePermission": "Polaris no escribe en Apple Salud."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ]
     ],
