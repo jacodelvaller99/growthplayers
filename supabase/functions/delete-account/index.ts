@@ -66,6 +66,8 @@ Deno.serve(async (req: Request) => {
       // Mentoría (sesiones + tareas)
       adminSupabase.from('mentorship_sessions').delete().eq('user_id', userId),
       adminSupabase.from('mentorship_tasks').delete().eq('user_id', userId),
+      // Plaud: el import guarda el transcript crudo de la sesión del cliente.
+      adminSupabase.from('plaud_imports').delete().eq('matched_user_id', userId),
       // Memory OS (perfil vivo, resúmenes, briefings/notas admin sobre el usuario)
       adminSupabase.from('user_memory_profile').delete().eq('user_id', userId),
       adminSupabase.from('memory_summaries').delete().eq('user_id', userId),

@@ -112,6 +112,7 @@ const SECTIONS: SectionCard[] = [
   { route: '/admin/codigos',      label: 'Códigos',         icon: '🔑', desc: 'Crear y gestionar' },
   { route: '/admin/inteligencia', label: 'ML',              icon: '🧠', desc: 'Dashboard completo' },
   { route: '/admin/contenido',    label: 'Contenido',       icon: '📝', desc: 'Diarios y chats' },
+  { route: '/admin/plaud',        label: 'Plaud',           icon: '🎙️', desc: 'Mentorías grabadas' },
   { route: '/admin/comunidad',    label: 'Moderación',      icon: '🚩', desc: 'Cola de reportes' },
   { route: '/admin/auditoria',    label: 'Auditoría',       icon: '📋', desc: 'Log de acciones' },
 ];
