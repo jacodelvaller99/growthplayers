@@ -31,6 +31,7 @@ import {
 import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useToast } from '@/context/ToastContext';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useMentorMemory } from '@/hooks/useMentorMemory';
@@ -973,7 +974,7 @@ const styles = StyleSheet.create({
   metricPill: {
     alignItems: 'center',
     backgroundColor: 'rgba(255,200,4,0.18)',
-    borderColor: palette.gold + '44',
+    borderColor: alpha(palette.gold, '44'),
     borderRadius: radii.sm,
     borderWidth: 1,
     flexDirection: 'row',
@@ -1025,7 +1026,7 @@ const styles = StyleSheet.create({
   memoryCard: {
     gap: 6,
     backgroundColor: 'rgba(201, 160, 0, 0.04)',
-    borderColor: palette.gold + '22',
+    borderColor: alpha(palette.gold, '22'),
   },
   memoryHeader: {
     alignItems: 'center',

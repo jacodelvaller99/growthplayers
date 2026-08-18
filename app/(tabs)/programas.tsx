@@ -15,6 +15,7 @@ import {
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
@@ -591,7 +592,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(179,141,60,0.10)',
-    borderColor: palette.gold + '55',
+    borderColor: alpha(palette.gold, '55'),
     borderRadius: radii.pill,
     borderWidth: 1,
     flexDirection: 'row',
@@ -703,7 +704,7 @@ const styles = StyleSheet.create({
   },
   teaserDismiss: {
     alignItems: 'center',
-    borderColor: palette.gold + '66',
+    borderColor: alpha(palette.gold, '66'),
     borderRadius: radii.sm,
     borderWidth: 1,
     justifyContent: 'center',

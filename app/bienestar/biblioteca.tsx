@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, screen, useScreen } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 
 // ─── Category grid ────────────────────────────────────────────────────────────
 interface Category {
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: 'rgba(201,160,0,0.06)',
-    borderColor: palette.gold + '33',
+    borderColor: alpha(palette.gold, '33'),
     borderWidth: 1,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,

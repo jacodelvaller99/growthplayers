@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { supabase } from '@/lib/supabase';
 import {
   OAUTH_URLS,
@@ -1091,8 +1092,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderRadius: radii.md, borderWidth: 1, marginBottom: spacing.sm,
   },
-  bannerSuccess: { backgroundColor: 'rgba(100,200,100,0.08)', borderColor: palette.success + '44' },
-  bannerError:   { backgroundColor: 'rgba(200,60,60,0.08)',   borderColor: palette.danger  + '44' },
+  bannerSuccess: { backgroundColor: 'rgba(100,200,100,0.08)', borderColor: alpha(palette.success, '44') },
+  bannerError:   { backgroundColor: 'rgba(200,60,60,0.08)',   borderColor: alpha(palette.danger, '44') },
   bannerInfo:    { backgroundColor: palette.goldGlow,         borderColor: palette.lineGold },
   bannerText:    { ...typography.body, flex: 1, fontSize: 13 },
 

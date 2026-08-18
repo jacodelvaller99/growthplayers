@@ -15,6 +15,7 @@ import {
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 function lessonIcon(status: string) {
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
   completionBanner: {
     alignItems: 'flex-start',
     backgroundColor: 'rgba(201,160,0,0.06)',
-    borderColor: palette.gold + '55',
+    borderColor: alpha(palette.gold, '55'),
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',
