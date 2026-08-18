@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import {
   useWearableConnections,
   useWearableDaily,
@@ -94,7 +95,7 @@ const sparklineStyles = StyleSheet.create({
   },
   bar:       {
     flex: 1,
-    backgroundColor: palette.gold + '88',
+    backgroundColor: alpha(palette.gold, '88'),
     borderRadius: 1,
     minWidth: 3,
   },

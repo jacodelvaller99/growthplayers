@@ -22,6 +22,7 @@ import { showAlert } from '@/lib/confirm';
 
 import { GoldDivider, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS } from '@/data/moderation';
 
@@ -461,6 +462,6 @@ const s = StyleSheet.create({
     paddingVertical: spacing.sm,
     minHeight: 38,
   },
-  actionDanger: { borderColor: palette.danger + '55' },
+  actionDanger: { borderColor: alpha(palette.danger, '55') },
   actionText: { ...typography.label, color: palette.goldText, fontSize: 9 },
 });

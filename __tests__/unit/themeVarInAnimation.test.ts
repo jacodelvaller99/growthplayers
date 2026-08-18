@@ -41,9 +41,20 @@ describe('interpolateColor nunca recibe un token cv()', () => {
     expect(tokens).toContain('lineSoft');
   });
 
-  it('`gold` NO es cv() — puede seguir usándose en interpolaciones', () => {
-    // Regla de color del proyecto: el oro de marca es hex constante.
-    expect(tokens).not.toContain('gold');
+  it('`gold` SÍ es cv() — por eso tiene prohibido entrar a una interpolación', () => {
+    // Cambió respecto a la versión anterior de este test, que afirmaba lo
+    // contrario: el oro era hex constante y se podía interpolar. Desde que
+    // entró al eje de señal (data-signal: oro ↔ ámbar) es `var(--c-gold)` en
+    // web, así que cayó bajo la MISMA prohibición que el resto de tokens.
+    // Reintrodujo literalmente el crash de esta suite hasta que se cambió la
+    // llamada de lesson/[id].tsx a `goldStatic`.
+    expect(tokens).toContain('gold');
+  });
+
+  it('`goldStatic` NO es cv() — es la vía sancionada para animar en oro', () => {
+    expect(tokens).not.toContain('goldStatic');
+    const theme = readFileSync(join(ROOT, 'constants/theme.ts'), 'utf8');
+    expect(theme).toMatch(/goldStatic:\s*'#FFC804'/);
   });
 
   for (const rel of FILES_WITH_INTERPOLATE) {

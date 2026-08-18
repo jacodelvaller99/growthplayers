@@ -33,6 +33,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
 import { selectTurno, type TurnoKind } from '@/lib/turnoLogic';
 import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
@@ -1618,7 +1619,7 @@ const styles = StyleSheet.create({
   // Wearable CTA
   wearableCta: {
     alignItems: 'center',
-    borderColor: palette.gold + '33',
+    borderColor: alpha(palette.gold, '33'),
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',
@@ -1944,7 +1945,7 @@ const styles = StyleSheet.create({
   // ── Live Session Card ───────────────────────────────────────────────────────
   liveCard: {
     backgroundColor:  'rgba(10,10,10,0.85)',
-    borderColor:      palette.gold + '55',
+    borderColor:      alpha(palette.gold, '55'),
     borderRadius:     radii.md,
     borderWidth:      1.5,
     gap:              spacing.md,

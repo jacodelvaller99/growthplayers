@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 
 // ─── Health disclaimer content ───────────────────────────────────────────────
 // Texto legal final provisto por el dueño — POLARIS GROWTH INSTITUTE CORP.
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
   alertCard: {
     alignItems: 'center',
     backgroundColor: palette.dangerMuted,
-    borderColor: palette.danger + '55',
+    borderColor: alpha(palette.danger, '55'),
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',

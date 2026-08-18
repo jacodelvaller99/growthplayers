@@ -26,6 +26,7 @@ import { GoldDivider, PrimaryButton, SecondaryButton, useScreen } from '@/compon
 import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
 import { analytics } from '@/lib/analytics';
@@ -62,15 +63,17 @@ function TextAreaField({
 }) {
   const focused = useSharedValue(0);
   const animStyle = useAnimatedStyle(() => ({
-    // El color de reposo va LITERAL, no `palette.lineSoft`. En web `cv()`
-    // devuelve `var(--c-border-soft)` y `interpolateColor` no sabe leer una
+    // AMBOS extremos van en hex/rgba LITERAL, nunca un token `cv()`. En web
+    // `cv()` devuelve `var(--c-…)` y `interpolateColor` no sabe leer una
     // variable CSS: lanzaba "Interpolation input and output ranges should
     // contain at least two values" y el ErrorBoundary se comía la pantalla
     // ENTERA de lección — el Protocolo completo estaba muerto en la PWA.
-    // El valor es el mismo fallback nativo de `cv('--c-border-soft', …)`;
-    // un separador extra-sutil que de todas formas no puede re-tematizarse
-    // a través del hilo de Reanimated. `palette.gold` sí es hex constante.
-    borderColor: interpolateColor(focused.value, [0, 1], ['rgba(255, 255, 255, 0.05)', palette.gold]),
+    //
+    // El reposo es el fallback nativo de `cv('--c-border-soft', …)`. El foco
+    // usa `goldStatic` y NO `palette.gold`: desde que el oro entró al eje de
+    // señal, `palette.gold` también es `var()` en web y reintroducía el mismo
+    // crash. Coste asumido: este borde no sigue el cambio a ámbar.
+    borderColor: interpolateColor(focused.value, [0, 1], ['rgba(255, 255, 255, 0.05)', palette.goldStatic]),
   }));
 
   const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0;
@@ -636,7 +639,7 @@ const celebStyles = StyleSheet.create({
   },
   btn: {
     alignItems:       'center',
-    borderColor:      palette.gold + '66',
+    borderColor:      alpha(palette.gold, '66'),
     borderRadius:     radii.sm,
     borderWidth:      1,
     minHeight:        44,
@@ -1398,7 +1401,7 @@ const styles = StyleSheet.create({
   // Next lesson teaser
   nextLessonTeaser: {
     backgroundColor: 'rgba(201, 160, 0, 0.06)',
-    borderColor: palette.gold + '44',
+    borderColor: alpha(palette.gold, '44'),
     borderLeftWidth: 3,
     borderRadius: radii.sm,
     borderWidth: 1,

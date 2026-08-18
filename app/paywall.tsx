@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { VERIFIED_TESTIMONIALS } from '@/data/testimonials';
 import { captureWebLead, isValidEmail } from '@/lib/webLeads';
 import {
@@ -650,7 +651,7 @@ const styles = StyleSheet.create({
   guaranteeRow: {
     alignItems: 'center',
     backgroundColor: 'rgba(77, 170, 87, 0.08)',
-    borderColor: palette.success + '44',
+    borderColor: alpha(palette.success, '44'),
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',

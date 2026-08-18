@@ -1,12 +1,20 @@
 /**
- * use-app-theme.tsx — Light/Dark theme provider (web-driven).
+ * use-app-theme.tsx — proveedor de tema en DOS EJES (web-driven).
  *
- * Injects the theme CSS variables at first paint, reads the persisted mode,
- * and flips `data-theme` on <html> when toggled. Screens re-theme instantly
- * because their palette.* tokens resolve to var(--c-*) on web (see themeColors.ts).
+ * Inyecta las variables CSS en el primer pintado, lee lo persistido y refleja el
+ * estado en <html> con dos atributos independientes:
  *
- * Native keeps the dark hex values (static StyleSheet); the toggle is a no-op
- * there visually, so the toggle UI is only shown on web.
+ *   data-theme  → FONDO   (dark · light · carbon · aura)
+ *   data-signal → SEÑAL   (oro · ambar · semaforo · calma)
+ *
+ * Las pantallas re-tematizan solas porque sus tokens palette.* resuelven a
+ * var(--c-*) en web (ver themeColors.ts).
+ *
+ * Nativo conserva los hex oscuros (StyleSheet estático); ahí ambos ejes son un
+ * no-op visual, por eso `canToggle` es false y la UI del selector se oculta.
+ *
+ * Compatibilidad: `mode`/`toggle` siguen existiendo con la misma firma (dark ↔
+ * light) para no romper el interruptor claro/oscuro que ya usaba el perfil.
  */
 import {
   createContext,
@@ -17,17 +25,30 @@ import {
 } from 'react';
 import { Platform } from 'react-native';
 
-import { injectThemeVars } from '@/constants/themeColors';
+import {
+  SIGNAL_VARS,
+  THEME_VARS,
+  injectThemeVars,
+  type BackdropId,
+  type SignalId,
+} from '@/constants/themeColors';
 
-export type ThemeMode = 'dark' | 'light';
+/** Alias histórico: el "modo" claro/oscuro es un subconjunto del eje de fondo. */
+export type ThemeMode = BackdropId;
 
 const STORAGE_KEY = 'polaris:theme';
+const SIGNAL_KEY = 'polaris:signal';
 
 interface AppThemeValue {
-  mode: ThemeMode;
-  setMode: (m: ThemeMode) => void;
+  /** Eje 1 — la tinta. */
+  mode: BackdropId;
+  setMode: (m: BackdropId) => void;
+  /** Alterna solo entre dark ↔ light (el interruptor de siempre). */
   toggle: () => void;
-  /** True on web, where the toggle actually re-themes the UI. */
+  /** Eje 2 — qué comunica el color. */
+  signal: SignalId;
+  setSignal: (s: SignalId) => void;
+  /** True en web, donde los ejes realmente re-tematizan la UI. */
   canToggle: boolean;
 }
 
@@ -35,51 +56,77 @@ const AppThemeContext = createContext<AppThemeValue>({
   mode: 'dark',
   setMode: () => {},
   toggle: () => {},
+  signal: 'oro',
+  setSignal: () => {},
   canToggle: false,
 });
 
 const isWeb = Platform.OS === 'web';
 
-function readInitialMode(): ThemeMode {
-  if (isWeb && typeof localStorage !== 'undefined') {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark') return stored;
-  }
-  return 'dark';
+function isBackdrop(v: string | null): v is BackdropId {
+  return v !== null && Object.prototype.hasOwnProperty.call(THEME_VARS, v);
+}
+function isSignal(v: string | null): v is SignalId {
+  return v !== null && Object.prototype.hasOwnProperty.call(SIGNAL_VARS, v);
 }
 
-function applyMode(mode: ThemeMode) {
+function readStored<T extends string>(key: string, guard: (v: string | null) => v is T, fallback: T): T {
+  if (isWeb && typeof localStorage !== 'undefined') {
+    const stored = localStorage.getItem(key);
+    if (guard(stored)) return stored;
+  }
+  return fallback;
+}
+
+function applyAttr(attr: 'theme' | 'signal', key: string, value: string) {
   if (!isWeb || typeof document === 'undefined') return;
-  document.documentElement.dataset.theme = mode;
-  try { localStorage.setItem(STORAGE_KEY, mode); } catch { /* private mode */ }
+  document.documentElement.dataset[attr] = value;
+  try { localStorage.setItem(key, value); } catch { /* modo privado */ }
 }
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {
-  // Lazy initializer runs before first child render → no flash of wrong theme.
-  const [mode, setModeState] = useState<ThemeMode>(() => {
+  // El inicializador perezoso corre antes del primer render de los hijos → sin
+  // parpadeo de tema equivocado.
+  const [mode, setModeState] = useState<BackdropId>(() => {
     injectThemeVars();
-    const initial = readInitialMode();
+    const initial = readStored(STORAGE_KEY, isBackdrop, 'dark');
     if (isWeb && typeof document !== 'undefined') {
       document.documentElement.dataset.theme = initial;
     }
     return initial;
   });
 
-  const setMode = useCallback((m: ThemeMode) => {
+  const [signal, setSignalState] = useState<SignalId>(() => {
+    const initial = readStored(SIGNAL_KEY, isSignal, 'oro');
+    if (isWeb && typeof document !== 'undefined') {
+      document.documentElement.dataset.signal = initial;
+    }
+    return initial;
+  });
+
+  const setMode = useCallback((m: BackdropId) => {
     setModeState(m);
-    applyMode(m);
+    applyAttr('theme', STORAGE_KEY, m);
+  }, []);
+
+  const setSignal = useCallback((s: SignalId) => {
+    setSignalState(s);
+    applyAttr('signal', SIGNAL_KEY, s);
   }, []);
 
   const toggle = useCallback(() => {
     setModeState((prev) => {
-      const next: ThemeMode = prev === 'dark' ? 'light' : 'dark';
-      applyMode(next);
+      // Solo alterna la pareja histórica: desde carbon/aura, "alternar" lleva a
+      // claro, que es la contraparte que el usuario espera del interruptor.
+      const next: BackdropId = prev === 'light' ? 'dark' : 'light';
+      applyAttr('theme', STORAGE_KEY, next);
       return next;
     });
   }, []);
 
   return (
-    <AppThemeContext.Provider value={{ mode, setMode, toggle, canToggle: isWeb }}>
+    <AppThemeContext.Provider
+      value={{ mode, setMode, toggle, signal, setSignal, canToggle: isWeb }}>
       {children}
     </AppThemeContext.Provider>
   );

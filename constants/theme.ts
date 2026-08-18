@@ -28,15 +28,27 @@ export const palette = {
   //    would flip to cream in light mode and vanish.
   ink:            '#0A0A0A',
 
-  // ── Brand accent (Philippine Yellow — constant across themes) ─────────────────
-  gold:           '#FFC804',   // CTA buttons, active states, key metrics ONLY (FILLS)
-  goldLight:      'rgba(255, 200, 4, 0.12)',   // tinted backgrounds
-  goldMuted:      'rgba(255, 200, 4, 0.60)',   // secondary gold usage
-  goldDim:        '#EDBA01',   // slightly darker variant
-  goldGlow:       'rgba(255, 200, 4, 0.08)',   // glow effects
-  // gold AS TEXT/icon on a surface — themeable. Bright gold on cream fails
-  // contrast, so light mode swaps to deep amber. Use for eyebrows/labels/
-  // timestamps/gold icons (color:), NOT for fills (keep palette.gold there).
+  // ── Brand accent (Philippine Yellow) — themeable por el EJE SEÑAL ────────────
+  // Dejó de ser constante: el eje `data-signal` permite cambiarlo a ámbar
+  // (#EDBA01, el segundo oro del manual) sin tocar una sola pantalla. En nativo
+  // cv() devuelve el hex real, así que nativo se queda en Philippine Yellow.
+  //
+  // ⚠ Para opacidades NO concatenes (`palette.gold + '44'`): en web el token es
+  //   `var(--c-gold)` y `var(--c-gold)44` no es CSS válido — el color se pierde
+  //   en silencio. Usa `alpha(palette.gold, '44')` de themeColors.ts.
+  gold:           cv('--c-gold',             '#FFC804'),   // FILLS: CTA, estados activos, métricas clave
+  goldLight:      cv('--c-gold-light',       'rgba(255, 200, 4, 0.12)'),   // fondos tintados
+  goldMuted:      cv('--c-gold-muted',       'rgba(255, 200, 4, 0.60)'),   // oro secundario
+  goldDim:        '#EDBA01',   // variante fija (no participa del eje)
+  // Oro CONSTANTE en hex. Existe SOLO para los interpoladores de Reanimated:
+  // no saben leer `var()`, y pasarles el token tematizable colapsa el rango de
+  // salida y mata la pantalla entera en web (ver __tests__/unit/themeVarInAnimation).
+  // Consecuencia asumida: una animación con este token no sigue el eje de señal.
+  goldStatic:     '#FFC804',
+  goldGlow:       cv('--c-gold-glow',        'rgba(255, 200, 4, 0.08)'),   // resplandores
+  // gold AS TEXT/icon sobre una superficie — el oro brillante sobre crema falla
+  // contraste, así que el fondo claro lo cambia a ámbar profundo. Para color:,
+  // NUNCA para rellenos (ahí va palette.gold).
   goldText:       cv('--c-gold-text', '#FFC804'),
 
   // ── Text hierarchy — themeable ───────────────────────────────────────────────
@@ -57,22 +69,25 @@ export const palette = {
   lineSoft:       cv('--c-border-soft',  'rgba(255, 255, 255, 0.05)'),  // extra-subtle separators
   lineHard:       cv('--c-border-hard',  'rgba(255, 255, 255, 0.13)'),  // focus, emphasis borders
   lineFocus:      cv('--c-border-focus', 'rgba(255, 255, 255, 0.20)'),  // input focus rings
-  lineGold:       'rgba(255, 200, 4, 0.30)',    // gold borders (use sparingly)
-  lineGoldSubtle: 'rgba(255, 200, 4, 0.15)',    // very subtle gold accent
+  lineGold:       cv('--c-line-gold',        'rgba(255, 200, 4, 0.30)'),   // bordes dorados (con moderación)
+  lineGoldSubtle: cv('--c-line-gold-subtle', 'rgba(255, 200, 4, 0.15)'),   // acento dorado muy sutil
 
-  // ── Semantic ─────────────────────────────────────────────────────────────────
-  success:        '#52A878',
+  // ── Semantic — themeable por el EJE SEÑAL ────────────────────────────────────
+  // `semaforo` los desatura para que convivan con el oro (modelo WHOOP: cada
+  // matiz significa algo). Las opacidades van por alpha(), no por concatenación.
+  success:        cv('--c-success', '#52A878'),
   successMuted:   'rgba(82, 168, 120, 0.15)',
-  // danger = CONSTANTE. Es el token de RELLENO/borde/icono: umbral 3:1 que #C0392B
-  // ya cumple, y hay call sites que concatenan opacidad (`palette.danger + '55'`),
-  // lo que un `var(--c-danger)` rompería silenciosamente. No lo tematices.
-  danger:         '#C0392B',
+  danger:         cv('--c-danger',  '#C0392B'),
   dangerMuted:    'rgba(192, 57, 43, 0.15)',
+  // Acento de RECUPERACIÓN. En casi todas las señales es el mismo oro; en
+  // `calma` pasa a azul sereno para separar el lenguaje de empuje del de
+  // restaurar (modelo Calm). Úsalo en bienestar/biometría, no en CTAs.
+  calm:           cv('--c-calm',    '#FFC804'),
   // danger AS TEXT — themeable, mismo patrón que goldText. #C0392B sobre la tarjeta
   // oscura (#111111) da 3.47:1 y falla AA (4.5:1) en TODO mensaje de error; el tono
   // del tema oscuro sube a 5.18:1. En claro pasa de sobra, así que ahí no cambia.
   dangerText:     cv('--c-danger-text', '#E5564A'),
-  warning:        '#D4A017',
+  warning:        cv('--c-warning', '#D4A017'),
   info:           '#3D8FC0',
 
   // ── Wellness accent (meditation, sleep, breathing) ────────────────────────

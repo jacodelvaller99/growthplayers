@@ -35,6 +35,7 @@ import {
 } from '@/components/polaris';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
 
@@ -522,7 +523,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   heroBadgeArch: {
-    borderColor: palette.gold + '55',
+    borderColor: alpha(palette.gold, '55'),
   },
   heroBadgeText: {
     color: palette.goldText,
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
   archetypeChip: {
     alignItems: 'center',
     backgroundColor: 'rgba(179,141,60,0.08)',
-    borderColor: palette.gold + '44',
+    borderColor: alpha(palette.gold, '44'),
     borderRadius: radii.sm,
     borderWidth: 1,
     flexDirection: 'row',

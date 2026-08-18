@@ -16,6 +16,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { logSilentError } from '@/lib/observability';
@@ -658,7 +659,7 @@ const styles = StyleSheet.create({
   },
   suggestionPill: {
     backgroundColor: 'rgba(201,160,0,0.08)',
-    borderColor: palette.gold + '44',
+    borderColor: alpha(palette.gold, '44'),
     borderRadius: radii.sm,
     borderWidth: 1,
     paddingHorizontal: spacing.md,

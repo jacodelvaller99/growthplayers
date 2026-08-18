@@ -26,6 +26,7 @@ import {
 import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { arcForDay } from '@/lib/narrativeLogic';
@@ -986,7 +987,7 @@ export default function ProgresoScreen() {
               {/* Subscription tier badge */}
               <PremiumCard style={[styles.tierCard, {
                 borderColor: subscription.isExpiringSoon
-                  ? palette.warning + '88'
+                  ? alpha(palette.warning, '88')
                   : subColor + '55',
               }]}>
                 <View style={[styles.tierIconBox, { backgroundColor: subColor + '22' }]}>
@@ -1439,7 +1440,7 @@ export default function ProgresoScreen() {
       {/* Tier badge — Supabase Realtime-synced */}
       <PremiumCard style={[styles.tierCard, {
         borderColor: subscription.isExpiringSoon
-          ? palette.warning + '88'
+          ? alpha(palette.warning, '88')
           : subColor + '55',
       }]}>
         <View style={[styles.tierIconBox, { backgroundColor: subColor + '22' }]}>
@@ -1496,7 +1497,7 @@ export default function ProgresoScreen() {
       {/* B2B CTA */}
       <PremiumCard style={styles.b2bCard}>
         <View style={styles.b2bHeader}>
-          <View style={[styles.b2bIconBox, { backgroundColor: palette.gold + '22' }]}>
+          <View style={[styles.b2bIconBox, { backgroundColor: alpha(palette.gold, '22') }]}>
             <MaterialIcons name="business" size={24} color={palette.goldText} />
           </View>
           <View style={styles.b2bTextCol}>
@@ -1917,7 +1918,7 @@ const styles = StyleSheet.create({
   },
   archetypeRowEarned: {
     opacity: 1,
-    borderColor: palette.gold + '55',
+    borderColor: alpha(palette.gold, '55'),
   },
   archetypeCopy: {
     flex: 1,
@@ -2068,7 +2069,7 @@ const styles = StyleSheet.create({
   // B2B card
   b2bCard: {
     gap: spacing.md,
-    borderColor: palette.gold + '44',
+    borderColor: alpha(palette.gold, '44'),
     marginBottom: spacing.lg,
   },
   b2bHeader: {
@@ -2209,7 +2210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: palette.danger + '55',
+    borderColor: alpha(palette.danger, '55'),
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -2261,7 +2262,7 @@ const styles = StyleSheet.create({
 const shareStyles = StyleSheet.create({
   row: {
     alignItems:      'center',
-    borderColor:     palette.gold + '44',
+    borderColor:     alpha(palette.gold, '44'),
     borderRadius:    radii.sm,
     borderWidth:     1,
     flexDirection:   'row',
