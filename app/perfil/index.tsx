@@ -376,6 +376,23 @@ export default function PerfilSoberanoScreen() {
         <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
       </Pressable>
 
+      {/* ── Navigation: Apariencia ── */}
+      <GoldDivider label="AJUSTES" />
+      <Pressable
+        style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
+        onPress={() => router.push('/perfil/apariencia' as never)}
+        accessibilityRole="button"
+        accessibilityLabel="Cambiar la apariencia de la app">
+        <View style={styles.navIcon}>
+          <MaterialIcons name="palette" size={22} color={palette.goldText} />
+        </View>
+        <View style={styles.navCopy}>
+          <Text style={styles.navTitle}>APARIENCIA</Text>
+          <Text style={styles.navSub}>Fondo y color — 30 combinaciones</Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
+      </Pressable>
+
       {/* ── Full profile link ── */}
       <Pressable
         style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}

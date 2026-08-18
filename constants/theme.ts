@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { cv } from './themeColors';
+import { alpha, cv } from './themeColors';
 
 // ─── Brand Identity ──────────────────────────────────────────────────────────────
 export const BRAND = {
@@ -61,7 +61,7 @@ export const palette = {
   silhouette:     cv('--c-silhouette',  '#5F5F5F'),
   zoneBorder:     cv('--c-zone-border', 'rgba(255,255,255,0.38)'),
   ash:            cv('--c-text-2',     '#AAAAAA'),   // secondary text
-  smoke:          cv('--c-text-3',     '#888888'),   // tertiary/placeholder text — 5.5:1 sobre graphite (WCAG AA en texto normal). Antes #666666 fallaba (3.3:1).
+  smoke:          cv('--c-text-3',     '#898989'),   // tertiary/placeholder text — AA sobre TODA la rampa, incluida charcoal (antes 4.49:1 ahí).
   muted:          cv('--c-text-faint', '#444444'),   // disabled, locked states
 
   // ── Borders — themeable ──────────────────────────────────────────────────────
@@ -75,18 +75,23 @@ export const palette = {
   // ── Semantic — themeable por el EJE SEÑAL ────────────────────────────────────
   // `semaforo` los desatura para que convivan con el oro (modelo WHOOP: cada
   // matiz significa algo). Las opacidades van por alpha(), no por concatenación.
+  //
+  // Los `*Muted` se DERIVAN del token, no se escriben aparte: eran rgba fijos y
+  // por tanto no seguían el eje. Con `semaforo` el borde y el texto de un chip
+  // cambiaban de verde pero su relleno se quedaba en el verde anterior.
   success:        cv('--c-success', '#52A878'),
-  successMuted:   'rgba(82, 168, 120, 0.15)',
-  danger:         cv('--c-danger',  '#C0392B'),
-  dangerMuted:    'rgba(192, 57, 43, 0.15)',
+  successMuted:   alpha(cv('--c-success', '#52A878'), '26'),   // 0x26 ≈ 15%
+  danger:         cv('--c-danger',  '#CF3D2E'),
+  dangerMuted:    alpha(cv('--c-danger', '#CF3D2E'), '26'),
   // Acento de RECUPERACIÓN. En casi todas las señales es el mismo oro; en
   // `calma` pasa a azul sereno para separar el lenguaje de empuje del de
   // restaurar (modelo Calm). Úsalo en bienestar/biometría, no en CTAs.
   calm:           cv('--c-calm',    '#FFC804'),
-  // danger AS TEXT — themeable, mismo patrón que goldText. #C0392B sobre la tarjeta
-  // oscura (#111111) da 3.47:1 y falla AA (4.5:1) en TODO mensaje de error; el tono
-  // del tema oscuro sube a 5.18:1. En claro pasa de sobra, así que ahí no cambia.
-  dangerText:     cv('--c-danger-text', '#E5564A'),
+  // danger AS TEXT — themeable, mismo patrón que goldText. El rojo de acento es
+  // demasiado oscuro para llevar copy sobre superficie oscura, de ahí este token
+  // aparte. Cada fondo define el suyo; themeContrast.test.ts fija que TODOS
+  // llegan a AA sobre las cinco superficies, no solo sobre la tarjeta base.
+  dangerText:     cv('--c-danger-text', '#E65C51'),
   warning:        cv('--c-warning', '#D4A017'),
   info:           '#3D8FC0',
 

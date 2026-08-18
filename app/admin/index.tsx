@@ -113,7 +113,9 @@ const SECTIONS: SectionCard[] = [
   { route: '/admin/inteligencia', label: 'ML',              icon: '🧠', desc: 'Dashboard completo' },
   { route: '/admin/contenido',    label: 'Contenido',       icon: '📝', desc: 'Diarios y chats' },
   { route: '/admin/plaud',        label: 'Plaud',           icon: '🎙️', desc: 'Mentorías grabadas' },
-  { route: '/admin/apariencia',   label: 'Apariencia',      icon: '🎨', desc: 'Laboratorio de color' },
+  // Apunta al perfil a propósito: la pantalla es la MISMA que ve el cliente, no
+  // una copia de admin. Un laboratorio aparte se desincronizaría del producto.
+  { route: '/perfil/apariencia',  label: 'Apariencia',      icon: '🎨', desc: 'Paletas de color' },
   { route: '/admin/comunidad',    label: 'Moderación',      icon: '🚩', desc: 'Cola de reportes' },
   { route: '/admin/auditoria',    label: 'Auditoría',       icon: '📋', desc: 'Log de acciones' },
 ];
