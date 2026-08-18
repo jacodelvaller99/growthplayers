@@ -6,11 +6,11 @@
  *   un <style> con los valores de cada eje, y el eje activo se elige con dos
  *   atributos en <html>:
  *
- *     data-theme="dark|light|carbon|aura"   ← EJE 1 · FONDO   (la tinta)
- *     data-signal="oro|ambar|semaforo|calma" ← EJE 2 · SEÑAL   (qué comunica el color)
+ *     data-theme="dark|carbon|aura|tinta|pizarra|light"  ← EJE 1 · FONDO (la tinta)
+ *     data-signal="oro|ambar|semaforo|calma|nitido"      ← EJE 2 · SEÑAL (qué comunica)
  *
  *   Son atributos SEPARADOS a propósito: las custom properties se fusionan por
- *   cascada, así que 4 fondos × 4 señales = 16 combinaciones sin escribir 16
+ *   cascada, así que 6 fondos × 5 señales = 30 combinaciones a partir de 11
  *   bloques. Cada pantalla re-tematiza sola porque ya referencia palette.*.
  *
  *   Nativo (iOS/Android) conserva los hex reales (StyleSheet estático), así que
@@ -24,8 +24,8 @@
  */
 import { Platform } from 'react-native';
 
-export type BackdropId = 'dark' | 'light' | 'carbon' | 'aura';
-export type SignalId = 'oro' | 'ambar' | 'semaforo' | 'calma';
+export type BackdropId = 'dark' | 'light' | 'carbon' | 'aura' | 'tinta' | 'pizarra';
+export type SignalId = 'oro' | 'ambar' | 'semaforo' | 'calma' | 'nitido';
 
 // ─── EJE 1 · FONDO — neutros, texto y bordes ──────────────────────────────────
 // `dark` y `light` conservan exactamente los valores que ya estaban en producción:
@@ -42,43 +42,58 @@ export const THEME_VARS: Record<BackdropId, Record<string, string>> = {
     '--c-text-warm':    '#F0EBE0',
     '--c-text-dim':     'rgba(235,235,235,0.55)',
     '--c-text-2':       '#AAAAAA',
-    '--c-text-3':       '#888888',
+    '--c-text-3':       '#898989',
     '--c-text-faint':   '#444444',
     '--c-border':       'rgba(255,255,255,0.07)',
     '--c-border-soft':  'rgba(255,255,255,0.05)',
     '--c-border-hard':  'rgba(255,255,255,0.13)',
     '--c-border-focus': 'rgba(255,255,255,0.20)',
-    // rojo de error AS TEXT sobre superficie oscura. El #C0392B de palette.danger
-    // solo da 3.47:1 sobre #111111 — falla AA (4.5:1) en cada mensaje de error.
-    // Este tono aclarado da 5.18:1 sobre #111111 y 4.87:1 sobre #181818 (elevado).
-    '--c-danger-text':  '#E5564A',
+    // rojo de error AS TEXT sobre superficie oscura. El rojo de acento
+    // (palette.danger) es demasiado oscuro para llevar copy — de ahí este token
+    // aparte. Se aclaró un punto respecto a #E5564A: aquel medía 4.37:1 sobre
+    // surface-3 (#222222), o sea que el mensaje de error dentro de una tarjeta
+    // elevada era el único texto de la app por debajo de AA.
+    '--c-danger-text':  '#E65C51',
     // La silueta del mapa corporal y el borde de sus zonas. Son tokens y no hex
     // porque en tema claro la silueta gris quedaba sobre superficie blanca y el
     // borde blanco al 38% desaparecía.
     '--c-silhouette':   '#5F5F5F',
     '--c-zone-border':  'rgba(255,255,255,0.38)',
   },
+  // LUZ — reconstruido. Dos defectos medidos en la versión anterior:
+  //
+  //   1. La elevación estaba ROTA. `bg` (#F5F3EE, lum 0.897) caía ENTRE
+  //      `surface-2` (0.948) y `surface-3` (0.841): una tarjeta surface-3 se
+  //      leía como agujero y una surface-2 como elevación, en la misma pantalla.
+  //      Ahora `bg` es el más oscuro de la familia y las superficies suben
+  //      monótonamente (0.815 → 0.863 → 0.930 → 1.000), igual que en oscuro.
+  //   2. `text-3` / `gold-text` / `warning` medían 4.17:1 sobre `overlay` —
+  //      por debajo de AA. Ahora el mínimo de la rampa es 4.77:1.
+  //
+  // El matiz también cambió: el crema anterior era inventado. El manual entrega
+  // neutros PUROS (#0F0F0F Smoky Black · #6D6D6D Dark Silver · #C9C9C9 ·
+  // #E6E6E6), y son los que se usan aquí. El calor de la marca lo pone el oro,
+  // no el papel. Lo fija __tests__/unit/themeContrast.test.ts.
   light: {
-    '--c-bg':           '#F5F3EE',
-    '--c-bg-deep':      '#ECE8DF',
+    '--c-bg':           '#E9E9E9',
+    '--c-bg-deep':      '#DCDCDC',
     '--c-surface':      '#FFFFFF',
-    '--c-surface-2':    '#FBF9F4',
-    '--c-surface-3':    '#F0ECE3',
-    '--c-overlay':      '#E8E3D9',
-    '--c-text':         '#0D0D0D',
-    '--c-text-warm':    '#1A1A1A',
-    '--c-text-dim':     'rgba(13,13,13,0.55)',
-    '--c-text-2':       '#4A4A4A',
-    '--c-text-3':       '#6B6B6B',
-    '--c-text-faint':   '#9A9A9A',
-    '--c-border':       'rgba(13,13,13,0.10)',
-    '--c-border-soft':  'rgba(13,13,13,0.06)',
-    '--c-border-hard':  'rgba(13,13,13,0.15)',
-    '--c-border-focus': 'rgba(13,13,13,0.22)',
-    // En claro el rojo original SÍ pasa (4.90:1 sobre #F5F3EE, 5.44:1 sobre #FFFFFF).
-    '--c-danger-text':  '#C0392B',
-    '--c-silhouette':   '#B4B0A6',
-    '--c-zone-border':  'rgba(13,13,13,0.42)',
+    '--c-surface-2':    '#F7F7F7',
+    '--c-surface-3':    '#EFEFEF',
+    '--c-overlay':      '#DEDEDE',
+    '--c-text':         '#0F0F0F',
+    '--c-text-warm':    '#1C1C1C',
+    '--c-text-dim':     'rgba(15,15,15,0.58)',
+    '--c-text-2':       '#3D3D3D',
+    '--c-text-3':       '#5C5C5C',
+    '--c-text-faint':   '#767676',
+    '--c-border':       'rgba(15,15,15,0.12)',
+    '--c-border-soft':  'rgba(15,15,15,0.07)',
+    '--c-border-hard':  'rgba(15,15,15,0.18)',
+    '--c-border-focus': 'rgba(15,15,15,0.26)',
+    '--c-danger-text':  '#96341F',
+    '--c-silhouette':   '#ADADAD',
+    '--c-zone-border':  'rgba(15,15,15,0.42)',
   },
   // CARBÓN — la misma familia oscura, sesgada al oro. El neutro deja de ser gris
   // puro (que se lee como "sin decidir") y toma el matiz de la marca: menos
@@ -101,7 +116,7 @@ export const THEME_VARS: Record<BackdropId, Record<string, string>> = {
     '--c-border-soft':  'rgba(230,220,190,0.06)',
     '--c-border-hard':  'rgba(230,220,190,0.18)',
     '--c-border-focus': 'rgba(230,220,190,0.26)',
-    '--c-danger-text':  '#E5564A',
+    '--c-danger-text':  '#E7655A',
     '--c-silhouette':   '#655F52',
     '--c-zone-border':  'rgba(235,231,222,0.38)',
   },
@@ -125,9 +140,59 @@ export const THEME_VARS: Record<BackdropId, Record<string, string>> = {
     '--c-border-soft':  'rgba(230,230,230,0.05)',
     '--c-border-hard':  'rgba(230,230,230,0.16)',
     '--c-border-focus': 'rgba(230,230,230,0.24)',
-    '--c-danger-text':  '#E5564A',
+    '--c-danger-text':  '#E65C51',
     '--c-silhouette':   '#5F5F5F',
     '--c-zone-border':  'rgba(255,255,255,0.38)',
+  },
+  // TINTA — negro real (#000000). En pantallas OLED el píxel se apaga: negro
+  // absoluto, batería más baja y un contraste que ninguna otra rampa alcanza.
+  // Los bordes suben de opacidad a propósito: sin luz ambiente que rebote,
+  // una línea al 7% sobre negro puro simplemente no existe.
+  tinta: {
+    '--c-bg':           '#000000',
+    '--c-bg-deep':      '#000000',
+    '--c-surface':      '#0C0C0C',
+    '--c-surface-2':    '#161616',
+    '--c-surface-3':    '#202020',
+    '--c-overlay':      '#1A1A1A',
+    '--c-text':         '#F4F4F4',
+    '--c-text-warm':    '#F6F1E6',
+    '--c-text-dim':     'rgba(244,244,244,0.58)',
+    '--c-text-2':       '#BDBDBD',
+    '--c-text-3':       '#949494',
+    '--c-text-faint':   '#4E4E4E',
+    '--c-border':       'rgba(255,255,255,0.11)',
+    '--c-border-soft':  'rgba(255,255,255,0.07)',
+    '--c-border-hard':  'rgba(255,255,255,0.20)',
+    '--c-border-focus': 'rgba(255,255,255,0.30)',
+    '--c-danger-text':  '#E5584C',
+    '--c-silhouette':   '#666666',
+    '--c-zone-border':  'rgba(255,255,255,0.42)',
+  },
+  // PIZARRA — el contrapunto frío de Carbón. Si Carbón sesga el neutro hacia el
+  // oro, Pizarra lo sesga hacia el azul: baja la temperatura de la pantalla y el
+  // oro resalta más por contraste de matiz. Es la misma derivación, en la otra
+  // dirección — el manual no entrega rampa de superficies para ninguna de las dos.
+  pizarra: {
+    '--c-bg':           '#0B0E12',
+    '--c-bg-deep':      '#07090C',
+    '--c-surface':      '#12161C',
+    '--c-surface-2':    '#1A1F27',
+    '--c-surface-3':    '#232A34',
+    '--c-overlay':      '#1D232C',
+    '--c-text':         '#E6EAF0',
+    '--c-text-warm':    '#F0EBE0',
+    '--c-text-dim':     'rgba(230,234,240,0.58)',
+    '--c-text-2':       '#AFB9C6',
+    '--c-text-3':       '#86919E',
+    '--c-text-faint':   '#454E5A',
+    '--c-border':       'rgba(200,220,245,0.10)',
+    '--c-border-soft':  'rgba(200,220,245,0.06)',
+    '--c-border-hard':  'rgba(200,220,245,0.19)',
+    '--c-border-focus': 'rgba(200,220,245,0.28)',
+    '--c-danger-text':  '#F0685A',
+    '--c-silhouette':   '#5A616D',
+    '--c-zone-border':  'rgba(230,234,240,0.38)',
   },
 };
 
@@ -145,7 +210,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-gold-text':        '#FFC804',
     '--c-success':          '#52A878',
     '--c-warning':          '#D4A017',
-    '--c-danger':           '#C0392B',
+    '--c-danger':           '#CF3D2E',
     '--c-calm':             '#FFC804',   // sin voz aparte: recuperar también es oro
   },
   // ÁMBAR — el segundo oro del manual (#EDBA01) toma el mando. Menos neón, más
@@ -160,7 +225,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-gold-text':        '#EDBA01',
     '--c-success':          '#52A878',
     '--c-warning':          '#D4A017',
-    '--c-danger':           '#C0392B',
+    '--c-danger':           '#CF3D2E',
     '--c-calm':             '#EDBA01',
   },
   // SEMÁFORO — modelo WHOOP: cada matiz significa algo (recuperado / medio /
@@ -191,8 +256,25 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-gold-text':        '#FFC804',
     '--c-success':          '#52A878',
     '--c-warning':          '#D4A017',
-    '--c-danger':           '#C0392B',
+    '--c-danger':           '#CF3D2E',
     '--c-calm':             '#6B8CA8',   // la voz de Recuperación
+  },
+  // NÍTIDO — accesibilidad. Todo el acento sube de luminancia para despegarse
+  // del fondo: el mínimo de la rampa pasa de ~4.5:1 a ~7:1 (AAA). Para vista
+  // cansada, pantalla al sol o cualquiera que sienta el oro "apagado". No es una
+  // paleta más bonita, es la misma paleta legible en peores condiciones.
+  nitido: {
+    '--c-gold':             '#FFD11A',
+    '--c-gold-light':       'rgba(255,209,26,0.18)',
+    '--c-gold-muted':       'rgba(255,209,26,0.75)',
+    '--c-gold-glow':        'rgba(255,209,26,0.12)',
+    '--c-line-gold':        'rgba(255,209,26,0.45)',
+    '--c-line-gold-subtle': 'rgba(255,209,26,0.24)',
+    '--c-gold-text':        '#FFD84D',
+    '--c-success':          '#63D69B',
+    '--c-warning':          '#FFC24D',
+    '--c-danger':           '#FF8071',
+    '--c-calm':             '#7FC4E8',
   },
 };
 
@@ -200,11 +282,56 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
 // El oro como TEXTO sobre claro es ilegible (#FFC804 mide 1.8:1 sobre crema).
 // Cada señal necesita su propia versión oscurecida del MISMO matiz. Selector de
 // dos atributos (0,2,0) para que gane sobre el bloque de señal (0,1,0).
+//
+// Además del texto, aquí se corrigen los tokens de oro CON ALFA, y ese era el
+// motivo real de que Luz se viera plano: están calibrados para tapar un fondo
+// oscuro. Sobre blanco, `rgba(255,200,4,0.12)` compone #FFF8E1 — indistinguible
+// del papel — y el borde `rgba(255,200,4,0.30)` compone #FFEFB4, que a efectos
+// prácticos no dibuja línea. Sobre claro hay que ir hacia ABAJO en luminancia,
+// no hacia arriba: mismo matiz de marca, base oscurecida y alfa mayor.
 export const LIGHT_SIGNAL_OVERRIDES: Record<SignalId, Record<string, string>> = {
-  oro:      { '--c-gold-text': '#8A6500', '--c-calm': '#8A6500' },
-  ambar:    { '--c-gold-text': '#7A5A00', '--c-calm': '#7A5A00' },
-  semaforo: { '--c-gold-text': '#8A6500', '--c-success': '#3F6B4F', '--c-warning': '#8A6212', '--c-danger': '#9B4430', '--c-calm': '#3F6B4F' },
-  calma:    { '--c-gold-text': '#8A6500', '--c-calm': '#3D5F7D' },
+  // Los semánticos se oscurecen en TODAS las señales, no solo en Semáforo. Ese
+  // era un agujero real del tema claro anterior: con la señal `oro`, el verde
+  // #52A878 medía 2.39:1 y el ámbar #D4A017 1.96:1 sobre el fondo claro —
+  // ilegibles incluso como icono. Solo Semáforo estaba corregido porque fue la
+  // única señal que se diseñó mirando el fondo claro.
+  oro: {
+    '--c-gold-text': '#7A5600', '--c-calm': '#7A5600',
+    '--c-success': '#2F6647', '--c-warning': '#7D5810', '--c-danger': '#96341F',
+    '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
+    '--c-gold-muted': 'rgba(122,86,0,0.72)',
+    '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',
+  },
+  ambar: {
+    '--c-gold-text': '#6E4E00', '--c-calm': '#6E4E00',
+    '--c-success': '#2F6647', '--c-warning': '#7D5810', '--c-danger': '#96341F',
+    '--c-gold-light': 'rgba(110,78,0,0.10)', '--c-gold-glow': 'rgba(110,78,0,0.06)',
+    '--c-gold-muted': 'rgba(110,78,0,0.72)',
+    '--c-line-gold': 'rgba(110,78,0,0.38)', '--c-line-gold-subtle': 'rgba(110,78,0,0.18)',
+  },
+  semaforo: {
+    '--c-gold-text': '#7A5600', '--c-success': '#2F6647', '--c-warning': '#7D5810',
+    '--c-danger': '#96341F', '--c-calm': '#2F6647',
+    '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
+    '--c-gold-muted': 'rgba(122,86,0,0.72)',
+    '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',
+  },
+  calma: {
+    '--c-gold-text': '#7A5600', '--c-calm': '#33556F',
+    '--c-success': '#2F6647', '--c-warning': '#7D5810', '--c-danger': '#96341F',
+    '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
+    '--c-gold-muted': 'rgba(122,86,0,0.72)',
+    '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',
+  },
+  // Nítido sobre claro va al revés que sobre oscuro: para ganar contraste hay
+  // que OSCURECER, no iluminar. Objetivo AAA (7:1) sobre las superficies claras.
+  nitido: {
+    '--c-gold-text': '#6B4E00', '--c-success': '#1F5335', '--c-warning': '#664700',
+    '--c-danger': '#7E2412', '--c-calm': '#26485F',
+    '--c-gold-light': 'rgba(107,78,0,0.14)', '--c-gold-glow': 'rgba(107,78,0,0.08)',
+    '--c-gold-muted': 'rgba(107,78,0,0.80)',
+    '--c-line-gold': 'rgba(107,78,0,0.50)', '--c-line-gold-subtle': 'rgba(107,78,0,0.26)',
+  },
 };
 
 /** web helper: el token resuelve a variable CSS en web, hex real en nativo. */

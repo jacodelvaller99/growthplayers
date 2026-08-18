@@ -42,11 +42,26 @@ describe('EJE 1 · fondos (THEME_VARS)', () => {
     }
   });
 
-  it('el fondo por defecto (dark) conserva los valores de producción', () => {
+  it('el fondo por defecto (dark) conserva su rampa de producción', () => {
     // Ampliar el sistema no puede cambiar el aspecto de arranque de la app.
+    // Las ÚNICAS excepciones son correcciones de contraste medidas (text-3 y
+    // danger-text subieron ~1% de luminancia para cerrar AA); las fija
+    // themeContrast.test.ts, no este fichero.
     expect(THEME_VARS.dark['--c-bg']).toBe('#090909');
     expect(THEME_VARS.dark['--c-surface']).toBe('#111111');
-    expect(THEME_VARS.light['--c-bg']).toBe('#F5F3EE');
+    expect(THEME_VARS.dark['--c-surface-3']).toBe('#222222');
+    expect(THEME_VARS.dark['--c-text']).toBe('#EBEBEB');
+  });
+
+  it('claro usa los neutros del manual, no un crema derivado', () => {
+    // El crema anterior (#F5F3EE) no salía de ningún sitio: el Manual de Marca
+    // entrega neutros PUROS. Además su rampa de elevación era incoherente —
+    // ver el comentario del bloque `light` y themeContrast.test.ts.
+    for (const key of ['--c-bg', '--c-surface-2', '--c-surface-3', '--c-overlay'] as const) {
+      const [r, g, b] = [1, 3, 5].map((i) => THEME_VARS.light[key].slice(i, i + 2));
+      expect(`${key}:${r}${g}${b}`).toBe(`${key}:${r}${r}${r}`); // gris puro
+    }
+    expect(THEME_VARS.light['--c-text']).toBe('#0F0F0F');       // Smoky Black
   });
 });
 
@@ -59,9 +74,11 @@ describe('EJE 2 · señales (SIGNAL_VARS)', () => {
   });
 
   it('la señal por defecto (oro) conserva el acento de marca de producción', () => {
+    // El oro es del manual y es intocable. El rojo NO está en el manual: es
+    // derivado, y subió a #CF3D2E porque #C0392B no llegaba ni a 3:1 sobre la
+    // superficie más elevada — ni siquiera como relleno o borde.
     expect(SIGNAL_VARS.oro['--c-gold']).toBe('#FFC804');       // Philippine Yellow
     expect(SIGNAL_VARS.oro['--c-success']).toBe('#52A878');
-    expect(SIGNAL_VARS.oro['--c-danger']).toBe('#C0392B');
   });
 
   it('ámbar cambia el acento al segundo oro del manual, no a un matiz inventado', () => {
