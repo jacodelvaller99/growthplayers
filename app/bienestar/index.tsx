@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FocusHero, LensRow, LensTabs } from '@/components/focus-deck';
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -308,8 +309,6 @@ export default function BienestarHub() {
 
   const phrase = useMemo(() => getTodayPhrase(), []);
 
-  // Hub más liviano: "HOY" enfocado arriba + el resto detrás de "Ver todo".
-  const [showAll, setShowAll] = useState(false);
   // "HOY" — antes era SOLO el reloj de pared: `new Date().getHours()` y tres
   // ramas fijas, con `useMemo(…, [])`. Cero señal del usuario. Daba lo mismo
   // venir reventado de estrés que en tu mejor día: el hub proponía lo mismo.
@@ -346,7 +345,6 @@ export default function BienestarHub() {
 
   /** El porqué real cuando el turno manda; si no, el texto de siempre. */
   const todayHint = turnoBlock ? turno.why : 'Para tu momento del día. Empieza por aquí.';
-  const extraCount = BLOCKS_EXTENDED.length + BLOCKS_EMOCIONAL.length;
 
   // ── Desktop layout ──────────────────────────────────────────────────────────
   if (isDesktop) {
@@ -380,89 +378,33 @@ export default function BienestarHub() {
               {/* Wearable card */}
               <WearableCard router={router} />
 
-              {/* HOY — enfocado */}
-              <GoldDivider label="HOY" />
-              <Text style={desktopStyles.todayHint}>{todayHint}</Text>
-              <View style={desktopStyles.blocksGrid}>
-                {todayPicks.map((block) => (
-                  <Pressable
-                    key={`hoy-${block.route}`}
-                    onPress={() => router.push(block.route as never)}
-                    accessibilityRole="button"
-                    accessibilityLabel={block.label}
-                    style={({ pressed }) => [desktopStyles.gridCard, desktopStyles.gridCardHoy, pressed && { opacity: 0.75 }]}>
-                    <MaterialIcons name={block.icon} size={28} color={palette.goldText} />
-                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
-                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
-                  </Pressable>
-                ))}
-              </View>
+              {/* ── Héroe: una mirada, una decisión ── */}
+              <FocusHero
+                eyebrow={`${stats.weekSessions} sesiones · ${stats.weekMinutes} min esta semana`}
+                statement={todayHint}
+                metric={{ value: String(streak), caption: streak === 1 ? 'DÍA SEGUIDO' : 'DÍAS SEGUIDOS' }}
+                directive={
+                  todayPicks[0]
+                    ? {
+                        title: todayPicks[0].label,
+                        reason: todayPicks[0].sub,
+                        onPress: () => router.push(todayPicks[0].route as never),
+                      }
+                    : undefined
+                }
+              />
 
-              {/* PRÁCTICA grid */}
-              <GoldDivider label="PRÁCTICA" />
-              <View style={desktopStyles.blocksGrid}>
-                {BLOCKS.map((block) => (
-                  <Pressable
-                    key={block.route}
-                    onPress={() => router.push(block.route as never)}
-                    accessibilityRole="button"
-                    accessibilityLabel={block.label}
-                    style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
-                    <MaterialIcons name={block.icon} size={28} color={palette.ash} />
-                    <Text style={desktopStyles.gridLabel}>{block.label}</Text>
-                    <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {/* Resto detrás de "Ver todo" */}
-              {!showAll ? (
-                <Pressable onPress={() => setShowAll(true)} style={desktopStyles.seeAllBtn} accessibilityRole="button">
-                  <Text style={desktopStyles.seeAllText}>VER TODO · {extraCount} MÁS</Text>
-                  <MaterialIcons name="expand-more" size={18} color={palette.goldText} />
-                </Pressable>
-              ) : (
-                <>
-                  {/* SISTEMA INTEGRAL grid */}
-                  <GoldDivider label="SISTEMA INTEGRAL" />
-                  <View style={desktopStyles.blocksGrid}>
-                    {BLOCKS_EXTENDED.map((block) => (
-                      <Pressable
-                        key={block.route}
-                        onPress={() => router.push(block.route as never)}
-                        accessibilityRole="button"
-                        accessibilityLabel={block.label}
-                        style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
-                        <MaterialIcons name={block.icon} size={28} color={palette.ash} />
-                        <Text style={desktopStyles.gridLabel}>{block.label}</Text>
-                        <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  {/* LIBERACIÓN EMOCIONAL grid */}
-                  <GoldDivider label="LIBERACIÓN EMOCIONAL" />
-                  <View style={desktopStyles.blocksGrid}>
-                    {BLOCKS_EMOCIONAL.map((block) => (
-                      <Pressable
-                        key={block.route}
-                        onPress={() => router.push(block.route as never)}
-                        accessibilityRole="button"
-                        accessibilityLabel={block.label}
-                        style={({ pressed }) => [desktopStyles.gridCard, pressed && { opacity: 0.75 }]}>
-                        <MaterialIcons name={block.icon} size={28} color={palette.ash} />
-                        <Text style={desktopStyles.gridLabel}>{block.label}</Text>
-                        <Text style={desktopStyles.gridSub} numberOfLines={1}>{block.sub}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  <Pressable onPress={() => setShowAll(false)} style={desktopStyles.seeAllBtn} accessibilityRole="button">
-                    <Text style={desktopStyles.seeAllText}>VER MENOS</Text>
-                    <MaterialIcons name="expand-less" size={18} color={palette.goldText} />
-                  </Pressable>
-                </>
-              )}
+              {/* ── Lentes: 17 destinos dejan de pedir que bajes por todos ── */}
+              <LensTabs
+                lenses={[
+                  { id: 'practica',  label: 'PRÁCTICA',  render: () => <>{BLOCKS.map((b) => (
+                    <LensRow key={b.route} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />))}</> },
+                  { id: 'cuerpo',    label: 'SISTEMA',   render: () => <>{BLOCKS_EXTENDED.map((b) => (
+                    <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />))}</> },
+                  { id: 'emocional', label: 'EMOCIONAL', render: () => <>{BLOCKS_EMOCIONAL.map((b) => (
+                    <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />))}</> },
+                ]}
+              />
 
             </View>
             {/* ──────────────── RIGHT COLUMN ──────────────── */}
@@ -557,72 +499,79 @@ export default function BienestarHub() {
         <Text style={styles.headerSub}>El cuerpo es el primer sistema de armas.</Text>
       </View>
 
-      {/* ── Quick stats: sessions · minutes + week activity dots ── */}
-      <PremiumCard style={styles.statsCard}>
-        <View style={styles.statsLeft}>
-          <View style={styles.statsHeadline}>
-            <Text style={styles.statsNumber}>{stats.weekSessions}</Text>
-            <Text style={styles.statsUnit}>sesiones</Text>
-          </View>
-          <Text style={styles.statsMeta}>{stats.weekMinutes} MIN · ESTA SEMANA</Text>
-        </View>
-        <View style={styles.dotRow}>
-          {DAY_LABELS.map((label, i) => (
-            <View key={label} style={styles.dotItem}>
-              <View style={[styles.dot, weekDots[i] && styles.dotActive]} />
-              <Text style={styles.dotLabel}>{label}</Text>
-            </View>
-          ))}
-        </View>
-      </PremiumCard>
+      {/* ── UN HÉROE, UNA DECISIÓN ──────────────────────────────────────────
+          Antes esto eran dos bloques distintos —tarjeta de estadísticas y
+          sección "HOY"— y "HOY" repetía en mosaico dos prácticas que volvían a
+          salir más abajo en "PRÁCTICA". Ahora el turno es LA propuesta, una
+          sola, con su porqué; el resto vive en su lente. */}
+      <FocusHero
+        eyebrow={`${stats.weekSessions} sesiones · ${stats.weekMinutes} min esta semana`}
+        statement={todayHint}
+        metric={{ value: String(streak), caption: streak === 1 ? 'DÍA SEGUIDO' : 'DÍAS SEGUIDOS' }}
+        directive={
+          todayPicks[0]
+            ? {
+                title: todayPicks[0].label,
+                reason: todayPicks[0].sub,
+                onPress: () => router.push(todayPicks[0].route as never),
+              }
+            : undefined
+        }
+      />
 
-      {/* ── HOY — enfocado (1-2 prácticas para tu momento) ── */}
-      <GoldDivider label="HOY" />
-      <Text style={styles.todayHint}>{todayHint}</Text>
-      <View style={styles.grid}>
-        {todayPicks.map((b) => (
-          <HubTile key={`hoy-${b.route}`} icon={b.icon} label={b.label} sub={b.sub} gold onPress={() => router.push(b.route as never)} />
+      {/* ── La semana, sin ocupar una tarjeta entera ── */}
+      <View style={styles.dotRow}>
+        {DAY_LABELS.map((label, i) => (
+          <View key={label} style={styles.dotItem}>
+            <View style={[styles.dot, weekDots[i] && styles.dotActive]} />
+            <Text style={styles.dotLabel}>{label}</Text>
+          </View>
         ))}
       </View>
 
-      {/* ── PRÁCTICA grid ── */}
-      <GoldDivider label="PRÁCTICA" />
-      <View style={styles.grid}>
-        {BLOCKS.map((b) => (
-          <HubTile key={b.route} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />
-        ))}
-      </View>
-
-      {/* ── Resto detrás de "Ver todo" — menos abrumador (su "me mareo") ── */}
-      {!showAll ? (
-        <Pressable onPress={() => setShowAll(true)} style={styles.seeAllBtn} accessibilityRole="button" accessibilityLabel="Ver todas las herramientas">
-          <Text style={styles.seeAllText}>VER TODO · {extraCount} MÁS</Text>
-          <MaterialIcons name="expand-more" size={18} color={palette.goldText} />
-        </Pressable>
-      ) : (
-        <>
-          {/* ── SISTEMA INTEGRAL grid ── */}
-          <GoldDivider label="SISTEMA INTEGRAL" />
-          <View style={styles.grid}>
-            {BLOCKS_EXTENDED.map((b) => (
-              <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />
-            ))}
-          </View>
-
-          {/* ── LIBERACIÓN EMOCIONAL grid (gold-accented tiles) ── */}
-          <GoldDivider label="LIBERACIÓN EMOCIONAL" />
-          <View style={styles.grid}>
-            {BLOCKS_EMOCIONAL.map((b) => (
-              <HubTile key={b.id} icon={b.icon} label={b.label} sub={b.sub} gold onPress={() => router.push(b.route as never)} />
-            ))}
-          </View>
-
-          <Pressable onPress={() => setShowAll(false)} style={styles.seeAllBtn} accessibilityRole="button" accessibilityLabel="Ver menos">
-            <Text style={styles.seeAllText}>VER MENOS</Text>
-            <MaterialIcons name="expand-less" size={18} color={palette.goldText} />
-          </Pressable>
-        </>
-      )}
+      {/* ── LENTES EN VEZ DE PILA ───────────────────────────────────────────
+          17 destinos en mosaicos idénticos (7 + 7 + 3) obligaban a recorrer la
+          pantalla entera para llegar a uno. Ahora se elige por dónde mirar. */}
+      <LensTabs
+        lenses={[
+          {
+            id: 'practica',
+            label: 'PRÁCTICA',
+            render: () => (
+              <>
+                {BLOCKS.map((b) => (
+                  <LensRow key={b.route} icon={b.icon} label={b.label} sub={b.sub}
+                    onPress={() => router.push(b.route as never)} />
+                ))}
+              </>
+            ),
+          },
+          {
+            id: 'cuerpo',
+            label: 'SISTEMA',
+            render: () => (
+              <>
+                {BLOCKS_EXTENDED.map((b) => (
+                  <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub}
+                    onPress={() => router.push(b.route as never)} />
+                ))}
+              </>
+            ),
+          },
+          {
+            id: 'emocional',
+            label: 'EMOCIONAL',
+            render: () => (
+              <>
+                {BLOCKS_EMOCIONAL.map((b) => (
+                  <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub}
+                    onPress={() => router.push(b.route as never)} />
+                ))}
+              </>
+            ),
+          },
+        ]}
+      />
 
       {/* ── Wearable card (real biometrics — shown if connected, else connect prompt) ── */}
       <WearableCard router={router} />
@@ -631,37 +580,6 @@ export default function BienestarHub() {
       <Text style={styles.phraseQuote}>{phrase}</Text>
 
     </ScrollView>
-  );
-}
-
-// ─── Hub Tile — square card with large icon (design: PRÁCTICA / SISTEMA / LIBERACIÓN) ──
-function HubTile({
-  icon,
-  label,
-  sub,
-  gold,
-  onPress,
-}: {
-  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  label: string;
-  sub?: string;
-  gold?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={sub ? `${label}: ${sub}` : label}
-      style={({ pressed }) => [
-        styles.gridCard,
-        gold && styles.gridCardGold,
-        pressed && { opacity: 0.75 },
-      ]}>
-      <MaterialIcons name={icon} size={28} color={gold ? palette.goldText : palette.ivory} />
-      <Text style={[styles.gridLabel, gold && styles.gridLabelGold]}>{label}</Text>
-      {sub ? <Text style={styles.gridSub} numberOfLines={2}>{sub}</Text> : null}
-    </Pressable>
   );
 }
 

@@ -26,8 +26,16 @@
  *   node scripts/audit-ui.mjs [urlBase] [carpetaSalida] [--shots] [--login]
  */
 import { chromium } from 'playwright';
-import { mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
+
+/**
+ * Sesión guardada tras un `--login`, para no tener que volver a entrar en cada
+ * pasada. Vive FUERA del repositorio a propósito: contiene un token de sesión
+ * real. Bórralo cuando termines la revisión (o cierra sesión en la app, que lo
+ * invalida igual).
+ */
+const SESSION_FILE = 'C:/tmp/polaris-session.json';
 
 const BASE = process.argv[2]?.startsWith('http') ? process.argv[2] : 'http://localhost:8081';
 const OUT = process.argv.find((a, i) => i > 2 && !a.startsWith('--')) ?? 'C:/tmp/polaris-audit';
@@ -169,8 +177,10 @@ if (LOGIN) {
   if (!dentro) {
     console.log('  Sin sesión tras 5 minutos — sigo solo con las rutas públicas.\n');
   } else {
-    console.log('  Sesión detectada. Recorriendo rutas...\n');
     await page.waitForTimeout(2000);
+    await ctx.storageState({ path: SESSION_FILE });
+    console.log(`  Sesión detectada y guardada en ${SESSION_FILE}.`);
+    console.log('  Las próximas pasadas ya no pedirán acceso. Recorriendo rutas...\n');
   }
 }
 page.on('pageerror', (e) => errores.push(String(e).slice(0, 160)));
