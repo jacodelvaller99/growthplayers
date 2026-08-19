@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BodyFocusCard } from '@/components/body-focus-card';
+import { LensTabs } from '@/components/focus-deck';
 import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { EvidenceBadge } from '@/components/EvidenceBadge';
@@ -60,6 +61,18 @@ const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['
   energía:   'bolt',
   compasión: 'volunteer-activism',
 };
+
+/**
+ * Las lentes salen de los DATOS, no de una lista escrita a mano.
+ *
+ * Con las categorías fijas aquí, una sesión con categoría nueva quedaría
+ * invisible: no aparecería en ninguna pestaña y nadie lo notaría hasta que
+ * alguien la echara de menos. Derivándolas, aparece sola.
+ */
+const CATEGORIES = [...new Set(MEDITATION_SESSIONS.map((s) => s.category))];
+const SESSIONS_BY_CATEGORY = Object.fromEntries(
+  CATEGORIES.map((c) => [c, MEDITATION_SESSIONS.filter((s) => s.category === c)]),
+) as Record<string, MeditationSession[]>;
 
 // ─── Circular timer ───────────────────────────────────────────────────────────
 
@@ -452,6 +465,49 @@ export default function MeditacionScreen() {
     );
   }
 
+  /** Una sesión. Extraída del `.map` para que las cuatro lentes la compartan. */
+  const renderSession = (session: MeditationSession) => {
+const done = completedIds.has(session.id);
+  const catColor = CATEGORY_COLOR[session.category] ?? palette.gold;
+  const catIcon = CATEGORY_ICON[session.category] ?? 'self-improvement';
+
+  return (
+    <Pressable
+      key={session.id}
+      onPress={() => { haptic('light'); setActive(session); }}
+      accessibilityRole="button"
+      accessibilityLabel={`${session.title}, ${session.category}, ${session.durationMinutes} minutos${done ? ', completada' : ''}`}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+      <PremiumCard style={styles.cardInner}>
+        <View style={styles.cardTop}>
+          <View style={[styles.iconBox, { backgroundColor: catColor + '22' }]}>
+            <MaterialIcons name={catIcon} size={26} color={catColor} />
+          </View>
+          <View style={styles.cardMeta}>
+            <Text style={styles.cardTitle}>{session.title}</Text>
+            <View style={styles.cardTags}>
+              <View style={[styles.tag, { borderColor: catColor }]}>
+                <Text style={[styles.tagText, { color: catColor }]}>
+                  {session.category.toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.duration}>{session.durationMinutes} min</Text>
+              {/* Solo aparece si la sesion declara evidencia. La ausencia
+                  del sello ES la informacion: no hay estado "sin respaldo". */}
+              <EvidenceBadge evidence={session.evidence} />
+            </View>
+          </View>
+          {done
+            ? <MaterialIcons name="check-circle" size={26} color={palette.success} />
+            : <MaterialIcons name="play-circle" size={26} color={palette.goldText} />
+          }
+        </View>
+        <Text style={styles.cardDesc}>{session.description}</Text>
+      </PremiumCard>
+    </Pressable>
+  );
+  };
+
   return (
     <View style={sc.root}>
       {/* Las prácticas son de los pocos momentos inmersivos donde la marca
@@ -494,49 +550,18 @@ export default function MeditacionScreen() {
       {/* Contexto biométrico del día (honesto, no en vivo) */}
       <BodyContextCard frame="Medita para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
 
-      <GoldDivider label="SESIONES" />
-
-      {MEDITATION_SESSIONS.map((session) => {
-        const done = completedIds.has(session.id);
-        const catColor = CATEGORY_COLOR[session.category] ?? palette.gold;
-        const catIcon = CATEGORY_ICON[session.category] ?? 'self-improvement';
-
-        return (
-          <Pressable
-            key={session.id}
-            onPress={() => { haptic('light'); setActive(session); }}
-            accessibilityRole="button"
-            accessibilityLabel={`${session.title}, ${session.category}, ${session.durationMinutes} minutos${done ? ', completada' : ''}`}
-            style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-            <PremiumCard style={styles.cardInner}>
-              <View style={styles.cardTop}>
-                <View style={[styles.iconBox, { backgroundColor: catColor + '22' }]}>
-                  <MaterialIcons name={catIcon} size={26} color={catColor} />
-                </View>
-                <View style={styles.cardMeta}>
-                  <Text style={styles.cardTitle}>{session.title}</Text>
-                  <View style={styles.cardTags}>
-                    <View style={[styles.tag, { borderColor: catColor }]}>
-                      <Text style={[styles.tagText, { color: catColor }]}>
-                        {session.category.toUpperCase()}
-                      </Text>
-                    </View>
-                    <Text style={styles.duration}>{session.durationMinutes} min</Text>
-                    {/* Solo aparece si la sesion declara evidencia. La ausencia
-                        del sello ES la informacion: no hay estado "sin respaldo". */}
-                    <EvidenceBadge evidence={session.evidence} />
-                  </View>
-                </View>
-                {done
-                  ? <MaterialIcons name="check-circle" size={26} color={palette.success} />
-                  : <MaterialIcons name="play-circle" size={26} color={palette.goldText} />
-                }
-              </View>
-              <Text style={styles.cardDesc}>{session.description}</Text>
-            </PremiumCard>
-          </Pressable>
-        );
-      })}
+      {/* ── LENTES EN VEZ DE PILA ─────────────────────────────────────────
+          26 sesiones en una lista plana son 26 tarjetas apiladas: para llegar
+          a la última hay que pasar por las veinticinco anteriores, y todas
+          pesan lo mismo. La categoría ya vive en los datos — solo hacía falta
+          dejar de ignorarla. Se elige por dónde mirar, no cuánto bajar. */}
+      <LensTabs
+        lenses={CATEGORIES.map((cat) => ({
+          id: cat,
+          label: cat.toUpperCase(),
+          render: () => <>{SESSIONS_BY_CATEGORY[cat].map(renderSession)}</>,
+        }))}
+      />
 
       <View style={{ height: spacing.xxxl }} />
     </ScrollView>

@@ -298,14 +298,17 @@ const s = StyleSheet.create({
   heroRule: { height: 1, backgroundColor: palette.line, marginHorizontal: -spacing.lg },
 
   // Héroe
-  hero: {
-    backgroundColor: palette.graphite,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-    borderRadius: radii.lg,
-    padding: spacing.xl,
-    gap: spacing.lg,
-  },
+  /**
+   * El héroe es CONTENIDO; `HeroPanel` es el marco. Uno solo de los dos dibuja.
+   *
+   * Llevaba su propio borde dorado y además se envolvía en HeroPanel, que pinta
+   * exactamente el mismo borde: dos cajas idénticas, una dentro de la otra, con
+   * el mismo contenido. Medido en el navegador antes de verse a simple vista.
+   *
+   * Repartido así el contrato, el fallo no puede volver: un héroe suelto no
+   * dibuja nada y se nota al instante; un héroe dentro del panel dibuja una vez.
+   */
+  hero: { gap: spacing.lg },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   metricWrap: { alignItems: 'center', minWidth: 86 },
   metricValue: {
@@ -400,12 +403,20 @@ const s = StyleSheet.create({
   },
 
   // Lentes
-  module: {
-    backgroundColor: palette.graphite,
-    borderWidth: 1, borderColor: palette.line, borderRadius: radii.lg,
-    overflow: 'hidden',
-  },
-  tabs: { flexDirection: 'row', gap: spacing.xs, padding: spacing.sm },
+  /**
+   * La lente NO es una caja.
+   *
+   * Nació con fondo y borde, y eso convertía en anidada TODA tarjeta que
+   * cayera dentro: medido en el navegador, 6 anidamientos en Comando y 3 en
+   * Progreso, de un solo origen. Una tarjeta dentro de otra subdivide en vez
+   * de agrupar — vuelve a dibujar el borde que se estaba quitando.
+   *
+   * Lo que agrupa aquí ya existe sin pintar nada: la fila de pestañas arriba
+   * y el aire alrededor. Las pestañas se sostienen solas sobre el fondo de
+   * página; ya llevan su propio relleno cuando están activas.
+   */
+  module: { gap: spacing.sm },
+  tabs: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.xs },
   tab: {
     paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center',
     borderRadius: 999, borderWidth: 1, borderColor: 'transparent',
@@ -413,7 +424,7 @@ const s = StyleSheet.create({
   tabOn: { backgroundColor: palette.goldLight, borderColor: palette.lineGold },
   tabText: { ...typography.label, color: palette.smoke, fontSize: 10, letterSpacing: 1.4 },
   tabTextOn: { color: palette.goldText },
-  panel: { padding: spacing.md, paddingTop: 0, gap: spacing.xs },
+  panel: { gap: spacing.xs },
 
   // Filas
   row: {

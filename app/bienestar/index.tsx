@@ -379,6 +379,7 @@ export default function BienestarHub() {
               <WearableCard router={router} />
 
               {/* ── Héroe: una mirada, una decisión ── */}
+              <HeroPanel>
               <FocusHero
                 eyebrow={`${stats.weekSessions} sesiones · ${stats.weekMinutes} min esta semana`}
                 statement={todayHint}
@@ -393,6 +394,7 @@ export default function BienestarHub() {
                     : undefined
                 }
               />
+              </HeroPanel>
 
               {/* ── Lentes: 17 destinos dejan de pedir que bajes por todos ── */}
               <LensTabs
