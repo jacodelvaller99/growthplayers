@@ -7,6 +7,7 @@ import Svg, { Circle, Path, Polyline } from 'react-native-svg';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LensTabs } from '@/components/focus-deck';
 import {
   AppHeader,
   DangerButton,
@@ -1220,6 +1221,13 @@ export default function ProgresoScreen() {
         ))}
       </View>
 
+      {/* ── LENTES ────────────────────────────────────────────────────────
+          Antes: 15 secciones apiladas. Para ver tus arquetipos había que bajar
+          por los ajustes de notificaciones. Las secciones NO se han reescrito
+          —son las mismas— pero ahora eliges por dónde entrar. */}
+      <LensTabs
+        lenses={[
+          { id: 'avance', label: 'AVANCE', render: () => (<>
       {/* ── Protocol Progress ── */}
       <ProgressCard
         label="Progreso · Protocolo Soberano 90D"
@@ -1227,6 +1235,33 @@ export default function ProgresoScreen() {
         progress={protocolProgress}
       />
 
+      {/* ── Módulos (ring + progreso del módulo activo) ── */}
+      <GoldDivider label="MÓDULOS" />
+      <PremiumCard style={styles.modulesCard}>
+        <ScoreRing
+          value={moduleProgress.completedModules}
+          max={moduleProgress.totalModules}
+          size={92}
+          stroke={7}
+          display={`${moduleProgress.completedModules}`}
+          sub={`de ${moduleProgress.totalModules}`}
+        />
+        <View style={styles.modulesBody}>
+          <Text style={styles.modulesTitle}>{ACTIVE_MODULE.title} · {moduleProgress.activePct}%</Text>
+          <View style={styles.modulesTrack}>
+            <View style={[styles.modulesFill, { width: `${moduleProgress.activePct}%` }]} />
+          </View>
+          <Text style={styles.modulesMeta}>1 ACTIVO · {moduleProgress.locked} BLOQUEADOS</Text>
+        </View>
+      </PremiumCard>
+
+      {/* ── 42-Day Streak Heatmap ── */}
+      {state.checkIns.length > 0 && (
+        <StreakCalendar checkIns={state.checkIns} />
+      )}
+
+          </>) },
+          { id: 'senal', label: 'SEÑAL', render: () => (<>
       {/* ── Promedios de la semana (sparkline metric cards) ── */}
       {analytics.hasWeek ? (
         <>
@@ -1296,31 +1331,6 @@ export default function ProgresoScreen() {
             />
           </View>
         </>
-      )}
-
-      {/* ── Módulos (ring + progreso del módulo activo) ── */}
-      <GoldDivider label="MÓDULOS" />
-      <PremiumCard style={styles.modulesCard}>
-        <ScoreRing
-          value={moduleProgress.completedModules}
-          max={moduleProgress.totalModules}
-          size={92}
-          stroke={7}
-          display={`${moduleProgress.completedModules}`}
-          sub={`de ${moduleProgress.totalModules}`}
-        />
-        <View style={styles.modulesBody}>
-          <Text style={styles.modulesTitle}>{ACTIVE_MODULE.title} · {moduleProgress.activePct}%</Text>
-          <View style={styles.modulesTrack}>
-            <View style={[styles.modulesFill, { width: `${moduleProgress.activePct}%` }]} />
-          </View>
-          <Text style={styles.modulesMeta}>1 ACTIVO · {moduleProgress.locked} BLOQUEADOS</Text>
-        </View>
-      </PremiumCard>
-
-      {/* ── 42-Day Streak Heatmap ── */}
-      {state.checkIns.length > 0 && (
-        <StreakCalendar checkIns={state.checkIns} />
       )}
 
       {/* ── Intelligence DNA Dashboard ── */}
@@ -1399,40 +1409,6 @@ export default function ProgresoScreen() {
           </PremiumCard>
         </>
       )}
-
-      {/* ── Archetype badges ── */}
-      <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
-      <View style={styles.archetypeList}>
-        {archetypes.map((arch) => (
-          <PremiumCard
-            key={arch.id}
-            style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
-            <MaterialIcons
-              // Sin condecoracion: `military-tech` es la misma medalla que se quito del
-                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
-                      // de comprobado, no con un galardon.
-                      name={arch.earned ? 'check-circle-outline' : 'lock'}
-              size={18}
-              color={arch.earned ? palette.goldText : palette.smoke}
-            />
-            <View style={styles.archetypeCopy}>
-              <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
-                {arch.name}
-              </Text>
-              <Text style={styles.archetypeProgress}>
-                {arch.earned
-                  ? 'ARQUETIPO CONQUISTADO'
-                  : `${arch.completedCount}/${arch.totalLessons} LECCIONES`}
-              </Text>
-            </View>
-            {arch.earned && (
-              <View style={styles.archetypeCheck}>
-                <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
-              </View>
-            )}
-          </PremiumCard>
-        ))}
-      </View>
 
       {/* ── Mi Bienestar ── */}
       <GoldDivider label="MI BIENESTAR" />
@@ -1522,6 +1498,44 @@ export default function ProgresoScreen() {
         </Pressable>
       </PremiumCard>
 
+          </>) },
+          { id: 'logros', label: 'LOGROS', render: () => (<>
+      {/* ── Archetype badges ── */}
+      <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
+      <View style={styles.archetypeList}>
+        {archetypes.map((arch) => (
+          <PremiumCard
+            key={arch.id}
+            style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
+            <MaterialIcons
+              // Sin condecoracion: `military-tech` es la misma medalla que se quito del
+                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
+                      // de comprobado, no con un galardon.
+                      name={arch.earned ? 'check-circle-outline' : 'lock'}
+              size={18}
+              color={arch.earned ? palette.goldText : palette.smoke}
+            />
+            <View style={styles.archetypeCopy}>
+              <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
+                {arch.name}
+              </Text>
+              <Text style={styles.archetypeProgress}>
+                {arch.earned
+                  ? 'ARQUETIPO CONQUISTADO'
+                  : `${arch.completedCount}/${arch.totalLessons} LECCIONES`}
+              </Text>
+            </View>
+            {arch.earned && (
+              <View style={styles.archetypeCheck}>
+                <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
+              </View>
+            )}
+          </PremiumCard>
+        ))}
+      </View>
+
+          </>) },
+          { id: 'ajustes', label: 'AJUSTES', render: () => (<>
       {/* ── Edit Profile ── */}
       <GoldDivider label="EDITAR PERFIL" />
       <PremiumCard style={styles.form}>
@@ -1718,6 +1732,10 @@ export default function ProgresoScreen() {
           <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
         </Pressable>
       )}
+
+          </>) },
+        ]}
+      />
 
       {/* ── Version footer ── */}
       <Text style={styles.versionText}>
