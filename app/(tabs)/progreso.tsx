@@ -7,7 +7,7 @@ import Svg, { Circle, Path, Polyline } from 'react-native-svg';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LensTabs } from '@/components/focus-deck';
+import { HeroPanel, LensTabs } from '@/components/focus-deck';
 import {
   AppHeader,
   DangerButton,
@@ -1159,67 +1159,74 @@ export default function ProgresoScreen() {
         </View>
       </View>
 
+      {/* ── HÉROE CONSOLIDADO ──────────────────────────────────────────────
+          Score, compartir y tu historia eran tres tarjetas apiladas. En el
+          diseño aprobado comparten UNA superficie: el número, su tendencia y lo
+          que significa se leen juntos porque son la misma lectura. */}
+      <HeroPanel>
       {/* ── Score Soberano + 14-day trend ── */}
-      <PremiumCard style={styles.scoreCard}>
-        <View style={styles.scoreTopRow}>
-          <View>
-            <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
-            <View style={styles.scoreNumberRow}>
-              {/* Sin una sola lectura el score no mide nada: los 25 puntos que
-                  salían el día 1 venían del `stress ?? 5` de arriba, con el
-                  término invertido. Comando ya lo resolvió así; esta pestaña
-                  se quedó con el número inventado. */}
-              <Text style={styles.scoreNumber}>{sinLecturas ? '—' : score}</Text>
-              {analytics.scoreDelta !== 0 && (
-                <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
-                  {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
-                </Text>
-              )}
+        <View style={styles.scoreCard}>
+          <View style={styles.scoreTopRow}>
+            <View>
+              <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
+              <View style={styles.scoreNumberRow}>
+                {/* Sin una sola lectura el score no mide nada: los 25 puntos que
+                    salían el día 1 venían del `stress ?? 5` de arriba, con el
+                    término invertido. Comando ya lo resolvió así; esta pestaña
+                    se quedó con el número inventado. */}
+                <Text style={styles.scoreNumber}>{sinLecturas ? '—' : score}</Text>
+                {analytics.scoreDelta !== 0 && (
+                  <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
+                    {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
+          {analytics.score14.length >= 2 && (
+            <View style={styles.scoreSpark}>
+              {/* «ÚLTIMOS 14 DÍAS» estaba arriba, etiquetando el número — que es
+                  VITALICIO y no baja. El mismo copy falso que ya se corrigió en
+                  Comando, vivo aquí. Baja a la gráfica, que sí son 14 días. */}
+              <Text style={styles.scoreCaption}>ÚLTIMOS 14 DÍAS</Text>
+              <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
+            </View>
+          )}
+          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
         </View>
-        {analytics.score14.length >= 2 && (
-          <View style={styles.scoreSpark}>
-            {/* «ÚLTIMOS 14 DÍAS» estaba arriba, etiquetando el número — que es
-                VITALICIO y no baja. El mismo copy falso que ya se corrigió en
-                Comando, vivo aquí. Baja a la gráfica, que sí son 14 días. */}
-            <Text style={styles.scoreCaption}>ÚLTIMOS 14 DÍAS</Text>
-            <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
-          </View>
-        )}
-        <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
-      </PremiumCard>
 
-      {/* ── Share profile CTA ── */}
-      <Pressable
-        style={shareStyles.row}
-        onPress={() => router.push('/perfil' as never)}
-        accessibilityRole="button"
-        accessibilityLabel="Ver y compartir tarjeta soberana">
-        <MaterialIcons name="share" size={16} color={palette.goldText} />
-        <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
-        <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-      </Pressable>
+        {/* ── Share profile CTA ── */}
+        <Pressable
+          style={shareStyles.row}
+          onPress={() => router.push('/perfil' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Ver y compartir tarjeta soberana">
+          <MaterialIcons name="share" size={16} color={palette.goldText} />
+          <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
+          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+        </Pressable>
 
-      {/* ── Transformation Narrative ── */}
-      {/* `compact` SOLO cuando hay historia debajo: encima de tres párrafos
-          de "TU HISTORIA" la frase del arco diría lo mismo una cuarta vez,
-          pero sin ellos no hay nada que repetir y el usuario del día 3 se
-          quedaba sin ver su propia frase en esta pantalla. La tarjeta ya no
-          cuelga de `narrativeBlock`: dónde estás no depende de cuánta historia
-          haya que contar. */}
-      <View style={styles.narrativeCard}>
-        <ArcHeader
-          arc={arcForDay(protocolDay, arcoSuyas)}
-          compact={narrativeBlock.length > 0}
-        />
-        {narrativeBlock.length > 0 && (
-          <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-        )}
-        {narrativeBlock.map((line, i) => (
-          <Text key={i} style={styles.narrativeLine}>{line}</Text>
-        ))}
-      </View>
+        {/* ── Transformation Narrative ── */}
+        {/* `compact` SOLO cuando hay historia debajo: encima de tres párrafos
+            de "TU HISTORIA" la frase del arco diría lo mismo una cuarta vez,
+            pero sin ellos no hay nada que repetir y el usuario del día 3 se
+            quedaba sin ver su propia frase en esta pantalla. La tarjeta ya no
+            cuelga de `narrativeBlock`: dónde estás no depende de cuánta historia
+            haya que contar. */}
+        <View style={styles.narrativeCard}>
+          <ArcHeader
+            arc={arcForDay(protocolDay, arcoSuyas)}
+            compact={narrativeBlock.length > 0}
+          />
+          {narrativeBlock.length > 0 && (
+            <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
+          )}
+          {narrativeBlock.map((line, i) => (
+            <Text key={i} style={styles.narrativeLine}>{line}</Text>
+          ))}
+        </View>
+
+      </HeroPanel>
 
       {/* ── LENTES ────────────────────────────────────────────────────────
           Antes: 15 secciones apiladas. Para ver tus arquetipos había que bajar
@@ -1748,11 +1755,9 @@ export default function ProgresoScreen() {
 
 const styles = StyleSheet.create({
   // Transformation narrative
+  // Sin marco: vive dentro del panel del héroe (ver HeroPanel).
   narrativeCard: {
-    backgroundColor: palette.goldGlow,
-    borderColor: palette.lineGold,
     borderRadius: 8,
-    borderWidth: 1,
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,

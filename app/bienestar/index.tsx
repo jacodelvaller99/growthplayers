@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FocusHero, LensRow, LensTabs } from '@/components/focus-deck';
+import { FocusHero, HeroPanel, LensRow, LensTabs } from '@/components/focus-deck';
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -504,30 +504,35 @@ export default function BienestarHub() {
           sección "HOY"— y "HOY" repetía en mosaico dos prácticas que volvían a
           salir más abajo en "PRÁCTICA". Ahora el turno es LA propuesta, una
           sola, con su porqué; el resto vive en su lente. */}
-      <FocusHero
-        eyebrow={`${stats.weekSessions} sesiones · ${stats.weekMinutes} min esta semana`}
-        statement={todayHint}
-        metric={{ value: String(streak), caption: streak === 1 ? 'DÍA SEGUIDO' : 'DÍAS SEGUIDOS' }}
-        directive={
-          todayPicks[0]
-            ? {
-                title: todayPicks[0].label,
-                reason: todayPicks[0].sub,
-                onPress: () => router.push(todayPicks[0].route as never),
-              }
-            : undefined
-        }
-      />
+      {/* La semana vive DENTRO del héroe: "cuántas sesiones llevas" y "qué
+          días" son el mismo dato leído de dos formas, no dos tarjetas. */}
+      <HeroPanel>
+        <FocusHero
+          eyebrow={`${stats.weekSessions} sesiones · ${stats.weekMinutes} min esta semana`}
+          statement={todayHint}
+          metric={{ value: String(streak), caption: streak === 1 ? 'DÍA SEGUIDO' : 'DÍAS SEGUIDOS' }}
+          directive={
+            todayPicks[0]
+              ? {
+                  title: todayPicks[0].label,
+                  reason: todayPicks[0].sub,
+                  onPress: () => router.push(todayPicks[0].route as never),
+                }
+              : undefined
+          }
+        />
 
-      {/* ── La semana, sin ocupar una tarjeta entera ── */}
-      <View style={styles.dotRow}>
-        {DAY_LABELS.map((label, i) => (
-          <View key={label} style={styles.dotItem}>
-            <View style={[styles.dot, weekDots[i] && styles.dotActive]} />
-            <Text style={styles.dotLabel}>{label}</Text>
-          </View>
-        ))}
-      </View>
+        {/* ── La semana, sin ocupar una tarjeta entera ── */}
+        <View style={styles.dotRow}>
+          {DAY_LABELS.map((label, i) => (
+            <View key={label} style={styles.dotItem}>
+              <View style={[styles.dot, weekDots[i] && styles.dotActive]} />
+              <Text style={styles.dotLabel}>{label}</Text>
+            </View>
+          ))}
+        </View>
+
+      </HeroPanel>
 
       {/* ── LENTES EN VEZ DE PILA ───────────────────────────────────────────
           17 destinos en mosaicos idénticos (7 + 7 + 3) obligaban a recorrer la
