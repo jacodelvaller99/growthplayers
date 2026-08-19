@@ -113,7 +113,7 @@ const s = StyleSheet.create({
   },
   safetyTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   safetyTitle: {
-    color: '#FFB86B',
+    color: palette.warning,
     fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 1.1,
@@ -122,7 +122,7 @@ const s = StyleSheet.create({
   emergencyButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#FFB86B',
+    backgroundColor: palette.warning,
     borderRadius: 999,
     flexDirection: 'row',
     gap: spacing.xs,

@@ -296,7 +296,7 @@ function EnergyFocusOverlay({
             <span
               aria-hidden
               style={{
-                background: active ? palette.goldText : '#B4B4B8',
+                background: active ? palette.goldText : palette.smoke,
                 borderRadius: '50%',
                 display: 'block',
                 height: active ? 6 : 4,
@@ -516,11 +516,13 @@ export function BodyScanReport({
         <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: Fonts.mono, fontSize: 11, color: palette.smoke }}>
             <span style={{ width: 8, height: 8, borderRadius: 4, background: palette.gold, display: 'inline-block' }} />
-            #FFC804 · ZONA ACTIVADA
+            {/* Sin el código hex: la muestra sigue al eje de señal y la etiqueta
+                se quedaba diciendo #FFC804 aunque el punto ya fuera ámbar. */}
+            ZONA ACTIVADA
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: Fonts.mono, fontSize: 11, color: palette.smoke }}>
-            <span style={{ width: 8, height: 8, borderRadius: 4, background: '#B4B4B8', display: 'inline-block' }} />
-            #B4B4B8 · PLATA FRÍA
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: palette.silhouette, display: 'inline-block' }} />
+            PLATA FRÍA
           </span>
         </div>
       </div>

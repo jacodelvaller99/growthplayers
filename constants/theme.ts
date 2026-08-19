@@ -27,6 +27,11 @@ export const palette = {
   //    light surfaces (e.g. button labels on gold). Using palette.black here
   //    would flip to cream in light mode and vanish.
   ink:            '#0A0A0A',
+  // ── Paper — CONSTANT blanco. La contrapartida de `ink`: texto/iconos que van
+  //    SOBRE un relleno de color oscuro (danger, purple) y deben seguir siendo
+  //    blancos en los dos temas. `palette.ivory` NO sirve ahí: en claro vale
+  //    #0F0F0F y pinta texto negro sobre rojo.
+  paper:          '#FFFFFF',
 
   // ── Brand accent (Philippine Yellow) — themeable por el EJE SEÑAL ────────────
   // Dejó de ser constante: el eje `data-signal` permite cambiarlo a ámbar
@@ -93,7 +98,10 @@ export const palette = {
   // llegan a AA sobre las cinco superficies, no solo sobre la tarjeta base.
   dangerText:     cv('--c-danger-text', '#E65C51'),
   warning:        cv('--c-warning', '#D4A017'),
-  info:           '#3D8FC0',
+  // El cuarto semántico. Era hex constante y por eso era IMPOSIBLE que pasara
+  // AA en los dos temas: sobre #111111 hace falta luminancia >= 0.201 y sobre
+  // blanco <= 0.183. Ningún color cumple ambas — de ahí que sea un token.
+  info:           cv('--c-info', '#5B9FD4'),
 
   // ── Wellness accent (meditation, sleep, breathing) ────────────────────────
   purple:         '#7C5CBF',
@@ -157,6 +165,43 @@ export const Fonts = {
   displayFallback: Platform.select({ web: "'Poppins', 'Arial', sans-serif",                  default: 'Inter_700Bold'                }),
   mono:            Platform.select({ web: "'Space Mono', monospace",                         default: 'SpaceMono_400Regular'         }),
 };
+
+/**
+ * Registra GrandisExtended en web. Idempotente; no-op en nativo (allí las carga
+ * `useFonts` desde assets/fonts/).
+ *
+ * POR QUE EN TIEMPO DE EJECUCION Y NO EN `app/+html.tsx`: el @font-face vivía
+ * allí y NUNCA llegó a producción — `expo export --platform web` genera la
+ * plantilla por defecto de Expo (1.2 KB, `lang="en"`, sin <style>), así que toda
+ * la PWA se renderizaba con la fuente de sustitución. Se verificó midiendo
+ * `document.fonts` en el navegador: solo contenía `material`. Encima las URLs
+ * apuntaban a `/assets/fonts/…`, que da 404 — el servidor las publica bajo
+ * `/assets/assets/fonts/…`.
+ *
+ * Los .ttf se sirven desde `public/fonts/`, que Expo copia VERBATIM a `dist/`:
+ * la misma ruta resuelve en el servidor de desarrollo y en el build. Es el mismo
+ * mecanismo que `injectThemeVars()`, que ya demostró funcionar.
+ */
+export function injectBrandFont(): void {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  if (document.getElementById('polaris-brand-font')) return;
+
+  const faces: [string, number][] = [
+    ['Light', 300], ['Regular', 400], ['Medium', 500], ['Bold', 700], ['Black', 900],
+  ];
+  const style = document.createElement('style');
+  style.id = 'polaris-brand-font';
+  style.textContent = faces
+    .map(
+      ([name, weight]) =>
+        `@font-face{font-family:'GrandisExtended';` +
+        `src:url('/fonts/GrandisExtended-${name}.ttf') format('truetype');` +
+        // swap, no block: antes de que cargue se ve Poppins/Arial, no un hueco.
+        `font-weight:${weight};font-style:normal;font-display:swap}`,
+    )
+    .join('');
+  document.head.appendChild(style);
+}
 
 // ─── Typography scale ─────────────────────────────────────────────────────────
 // GrandisExtended has multiple weights — use them for hierarchy.
@@ -261,6 +306,30 @@ export const typography = {
 };
 
 // ─── Spacing system (8pt grid — consistent with Material + Apple HIG) ─────────
+/**
+ * Tamaño de un titular display que CABE en el ancho disponible.
+ *
+ * POR QUE EXISTE: GrandisExtended es una tipografía *extended* — mide ~21% más
+ * que Arial al mismo cuerpo (medido: 711px vs 588px). Los titulares se
+ * dimensionaron con números fijos mientras la fuente de marca no cargaba en web
+ * (ver `injectBrandFont`), así que encajaban con el sustituto y NO con la real.
+ * Al arreglar la fuente, el hero de bienvenida partía palabras en móvil:
+ * "SISTEM / A / INTERN / O.".
+ *
+ * Un titular no debe partir una palabra nunca. En vez de bajar el cuerpo a ojo
+ * hasta que "se vea bien" en un teléfono concreto, se deriva del ancho real.
+ *
+ * @param available  ancho útil en px (viewport menos padding horizontal)
+ * @param longestWord  nº de caracteres de la palabra más larga del titular
+ * @param max  cuerpo de diseño; nunca se sube por encima
+ */
+export function fitDisplaySize(available: number, longestWord: number, max: number): number {
+  // 0.78 em/carácter medido sobre GrandisExtended Bold en mayúsculas, con un
+  // margen sobre el 0.74 real para acomodar letras anchas (M, W) y el redondeo.
+  const perChar = 0.78;
+  return Math.max(20, Math.min(max, Math.floor(available / (longestWord * perChar))));
+}
+
 export const spacing = {
   xs:      4,
   sm:      8,

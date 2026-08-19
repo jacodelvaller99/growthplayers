@@ -361,12 +361,12 @@ export default function BiometricsScreen() {
 // ─── Color helpers ────────────────────────────────────────────────────────────
 function scoreColor(score: number | null | undefined): string {
   if (score == null) return palette.smoke;
-  if (score >= 70) return '#2e7d52';
+  if (score >= 70) return palette.success;
   // goldText (no gold): este color también es el TEXTO del score (22px). `palette.gold`
   // (#FFC804) como texto es ilegible sobre superficie clara; goldText es theme-aware.
   if (score >= 50) return palette.goldText;
-  if (score >= 30) return '#b07d1a';
-  return '#e63946';
+  if (score >= 30) return palette.warning;
+  return palette.dangerText;   // es TEXTO de 22px, no relleno
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────

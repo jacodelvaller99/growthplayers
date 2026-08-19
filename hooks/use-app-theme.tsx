@@ -25,6 +25,7 @@ import {
 } from 'react';
 import { Platform } from 'react-native';
 
+import { injectBrandFont } from '@/constants/theme';
 import {
   SIGNAL_VARS,
   THEME_VARS,
@@ -89,6 +90,9 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   // parpadeo de tema equivocado.
   const [mode, setModeState] = useState<BackdropId>(() => {
     injectThemeVars();
+    // Misma ventana que las variables de color: antes del primer render de los
+    // hijos. La marca es la tipografía tanto como el oro.
+    injectBrandFont();
     const initial = readStored(STORAGE_KEY, isBackdrop, 'dark');
     if (isWeb && typeof document !== 'undefined') {
       document.documentElement.dataset.theme = initial;
