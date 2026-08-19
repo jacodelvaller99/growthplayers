@@ -443,7 +443,12 @@ export default function MentoriaScreen() {
 function ActionRow({ item, onToggle, onRemove }: { item: ActionItem; onToggle: () => void; onRemove: () => void }) {
   return (
     <View style={styles.itemRow}>
-      <Pressable onPress={onToggle} style={styles.check} accessibilityRole="checkbox" accessibilityState={{ checked: item.done }}>
+      <Pressable
+        onPress={onToggle}
+        style={styles.check}
+        accessibilityRole="checkbox"
+        accessibilityLabel={item.text}
+        accessibilityState={{ checked: item.done }}>
         <View style={[styles.checkBox, item.done && styles.checkBoxOn]}>
           {item.done && <MaterialIcons name="check" size={14} color={palette.ink} />}
         </View>

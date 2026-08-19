@@ -99,11 +99,21 @@ export function WellnessMiniPlayer() {
 
         {/* Pause indicator + stop */}
         {player.isPaused && (
-          <Pressable onPress={resumeSession} style={styles.stopBtn} hitSlop={12}>
+          <Pressable
+            onPress={resumeSession}
+            style={styles.stopBtn}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Reanudar la sesión">
             <MaterialIcons name="play-arrow" size={18} color={color} />
           </Pressable>
         )}
-        <Pressable onPress={handleStop} style={styles.stopBtn} hitSlop={12}>
+        <Pressable
+          onPress={handleStop}
+          style={styles.stopBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Detener la sesión">
           <MaterialIcons name="stop" size={18} color={palette.ash} />
         </Pressable>
       </View>

@@ -331,7 +331,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    minHeight: 30,
+    // 44 y no 30: es el único control de la barra lateral que bajaba del mínimo
+    // táctil. En escritorio se pulsa con ratón, pero la PWA se instala también
+    // en tablet, donde 30px es un objetivo que se falla.
+    minHeight: 44,
     borderRadius: 999,
     paddingVertical: 6,
   },

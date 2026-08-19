@@ -300,7 +300,7 @@ export function MentorReviewDrawer({
         <View style={s.drawer}>
           <View style={s.drawerHead}>
             <Text style={s.drawerTitle} numberOfLines={2}>{task?.title ?? 'Revisar tarea'}</Text>
-            <Pressable onPress={onClose}><MaterialIcons name="close" size={22} color={palette.smoke} /></Pressable>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar la revisión"><MaterialIcons name="close" size={22} color={palette.smoke} /></Pressable>
           </View>
           <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.md }}>
             <ChipRow label="ESTADO" options={RUBRIC.review_status} value={r.review_status} onPick={set('review_status')} />
