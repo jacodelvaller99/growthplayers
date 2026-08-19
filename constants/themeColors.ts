@@ -24,8 +24,8 @@
  */
 import { Platform } from 'react-native';
 
-export type BackdropId = 'dark' | 'light' | 'carbon' | 'aura' | 'tinta' | 'pizarra';
-export type SignalId = 'oro' | 'ambar' | 'semaforo' | 'calma' | 'nitido';
+export type BackdropId = 'dark' | 'light' | 'carbon' | 'aura' | 'tinta' | 'pizarra' | 'bruma' | 'arena';
+export type SignalId = 'oro' | 'ambar' | 'semaforo' | 'calma' | 'nitido' | 'sereno' | 'vital';
 
 // ─── EJE 1 · FONDO — neutros, texto y bordes ──────────────────────────────────
 // `dark` y `light` conservan exactamente los valores que ya estaban en producción:
@@ -194,6 +194,54 @@ export const THEME_VARS: Record<BackdropId, Record<string, string>> = {
     '--c-silhouette':   '#5A616D',
     '--c-zone-border':  'rgba(230,234,240,0.38)',
   },
+  // BRUMA — negros levantados. El contraste extremo cansa en sesiones largas y
+  // de noche; aquí el fondo sube y el texto baja, así que la pantalla deja de
+  // ser un foco. Es el fondo de una app de bienestar usada a las once.
+  bruma: {
+    '--c-bg':           '#16181A',
+    '--c-bg-deep':      '#101214',
+    '--c-surface':      '#1E2124',
+    '--c-surface-2':    '#262A2E',
+    '--c-surface-3':    '#2F3438',
+    '--c-overlay':      '#292D31',
+    '--c-text':         '#E2E5E8',
+    '--c-text-warm':    '#EDE9E0',
+    '--c-text-dim':     'rgba(226,229,232,0.58)',
+    '--c-text-2':       '#AFB5BA',
+    '--c-text-3':       '#969CA2',
+    '--c-text-faint':   '#4E545A',
+    '--c-border':       'rgba(226,229,232,0.10)',
+    '--c-border-soft':  'rgba(226,229,232,0.06)',
+    '--c-border-hard':  'rgba(226,229,232,0.18)',
+    '--c-border-focus': 'rgba(226,229,232,0.26)',
+    '--c-danger-text':  '#F4796B',
+    '--c-silhouette':   '#5E656B',
+    '--c-zone-border':  'rgba(226,229,232,0.38)',
+  },
+  // ARENA — la contraparte cálida de Luz. El neutro puro es correcto pero frío;
+  // este sesga el papel hacia el pergamino sin volver al crema inventado: el
+  // matiz sale del oro de marca, rebajado hasta ser casi imperceptible.
+  arena: {
+    '--c-bg':           '#EAE7E1',
+    '--c-bg-deep':      '#DEDAD2',
+    '--c-surface':      '#FFFDF9',
+    '--c-surface-2':    '#F7F4EE',
+    '--c-surface-3':    '#F0EDE6',
+    '--c-overlay':      '#DFDBD3',
+    '--c-text':         '#14120E',
+    '--c-text-warm':    '#221F19',
+    '--c-text-dim':     'rgba(20,18,14,0.58)',
+    '--c-text-2':       '#403D36',
+    '--c-text-3':       '#5F5B52',
+    '--c-text-faint':   '#79746A',
+    '--c-border':       'rgba(20,18,14,0.12)',
+    '--c-border-soft':  'rgba(20,18,14,0.07)',
+    '--c-border-hard':  'rgba(20,18,14,0.18)',
+    '--c-border-focus': 'rgba(20,18,14,0.26)',
+    '--c-danger-text':  '#8E3A22',
+    '--c-silhouette':   '#ADA79B',
+    '--c-zone-border':  'rgba(20,18,14,0.42)',
+  },
 };
 
 // ─── EJE 2 · SEÑAL — acento de marca + qué significa cada estado ───────────────
@@ -210,7 +258,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-gold-text':        '#FFC804',
     '--c-success':          '#52A878',
     '--c-warning':          '#D4A017',
-    '--c-danger':           '#CF3D2E',
+    '--c-danger':           '#D54F42',
     '--c-calm':             '#FFC804',   // sin voz aparte: recuperar también es oro
     '--c-info':             '#5B9FD4',
   },
@@ -226,7 +274,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-gold-text':        '#EDBA01',
     '--c-success':          '#52A878',
     '--c-warning':          '#D4A017',
-    '--c-danger':           '#CF3D2E',
+    '--c-danger':           '#D54F42',
     '--c-calm':             '#EDBA01',
     '--c-info':             '#5B9FD4',
   },
@@ -259,7 +307,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-gold-text':        '#FFC804',
     '--c-success':          '#52A878',
     '--c-warning':          '#D4A017',
-    '--c-danger':           '#CF3D2E',
+    '--c-danger':           '#D54F42',
     '--c-calm':             '#6B8CA8',   // la voz de Recuperación
     '--c-info':             '#6B8CA8',
   },
@@ -280,6 +328,39 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-danger':           '#FF8071',
     '--c-calm':             '#7FC4E8',
     '--c-info':             '#7FC4E8',
+  },
+  // SERENO — el acento baja de volumen. Todo desaturado, sin brillo: para quien
+  // usa la app para bajar revoluciones y no quiere que la pantalla le grite.
+  // Es el extremo opuesto de Nítido, y ambos son legítimos.
+  sereno: {
+    '--c-gold':             '#C9A63C',
+    '--c-gold-light':       'rgba(201,166,60,0.10)',
+    '--c-gold-muted':       'rgba(201,166,60,0.55)',
+    '--c-gold-glow':        'rgba(201,166,60,0.06)',
+    '--c-line-gold':        'rgba(201,166,60,0.24)',
+    '--c-line-gold-subtle': 'rgba(201,166,60,0.12)',
+    '--c-gold-text':        '#D6B457',
+    '--c-success':          '#7FA890',
+    '--c-warning':          '#C4A76B',
+    '--c-danger':           '#C08578',
+    '--c-calm':             '#8FA6B5',
+    '--c-info':             '#7E9AAF',
+  },
+  // VITAL — el acento sube de energía sin perder el matiz de marca. Verde y
+  // rojo más vivos para quien lee la app como un tablero de rendimiento.
+  vital: {
+    '--c-gold':             '#FFC804',
+    '--c-gold-light':       'rgba(255,200,4,0.14)',
+    '--c-gold-muted':       'rgba(255,200,4,0.65)',
+    '--c-gold-glow':        'rgba(255,200,4,0.10)',
+    '--c-line-gold':        'rgba(255,200,4,0.34)',
+    '--c-line-gold-subtle': 'rgba(255,200,4,0.17)',
+    '--c-gold-text':        '#FFC804',
+    '--c-success':          '#3FBF7F',
+    '--c-warning':          '#F0A93C',
+    '--c-danger':           '#F0574A',
+    '--c-calm':             '#4FB0D8',
+    '--c-info':             '#4FA3D8',
   },
 };
 
@@ -337,7 +418,24 @@ export const LIGHT_SIGNAL_OVERRIDES: Record<SignalId, Record<string, string>> = 
     '--c-gold-muted': 'rgba(107,78,0,0.80)',
     '--c-line-gold': 'rgba(107,78,0,0.50)', '--c-line-gold-subtle': 'rgba(107,78,0,0.26)',
   },
+  sereno: {
+    '--c-info': '#2C5468', '--c-gold-text': '#6E5410', '--c-calm': '#3B5666',
+    '--c-success': '#33604A', '--c-warning': '#6E571F', '--c-danger': '#8A4436',
+    '--c-gold-light': 'rgba(110,84,16,0.09)', '--c-gold-glow': 'rgba(110,84,16,0.05)',
+    '--c-gold-muted': 'rgba(110,84,16,0.68)',
+    '--c-line-gold': 'rgba(110,84,16,0.32)', '--c-line-gold-subtle': 'rgba(110,84,16,0.16)',
+  },
+  vital: {
+    '--c-info': '#1C5C82', '--c-gold-text': '#7A5600', '--c-calm': '#1C5C82',
+    '--c-success': '#1E6B45', '--c-warning': '#7E5410', '--c-danger': '#96301F',
+    '--c-gold-light': 'rgba(122,86,0,0.12)', '--c-gold-glow': 'rgba(122,86,0,0.07)',
+    '--c-gold-muted': 'rgba(122,86,0,0.75)',
+    '--c-line-gold': 'rgba(122,86,0,0.42)', '--c-line-gold-subtle': 'rgba(122,86,0,0.21)',
+  },
 };
+
+/** Fondos de rampa CLARA: heredan las correcciones de contraste sobre papel. */
+export const LIGHT_BACKDROPS: BackdropId[] = ['light', 'arena'];
 
 /** web helper: el token resuelve a variable CSS en web, hex real en nativo. */
 export const cv = (varName: string, nativeHex: string): string =>
@@ -387,9 +485,14 @@ export function buildThemeCSS(): string {
     )
     .join('');
 
-  const lightFixes = (Object.keys(LIGHT_SIGNAL_OVERRIDES) as SignalId[])
-    .map((id) => block(`[data-theme="light"][data-signal="${id}"]`, LIGHT_SIGNAL_OVERRIDES[id]))
-    .join('');
+  // Los fondos CLAROS son dos (light y arena) y ambos necesitan la corrección:
+  // heredar el oro brillante sobre papel lo vuelve ilegible. Se declara aquí y
+  // no en cada bloque para que añadir un tercer fondo claro sea una línea.
+  const lightFixes = LIGHT_BACKDROPS.flatMap((bd) =>
+    (Object.keys(LIGHT_SIGNAL_OVERRIDES) as SignalId[]).map((id) =>
+      block(`[data-theme="${bd}"][data-signal="${id}"]`, LIGHT_SIGNAL_OVERRIDES[id]),
+    ),
+  ).join('');
 
   const auraLayer =
     '[data-theme="aura"] body{' +

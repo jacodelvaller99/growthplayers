@@ -86,8 +86,8 @@ export const palette = {
   // cambiaban de verde pero su relleno se quedaba en el verde anterior.
   success:        cv('--c-success', '#52A878'),
   successMuted:   alpha(cv('--c-success', '#52A878'), '26'),   // 0x26 ≈ 15%
-  danger:         cv('--c-danger',  '#CF3D2E'),
-  dangerMuted:    alpha(cv('--c-danger', '#CF3D2E'), '26'),
+  danger:         cv('--c-danger',  '#D54F42'),
+  dangerMuted:    alpha(cv('--c-danger', '#D54F42'), '26'),
   // Acento de RECUPERACIÓN. En casi todas las señales es el mismo oro; en
   // `calma` pasa a azul sereno para separar el lenguaje de empuje del de
   // restaurar (modelo Calm). Úsalo en bienestar/biometría, no en CTAs.

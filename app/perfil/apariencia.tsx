@@ -31,7 +31,9 @@ const BACKDROPS: { id: BackdropId; name: string; note: string }[] = [
   { id: 'aura',    name: 'Aura',    note: 'Negro profundo con un resplandor detrás. Atmósfera.' },
   { id: 'tinta',   name: 'Tinta',   note: 'Negro real. En pantallas OLED el píxel se apaga.' },
   { id: 'pizarra', name: 'Pizarra', note: 'Frío, azulado. Baja la temperatura y el oro resalta.' },
+  { id: 'bruma',   name: 'Bruma',   note: 'Negros levantados. Menos contraste: para sesiones largas y de noche.' },
   { id: 'light',   name: 'Luz',     note: 'El día. Grises del manual y texto Smoky Black.' },
+  { id: 'arena',   name: 'Arena',   note: 'El día, en cálido. El papel se sesga hacia el pergamino.' },
 ];
 
 const SIGNALS: { id: SignalId; name: string; note: string }[] = [
@@ -40,6 +42,8 @@ const SIGNALS: { id: SignalId; name: string; note: string }[] = [
   { id: 'ambar',    name: 'Ámbar',     note: 'El segundo oro del manual. Menos neón, más metal.' },
   { id: 'calma',    name: 'Dos voces', note: 'El oro exige, el azul restaura. Separa empuje de recuperación.' },
   { id: 'nitido',   name: 'Nítido',    note: 'Todo el acento sube de contraste. Para vista cansada o pantalla al sol.' },
+  { id: 'sereno',   name: 'Sereno',    note: 'El acento baja de volumen. Para cuando la pantalla no debe gritarte.' },
+  { id: 'vital',    name: 'Vital',     note: 'Verde y rojo más vivos. Para leer la app como un tablero.' },
 ];
 
 /** Muestras leídas del registro — no repintadas a mano, así nunca mienten. */
