@@ -114,9 +114,9 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     alignItems: 'center',
-    height: 36,
+    height: 44,
     justifyContent: 'center',
-    width: 36,
+    width: 44,
   },
   title: {
     ...typography.title,

@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   screenTitle: { ...typography.title, color: palette.ivory, fontSize: 21 },
 
   // Header (design: title + body subtitle)

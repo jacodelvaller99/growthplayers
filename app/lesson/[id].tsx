@@ -1105,11 +1105,11 @@ const styles = StyleSheet.create({
     borderColor: palette.lineHard,
     borderRadius: radii.sm,
     borderWidth: 1,
-    height: 38,
+    height: 44,
     justifyContent: 'center',
     left: spacing.lg,
     position: 'absolute',
-    width: 38,
+    width: 44,
     zIndex: 3,
   },
   videoLabel: {

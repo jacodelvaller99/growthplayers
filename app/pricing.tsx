@@ -226,6 +226,10 @@ const s = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   backBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+    minHeight: 44,
     padding: spacing.sm,
     backgroundColor: palette.graphite,
     borderColor: palette.lineSoft,
@@ -325,6 +329,10 @@ const s = StyleSheet.create({
   },
   codeInput: {
     flex: 1,
+    // Sin esto el input NO encoge: el minimo implicito de un item flex es su
+    // contenido, asi que la fila pedia 334px en un ancho de 316 y el boton
+    // CANJEAR se salia de la tarjeta.
+    minWidth: 0,
     backgroundColor: palette.graphite,
     borderColor: palette.line,
     borderWidth: 1,

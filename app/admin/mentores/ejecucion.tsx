@@ -167,7 +167,7 @@ export default function AdminEjecucionScreen() {
 
 const s = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18 },
   intro: { ...typography.body, color: palette.ash, marginBottom: spacing.lg },
   card: { gap: 2, marginBottom: spacing.md },

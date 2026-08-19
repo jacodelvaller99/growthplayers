@@ -408,10 +408,10 @@ const styles = StyleSheet.create({
     borderColor: palette.line,
     borderRadius: radii.sm,
     borderWidth: 1,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
     marginTop: 2,
-    width: 40,
+    width: 44,
   },
   headerCopy: {
     flex: 1,

@@ -1075,7 +1075,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.md,
   },
-  backBtn:  { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  backBtn:  { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title:    { fontFamily: Fonts.display, fontSize: 18, fontWeight: '800', color: palette.ivory, letterSpacing: 2 },
   topRight: { width: 80, alignItems: 'flex-end' },
   countBadge: {

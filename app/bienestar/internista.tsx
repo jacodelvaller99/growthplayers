@@ -319,7 +319,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm,
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18, textAlign: 'center' },
   subtitle: { ...typography.caption, color: palette.smoke, fontSize: 10, textAlign: 'center' },
 
