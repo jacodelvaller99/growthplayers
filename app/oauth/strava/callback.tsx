@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.graphite,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1e1e1e',
+    borderColor: palette.line,
     padding: 40,
     alignItems: 'center',
     width: '100%',

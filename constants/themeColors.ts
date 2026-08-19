@@ -212,6 +212,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-warning':          '#D4A017',
     '--c-danger':           '#CF3D2E',
     '--c-calm':             '#FFC804',   // sin voz aparte: recuperar también es oro
+    '--c-info':             '#5B9FD4',
   },
   // ÁMBAR — el segundo oro del manual (#EDBA01) toma el mando. Menos neón, más
   // metal. Mismo matiz de marca, un paso más profundo.
@@ -227,6 +228,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-warning':          '#D4A017',
     '--c-danger':           '#CF3D2E',
     '--c-calm':             '#EDBA01',
+    '--c-info':             '#5B9FD4',
   },
   // SEMÁFORO — modelo WHOOP: cada matiz significa algo (recuperado / medio /
   // riesgo). Desaturados A PROPÓSITO: a plena saturación pelean con el oro y la
@@ -243,6 +245,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-warning':          '#D9A441',
     '--c-danger':           '#C46B52',
     '--c-calm':             '#7FA87F',
+    '--c-info':             '#6B9BC4',
   },
   // CALMA — dos voces: el oro exige, el azul sereno restaura. Separa el lenguaje
   // de empuje del de recuperación (modelo Calm/Headspace). El oro NO se toca.
@@ -258,6 +261,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-warning':          '#D4A017',
     '--c-danger':           '#CF3D2E',
     '--c-calm':             '#6B8CA8',   // la voz de Recuperación
+    '--c-info':             '#6B8CA8',
   },
   // NÍTIDO — accesibilidad. Todo el acento sube de luminancia para despegarse
   // del fondo: el mínimo de la rampa pasa de ~4.5:1 a ~7:1 (AAA). Para vista
@@ -275,6 +279,7 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-warning':          '#FFC24D',
     '--c-danger':           '#FF8071',
     '--c-calm':             '#7FC4E8',
+    '--c-info':             '#7FC4E8',
   },
 };
 
@@ -296,28 +301,28 @@ export const LIGHT_SIGNAL_OVERRIDES: Record<SignalId, Record<string, string>> = 
   // ilegibles incluso como icono. Solo Semáforo estaba corregido porque fue la
   // única señal que se diseñó mirando el fondo claro.
   oro: {
-    '--c-gold-text': '#7A5600', '--c-calm': '#7A5600',
+    '--c-info': '#215C87', '--c-gold-text': '#7A5600', '--c-calm': '#7A5600',
     '--c-success': '#2F6647', '--c-warning': '#7D5810', '--c-danger': '#96341F',
     '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
     '--c-gold-muted': 'rgba(122,86,0,0.72)',
     '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',
   },
   ambar: {
-    '--c-gold-text': '#6E4E00', '--c-calm': '#6E4E00',
+    '--c-info': '#215C87', '--c-gold-text': '#6E4E00', '--c-calm': '#6E4E00',
     '--c-success': '#2F6647', '--c-warning': '#7D5810', '--c-danger': '#96341F',
     '--c-gold-light': 'rgba(110,78,0,0.10)', '--c-gold-glow': 'rgba(110,78,0,0.06)',
     '--c-gold-muted': 'rgba(110,78,0,0.72)',
     '--c-line-gold': 'rgba(110,78,0,0.38)', '--c-line-gold-subtle': 'rgba(110,78,0,0.18)',
   },
   semaforo: {
-    '--c-gold-text': '#7A5600', '--c-success': '#2F6647', '--c-warning': '#7D5810',
+    '--c-info': '#215C87', '--c-gold-text': '#7A5600', '--c-success': '#2F6647', '--c-warning': '#7D5810',
     '--c-danger': '#96341F', '--c-calm': '#2F6647',
     '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
     '--c-gold-muted': 'rgba(122,86,0,0.72)',
     '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',
   },
   calma: {
-    '--c-gold-text': '#7A5600', '--c-calm': '#33556F',
+    '--c-info': '#215C87', '--c-gold-text': '#7A5600', '--c-calm': '#33556F',
     '--c-success': '#2F6647', '--c-warning': '#7D5810', '--c-danger': '#96341F',
     '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
     '--c-gold-muted': 'rgba(122,86,0,0.72)',
@@ -326,7 +331,7 @@ export const LIGHT_SIGNAL_OVERRIDES: Record<SignalId, Record<string, string>> = 
   // Nítido sobre claro va al revés que sobre oscuro: para ganar contraste hay
   // que OSCURECER, no iluminar. Objetivo AAA (7:1) sobre las superficies claras.
   nitido: {
-    '--c-gold-text': '#6B4E00', '--c-success': '#1F5335', '--c-warning': '#664700',
+    '--c-info': '#17456A', '--c-gold-text': '#6B4E00', '--c-success': '#1F5335', '--c-warning': '#664700',
     '--c-danger': '#7E2412', '--c-calm': '#26485F',
     '--c-gold-light': 'rgba(107,78,0,0.14)', '--c-gold-glow': 'rgba(107,78,0,0.08)',
     '--c-gold-muted': 'rgba(107,78,0,0.80)',

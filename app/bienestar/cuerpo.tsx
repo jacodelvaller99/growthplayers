@@ -53,10 +53,14 @@ function calcBMI(weight: number, height: number): number {
 
 function bmiCategory(bmi: number): { label: string; color: string } {
   if (bmi <= 0)   return { label: '—',          color: palette.ash };
-  if (bmi < 18.5) return { label: 'Bajo peso',  color: '#4A9EFF' };
-  if (bmi < 25)   return { label: 'Normal',      color: '#4CAF50' };
-  if (bmi < 30)   return { label: 'Sobrepeso',   color: '#EDBA01' };
-  return              { label: 'Obesidad',    color: '#E74C3C' };
+  // Tokens, no hex: este color es a la vez el relleno del segmento Y el TEXTO de
+  // la categoría. Un hex constante no puede pasar AA en claro y oscuro a la vez
+  // (sobre #111111 exige luminancia >= 0.201; sobre blanco <= 0.183), así que la
+  // escala tenía que ser tematizable o quedarse ilegible en uno de los dos.
+  if (bmi < 18.5) return { label: 'Bajo peso',  color: palette.info };
+  if (bmi < 25)   return { label: 'Normal',      color: palette.success };
+  if (bmi < 30)   return { label: 'Sobrepeso',   color: palette.warning };
+  return              { label: 'Obesidad',    color: palette.danger };
 }
 
 function formatDate(iso: string): string {
@@ -172,10 +176,10 @@ export default function CuerpoScreen() {
             <Text style={[styles.bmiCategory, { color: category.color }]}>{category.label}</Text>
             {/* Barra visual IMC */}
             <View style={styles.bmiBar}>
-              <View style={[styles.bmiSegment, { flex: 1, backgroundColor: '#4A9EFF' }]} />
-              <View style={[styles.bmiSegment, { flex: 2, backgroundColor: '#4CAF50' }]} />
-              <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: '#EDBA01' }]} />
-              <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: '#E74C3C' }]} />
+              <View style={[styles.bmiSegment, { flex: 1, backgroundColor: palette.info }]} />
+              <View style={[styles.bmiSegment, { flex: 2, backgroundColor: palette.success }]} />
+              <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.warning }]} />
+              <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.danger }]} />
             </View>
             <View style={styles.bmiBarLabels}>
               <Text style={styles.bmiBarTick}>18.5</Text>

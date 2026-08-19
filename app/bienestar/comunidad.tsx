@@ -528,9 +528,9 @@ export default function ComunidadScreen() {
                   <MaterialIcons
                     name={post.liked ? 'favorite' : 'favorite-border'}
                     size={18}
-                    color={post.liked ? '#E74C3C' : palette.ash}
+                    color={post.liked ? palette.danger : palette.ash}
                   />
-                  <Text style={[styles.likeCount, post.liked && { color: '#E74C3C' }]}>
+                  <Text style={[styles.likeCount, post.liked && { color: palette.dangerText }]}>
                     {post.likes_count > 0 ? post.likes_count : ''}
                   </Text>
                 </Pressable>

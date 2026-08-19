@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   btnPressed: {
-    backgroundColor: '#c9a000',
+    backgroundColor: palette.goldDim,
   },
   btnText: {
     color: palette.ink,

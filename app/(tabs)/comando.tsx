@@ -956,7 +956,7 @@ export default function DashboardScreen() {
         <MaterialIcons
           name={liveSession.isOngoing ? 'videocam' : 'open-in-new'}
           size={15}
-          color={liveSession.isOngoing ? '#fff' : palette.black}
+          color={liveSession.isOngoing ? palette.paper : palette.ink}
         />
         <Text style={[styles.liveBtnText, liveSession.isOngoing && styles.liveBtnTextOngoing]}>
           {liveSession.isOngoing ? 'UNIRME A LA SESIÓN' : `AGENDAR · ${LIVE_SESSION.durationMinutes} MIN`}
@@ -2029,14 +2029,14 @@ const styles = StyleSheet.create({
     backgroundColor: palette.danger,
   },
   liveBtnText: {
-    color:        palette.black,
+    color:        palette.ink,
     fontFamily:   Fonts.mono,
     fontSize:     11,
     fontWeight:   '700',
     letterSpacing: 2,
   },
   liveBtnTextOngoing: {
-    color: '#fff',
+    color: palette.paper,
   },
 
   // ── Community Teaser Card ───────────────────────────────────────────────────

@@ -75,7 +75,7 @@ const COPY = ['--c-text', '--c-text-2', '--c-text-3', '--c-gold-text', '--c-dang
  * del mensaje de error. Si algún día un acento tiene que llevar copy, la salida
  * es un token `-text` propio, no bajar esta constante.
  */
-const ACCENTS = ['--c-success', '--c-warning', '--c-danger', '--c-calm'];
+const ACCENTS = ['--c-success', '--c-warning', '--c-danger', '--c-calm', '--c-info'];
 
 const AA = 4.5;
 const NON_TEXT = 3;

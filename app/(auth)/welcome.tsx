@@ -13,7 +13,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -24,13 +24,17 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PolarisMark, PrimaryButton } from '@/components/polaris';
-import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { Fonts, fitDisplaySize, palette, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 
 export default function WelcomeScreen() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
+  const { width } = useWindowDimensions();
+  // "INTERNO." es la palabra más larga del titular (8 caracteres). Con la
+  // fuente de marca real a 62px no cabía en 390px y partía la palabra.
+  const heroSize = fitDisplaySize(width - spacing.xl * 2, 8, 62);
 
   // Mientras corre la intro, una capa transparente captura el tap para saltarla.
   // Al terminar (o al primer tap) se retira y los CTAs quedan libres.
@@ -232,7 +236,7 @@ export default function WelcomeScreen() {
 
       {/* ── Center: headline + manifesto + stats ── */}
       <View style={styles.center}>
-        <Animated.Text style={[styles.headline, titleStyle]}>
+        <Animated.Text style={[styles.headline, { fontSize: heroSize, lineHeight: Math.round(heroSize * 1.06) }, titleStyle]}>
           SISTEMA{'\n'}INTERNO.
         </Animated.Text>
 
