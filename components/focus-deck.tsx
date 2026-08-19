@@ -93,6 +93,26 @@ export function FocusHero({ eyebrow, statement, metric, directive }: FocusHeroPr
   );
 }
 
+/**
+ * Panel del héroe: UNA superficie que agrupa lo que en escritorio ya vive junto.
+ *
+ * POR QUE: en escritorio, el score, la jornada y la coherencia comparten una
+ * sola tarjeta grande. En móvil eran TRES tarjetas apiladas, cada una con su
+ * borde, su fondo y su título — la misma información enmarcada tres veces. Ese
+ * era el ruido: no sobra contenido, sobran marcos.
+ *
+ * Los hijos deben entrar SIN su propio marco. Una tarjeta dentro de otra no
+ * agrupa: subdivide, y añade justo el borde que se quería quitar.
+ */
+export function HeroPanel({ children }: { children: ReactNode }) {
+  return <View style={s.heroPanel}>{children}</View>;
+}
+
+/** Separador interno del panel: agrupa sin dibujar una caja nueva. */
+export function HeroRule() {
+  return <View style={s.heroRule} />;
+}
+
 // ─── 2 · Tres números ─────────────────────────────────────────────────────────
 
 export type Stat = { name: string; value: string; tone?: 'normal' | 'warn' | 'good' };
@@ -196,6 +216,17 @@ export function LensRow({
 }
 
 const s = StyleSheet.create({
+  heroPanel: {
+    backgroundColor: palette.graphite,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    overflow: 'hidden',
+  },
+  heroRule: { height: 1, backgroundColor: palette.line, marginHorizontal: -spacing.lg },
+
   // Héroe
   hero: {
     backgroundColor: palette.graphite,

@@ -61,6 +61,8 @@ function StepsRow({ jornada }: { jornada: Jornada }) {
 // ── El tracker (Comando) ──────────────────────────────────────────────────────
 
 export interface JornadaTrackerProps {
+  /** Sin marco propio: para usarlo dentro del panel del héroe. */
+  flat?: boolean;
   /** `null` mientras el log local carga — se renderiza el turno clásico. */
   jornada: Jornada | null;
   turno: Turno;
@@ -69,12 +71,15 @@ export interface JornadaTrackerProps {
   arcPhrase?: string;
 }
 
-export function JornadaTracker({ jornada, turno, onPressCta, arcPhrase }: JornadaTrackerProps) {
+export function JornadaTracker({ jornada, turno, onPressCta, arcPhrase, flat }: JornadaTrackerProps) {
+  // `flat`: el tracker vive DENTRO del panel del héroe, que ya pone el marco.
+  // Sin esto queda una tarjeta dentro de otra, que no agrupa — subdivide.
+  const chrome = flat ? { backgroundColor: 'transparent', borderWidth: 0, padding: 0 } : undefined;
   if (jornada?.complete) {
     // El día está hecho. Sin fanfarria: los cuatro checks, la frase del arco
     // (que ya habla en segunda persona) y una salida serena a progreso.
     return (
-      <GoldAccentCard accessibilityLabel="Jornada completa">
+      <GoldAccentCard style={chrome} accessibilityLabel="Jornada completa">
         <Text style={s.mandoLabel}>TU JORNADA</Text>
         <StepsRow jornada={jornada} />
         <Text style={s.mandoText}>{turno.headline}</Text>
@@ -87,7 +92,7 @@ export function JornadaTracker({ jornada, turno, onPressCta, arcPhrase }: Jornad
   }
 
   return (
-    <GoldAccentCard
+    <GoldAccentCard style={chrome}
       onPress={onPressCta}
       accessibilityRole="button"
       accessibilityLabel={`${turno.headline}. ${turno.why}`}>
