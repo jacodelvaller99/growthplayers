@@ -243,7 +243,7 @@ export default function BiometricsScreen() {
             <ScoreBar
               label="SUEÑO"
               score={today?.sleep_score ?? null}
-              color="#4a6fa5"
+              color={palette.info}
             />
             {today?.sleep_duration_min && (
               <Text style={styles.scoreSubLabel}>
@@ -257,7 +257,7 @@ export default function BiometricsScreen() {
               label="ACTIVIDAD"
               score={today?.activity_score ?? today?.strain_score ?? null}
               max={provider === 'whoop' ? 21 : 100}
-              color="#2e7d52"
+              color={palette.success}
             />
             {today?.steps && (
               <Text style={styles.scoreSubLabel}>
@@ -272,7 +272,7 @@ export default function BiometricsScreen() {
       <PremiumCard style={styles.vitalsCard}>
         <View style={styles.vitalsRow}>
           <View style={styles.vitalItem}>
-            <MaterialIcons name="favorite" size={16} color="#e63946" />
+            <MaterialIcons name="favorite" size={16} color={palette.dangerText} />
             <Text style={styles.vitalValue}>
               {today?.hrv_ms != null ? `${Math.round(today.hrv_ms)}ms` : '–'}
             </Text>
@@ -280,7 +280,7 @@ export default function BiometricsScreen() {
           </View>
           <View style={styles.vitalDivider} />
           <View style={styles.vitalItem}>
-            <MaterialIcons name="monitor-heart" size={16} color="#4a6fa5" />
+            <MaterialIcons name="monitor-heart" size={16} color={palette.info} />
             <Text style={styles.vitalValue}>
               {today?.resting_hr != null ? `${today.resting_hr}bpm` : '–'}
             </Text>
@@ -288,7 +288,7 @@ export default function BiometricsScreen() {
           </View>
           <View style={styles.vitalDivider} />
           <View style={styles.vitalItem}>
-            <MaterialIcons name="thermostat" size={16} color="#b07d1a" />
+            <MaterialIcons name="thermostat" size={16} color={palette.warning} />
             <Text style={styles.vitalValue}>
               {today?.body_temp_delta != null
                 ? `${today.body_temp_delta >= 0 ? '+' : ''}${today.body_temp_delta.toFixed(1)}°C`
@@ -298,7 +298,7 @@ export default function BiometricsScreen() {
           </View>
           <View style={styles.vitalDivider} />
           <View style={styles.vitalItem}>
-            <MaterialIcons name="air" size={16} color="#2e7d52" />
+            <MaterialIcons name="air" size={16} color={palette.success} />
             <Text style={styles.vitalValue}>
               {today?.spo2_avg != null ? `${today.spo2_avg.toFixed(1)}%` : '–'}
             </Text>
@@ -325,7 +325,7 @@ export default function BiometricsScreen() {
             <Text style={styles.weeklyLabel}>RECUPERACIÓN</Text>
             <WeeklyBars data={dailyData} field="recovery_score" color={palette.goldText} />
             <Text style={[styles.weeklyLabel, { marginTop: spacing.md }]}>SUEÑO</Text>
-            <WeeklyBars data={dailyData} field="sleep_score" color="#4a6fa5" />
+            <WeeklyBars data={dailyData} field="sleep_score" color={palette.info} />
           </PremiumCard>
         </>
       )}
