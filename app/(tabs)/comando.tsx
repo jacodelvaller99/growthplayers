@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 
-import { LensTabs } from '@/components/focus-deck';
+import { HeroPanel, HeroRule, LensTabs } from '@/components/focus-deck';
 import {
   AppHeader,
   GoldAccentCard,
@@ -456,6 +456,7 @@ export default function DashboardScreen() {
   // (components/jornada.tsx), montado igual en móvil y desktop.
   const mandoStripBlock = (
     <JornadaTracker
+      flat={!isDesktop}
       jornada={jornada}
       turno={turno}
       arcPhrase={arc.line}
@@ -1369,9 +1370,16 @@ export default function DashboardScreen() {
           {/* TENSIÓN — la única decisión de hoy. mandoStripBlock estaba escrito
               pero solo se montaba dentro de deskHero, así que el teléfono
               —donde se abre a diario— perdía la única pieza direccional. */}
-          {mandoStripBlock}
-          {mScoreCard}
-          {mCheckinCard}
+          {/* ── HÉROE CONSOLIDADO ────────────────────────────────────────
+              En escritorio, score + jornada + coherencia comparten UNA tarjeta.
+              En móvil eran tres apiladas, cada una con su borde y su título: la
+              misma información enmarcada tres veces. Mismo contenido, un marco. */}
+          <HeroPanel>
+            {mandoStripBlock}
+            <HeroRule />
+            {mScoreCard}
+            {mCheckinCard ? <><HeroRule />{mCheckinCard}</> : null}
+          </HeroPanel>
 
           {/* Señales en tiempo real (solo cuando aplican) */}
           {northAnchorStrip}
@@ -2260,8 +2268,9 @@ const mob = StyleSheet.create({
   },
 
   // Score Soberano card
+  // Sin marco: vive DENTRO del panel del héroe. Conservarlo dibujaría una
+  // tarjeta dentro de otra, que es exactamente el ruido que se quita.
   scoreCard: {
-    ...surfaces.premiumCard,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xl,
@@ -2292,10 +2301,7 @@ const mob = StyleSheet.create({
 
   // Check-in — done state
   checkinDoneCard: {
-    ...surfaces.premiumCard,
-    borderColor: palette.lineGold,
-    padding: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.md,   // sin marco: dentro del panel del héroe
   },
   coherenceRow: {
     flexDirection: 'row',
