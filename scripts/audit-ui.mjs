@@ -129,7 +129,12 @@ const browser = await chromium.launch({ headless: !LOGIN });
 // propios desbordes, que a 390px no se ven.
 const WIDTH = Number(process.env.AUDIT_WIDTH ?? 390);
 const MOVIL = WIDTH < 768;
+// Si hay sesión de un `--login` anterior, se reutiliza: las pasadas siguientes
+// cubren las rutas privadas sin volver a pedir acceso.
+const REUSA = !LOGIN && existsSync(SESSION_FILE);
+console.log(REUSA ? `sesión reutilizada de ${SESSION_FILE}` : 'sin sesión — solo rutas públicas');
 const ctx = await browser.newContext({
+  ...(REUSA ? { storageState: SESSION_FILE } : {}),
   viewport: { width: WIDTH, height: MOVIL ? 844 : 900 },
   deviceScaleFactor: 1,
   isMobile: MOVIL,

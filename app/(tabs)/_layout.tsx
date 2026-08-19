@@ -57,7 +57,12 @@ const tabStyles = StyleSheet.create({
 export function BottomNavigation() {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
-  const tabBarHeight = 56 + insets.bottom;
+  // 60 y no 56: el relleno (8 arriba + 6 abajo, sin contar el área segura) se
+  // come 14px, así que con 56 cada pestaña quedaba en 41px de zona pulsable —
+  // por debajo del mínimo de 44. Medido en el DOM a 390px, en las 25 apariciones
+  // (5 pestañas × 5 pantallas). Es la navegación principal de la app: el
+  // objetivo que más se pulsa era el que peor cumplía.
+  const tabBarHeight = 60 + insets.bottom;
 
   return (
     <Tabs
