@@ -31,6 +31,10 @@ const ROOT = join(__dirname, '../..');
  * (letterbox de vídeo, lienzo de escaneo), o es una sombra.
  */
 const ALLOWED: Record<string, string> = {
+  // `+html.tsx` NO llega al build (Expo genera su propia plantilla; ver
+  // injectBrandFont). Se deja el color por si algún día vuelve a aplicarse.
+  'app/+html.tsx:#080808': 'theme-color del navegador — plantilla que hoy no se aplica',
+
   // Sombras: siempre negras, en los dos temas.
   'components/tour/TourButton.tsx:#000': 'shadowColor',
   'components/PWAInstallBanner.tsx:#000': 'shadowColor',
@@ -82,7 +86,9 @@ describe('cobertura del tema en toda la app', () => {
 
     for (const rel of files) {
       const src = readFileSync(join(ROOT, rel), 'utf8');
-      for (const m of src.matchAll(/'(#[0-9A-Fa-f]{3,8})'/g)) {
+      // Comillas simples Y dobles: en JSX el color va como `color="#e63946"`,
+      // y la versión anterior solo miraba comillas simples — por ahí se colaron.
+      for (const m of src.matchAll(/['"](#[0-9A-Fa-f]{3,8})['"]/g)) {
         const key = `${rel}:${m[1]}`;
         if (!(key in ALLOWED)) offenders.push(key);
       }

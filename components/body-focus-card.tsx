@@ -32,7 +32,7 @@ export function BodyFocusCard({
       {showChestSafety ? (
         <View style={s.safety} accessibilityRole="alert">
           <View style={s.safetyTitleRow}>
-            <MaterialIcons name="warning-amber" size={18} color="#FFB86B" />
+            <MaterialIcons name="warning-amber" size={18} color={palette.warning} />
             <Text style={s.safetyTitle}>PRIMERO, SEGURIDAD</Text>
           </View>
           <Text style={s.safetyText}>
