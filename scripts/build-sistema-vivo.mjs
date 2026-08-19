@@ -1,274 +1,173 @@
 /**
- * Genera el "Sistema Vivo" — la página que muestra el estado del rediseño.
+ * Construye el Sistema Vivo: la app REAL, pantalla por pantalla.
  *
- * NO es una página escrita a mano: LEE el código fuente y emite lo que hay.
- * Por eso puede llamarse viva — si alguien añade un fondo o cambia un hex, la
- * siguiente generación lo refleja sin que nadie se acuerde de actualizarla. Una
- * página de sistema de diseño mantenida a mano miente a las dos semanas.
+ * No es un catálogo de paletas ni una teoría del diseño — son las capturas que
+ * `shoot-app.mjs` acaba de tomar del build que corre ahora mismo, móvil y
+ * escritorio, embebidas en una sola página que se abre sin servidor.
  *
- *   node scripts/build-sistema-vivo.mjs   →  C:/tmp/sistema-vivo.html
+ *   node scripts/shoot-app.mjs && node scripts/build-sistema-vivo.mjs
  */
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
-// cwd y no import.meta.url: la ruta del proyecto lleva espacios y el URL los
-// escapa a %20, que readFileSync no deshace. Correr desde la raíz del repo.
-const read = (p) => readFileSync(`${process.cwd()}/${p}`, 'utf8');
+const SHOTS = 'C:/tmp/polaris-shots';
+const DESTINO = 'C:/tmp/sistema-vivo.html';
 
-// ─── Extraer del código ───────────────────────────────────────────────────────
-
-function parseVarBlocks(src, exportName) {
-  const i = src.indexOf(`export const ${exportName}`);
-  const blk = src.slice(i, src.indexOf('\n};', i));
-  const out = {};
-  for (const m of blk.matchAll(/^ {2}([a-z]+): \{([\s\S]*?)\n {2}\},/gm)) {
-    const vars = {};
-    for (const n of m[2].matchAll(/'(--c-[a-z0-9-]+)':\s*'([^']+)'/g)) vars[n[1]] = n[2];
-    out[m[1]] = vars;
-  }
-  return out;
+if (!existsSync(`${SHOTS}/inventario.json`)) {
+  console.error('Faltan capturas. Corre primero: node scripts/shoot-app.mjs');
+  process.exit(1);
 }
+const inventario = JSON.parse(readFileSync(`${SHOTS}/inventario.json`, 'utf8'));
 
-const themeSrc = read('constants/themeColors.ts');
-const BACKDROPS = parseVarBlocks(themeSrc, 'THEME_VARS');
-const SIGNALS = parseVarBlocks(themeSrc, 'SIGNAL_VARS');
-
-/** Las notas que ya viven junto a cada opción en la pantalla de Apariencia. */
-function catalogNotes(file, constName) {
-  const src = read(file);
-  const i = src.indexOf(`const ${constName}`);
-  const blk = src.slice(i, src.indexOf('\n];', i));
-  const out = {};
-  for (const m of blk.matchAll(/\{ id: '([a-z]+)',\s*name: '([^']+)',\s*note: '([^']+)'/g)) {
-    out[m[1]] = { name: m[2], note: m[3] };
-  }
-  return out;
-}
-const BD_NOTES = catalogNotes('app/perfil/apariencia.tsx', 'BACKDROPS');
-const SG_NOTES = catalogNotes('app/perfil/apariencia.tsx', 'SIGNALS');
-
-/** Estado del rediseño por pantalla — se declara aquí y se contrasta con el código. */
-const SCREENS = [
-  ['Comando',    'hecho',     'Héroe consolidado (jornada + score + coherencia en una superficie) · 7 secciones → 4 lentes'],
-  ['Progreso',   'hecho',     'Héroe consolidado (score + tendencia + historia) · 15 secciones → 4 lentes'],
-  ['Bienestar',  'hecho',     'Héroe + semana en un panel · 17 destinos → 3 lentes · duplicados eliminados'],
-  ['Apariencia', 'hecho',     'Laboratorio de color en la app: 8 fondos × 7 señales sobre datos reales'],
-  ['Bienvenida', 'parcial',   'Titular responsivo (no parte palabras) · falta el tratamiento de héroe'],
-  ['Acceso',     'parcial',   'CTA a 44px · falta composición'],
-  ['Mi Norte',   'sin tocar', 'Es un FORMULARIO, no una pila: las lentes lo empeorarían'],
-  ['Mentor',     'sin tocar', 'Es un chat: las lentes estorbarían'],
-  ['Check-in',   'pendiente', 'Desborde horizontal de 4px sin resolver'],
-  ['Mentoría',   'pendiente', ''],
-  ['El Círculo', 'pendiente', '12 pantallas'],
-  ['Bienestar · prácticas', 'pendiente', '19 pantallas'],
-  ['Admin',      'pendiente', '14 pantallas'],
+/** Las secciones son las del producto, no las del árbol de archivos. */
+const SECCIONES = [
+  { id: 'nucleo', titulo: 'El núcleo',
+    nota: 'El bucle diario: mirar, decidir, ejecutar, revisar.',
+    test: (r) => ['comando', 'checkin', 'norte', 'progreso', 'mentor', 'mentoria', 'ritual', 'explore'].includes(r) },
+  { id: 'bienestar', titulo: 'Bienestar',
+    nota: 'El cuerpo como primer sistema. Prácticas, protocolo y lectura biométrica.',
+    test: (r) => r.startsWith('bienestar') },
+  { id: 'circulo', titulo: 'El Círculo',
+    nota: 'La hermandad: espacios, eventos, conexiones y mensajes.',
+    test: (r) => r.startsWith('comunidad') },
+  { id: 'cuenta', titulo: 'Cuenta y acceso',
+    nota: 'Perfil, dispositivos, apariencia, planes y textos legales.',
+    test: (r) => r.startsWith('perfil') || r.startsWith('legal') || ['paywall', 'pricing', 'programas'].includes(r) },
+  { id: 'admin', titulo: 'Panel del mentor',
+    nota: 'Lo que ve quien acompaña. Nunca visible para el cliente.',
+    test: (r) => r.startsWith('admin') },
 ];
 
-/** Invariantes que un test verifica hoy. Cada línea es un test real. */
-const GUARDS = [
-  ['Contraste AA', 'themeContrast', `${Object.keys(BACKDROPS).length * Object.keys(SIGNALS).length} combinaciones × texto y acentos sobre 5 superficies`],
-  ['Cobertura de tema', 'themeCoverage', 'Ningún color fuera del sistema sin motivo declarado'],
-  ['Objetivos táctiles', 'touchTargets', 'Ningún control de navegación por debajo de 44px'],
-  ['Guard de rutas', 'routeGuard', 'Ninguna pantalla accesible sin sesión sin declararse pública'],
-  ['Titulares', 'fitDisplaySize', 'El titular nunca parte una palabra, en 5 anchos de teléfono'],
-  ['Animación', 'themeVarInAnimation', 'Ningún token var() dentro de interpolateColor'],
-  ['Estados de métrica', 'metricTileLogic', 'Vocabulario de acompañamiento, no clínico'],
-];
+const b64 = (archivo) => readFileSync(`${SHOTS}/${archivo}`).toString('base64');
 
-// ─── Utilidades de color ──────────────────────────────────────────────────────
+const rutas = [...new Set(inventario.map((i) => i.ruta))].sort();
+const porRuta = Object.fromEntries(rutas.map((r) => [r, {
+  movil: inventario.find((i) => i.ruta === r && i.tamano === 'movil' && i.archivo),
+  pc: inventario.find((i) => i.ruta === r && i.tamano === 'pc' && i.archivo),
+}]));
 
-const chan = (c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
-const lum = (hex) => {
-  const h = hex.replace('#', '');
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
-  return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
-};
-const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-const esClaro = (bd) => lum(BACKDROPS[bd]['--c-bg']) > 0.4;
+const capturadas = rutas.filter((r) => porRuta[r].movil || porRuta[r].pc);
+const sinCaptura = rutas.filter((r) => !porRuta[r].movil && !porRuta[r].pc);
 
-// ─── HTML ─────────────────────────────────────────────────────────────────────
+const nombreBonito = (r) => (r === 'comando' ? 'Centro de comando'
+  : r.split('/').pop().replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase()));
 
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-
-const swatchRow = (vars, keys) => keys
-  .map((k) => `<i class="sw" style="background:${vars[k] ?? 'transparent'}" title="${k}: ${vars[k] ?? '—'}"></i>`)
-  .join('');
-
-const backdropCards = Object.entries(BACKDROPS).map(([id, v]) => {
-  const n = BD_NOTES[id] ?? { name: id, note: '' };
-  const contraste = ratio(v['--c-text'], v['--c-bg']).toFixed(1);
-  return `<article class="card" style="--demo-bg:${v['--c-bg']};--demo-fg:${v['--c-text']};--demo-s:${v['--c-surface']}">
-    <div class="demo"><span>Aa</span></div>
-    <h3>${esc(n.name)}</h3>
-    <p>${esc(n.note)}</p>
-    <div class="sws">${swatchRow(v, ['--c-bg', '--c-surface', '--c-surface-2', '--c-surface-3', '--c-text'])}</div>
-    <div class="meta">texto sobre fondo · <b>${contraste}:1</b>${esClaro(id) ? ' · rampa clara' : ''}</div>
-  </article>`;
-}).join('');
-
-const signalCards = Object.entries(SIGNALS).map(([id, v]) => {
-  const n = SG_NOTES[id] ?? { name: id, note: '' };
-  return `<article class="card">
-    <div class="sig">
-      ${['--c-gold', '--c-success', '--c-warning', '--c-danger', '--c-calm', '--c-info']
-        .map((k) => `<i class="dot" style="background:${v[k] ?? '#333'}" title="${k}"></i>`).join('')}
-    </div>
-    <h3>${esc(n.name)}</h3>
-    <p>${esc(n.note)}</p>
-    <div class="meta">acento <code>${v['--c-gold']}</code></div>
-  </article>`;
-}).join('');
-
-const ESTADO = { hecho: 'ok', parcial: 'wip', 'sin tocar': 'na', pendiente: 'todo' };
-const ETIQUETA = { hecho: 'Hecho', parcial: 'Parcial', 'sin tocar': 'No aplica', pendiente: 'Pendiente' };
-
-const screenRows = SCREENS.map(([name, st, note]) => `<tr>
-  <td class="nm">${esc(name)}</td>
-  <td><span class="pill ${ESTADO[st]}">${ETIQUETA[st]}</span></td>
-  <td class="nt">${esc(note)}</td></tr>`).join('');
-
-const guardRows = GUARDS.map(([t, f, d]) => `<tr>
-  <td class="nm">${esc(t)}</td><td><code>${esc(f)}</code></td><td class="nt">${esc(d)}</td></tr>`).join('');
-
-const hechas = SCREENS.filter((s) => s[1] === 'hecho').length;
-const total = SCREENS.length;
-
-const html = `<title>Sistema Vivo Polaris</title>
-<style>
-:root{
-  --bg:#090909; --surface:#111111; --surface2:#181818; --line:rgba(255,255,255,.07);
-  --lineHard:rgba(255,255,255,.13); --ivory:#EBEBEB; --ash:#AAAAAA; --smoke:#898989;
-  --gold:#FFC804; --good:#52A878; --warn:#D4A017; --bad:#D54F42;
-  --display:'Arial Black','Segoe UI Black',system-ui,sans-serif;
-  --body:-apple-system,'Segoe UI',Inter,system-ui,sans-serif;
-  --data:ui-monospace,'Cascadia Code',Consolas,monospace;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ivory);font-family:var(--body);-webkit-font-smoothing:antialiased}
-.stage{max-width:1180px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-direction:column;gap:44px}
-.kick{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
-.brand{font-family:var(--display);font-size:12px;font-weight:900;letter-spacing:5px}
-.brand i{color:var(--gold);font-style:normal}
-.stamp{font-family:var(--data);font-size:11px;color:var(--smoke)}
-h1{font-family:var(--display);font-size:clamp(28px,5vw,44px);letter-spacing:-1px;margin:0;text-wrap:balance}
-.lede{font-weight:300;font-size:17px;line-height:1.55;color:var(--ash);max-width:62ch;margin:10px 0 0}
-.count{display:flex;gap:26px;flex-wrap:wrap;margin-top:6px}
-.count div{display:flex;flex-direction:column;gap:2px}
-.count b{font-family:var(--data);font-size:24px;color:var(--gold);font-variant-numeric:tabular-nums}
-.count span{font-size:10px;letter-spacing:1.6px;color:var(--smoke);text-transform:uppercase}
-h2{font-family:var(--display);font-size:11px;font-weight:900;letter-spacing:2.4px;color:var(--smoke);
-   text-transform:uppercase;margin:0 0 16px}
-.note{color:var(--ash);font-size:14px;line-height:1.6;max-width:70ch;margin:-6px 0 18px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:14px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;
-      display:flex;flex-direction:column;gap:8px}
-.card h3{font-family:var(--display);font-size:12px;letter-spacing:1.4px;margin:0;text-transform:uppercase}
-.card p{margin:0;font-size:12.5px;line-height:1.5;color:var(--ash)}
-.demo{background:var(--demo-bg);border:1px solid var(--line);border-radius:9px;height:58px;
-      display:flex;align-items:center;justify-content:center}
-.demo span{font-family:var(--display);font-size:20px;color:var(--demo-fg)}
-.sws,.sig{display:flex;gap:5px}
-.sw{width:22px;height:22px;border-radius:5px;border:1px solid var(--line);display:block}
-.dot{width:26px;height:26px;border-radius:50%;display:block}
-.meta{font-family:var(--data);font-size:10.5px;color:var(--smoke);margin-top:2px}
-.meta code{color:var(--ash)}
-.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
-table{border-collapse:collapse;width:100%;min-width:560px}
-th,td{text-align:left;padding:13px 16px;font-size:13.5px;border-top:1px solid var(--line);vertical-align:top}
-th{font-family:var(--display);font-size:9.5px;letter-spacing:1.6px;color:var(--smoke);
-   text-transform:uppercase;border-top:0}
-td.nm{font-weight:600;white-space:nowrap}
-td.nt{color:var(--ash);line-height:1.5}
-code{font-family:var(--data);font-size:12px}
-.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-family:var(--display);
-      font-size:9px;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;border:1px solid}
-.pill.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent);
-         background:color-mix(in srgb,var(--good) 12%,transparent)}
-.pill.wip{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);
-          background:color-mix(in srgb,var(--warn) 12%,transparent)}
-.pill.todo{color:var(--smoke);border-color:var(--lineHard)}
-.pill.na{color:var(--ash);border-color:var(--lineHard);background:transparent}
-.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px}
-.rule{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;
-      display:flex;flex-direction:column;gap:7px;border-left:none}
-.rule b{font-family:var(--display);font-size:11px;letter-spacing:1.3px;color:var(--gold);text-transform:uppercase}
-.rule p{margin:0;font-size:13px;line-height:1.55;color:var(--ash)}
-footer{border-top:1px solid var(--line);padding-top:18px;color:var(--smoke);font-size:12px;line-height:1.6}
-@media (max-width:640px){ .stage{padding:28px 16px 60px;gap:34px} }
-</style>
-
-<div class="stage">
-  <div class="kick">
-    <div class="brand">POLARIS<i>·</i>SISTEMA VIVO</div>
-    <div class="stamp">${Object.keys(BACKDROPS).length} fondos · ${Object.keys(SIGNALS).length} señales · ${Object.keys(BACKDROPS).length * Object.keys(SIGNALS).length} combinaciones</div>
+function ficha(r) {
+  const { movil, pc } = porRuta[r];
+  const img = (e, clase, alt) => (e
+    ? `<img loading="lazy" alt="${alt}" src="data:image/jpeg;base64,${b64(e.archivo)}">`
+    : `<p class="falta">sin captura</p>`);
+  return `<article class="ficha" id="p-${r.replace(/\//g, '-')}">
+  <header><h3>${nombreBonito(r)}</h3><code>/${r}</code></header>
+  <div class="par">
+    <figure class="movil">${img(movil, 'movil', `${r} en móvil`)}<figcaption>390 px</figcaption></figure>
+    <figure class="pc">${img(pc, 'pc', `${r} en escritorio`)}<figcaption>1280 px</figcaption></figure>
   </div>
+</article>`;
+}
 
-  <header>
-    <h1>El rediseño, mientras ocurre.</h1>
-    <p class="lede">Esta página no se escribe a mano: lee el código de Polaris y muestra lo que
-      hay. Si alguien añade un fondo o corrige un hex, la siguiente generación lo refleja sin que
-      nadie tenga que acordarse. Un sistema de diseño mantenido a mano miente a las dos semanas.</p>
-    <div class="count">
-      <div><b>${hechas}/${total}</b><span>Pantallas rediseñadas</span></div>
-      <div><b>${Object.keys(BACKDROPS).length * Object.keys(SIGNALS).length}</b><span>Paletas verificadas</span></div>
-      <div><b>${GUARDS.length}</b><span>Invariantes con test</span></div>
-    </div>
-  </header>
+const usadas = new Set();
+const secciones = SECCIONES.map((s) => {
+  const suyas = capturadas.filter((r) => !usadas.has(r) && s.test(r));
+  suyas.forEach((r) => usadas.add(r));
+  if (!suyas.length) return '';
+  return `<section id="${s.id}">
+  <div class="cab"><h2>${s.titulo}</h2><p>${s.nota}</p><span class="cuenta">${suyas.length} pantallas</span></div>
+  ${suyas.map(ficha).join('\n')}
+</section>`;
+}).filter(Boolean).join('\n');
 
-  <section>
-    <h2>Las tres reglas</h2>
-    <p class="note">No son de color. El color ya funcionaba; lo que fallaba era el orden.</p>
-    <div class="rules">
-      <div class="rule"><b>Un héroe, una decisión</b>
-        <p>Arriba se ve el estado de un vistazo y UNA acción. Si una pantalla necesita dos, no ha
-           decidido cuál importa — y esa decisión es del diseño, no del usuario.</p></div>
-      <div class="rule"><b>Tres números como mucho</b>
-        <p>Un cuarto convierte el vistazo en lectura, y entonces ya no es un resumen. Lo que sobra
-           pertenece a una lente.</p></div>
-      <div class="rule"><b>Lentes en vez de pila</b>
-        <p>Seis secciones apiladas pasan a un módulo con pestañas. El lector elige por dónde mirar
-           en vez de recorrerlo todo. Es la que de verdad baja la densidad.</p></div>
-    </div>
-  </section>
+const sueltas = capturadas.filter((r) => !usadas.has(r));
+const restantes = sueltas.length ? `<section id="otras">
+  <div class="cab"><h2>Otras</h2><p>Pantallas que aún no entran en ninguna sección del producto.</p><span class="cuenta">${sueltas.length} pantallas</span></div>
+  ${sueltas.map(ficha).join('\n')}
+</section>` : '';
 
-  <section>
-    <h2>Eje 1 · Fondo</h2>
-    <p class="note">La tinta sobre la que vive todo. Cada uno responde a un momento de uso real,
-      no a una variación de relleno.</p>
-    <div class="grid">${backdropCards}</div>
-  </section>
+const fecha = process.env.SV_FECHA || '—';
 
-  <section>
-    <h2>Eje 2 · Señal</h2>
-    <p class="note">Qué comunica el color. Se combinan por cascada con el fondo, así que cambiar
-      de eje no obliga a tocar ninguna pantalla.</p>
-    <div class="grid">${signalCards}</div>
-  </section>
+const html = `<title>Polaris en vivo</title>
+<style>
+  :root{
+    --tinta:#141312; --tinta-2:#4a4744; --papel:#f2efe9;
+    --linea:#d3cdc1; --oro:#8a6500; --marco:#1a1917;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --tinta:#efece6; --tinta-2:#a09a90; --papel:#111110;
+      --linea:#2c2a27; --oro:#ffc804; --marco:#000;
+    }
+  }
+  :root[data-theme="dark"]{
+    --tinta:#efece6; --tinta-2:#a09a90; --papel:#111110;
+    --linea:#2c2a27; --oro:#ffc804; --marco:#000;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--papel);color:var(--tinta);
+    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  .envoltura{max-width:1180px;margin:0 auto;padding:0 24px 96px}
+  header.principal{padding:72px 0 40px;border-bottom:1px solid var(--linea)}
+  h1{font-size:clamp(30px,5vw,52px);line-height:1.05;margin:0 0 12px;
+    letter-spacing:-.02em;text-wrap:balance}
+  .sub{color:var(--tinta-2);max-width:62ch;margin:0 0 28px;text-wrap:pretty}
+  .resumen{display:flex;flex-wrap:wrap;gap:32px;font-variant-numeric:tabular-nums}
+  .resumen div{display:flex;flex-direction:column}
+  .resumen b{font-size:28px;line-height:1;color:var(--oro)}
+  .resumen span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--tinta-2);margin-top:6px}
+  nav.indice{position:sticky;top:0;z-index:10;background:var(--papel);
+    border-bottom:1px solid var(--linea);padding:14px 0;display:flex;gap:20px;flex-wrap:wrap}
+  nav.indice a{color:var(--tinta-2);text-decoration:none;font-size:12px;
+    letter-spacing:.12em;text-transform:uppercase}
+  nav.indice a:hover,nav.indice a:focus-visible{color:var(--oro)}
+  section{padding-top:64px}
+  .cab{margin-bottom:24px}
+  .cab h2{font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+  .cab p{margin:0;color:var(--tinta-2);max-width:60ch}
+  .cuenta{display:inline-block;margin-top:10px;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--oro)}
+  .ficha{padding:28px 0;border-top:1px solid var(--linea)}
+  .ficha header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .ficha h3{margin:0;font-size:17px;letter-spacing:-.01em}
+  .ficha code{font-size:12px;color:var(--tinta-2)}
+  .par{display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr);gap:24px;align-items:start}
+  @media (max-width:720px){.par{grid-template-columns:1fr}}
+  figure{margin:0}
+  figcaption{margin-top:8px;font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--tinta-2)}
+  img{display:block;width:100%;height:auto;max-height:660px;object-fit:cover;
+    object-position:top;border:1px solid var(--linea);border-radius:10px;background:var(--marco)}
+  .falta{margin:0;padding:28px;border:1px dashed var(--linea);border-radius:10px;
+    color:var(--tinta-2);font-size:13px;text-align:center}
+  footer{margin-top:72px;padding-top:24px;border-top:1px solid var(--linea);
+    color:var(--tinta-2);font-size:13px}
+</style>
+<div class="envoltura">
+<header class="principal">
+  <h1>Polaris en vivo</h1>
+  <p class="sub">Todas las pantallas de la aplicación tal como se ven ahora mismo, en móvil y en
+     escritorio. No son maquetas ni bocetos: son capturas del build que está corriendo.</p>
+  <div class="resumen">
+    <div><b>${capturadas.length}</b><span>pantallas</span></div>
+    <div><b>${inventario.filter((i) => i.archivo).length}</b><span>capturas</span></div>
+    <div><b>${fecha}</b><span>actualizado</span></div>
+  </div>
+</header>
 
-  <section>
-    <h2>Estado por pantalla</h2>
-    <p class="note">«No aplica» no es una excusa: un formulario o un chat empeoran con pestañas,
-      y forzar el patrón donde no toca es peor que no aplicarlo.</p>
-    <div class="wrap"><table>
-      <thead><tr><th>Pantalla</th><th>Estado</th><th>Qué cambió</th></tr></thead>
-      <tbody>${screenRows}</tbody>
-    </table></div>
-  </section>
+<nav class="indice">
+  ${SECCIONES.map((s) => `<a href="#${s.id}">${s.titulo}</a>`).join('\n  ')}
+  ${sueltas.length ? '<a href="#otras">Otras</a>' : ''}
+</nav>
 
-  <section>
-    <h2>Lo que impide que esto se degrade</h2>
-    <p class="note">Cada línea es un test que corre en cada cambio. Sin ellos, un sistema de
-      diseño dura hasta la primera prisa.</p>
-    <div class="wrap"><table>
-      <thead><tr><th>Invariante</th><th>Test</th><th>Qué fija</th></tr></thead>
-      <tbody>${guardRows}</tbody>
-    </table></div>
-  </section>
+${secciones}
+${restantes}
 
-  <footer>
-    Generado desde <code>constants/themeColors.ts</code> y <code>app/perfil/apariencia.tsx</code>.
-    Los contrastes se calculan aquí mismo con la fórmula WCAG 2.1 — no están copiados.
-  </footer>
+<footer>
+  <p>Generado con <code>scripts/shoot-app.mjs</code> y <code>scripts/build-sistema-vivo.mjs</code>
+     contra el servidor de desarrollo, con la sesión iniciada.</p>
+  ${sinCaptura.length ? `<p>Sin captura en esta pasada: ${sinCaptura.map((r) => `<code>/${r}</code>`).join(' · ')}</p>` : ''}
+</footer>
 </div>`;
 
-writeFileSync('C:/tmp/sistema-vivo.html', html, 'utf8');
-console.log(`generado · ${Object.keys(BACKDROPS).length} fondos · ${Object.keys(SIGNALS).length} señales · ${hechas}/${total} pantallas`);
+writeFileSync(DESTINO, html);
+const mb = (Buffer.byteLength(html) / 1024 / 1024).toFixed(1);
+console.log(`${DESTINO} · ${capturadas.length} pantallas · ${mb} MB`);
+if (Number(mb) > 15) console.log('AVISO: por encima de 15 MB — baja la calidad en shoot-app.mjs');
