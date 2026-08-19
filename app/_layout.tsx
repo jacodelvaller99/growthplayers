@@ -95,6 +95,7 @@ function MainStack() {
         <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/index" options={{ headerShown: false }} />
+        <Stack.Screen name="bienestar/body-context" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/binaurales" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/meditacion" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/respiracion" options={{ headerShown: false }} />
@@ -133,6 +134,10 @@ function MainStack() {
         <Stack.Screen name="perfil/index" options={{ headerShown: false }} />
         <Stack.Screen name="perfil/cliente" options={{ headerShown: false }} />
         <Stack.Screen name="perfil/wearables" options={{ headerShown: false }} />
+        {/* Ajustes de apariencia: es una pantalla del USUARIO. Se creó sin
+            registrarla aquí y quedaba accesible sin sesión — no filtraba datos
+            (solo lee localStorage) pero rompía la regla. */}
+        <Stack.Screen name="perfil/apariencia" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
         <Stack.Screen name="admin/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/usuarios/index" options={{ headerShown: false }} />
