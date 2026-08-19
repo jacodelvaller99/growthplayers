@@ -274,7 +274,7 @@ function PracticeCard({ practice, done, onPress }: { practice: MovementPractice;
 
 const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xl },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18 },
   intro: { ...typography.body, color: palette.ash, marginBottom: spacing.lg },
   card: { marginBottom: spacing.md },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
 const player = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.black, paddingHorizontal: spacing.xl, alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingTop: 56, marginBottom: spacing.lg },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 22, textAlign: 'center', marginBottom: spacing.sm },
   desc: { ...typography.body, color: palette.smoke, textAlign: 'center', marginBottom: spacing.xl },
   barTrack: { width: '100%', height: 6, borderRadius: 3, backgroundColor: palette.charcoal, overflow: 'hidden' },

@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   backBtn: {
-    width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
   },
   title: {
     ...typography.title,
@@ -625,7 +625,7 @@ const player = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   backBtn: {
-    width: 36, height: 36,
+    width: 44, height: 44,
     alignItems: 'center', justifyContent: 'center',
   },
   sessionTitle: {

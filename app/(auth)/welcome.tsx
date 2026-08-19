@@ -331,7 +331,10 @@ const styles = StyleSheet.create({
     ...typography.label,
     color:        palette.smoke,
     fontSize:     11,
-    letterSpacing: 1.5,
+    // 1.0 y no 1.5: el interletrado se aplica TAMBIEN tras el ultimo caracter,
+    // asi que "PSICOLOGIA" (10 letras) medía 96.4px en una columna de 97 y se
+    // salía por el margen. Medido en el navegador, no estimado.
+    letterSpacing: 0.5,
     textAlign:    'center',
   },
   statDivider: {

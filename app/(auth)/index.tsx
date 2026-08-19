@@ -372,6 +372,10 @@ const styles = StyleSheet.create({
   modeTab: {
     alignItems: 'center',
     flex: 1,
+    justifyContent: 'center',
+    // 44 real, no 37: con solo paddingVertical el alto lo fijaba el texto de
+    // 11px y quedaba por debajo del minimo tactil. Son los CTA de entrada.
+    minHeight: 44,
     paddingVertical: spacing.md,
   },
   modeTabActive: {
@@ -422,6 +426,8 @@ const styles = StyleSheet.create({
 
   linkWrap: {
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,   // el enlace medía 22px de alto: imposible de acertar
     marginTop: spacing.lg,
   },
   link: {
