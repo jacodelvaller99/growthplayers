@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 
+import { LensTabs } from '@/components/focus-deck';
 import {
   AppHeader,
   GoldAccentCard,
@@ -1383,22 +1384,26 @@ export default function DashboardScreen() {
           {mNextLessonBlock}
           {mQuickAccessBlock}
 
-          {/* Contenido extendido (datos reales, debajo del fold del diseño) */}
-          <GoldDivider label="MENTORÍA" />
-          {mentoriaBlock}
-          <GoldDivider label="HOY EN TU PROTOCOLO" />
-          {protocolBlock}
-          <GoldDivider label="ESTADO DEL DÍA" />
-          {estadoBlock}
-          {metricsRow}
-          <GoldDivider label="LIFEFLOW" />
-          {wellnessBlock}
-          <GoldDivider label="SESIÓN EN VIVO" />
-          {liveSessionBlock}
-          <GoldDivider label="COMUNIDAD" />
-          {communityBlock}
-          <CommunityPreview />
-          <GoldDivider label="MI NORTE" />
+          {/* ── LENTES ──────────────────────────────────────────────────
+              Debajo del héroe había SIETE secciones apiladas con su divisor:
+              mentoría, protocolo, estado del día, lifeflow, sesión en vivo,
+              comunidad y norte. Todas siguen aquí con el mismo contenido; lo que
+              cambia es que se elige una en vez de recorrerlas todas cada mañana. */}
+          <LensTabs
+            lenses={[
+              { id: 'hoy', label: 'HOY', render: () => (<>
+                {protocolBlock}
+                {estadoBlock}
+                {metricsRow}
+              </>) },
+              { id: 'cuerpo', label: 'CUERPO', render: () => (<>{wellnessBlock}</>) },
+              { id: 'personas', label: 'PERSONAS', render: () => (<>
+                {mentoriaBlock}
+                {liveSessionBlock}
+                {communityBlock}
+                <CommunityPreview />
+              </>) },
+              { id: 'norte', label: 'MI NORTE', render: () => (<>
           <PremiumCard style={styles.northCard}>
             <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
             <Text style={styles.northBody}>
@@ -1410,6 +1415,9 @@ export default function DashboardScreen() {
               onPress={() => router.push('/(tabs)/norte')}
             />
           </PremiumCard>
+              </>) },
+            ]}
+          />
         </>
       )}
     </ScrollView>
