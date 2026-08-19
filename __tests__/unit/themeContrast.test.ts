@@ -1,5 +1,5 @@
 /**
- * Contraste WCAG de las 30 combinaciones (6 fondos × 5 señales).
+ * Contraste WCAG de las 56 combinaciones (8 fondos × 7 señales).
  *
  * POR QUE ESTE FICHERO: los ejes se eligen desde una pantalla de ajustes, así
  * que cualquier cliente puede aterrizar en cualquier combinación. Revisar 30
@@ -15,6 +15,7 @@
  *     blanco compone #FFF8E1, indistinguible del papel).
  */
 import {
+  LIGHT_BACKDROPS,
   LIGHT_SIGNAL_OVERRIDES,
   SIGNAL_VARS,
   THEME_VARS,
@@ -46,7 +47,7 @@ function resolve(backdrop: BackdropId, signal: SignalId): Record<string, string>
   return {
     ...THEME_VARS[backdrop],
     ...SIGNAL_VARS[signal],
-    ...(backdrop === 'light' ? LIGHT_SIGNAL_OVERRIDES[signal] : {}),
+    ...(LIGHT_BACKDROPS.includes(backdrop) ? LIGHT_SIGNAL_OVERRIDES[signal] : {}),
   };
 }
 
@@ -82,10 +83,10 @@ const NON_TEXT = 3;
 
 // ─── Invariantes ──────────────────────────────────────────────────────────────
 
-describe('contraste AA en las 30 combinaciones', () => {
+describe('contraste AA en las 56 combinaciones', () => {
   it('la matriz no está vacía (si lo estuviera, lo de abajo no probaría nada)', () => {
-    expect(BACKDROPS.length).toBe(6);
-    expect(SIGNALS.length).toBe(5);
+    expect(BACKDROPS.length).toBe(8);
+    expect(SIGNALS.length).toBe(7);
   });
 
   for (const backdrop of BACKDROPS) {
