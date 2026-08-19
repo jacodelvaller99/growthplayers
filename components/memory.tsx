@@ -314,6 +314,8 @@ export function AdminNotesCard({
           <Pressable
             onPress={() => { if (text.trim()) { onAdd(text.trim()); setText(''); } }}
             disabled={busy || !text.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="Añadir nota privada"
             style={({ pressed }) => [s.noteAddBtn, (pressed) && { opacity: 0.8 }, (busy || !text.trim()) && { opacity: 0.4 }]}>
             <MaterialIcons name="add" size={18} color={palette.ink} />
           </Pressable>

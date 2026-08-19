@@ -116,11 +116,16 @@ const PROBE = () => {
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch({ headless: !LOGIN });
+// AUDIT_WIDTH permite medir el mismo barrido a ancho de escritorio: el diseño
+// de PC tiene su propia rama (DesktopSidebar, rejillas de 3 columnas) y sus
+// propios desbordes, que a 390px no se ven.
+const WIDTH = Number(process.env.AUDIT_WIDTH ?? 390);
+const MOVIL = WIDTH < 768;
 const ctx = await browser.newContext({
-  viewport: { width: 390, height: 844 },
+  viewport: { width: WIDTH, height: MOVIL ? 844 : 900 },
   deviceScaleFactor: 1,
-  isMobile: true,
-  hasTouch: true,
+  isMobile: MOVIL,
+  hasTouch: MOVIL,
 });
 
 const [, , theme = 'dark', signal = 'semaforo'] =
