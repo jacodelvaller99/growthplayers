@@ -19,7 +19,7 @@
  * decora — es la regla de marca, no una preferencia.
  */
 import { useEffect } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -44,6 +44,19 @@ export interface AuraProps {
 /** Ciclo de respiración: 4s dentro, 4s fuera. Lo bastante lento para leerse
  *  como atmósfera y no como un pulso que compite por la atención. */
 const BREATH_MS = 4000;
+
+/**
+ * El aura se RECORTA A SÍ MISMA.
+ *
+ * Respira escalando hasta 1.08, así que a 390px de ancho ocupa 421 y empuja el
+ * scroll lateral de la página: medido en checkin, respiración, binaurales y
+ * sueño, entre 5 y 11px de desborde. Un fondo decorativo no puede cambiar las
+ * dimensiones del documento.
+ *
+ * El recorte vive AQUÍ y no en las seis pantallas que la usan: quien crea el
+ * desborde es quien debe contenerlo, y así una séptima pantalla no lo hereda.
+ */
+const clip = [StyleSheet.absoluteFill, { overflow: 'hidden' as const }];
 
 export function Aura({ state, weight = 0.6, origin }: AuraProps) {
   const reduced = useReducedMotion();
@@ -83,6 +96,7 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
   // recurso que ya usa `comando.tsx:1348-1353` para su glow de escritorio.
   if (Platform.OS === 'web') {
     return (
+      <View style={clip} pointerEvents="none">
       <Animated.View
         pointerEvents="none"
         accessibilityElementsHidden
@@ -93,6 +107,7 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
           { backgroundImage: `radial-gradient(ellipse 90% 55% at ${x} ${y}, ${color} 0%, transparent 70%)` },
         ]}
       />
+      </View>
     );
   }
 
@@ -108,6 +123,7 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
   // frente. Con el origen arriba y el desvanecido hacia abajo, la diferencia
   // contra un radial es imperceptible en un fondo de esta opacidad.
   return (
+    <View style={clip} pointerEvents="none">
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animated]}>
       <LinearGradient
         colors={[color, `${color}00`]}
@@ -117,5 +133,6 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
         style={StyleSheet.absoluteFill}
       />
     </Animated.View>
+    </View>
   );
 }
