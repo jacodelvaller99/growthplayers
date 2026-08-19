@@ -24,8 +24,12 @@
  */
 import { Platform } from 'react-native';
 
-export type BackdropId = 'dark' | 'light' | 'carbon' | 'aura' | 'tinta' | 'pizarra' | 'bruma' | 'arena';
-export type SignalId = 'oro' | 'ambar' | 'semaforo' | 'calma' | 'nitido' | 'sereno' | 'vital';
+export type BackdropId =
+  | 'dark' | 'light' | 'carbon' | 'aura' | 'tinta' | 'pizarra' | 'bruma' | 'arena'
+  | 'bosque' | 'vino' | 'nieve';
+export type SignalId =
+  | 'oro' | 'ambar' | 'semaforo' | 'calma' | 'nitido' | 'sereno' | 'vital'
+  | 'respiro' | 'seguro';
 
 // ─── EJE 1 · FONDO — neutros, texto y bordes ──────────────────────────────────
 // `dark` y `light` conservan exactamente los valores que ya estaban en producción:
@@ -242,6 +246,80 @@ export const THEME_VARS: Record<BackdropId, Record<string, string>> = {
     '--c-silhouette':   '#ADA79B',
     '--c-zone-border':  'rgba(20,18,14,0.42)',
   },
+
+  // BOSQUE - el neutro se sesga al verde. Ningun otro fondo vive en esta
+  // familia: dark y bruma son grises, pizarra azulea, carbon y arena van al
+  // calido. En una app cuyo tema es el cuerpo, el verde no es decoracion:
+  // es el unico fondo que no evoca una oficina.
+  bosque: {
+    '--c-bg':           '#080C09',
+    '--c-bg-deep':      '#050806',
+    '--c-surface':      '#0F1512',
+    '--c-surface-2':    '#17201B',
+    '--c-surface-3':    '#202B24',
+    '--c-overlay':      '#1A241E',
+    '--c-text':         '#E7F0EA',
+    '--c-text-warm':    '#F0EBE0',
+    '--c-text-dim':     'rgba(231,240,234,0.58)',
+    '--c-text-2':       '#AEC2B5',
+    '--c-text-3':       '#87998D',
+    '--c-text-faint':   '#445048',
+    '--c-border':       'rgba(210,240,220,0.10)',
+    '--c-border-soft':  'rgba(210,240,220,0.06)',
+    '--c-border-hard':  'rgba(210,240,220,0.19)',
+    '--c-border-focus': 'rgba(210,240,220,0.28)',
+    '--c-danger-text':  '#F0685A',
+    '--c-silhouette':   '#596B60',
+    '--c-zone-border':  'rgba(231,240,234,0.38)',
+  },
+  // VINO - negro con fondo granate. Es el fondo de la noche: la temperatura
+  // sube sin que la pantalla se ilumine, que es lo contrario de bruma, donde
+  // el contraste baja levantando el negro.
+  vino: {
+    '--c-bg':           '#0E0809',
+    '--c-bg-deep':      '#090506',
+    '--c-surface':      '#170F11',
+    '--c-surface-2':    '#201618',
+    '--c-surface-3':    '#2B1F21',
+    '--c-overlay':      '#241A1C',
+    '--c-text':         '#F1E8EA',
+    '--c-text-warm':    '#F0EBE0',
+    '--c-text-dim':     'rgba(241,232,234,0.58)',
+    '--c-text-2':       '#C8B2B6',
+    '--c-text-3':       '#A0888D',
+    '--c-text-faint':   '#554448',
+    '--c-border':       'rgba(245,222,226,0.10)',
+    '--c-border-soft':  'rgba(245,222,226,0.06)',
+    '--c-border-hard':  'rgba(245,222,226,0.19)',
+    '--c-border-focus': 'rgba(245,222,226,0.28)',
+    '--c-danger-text':  '#F0685A',
+    '--c-silhouette':   '#6B595D',
+    '--c-zone-border':  'rgba(241,232,234,0.38)',
+  },
+  // NIEVE - el tercer claro, y el unico frio. Luz y Arena son ambos calidos;
+  // quien trabaja con luz de dia fria no tenia ninguna opcion que no le
+  // amarilleara la pantalla.
+  nieve: {
+    '--c-bg':           '#E7EAEE',
+    '--c-bg-deep':      '#DADEE4',
+    '--c-surface':      '#FFFFFF',
+    '--c-surface-2':    '#F6F8FA',
+    '--c-surface-3':    '#EDF0F4',
+    '--c-overlay':      '#DCE0E6',
+    '--c-text':         '#0D1014',
+    '--c-text-warm':    '#1A1D22',
+    '--c-text-dim':     'rgba(13,16,20,0.58)',
+    '--c-text-2':       '#383E46',
+    '--c-text-3':       '#555D67',
+    '--c-text-faint':   '#737B86',
+    '--c-border':       'rgba(13,16,20,0.12)',
+    '--c-border-soft':  'rgba(13,16,20,0.07)',
+    '--c-border-hard':  'rgba(13,16,20,0.18)',
+    '--c-border-focus': 'rgba(13,16,20,0.26)',
+    '--c-danger-text':  '#96341F',
+    '--c-silhouette':   '#A9B0BA',
+    '--c-zone-border':  'rgba(13,16,20,0.42)',
+  },
 };
 
 // ─── EJE 2 · SEÑAL — acento de marca + qué significa cada estado ───────────────
@@ -362,6 +440,44 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-calm':             '#4FB0D8',
     '--c-info':             '#4FA3D8',
   },
+
+  // RESPIRO - el registro callado. En una app de bienestar "peligro" casi
+  // nunca es un error: es que hace falta parar. El rojo de alarma dice
+  // "algo se rompio"; la arcilla dice "baja el ritmo", que es lo que de
+  // verdad se esta comunicando. El oro no se toca.
+  respiro: {
+    '--c-gold':             '#FFC804',
+    '--c-gold-light':       'rgba(255,200,4,0.12)',
+    '--c-gold-muted':       'rgba(255,200,4,0.60)',
+    '--c-gold-glow':        'rgba(255,200,4,0.08)',
+    '--c-line-gold':        'rgba(255,200,4,0.30)',
+    '--c-line-gold-subtle': 'rgba(255,200,4,0.15)',
+    '--c-gold-text':        '#FFC804',
+    '--c-success':          '#7FB894',
+    '--c-warning':          '#C9A44E',
+    '--c-danger':           '#C08063',
+    '--c-calm':             '#7FB894',
+    '--c-info':             '#6E9FC0',
+  },
+  // SEGURO - para quien no distingue rojo de verde. No es una preferencia
+  // estetica: la app codifica recuperacion en ese par exacto, asi que con
+  // deuteranopia "recuperado" y "riesgo" son el mismo color. Aqui el eje
+  // pasa a azul/naranja, que sobrevive a las tres formas comunes. Paleta
+  // ColorBrewer Dark2, elegida por eso y no por gusto.
+  seguro: {
+    '--c-gold':             '#FFC804',
+    '--c-gold-light':       'rgba(255,200,4,0.12)',
+    '--c-gold-muted':       'rgba(255,200,4,0.60)',
+    '--c-gold-glow':        'rgba(255,200,4,0.08)',
+    '--c-line-gold':        'rgba(255,200,4,0.30)',
+    '--c-line-gold-subtle': 'rgba(255,200,4,0.15)',
+    '--c-gold-text':        '#FFC804',
+    '--c-success':          '#4FA3DB',
+    '--c-warning':          '#D9B036',
+    '--c-danger':           '#E2762E',
+    '--c-calm':             '#4FA3DB',
+    '--c-info':             '#9C8FD6',
+  },
 };
 
 // ─── Contraste sobre fondo CLARO ──────────────────────────────────────────────
@@ -432,10 +548,28 @@ export const LIGHT_SIGNAL_OVERRIDES: Record<SignalId, Record<string, string>> = 
     '--c-gold-muted': 'rgba(122,86,0,0.75)',
     '--c-line-gold': 'rgba(122,86,0,0.42)', '--c-line-gold-subtle': 'rgba(122,86,0,0.21)',
   },
+
+  respiro: {
+    '--c-info': '#215C87', '--c-gold-text': '#7A5600', '--c-calm': '#356B4C',
+    '--c-success': '#356B4C', '--c-warning': '#6F5416', '--c-danger': '#8A452B',
+    '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
+    '--c-gold-muted': 'rgba(122,86,0,0.72)',
+    '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',
+  },
+  // El eje azul/naranja tambien se oscurece sobre papel: el azul que funciona
+  // sobre negro no llega a 3:1 sobre blanco. Se conserva el PAR (azul frente
+  // a naranja), que es lo que hace segura la senal.
+  seguro: {
+    '--c-info': '#4A3E8C', '--c-gold-text': '#7A5600', '--c-calm': '#175A80',
+    '--c-success': '#175A80', '--c-warning': '#6D5410', '--c-danger': '#8F4310',
+    '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
+    '--c-gold-muted': 'rgba(122,86,0,0.72)',
+    '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',
+  },
 };
 
 /** Fondos de rampa CLARA: heredan las correcciones de contraste sobre papel. */
-export const LIGHT_BACKDROPS: BackdropId[] = ['light', 'arena'];
+export const LIGHT_BACKDROPS: BackdropId[] = ['light', 'arena', 'nieve'];
 
 /** web helper: el token resuelve a variable CSS en web, hex real en nativo. */
 export const cv = (varName: string, nativeHex: string): string =>

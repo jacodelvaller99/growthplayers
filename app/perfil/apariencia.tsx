@@ -32,8 +32,11 @@ const BACKDROPS: { id: BackdropId; name: string; note: string }[] = [
   { id: 'tinta',   name: 'Tinta',   note: 'Negro real. En pantallas OLED el píxel se apaga.' },
   { id: 'pizarra', name: 'Pizarra', note: 'Frío, azulado. Baja la temperatura y el oro resalta.' },
   { id: 'bruma',   name: 'Bruma',   note: 'Negros levantados. Menos contraste: para sesiones largas y de noche.' },
+  { id: 'bosque',  name: 'Bosque',  note: 'El neutro se sesga al verde. El unico fondo que no evoca una oficina.' },
+  { id: 'vino',    name: 'Vino',    note: 'Granate profundo. Sube la temperatura sin encender la pantalla.' },
   { id: 'light',   name: 'Luz',     note: 'El día. Grises del manual y texto Smoky Black.' },
   { id: 'arena',   name: 'Arena',   note: 'El día, en cálido. El papel se sesga hacia el pergamino.' },
+  { id: 'nieve',   name: 'Nieve',   note: 'El dia, en frio. Para quien no quiere la pantalla amarilleada.' },
 ];
 
 const SIGNALS: { id: SignalId; name: string; note: string }[] = [
@@ -44,6 +47,8 @@ const SIGNALS: { id: SignalId; name: string; note: string }[] = [
   { id: 'nitido',   name: 'Nítido',    note: 'Todo el acento sube de contraste. Para vista cansada o pantalla al sol.' },
   { id: 'sereno',   name: 'Sereno',    note: 'El acento baja de volumen. Para cuando la pantalla no debe gritarte.' },
   { id: 'vital',    name: 'Vital',     note: 'Verde y rojo más vivos. Para leer la app como un tablero.' },
+  { id: 'respiro',  name: 'Respiro',   note: 'El registro callado: la alarma se vuelve arcilla. Parar no es un error.' },
+  { id: 'seguro',   name: 'Seguro',    note: 'Azul y naranja en vez de rojo y verde. Legible con daltonismo.' },
 ];
 
 /** Muestras leídas del registro — no repintadas a mano, así nunca mienten. */

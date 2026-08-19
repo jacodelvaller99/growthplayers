@@ -83,10 +83,10 @@ const NON_TEXT = 3;
 
 // ─── Invariantes ──────────────────────────────────────────────────────────────
 
-describe('contraste AA en las 56 combinaciones', () => {
+describe('contraste AA en las 99 combinaciones', () => {
   it('la matriz no está vacía (si lo estuviera, lo de abajo no probaría nada)', () => {
-    expect(BACKDROPS.length).toBe(8);
-    expect(SIGNALS.length).toBe(7);
+    expect(BACKDROPS.length).toBe(11);
+    expect(SIGNALS.length).toBe(9);
   });
 
   for (const backdrop of BACKDROPS) {
