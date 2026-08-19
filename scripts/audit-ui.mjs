@@ -10,12 +10,20 @@
  *   - objetivos táctiles por debajo de 44px
  *   - que la tipografía de marca esté realmente aplicada, no en sustitución
  *
- * Sesión: las rutas privadas están tras un guard de cliente. Se siembra una
- * sesión LOCAL en localStorage para que rendericen en ESTADO VACÍO — no hay
- * datos reales ni se toca ningún servidor; sirve para auditar diseño y estados
- * vacíos, no para validar contenido.
+ * Sesión: las ~44 rutas privadas están tras un guard de cliente, y el guard
+ * RECHAZA una sesión falsificada (comprobado — es la respuesta correcta). Para
+ * auditarlas hace falta entrar de verdad, y de eso se encarga `--login`:
  *
- *   node scripts/audit-ui.mjs [urlBase] [carpetaSalida] [--shots]
+ *   node scripts/audit-ui.mjs --login          ← abre el navegador y ESPERA
+ *
+ * El navegador se abre a la vista, se detiene en la pantalla de acceso y espera
+ * hasta 5 minutos a que TÚ escribas tus credenciales. En cuanto detecta sesión,
+ * recorre las 51 rutas solo. La contraseña no pasa por el script ni queda en
+ * ningún fichero: se teclea en la ventana y ahí se queda.
+ *
+ * Sin `--login` solo cubre las rutas públicas (7).
+ *
+ *   node scripts/audit-ui.mjs [urlBase] [carpetaSalida] [--shots] [--login]
  */
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'fs';
@@ -24,6 +32,7 @@ import { join } from 'path';
 const BASE = process.argv[2]?.startsWith('http') ? process.argv[2] : 'http://localhost:8081';
 const OUT = process.argv.find((a, i) => i > 2 && !a.startsWith('--')) ?? 'C:/tmp/polaris-audit';
 const SHOTS = process.argv.includes('--shots');
+const LOGIN = process.argv.includes('--login');
 
 const SUPABASE_REF = 'bizbbtiyftfjufxinwsu';
 
@@ -106,7 +115,7 @@ const PROBE = () => {
 
 mkdirSync(OUT, { recursive: true });
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ headless: !LOGIN });
 const ctx = await browser.newContext({
   viewport: { width: 390, height: 844 },
   deviceScaleFactor: 1,
@@ -118,27 +127,47 @@ const [, , theme = 'dark', signal = 'semaforo'] =
   [null, null, process.env.AUDIT_THEME, process.env.AUDIT_SIGNAL];
 
 await ctx.addInitScript(
-  ([ref, t, s]) => {
+  ([t, s]) => {
     localStorage.setItem('polaris:theme', t);
     localStorage.setItem('polaris:signal', s);
-    // Sesión LOCAL para pasar el guard de cliente y renderizar en estado vacío.
-    // No autentica contra nada: las llamadas de red devolverán 401 y las
-    // pantallas mostrarán sus estados vacíos, que es lo que se audita.
-    const exp = Math.floor(Date.now() / 1000) + 86400;
-    const b64 = (o) => btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: '00000000-0000-4000-8000-000000000000', role: 'authenticated', exp })}.qa`;
-    localStorage.setItem(
-      `sb-${ref}-auth-token`,
-      JSON.stringify({
-        access_token: jwt, refresh_token: 'qa', expires_at: exp, expires_in: 86400, token_type: 'bearer',
-        user: { id: '00000000-0000-4000-8000-000000000000', aud: 'authenticated', role: 'authenticated', email: 'qa@local' },
-      }),
-    );
   },
-  [SUPABASE_REF, theme, signal],
+  [theme, signal],
 );
 
 const page = await ctx.newPage();
+
+if (LOGIN) {
+  // El guard rechaza una sesión falsificada (correcto). Así que aquí NO se
+  // automatiza el acceso: se abre la pantalla y se espera a que una persona
+  // teclee sus credenciales. El script nunca las ve ni las guarda.
+  await page.goto(BASE + '/(auth)', { waitUntil: 'domcontentloaded', timeout: 45_000 });
+  console.log('\n  ┌─────────────────────────────────────────────────────────┐');
+  console.log('  │  Entra con tu cuenta en la ventana que se acaba de abrir │');
+  console.log('  │  En cuanto detecte la sesión, sigo yo con las 51 rutas.  │');
+  console.log('  └─────────────────────────────────────────────────────────┘\n');
+
+  const hastaCuando = Date.now() + 5 * 60_000;
+  let dentro = false;
+  while (Date.now() < hastaCuando) {
+    await page.waitForTimeout(1500);
+    dentro = await page.evaluate(
+      (ref) => {
+        try {
+          const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+          return !!raw && !!JSON.parse(raw)?.access_token;
+        } catch { return false; }
+      },
+      SUPABASE_REF,
+    );
+    if (dentro) break;
+  }
+  if (!dentro) {
+    console.log('  Sin sesión tras 5 minutos — sigo solo con las rutas públicas.\n');
+  } else {
+    console.log('  Sesión detectada. Recorriendo rutas...\n');
+    await page.waitForTimeout(2000);
+  }
+}
 page.on('pageerror', (e) => errores.push(String(e).slice(0, 160)));
 let errores = [];
 
