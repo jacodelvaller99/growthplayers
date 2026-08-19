@@ -142,6 +142,76 @@ export function StatStack({ stats }: { stats: Stat[] }) {
   );
 }
 
+// ─── 2.bis · Ficha de métrica con estado ──────────────────────────────────────
+
+export type MetricState = 'good' | 'mid' | 'bad' | 'none';
+
+const STATE_COLOR: Record<MetricState, string> = {
+  good: palette.success,
+  mid: palette.warning,
+  bad: palette.danger,
+  none: palette.smoke,
+};
+
+/**
+ * Métrica que dice QUÉ SIGNIFICA su número, no solo cuál es.
+ *
+ * En el diseño aprobado cada ficha lleva su estado en palabra (ÓPTIMO, MEDIA,
+ * ELEVADO) y su serie coloreada por ese estado. Eso es lo que hace que el eje
+ * Semáforo trabaje: el color deja de decorar y pasa a informar. Un 61% no dice
+ * nada; "61% · ELEVADO" en rojo se entiende sin leer.
+ *
+ * @param series valores 0..1 ya normalizados — la ficha no calcula escalas.
+ */
+export function MetricTile({
+  label, value, unit, stateLabel, state = 'none', series = [],
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  stateLabel?: string;
+  state?: MetricState;
+  series?: number[];
+}) {
+  const tint = STATE_COLOR[state];
+  return (
+    <View style={s.tile}>
+      <View style={s.tileTop}>
+        <Text style={s.tileLabel}>{label}</Text>
+        {stateLabel ? <Text style={[s.tileState, { color: tint }]}>{stateLabel}</Text> : null}
+      </View>
+      <View style={s.tileValueRow}>
+        <Text style={s.tileValue}>{value}</Text>
+        {unit ? <Text style={s.tileUnit}>{unit}</Text> : null}
+      </View>
+      {series.length > 0 && (
+        <View style={s.bars} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {series.map((v, i) => (
+            <View
+              key={i}
+              style={[s.bar, { height: 4 + Math.max(0, Math.min(1, v)) * 20, backgroundColor: alpha(tint, 'B3') }]}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/** Lista de filas etiqueta/valor en UNA superficie — no una tarjeta por dato. */
+export function RowList({ rows }: { rows: { label: string; value: string }[] }) {
+  return (
+    <View style={s.rowList}>
+      {rows.map((r, i) => (
+        <View key={r.label} style={[s.rowItem, i > 0 && s.rowItemSep]}>
+          <Text style={s.rowItemLabel}>{r.label}</Text>
+          <Text style={s.rowItemValue}>{r.value}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ─── 3 · Lentes ───────────────────────────────────────────────────────────────
 
 export type Lens = { id: string; label: string; render: () => ReactNode };
@@ -290,6 +360,42 @@ const s = StyleSheet.create({
   statName: { ...typography.caption, color: palette.smoke, fontSize: 10, letterSpacing: 1 },
   statValue: {
     fontFamily: Fonts.mono, fontSize: 17, fontWeight: '700',
+    color: palette.ivory, fontVariant: ['tabular-nums'],
+  },
+
+  // Ficha de métrica
+  tile: {
+    flexGrow: 1, flexBasis: 150, minWidth: 0,
+    backgroundColor: palette.graphite,
+    borderWidth: 1, borderColor: palette.line, borderRadius: radii.md,
+    padding: spacing.md, gap: spacing.sm,
+  },
+  tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  tileLabel: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1.6 },
+  tileState: { ...typography.label, fontSize: 9, letterSpacing: 1.2 },
+  tileValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
+  tileValue: {
+    fontFamily: Fonts.display, fontSize: 26, fontWeight: '800',
+    color: palette.ivory, fontVariant: ['tabular-nums'],
+  },
+  tileUnit: { ...typography.caption, color: palette.smoke, fontSize: 11 },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 24 },
+  bar: { flex: 1, borderRadius: 1 },
+
+  // Lista de filas
+  rowList: {
+    backgroundColor: palette.graphite,
+    borderWidth: 1, borderColor: palette.line, borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+  },
+  rowItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    minHeight: 52, gap: spacing.md,
+  },
+  rowItemSep: { borderTopWidth: 1, borderTopColor: palette.lineSoft },
+  rowItemLabel: { ...typography.body, color: palette.ash, fontSize: 13, flex: 1, minWidth: 0 },
+  rowItemValue: {
+    fontFamily: Fonts.display, fontSize: 17, fontWeight: '800',
     color: palette.ivory, fontVariant: ['tabular-nums'],
   },
 

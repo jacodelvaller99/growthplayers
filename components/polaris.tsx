@@ -186,17 +186,28 @@ export function HoverCard({
 
 // ─── Gold Divider ────────────────────────────────────────────────────────────
 
+/**
+ * Rótulo de sección.
+ *
+ * Era una línea dorada con la etiqueta CENTRADA en medio. Repetido 53 veces,
+ * eso convierte cada pantalla en una escalera de barras doradas: el oro deja de
+ * señalar y pasa a ser el fondo. En el diseño aprobado el rótulo es lo
+ * contrario — pequeño, gris, pegado a la izquierda, sin línea: se lee cuando lo
+ * buscas y desaparece cuando no. El acento se reserva para lo accionable.
+ *
+ * Se conserva el nombre y la firma a propósito: así los 53 sitios adoptan el
+ * rótulo nuevo sin tocar ni una llamada.
+ */
 export function GoldDivider({ label }: { label?: string }) {
+  if (!label) return <View style={styles.dividerLine} />;
   return (
-    <View
-      style={styles.dividerRow}
+    <Text
+      style={styles.sectionLabel}
       accessible
       accessibilityRole="header"
       accessibilityLabel={label}>
-      <View style={styles.dividerLine} />
-      {label ? <Text style={styles.dividerLabel}>{label}</Text> : null}
-      {label ? <View style={styles.dividerLine} /> : null}
-    </View>
+      {label}
+    </Text>
   );
 }
 
@@ -976,19 +987,20 @@ const styles = StyleSheet.create({
   },
 
   // Gold divider
-  dividerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
+  // Rótulo de sección — gris, pequeño, a la izquierda. Ver GoldDivider.
+  sectionLabel: {
+    fontFamily: Fonts.display,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
+    color: palette.smoke,
+    marginTop: spacing.sm,
   },
   dividerLine: {
     backgroundColor: palette.line,
-    flex: 1,
     height: 1,
-  },
-  dividerLabel: {
-    ...typography.label,
-    color: palette.goldText,
+    marginVertical: spacing.sm,
   },
 
   // Editorial panel
