@@ -384,7 +384,7 @@ export default function ChatThreadScreen() {
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: palette.black },
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
-  backBtn:     { padding: 8, minWidth: 38, alignItems: 'center' },
+  backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerCenter:{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   headerName:  { fontFamily: Fonts.display, fontSize: 14, color: palette.ivory, letterSpacing: 1, maxWidth: 200 },
 

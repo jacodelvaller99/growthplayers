@@ -295,7 +295,7 @@ const s = StyleSheet.create({
   soonCtaText: { ...typography.label, color: palette.goldText, letterSpacing: 1 },
 
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory },
   subtitle: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
   dmBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold },

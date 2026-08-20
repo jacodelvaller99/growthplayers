@@ -147,7 +147,7 @@ export default function AuditoriaScreen() {
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   badge: { ...typography.mono, color: palette.goldText, backgroundColor: palette.goldLight, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 999, fontSize: 12 },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },

@@ -281,7 +281,7 @@ export default function InteligenciaScreen() {
 const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   recalcBtn: { backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   recalcText: { ...typography.label, color: palette.ink, fontSize: 9 },

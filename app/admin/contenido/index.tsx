@@ -216,7 +216,7 @@ export default function ContenidoScreen() {
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory },
   privacyBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(212,160,23,0.12)', borderRadius: radii.sm, padding: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.md, borderWidth: 1, borderColor: palette.warning },
   privacyText: { ...typography.caption, color: palette.warning, flex: 1, fontSize: 11 },

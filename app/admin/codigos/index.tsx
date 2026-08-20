@@ -297,20 +297,22 @@ export default function CodigosScreen() {
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  // Volver es la salida de la pantalla. Medía 24 y su unica defensa era
+  // `hitSlop`, que react-native-web no implementa: en la PWA no existia.
+  backBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory },
   lastGenCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md, backgroundColor: palette.goldLight, borderColor: palette.gold, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, alignItems: 'center' },
   lastGenLabel: { ...typography.label, color: palette.goldText, marginBottom: spacing.xs },
   lastGenCode: { fontFamily: Fonts.mono, fontSize: 20, color: palette.ivory, letterSpacing: 4 },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.lg },
   fieldLabel: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs, fontSize: 9 },
-  input: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
+  input: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, minHeight: 44, paddingHorizontal: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   optGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   optChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
   optChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   optText: { ...typography.caption, color: palette.ash, fontSize: 11 },
   optTextActive: { color: palette.goldText },
-  submitBtn: { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.lg },
+  submitBtn: { backgroundColor: palette.gold, borderRadius: radii.md, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: spacing.lg },
   submitText: { ...typography.section, color: palette.ink },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', padding: spacing.md },
 });
@@ -326,6 +328,6 @@ const cr = StyleSheet.create({
   track: { height: 3, backgroundColor: palette.charcoal, borderRadius: 2, marginTop: spacing.xs },
   fill: { height: 3, borderRadius: 2, backgroundColor: palette.gold },
   actions: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  copyBtn: { padding: spacing.xs, backgroundColor: palette.goldLight, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.lineGold },
-  deactivateBtn: { padding: spacing.xs, backgroundColor: palette.graphiteLight, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.line },
+  copyBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.lineGold },
+  deactivateBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.graphiteLight, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.line },
 });

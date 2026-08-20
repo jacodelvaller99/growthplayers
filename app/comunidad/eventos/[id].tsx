@@ -288,7 +288,7 @@ export default function EventoDetalleScreen() {
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   overflowBtn: { padding: spacing.xs, minWidth: 36, minHeight: 36, alignItems: 'center', justifyContent: 'center' },
 

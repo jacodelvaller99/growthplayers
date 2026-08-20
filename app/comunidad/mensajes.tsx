@@ -221,7 +221,7 @@ export default function MensajesScreen() {
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: palette.black },
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:     { padding: 8, minWidth: 38, alignItems: 'center' },
+  backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title:       { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
 
   belong:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, borderRadius: 10 },

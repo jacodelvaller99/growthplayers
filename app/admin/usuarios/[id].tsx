@@ -1526,7 +1526,7 @@ export default function UserDetailScreen() {
 const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { ...typography.title, color: palette.ivory, fontSize: 18, letterSpacing: 0.5 },
   headerSub: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 0.8, marginTop: 2 },
 

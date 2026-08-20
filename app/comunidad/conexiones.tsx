@@ -193,7 +193,7 @@ export default function ConexionesScreen() {
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory },
   section: { paddingHorizontal: spacing.lg, gap: spacing.sm, marginBottom: spacing.md },
   emptyLine: { ...typography.caption, color: palette.smoke, fontSize: 12, fontStyle: 'italic' },

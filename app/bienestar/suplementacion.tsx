@@ -281,7 +281,7 @@ export default function SuplementacionScreen() {
 const styles = StyleSheet.create({
   root:          { flex: 1, backgroundColor: palette.black },
   header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:       { padding: 8 },
+  backBtn:       { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title:         { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
 
   disclaimer:    { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: 'rgba(212,175,55,0.08)', borderRadius: radii.sm, padding: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)' },

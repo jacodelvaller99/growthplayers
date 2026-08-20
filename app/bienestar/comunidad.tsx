@@ -652,7 +652,7 @@ export default function ComunidadScreen() {
 const styles = StyleSheet.create({
   root:            { flex: 1, backgroundColor: palette.black },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:         { padding: 8, minWidth: 38, alignItems: 'center' },
+  backBtn:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title:           { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
 
   composeBox:      { flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, gap: 8, borderWidth: 1, borderColor: palette.line },

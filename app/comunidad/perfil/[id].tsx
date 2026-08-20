@@ -189,7 +189,7 @@ export default function PerfilPublicoScreen() {
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  backBtn: { padding: spacing.xs },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory },
   card: { marginHorizontal: spacing.lg, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
   name: { ...typography.title, color: palette.ivory, fontSize: 20 },
