@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -15,14 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 
-import { HeroPanel, HeroRule, LensTabs, MetricTile } from '@/components/focus-deck';
+import { HeroPanel, HeroRule, LensTabs, MetricTile, RowList } from '@/components/focus-deck';
 import { useMetricasDia } from '@/hooks/use-metricas-dia';
 import {
   AppHeader,
   GoldAccentCard,
   GoldDivider,
   HoverCard,
-  MetricCard,
   PremiumCard,
   PrimaryButton,
   ProgressCard,
@@ -47,7 +45,6 @@ import { arcForDay } from '@/lib/narrativeLogic';
 import { checkMilestone } from '@/lib/milestoneCheck';
 import { useJornada } from '@/hooks/use-jornada';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { useDashboardPrefs, DASHBOARD_MAX } from '@/hooks/use-dashboard-prefs';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { stripMarkdownLite } from '@/lib/markdownLite';
@@ -192,7 +189,6 @@ export default function DashboardScreen() {
 
   const { isConnected: isWearableConnected } = useWearableConnections();
   const hasWearable = isWearableConnected('whoop') || isWearableConnected('oura');
-  const dashboardPrefs = useDashboardPrefs(userId);
 
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
 
@@ -509,170 +505,11 @@ export default function DashboardScreen() {
     </View>
   );
 
-  // ── Tablero personalizable — el usuario elige sus 4 valores más importantes ──
-  type MetricDef = {
-    label: string;
-    value: string;
-    numericValue?: number;
-    numericSuffix?: string;
-    meta: string;
-    icon: React.ComponentProps<typeof MaterialIcons>['name'];
-    route?: string;
-    accent?: string;
-  };
-  const metricCatalog: Record<string, MetricDef> = {
-    racha: {
-      label: 'Racha',
-      value: `${checkinStreak}`,
-      numericValue: checkinStreak,
-      meta: checkinStreak === 1 ? 'día seguido con check-in' : 'días seguidos con check-in',
-      icon: 'local-fire-department',
-      route: '/checkin',
-    },
-    checkins: {
-      label: 'Check-ins',
-      value: `${state.checkIns.length}`,
-      numericValue: state.checkIns.length,
-      meta: todayCheckIn ? 'hoy completo' : 'pendiente hoy',
-      icon: 'fact-check',
-      route: '/checkin',
-    },
-    modulo: {
-      label: 'Módulo',
-      value: `0${ACTIVE_MODULE.order}`,
-      meta: ACTIVE_MODULE.title.split(/[\s:]/)[0].toLowerCase(),
-      icon: 'view-module',
-      route: `/module/${ACTIVE_MODULE.id}`,
-    },
-    capacidad: {
-      label: 'Capacidad',
-      value: checkIn ? `${coherenceToday}/10` : '--',
-      numericValue: checkIn ? coherenceToday : undefined,
-      numericSuffix: '/10',
-      meta: 'operativa hoy',
-      icon: 'verified-user',
-      route: '/checkin',
-      accent: checkIn ? undefined : palette.smoke,
-    },
-    score: {
-      label: 'Score',
-      value: sinLecturas ? '—' : `${sovereignScore}`,
-      numericValue: sovereignScore,
-      meta: sovereignTier.toLowerCase(),
-      icon: 'military-tech',
-      route: '/(tabs)/progreso',
-    },
-    bienestar: {
-      label: 'Práctica',
-      value: `${totalWellnessMinutes}`,
-      numericValue: totalWellnessMinutes,
-      meta: 'min de bienestar',
-      icon: 'self-improvement',
-      route: '/bienestar',
-    },
-    sesiones: {
-      label: 'Sesiones',
-      value: `${totalWellnessSessions}`,
-      numericValue: totalWellnessSessions,
-      meta: 'prácticas completadas',
-      icon: 'spa',
-      route: '/bienestar',
-    },
-    lecciones: {
-      label: 'Lecciones',
-      value: `${(state.completedLessons ?? []).length}`,
-      numericValue: (state.completedLessons ?? []).length,
-      meta: 'completadas',
-      icon: 'school',
-      route: `/module/${ACTIVE_MODULE.id}`,
-    },
-    energia: {
-      label: 'Energía',
-      value: checkIn ? `${checkIn.energy}/10` : '--',
-      numericValue: checkIn?.energy,
-      numericSuffix: '/10',
-      meta: 'lectura de hoy',
-      icon: 'bolt',
-      route: '/checkin',
-      accent: checkIn ? undefined : palette.smoke,
-    },
-    sueno: {
-      label: 'Sueño',
-      value: checkIn ? `${checkIn.sleep}/10` : '--',
-      numericValue: checkIn?.sleep,
-      numericSuffix: '/10',
-      meta: 'anoche',
-      icon: 'bedtime',
-      route: '/bienestar/sueno',
-      accent: checkIn ? undefined : palette.smoke,
-    },
-  };
-
-  const metricsRow = (
-    <>
-      <View style={styles.tableroHeader}>
-        <Text style={styles.tableroLabel}>TU TABLERO</Text>
-        <Pressable
-          onPress={() => dashboardPrefs.setEditing(!dashboardPrefs.editing)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={dashboardPrefs.editing ? 'Cerrar personalización' : 'Personalizar tablero'}>
-          <MaterialIcons
-            name={dashboardPrefs.editing ? 'check' : 'tune'}
-            size={16}
-            color={dashboardPrefs.editing ? palette.goldText : palette.smoke}
-          />
-        </Pressable>
-      </View>
-      {dashboardPrefs.editing && (
-        <Animated.View entering={FadeInDown.duration(220)} style={styles.tableroPicker}>
-          <Text style={styles.tableroPickerHint}>Elige hasta {DASHBOARD_MAX} valores — tu tablero, tus reglas.</Text>
-          <View style={styles.tableroChips}>
-            {Object.entries(metricCatalog).map(([id, def]) => {
-              const pos = dashboardPrefs.selected.indexOf(id);
-              const active = pos >= 0;
-              return (
-                <Pressable
-                  key={id}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') Haptics.selectionAsync();
-                    dashboardPrefs.toggle(id);
-                  }}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: active }}
-                  accessibilityLabel={`Métrica ${def.label}${active ? `, posición ${pos + 1}` : ''}`}
-                  style={[styles.tableroChip, active && styles.tableroChipActive]}>
-                  {active && <Text style={styles.tableroChipIndex}>{pos + 1}</Text>}
-                  <MaterialIcons name={def.icon} size={12} color={active ? palette.goldText : palette.smoke} />
-                  <Text style={[styles.tableroChipText, active && styles.tableroChipTextActive]}>{def.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </Animated.View>
-      )}
-      <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
-        {dashboardPrefs.selected.filter((id) => metricCatalog[id]).map((id, i) => {
-          const def = metricCatalog[id];
-          return (
-            <MetricCard
-              key={id}
-              label={def.label}
-              value={def.value}
-              numericValue={def.numericValue}
-              numericSuffix={def.numericSuffix}
-              meta={def.meta}
-              icon={def.icon}
-              accent={def.accent}
-              entryDelay={i * 60}
-              style={isDesktop ? styles.metricCardDesktop : undefined}
-              onPress={def.route ? () => router.push(def.route as never) : undefined}
-            />
-          );
-        })}
-      </View>
-    </>
-  );
+  // metricsRow (TU TABLERO, personalización con MetricCard) se retiró de la
+  // vista principal — decisión #7 del plan Focus Deck: las 4 MetricTile ya
+  // cubren la biometría con el lenguaje del mockup, y mostrar ambas era la
+  // misma información dos veces. `useDashboardPrefs` se conserva por si se
+  // reactiva la personalización más adelante.
 
   const estadoBlock = (
     <View style={styles.stack}>
@@ -1307,11 +1144,23 @@ export default function DashboardScreen() {
           {/* ZONA 1 — hero cinematográfico full-width */}
           {deskHero}
 
-          {/* ZONA 2 — instrumentos: KPI strip + engagement */}
+          {/* ZONA 2 — instrumentos: fichas reales (mismo lenguaje que móvil) + engagement */}
           <Animated.View
             entering={FadeInDown.delay(120).springify().damping(20).stiffness(180)}
             style={styles.deskZone2}>
-            {metricsRow}
+            <View style={styles.tileGrid}>
+              {metricasDia.tiles.map((t) => (
+                <MetricTile
+                  key={t.label}
+                  label={t.label}
+                  value={t.value}
+                  unit={t.unit}
+                  stateLabel={t.stateLabel}
+                  state={t.state}
+                  series={t.series}
+                />
+              ))}
+            </View>
             {engagementBlock}
           </Animated.View>
 
@@ -1423,6 +1272,17 @@ export default function DashboardScreen() {
               { id: 'hoy', label: 'HOY', render: () => (<>
                 {protocolBlock}
                 {estadoBlock}
+                <View style={{ gap: spacing.sm }}>
+                  <Text style={screen.sectionTitle}>Estado del día</Text>
+                  <RowList
+                    rows={[
+                      { label: 'Racha', value: checkinStreak > 0 ? `${checkinStreak} días seguidos` : 'retomar hoy' },
+                      { label: 'Módulo activo', value: `0${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title.split(/[\s:]/)[0]}` },
+                      { label: 'Próxima lección', value: `${nextLesson.lessonTitle} · ${nextLesson.pct}%` },
+                      { label: 'Día de protocolo', value: `${protocolDay} / 90` },
+                    ]}
+                  />
+                </View>
               </>) },
               { id: 'cuerpo', label: 'CUERPO', render: () => (<>{wellnessBlock}</>) },
               { id: 'personas', label: 'PERSONAS', render: () => (<>
