@@ -185,7 +185,7 @@ const s = StyleSheet.create({
   bubbleUserText: { ...typography.body, color: palette.ivory, fontSize: 13.5 },
   bubbleAIText: { ...typography.body, color: palette.ivory, fontSize: 13.5, lineHeight: 20 },
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
-  quickChip: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.pill, backgroundColor: palette.charcoal },
+  quickChip: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.pill, backgroundColor: palette.charcoal },
   quickText: { ...typography.caption, color: palette.ash, fontSize: 11 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   input: { flex: 1, ...typography.body, color: palette.ivory, fontSize: 14, backgroundColor: palette.graphite, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: palette.line, maxHeight: 100 },

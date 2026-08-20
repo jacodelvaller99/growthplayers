@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
+import { palette, spacing, typography, Fonts, radii, hitBox } from '@/constants/theme';
 
 type Tab = 'energia' | 'sueno' | 'cognitivo';
 
@@ -201,12 +201,17 @@ export default function SuplementacionScreen() {
                 <Pressable
                   onPress={() => setEditing(isEditing ? null : s.name)}
                   hitSlop={8}
-                  style={styles.editBtn}
+                  style={hitBox(28)}
                   accessibilityRole="button"
                   accessibilityState={{ expanded: isEditing }}
                   accessibilityLabel={isEditing ? `Cerrar edición de ${s.name}` : `Editar dosis y horario de ${s.name}`}
                 >
-                  <MaterialIcons name={isEditing ? 'check' : 'edit'} size={16} color={palette.goldText} />
+                  {/* El circulo sigue midiendo 28; lo que crece es la caja
+                      que se toca. `hitSlop` no vale en la PWA -- RNW no lo
+                      implementa -- asi que la caja tiene que ser real. */}
+                  <View style={styles.editBtn}>
+                    <MaterialIcons name={isEditing ? 'check' : 'edit'} size={16} color={palette.goldText} />
+                  </View>
                 </Pressable>
               </View>
 

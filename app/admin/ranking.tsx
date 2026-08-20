@@ -137,7 +137,7 @@ const s = StyleSheet.create({
   title: { ...typography.title, color: palette.ivory, fontSize: 18 },
   intro: { ...typography.body, color: palette.ash, marginBottom: spacing.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.pill, backgroundColor: palette.charcoal },
+  chip: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.pill, backgroundColor: palette.charcoal },
   chipActive: { backgroundColor: palette.gold },
   chipText: { ...typography.label, color: palette.ash, fontSize: 9, letterSpacing: 1 },
   chipTextActive: { color: palette.ink },

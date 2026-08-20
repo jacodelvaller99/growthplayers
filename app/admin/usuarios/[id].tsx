@@ -1566,7 +1566,7 @@ const s = StyleSheet.create({
   currentTierDot: { width: 10, height: 10, borderRadius: 5 },
   currentTierLabel: { ...typography.label, color: palette.ash, fontSize: 8, letterSpacing: 1.5 },
   currentTierName: { fontFamily: Fonts.display, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
-  changeTierBtn: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radii.xs, borderWidth: 1 },
+  changeTierBtn: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.xs, borderWidth: 1 },
   changeTierText: { ...typography.label, fontSize: 8, fontWeight: '700' },
 
   // Panel de NIVEL DE ACCESO (4 roles)
@@ -1586,7 +1586,7 @@ const s = StyleSheet.create({
   deactivateBtn: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.danger },
   deactivateText: { ...typography.label, color: palette.danger, fontSize: 8 },
 
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm, alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: spacing.sm, backgroundColor: palette.goldLight, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm, alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold },
   addBtnText: { ...typography.label, color: palette.goldText, fontSize: 9 },
 
   courseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
