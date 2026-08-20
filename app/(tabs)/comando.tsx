@@ -1423,7 +1423,6 @@ export default function DashboardScreen() {
               { id: 'hoy', label: 'HOY', render: () => (<>
                 {protocolBlock}
                 {estadoBlock}
-                {metricsRow}
               </>) },
               { id: 'cuerpo', label: 'CUERPO', render: () => (<>{wellnessBlock}</>) },
               { id: 'personas', label: 'PERSONAS', render: () => (<>
