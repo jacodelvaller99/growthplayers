@@ -227,16 +227,13 @@ const styles = StyleSheet.create({
   intro: { ...typography.body, color: palette.ash, marginBottom: spacing.lg },
 
   typeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg, flexWrap: 'wrap' },
-  typeBtn: {
-    flexDirection: 'row',
+  typeBtn: { flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: palette.line,
-  },
+    borderColor: palette.line, minHeight: 44, justifyContent: 'center' },
   typeBtnActive: { backgroundColor: palette.gold, borderColor: palette.gold },
   typeBtnText: { ...typography.label, color: palette.ash },
   typeBtnTextActive: { color: palette.ink },

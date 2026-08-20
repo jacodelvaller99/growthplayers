@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   disclaimerText:{ flex: 1, fontSize: 11, color: palette.ash, lineHeight: 16 },
 
   tabRow:        { flexDirection: 'row', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: 4, gap: 4 },
-  tab:           { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: radii.sm - 2, gap: 5 },
+  tab:           { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: radii.sm - 2, gap: 5, minHeight: 44 },
   tabActive:     { backgroundColor: palette.gold },
   tabText:       { fontFamily: Fonts.display, fontSize: 10, color: palette.ash, letterSpacing: 1 },
 
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   editLabel:     { ...typography.label, color: palette.ash, fontSize: 9 },
   editInput:     { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.sm, paddingVertical: 8, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13 },
 
-  saveBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.sm },
+  saveBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, marginTop: spacing.sm, minHeight: 44 },
   saveBtnSaved:  { backgroundColor: 'rgba(212,175,55,0.3)', borderWidth: 1, borderColor: palette.gold },
   saveBtnText:   { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
 

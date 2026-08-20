@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   calLabel:         { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory },
   calDesc:          { fontSize: 11, color: palette.ash, marginTop: 2 },
 
-  nextBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center', marginTop: spacing.lg },
+  nextBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, alignItems: 'center', marginTop: spacing.lg, minHeight: 44, justifyContent: 'center' },
   nextBtnDisabled:  { backgroundColor: palette.graphite },
   nextBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
@@ -522,8 +522,8 @@ const styles = StyleSheet.create({
   planSavedLabel:   { fontFamily: Fonts.sans, fontSize: 13, color: palette.ivory, fontWeight: '600' },
   planSavedMeta:    { fontSize: 11, color: palette.ash, marginTop: 2 },
   planInputLabel:   { ...typography.label, color: palette.ash, fontSize: 9, marginTop: 4 },
-  planInput:        { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13 },
-  planSaveBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.sm, padding: spacing.sm, marginTop: 4 },
+  planInput:        { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.md, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13, minHeight: 44, justifyContent: 'center' },
+  planSaveBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, marginTop: 4, minHeight: 44 },
   planSaveBtnDisabled:{ backgroundColor: palette.charcoal },
   planSaveBtnText:  { fontFamily: Fonts.display, fontSize: 12, color: palette.ink, letterSpacing: 1 },
 });

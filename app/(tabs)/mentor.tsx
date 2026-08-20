@@ -1158,13 +1158,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     width: '100%',
   },
-  modeChip: {
-    borderColor: palette.line,
+  modeChip: { borderColor: palette.line,
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
+    paddingHorizontal: 12, minHeight: 44, justifyContent: 'center' },
   modeChipActive: {
     backgroundColor: palette.gold,
     borderColor: palette.gold,

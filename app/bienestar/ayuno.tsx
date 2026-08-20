@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   timerProtocol:    { ...typography.caption, color: palette.ash },
   progressBar:      { width: '100%', height: 3, backgroundColor: palette.line, borderRadius: 2, overflow: 'hidden', marginVertical: 4 },
   progressFill:     { height: '100%', backgroundColor: palette.gold, borderRadius: 2 },
-  stageChip:        { borderWidth: 1, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 4, marginTop: 8 },
+  stageChip:        { borderWidth: 1, borderRadius: radii.pill, paddingHorizontal: 12, marginTop: 8, minHeight: 44, justifyContent: 'center' },
   stageName:        { fontFamily: Fonts.sans, fontSize: 13, fontWeight: '600' },
   stageInfo:        { ...typography.caption, color: palette.ash, textAlign: 'center' },
   timerIdleText:    { fontFamily: Fonts.display, fontSize: 22, color: palette.ivory, letterSpacing: 1 },
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   section:          { marginBottom: spacing.lg },
   sectionLabel:     { ...typography.label, color: palette.goldText, marginBottom: spacing.sm },
 
-  protocolRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, gap: spacing.sm },
+  protocolRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.md, minHeight: 44, marginBottom: 8, gap: spacing.sm },
   protocolRowActive:{ backgroundColor: palette.gold },
   protocolLeft:     { width: 44, alignItems: 'center' },
   protocolLabel:    { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   guideBullet:      { width: 5, height: 5, borderRadius: 3, backgroundColor: palette.gold, marginTop: 7 },
   guidePointText:   { flex: 1, fontSize: 12, color: palette.ash, lineHeight: 18 },
 
-  ctaBtn:           { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center', marginTop: 8 },
+  ctaBtn:           { backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, alignItems: 'center', marginTop: 8, minHeight: 44, justifyContent: 'center' },
   ctaBtnEnd:        { backgroundColor: 'rgba(212,175,55,0.2)', borderWidth: 1, borderColor: palette.gold },
   ctaBtnText:       { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
