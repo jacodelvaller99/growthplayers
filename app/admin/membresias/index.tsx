@@ -683,7 +683,7 @@ const s = StyleSheet.create({
   },
   activateBtnText: { ...typography.label, color: palette.ink, fontSize: 9 },
   filterRow:   { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
-  filterChip:  { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
+  filterChip:  { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
   filterChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   filterText:  { ...typography.label, color: palette.ash, fontSize: 9 },
   filterTextActive: { color: palette.goldText },
@@ -725,10 +725,16 @@ const s = StyleSheet.create({
     borderColor: palette.line,
     borderWidth: 1,
     borderRadius: radii.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    // 23px de alto medidos: por debajo incluso del minimo de 24 de WCAG 2.5.8.
+    // Y no es un boton cualquiera -- SUBIR, BAJAR y CANCELAR cambian el nivel
+    // de suscripcion de una persona. El coste de un toque errado aqui no es
+    // volver atras, es tocarle la facturacion a alguien. Por eso va al 44
+    // completo y no a un termino medio.
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  rowBtnText:    { ...typography.label, color: palette.goldText, fontSize: 8 },
+  rowBtnText:    { ...typography.label, color: palette.goldText, fontSize: 9 },
   toastContainer: {
     position: 'absolute',
     bottom: 100,

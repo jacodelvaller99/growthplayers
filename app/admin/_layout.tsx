@@ -200,10 +200,40 @@ function AdminBottomNav() {
   );
 }
 
+/** Estado honesto del portero: nunca una pantalla en negro sin explicacion. */
+function AdminGateState({
+  texto, detalle, accion,
+}: {
+  texto: string;
+  detalle?: string;
+  accion?: { label: string; onPress: () => void };
+}) {
+  return (
+    <View style={s.gate}>
+      <Text style={s.gateText}>{texto}</Text>
+      {detalle ? <Text style={s.gateDetalle}>{detalle}</Text> : null}
+      {accion ? (
+        <Pressable
+          onPress={accion.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={accion.label}
+          style={s.gateBtn}
+        >
+          <Text style={s.gateBtnText}>{accion.label}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 export default function AdminLayout() {
   const router = useRouter();
-  const { userId } = useLifeFlow();
+  const { userId, isLoaded } = useLifeFlow();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  // "Verificando" eterno es un callejon sin salida con mejor letra. Si a los
+  // 12s no se resolvio -- token caducado, red caida, RLS mal aplicada -- hay
+  // que DECIRLO y dar salida, no dejar a alguien mirando la misma linea.
+  const [tardando, setTardando] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isDesktop } = useBreakpoint();
   const isWeb = Platform.OS === 'web';
@@ -220,6 +250,16 @@ export default function AdminLayout() {
     // no renderiza, pero tampoco rebota). El acceso SOLO se concede con
     // is_admin === true confirmado — sin regresión de seguridad (RLS manda).
     const check = async (attempt = 0): Promise<void> => {
+      // "La sesion todavia no cargo" NO es "no eres admin".
+      //
+      // Sin esta distincion, entrar directo a cualquier URL de admin -- un
+      // marcador, un enlace compartido, recargar la pagina -- rebotaba a
+      // Comando: en carga fria `userId` aun no existe, el guard lo leia como
+      // denegacion y hacia `router.replace`. Medido: /admin/membresias pintaba
+      // una pantalla en negro con los nodos de Comando a altura cero.
+      //
+      // `isLoaded` es la senal que ya usa el guard de (tabs); aqui faltaba.
+      if (!isLoaded) return;
       if (!userId) { if (!cancelled) setIsAdmin(false); return; }
       const { data, error } = await intel.profiles()
         .select('is_admin')
@@ -237,11 +277,29 @@ export default function AdminLayout() {
       if (!admin) router.replace('/(tabs)/comando' as never);
     };
     check();
-    return () => { cancelled = true; };
-  }, [userId, router]);
+    const reloj = setTimeout(() => { if (!cancelled) setTardando(true); }, 12000);
+    return () => { cancelled = true; clearTimeout(reloj); };
+  }, [userId, isLoaded, router]);
 
-  if (isAdmin === null) return null; // loading — no flash
-  if (isAdmin === false) return null; // redirecting
+  // Ni una ni otra puede ser una pantalla en negro.
+  //
+  // Eran dos `return null` mudos. Ante un fallo de red el codigo mantiene
+  // `null` a proposito -- correcto, el acceso solo se concede con
+  // is_admin === true confirmado -- pero eso dejaba al mentor mirando un
+  // rectangulo negro sin saber si carga, si esta roto o si le denegaron.
+  // La postura de seguridad no cambia; lo que cambia es que ahora se dice.
+  if (isAdmin === null) {
+    return tardando
+      ? (
+        <AdminGateState
+          texto="NO PUDIMOS VERIFICAR TU ACCESO"
+          detalle="Puede ser tu conexion o una sesion caducada. Vuelve a entrar."
+          accion={{ label: 'IR A COMANDO', onPress: () => router.replace('/(tabs)/comando' as never) }}
+        />
+      )
+      : <AdminGateState texto="VERIFICANDO ACCESO" />;
+  }
+  if (isAdmin === false) return <AdminGateState texto="SIN ACCESO · VOLVIENDO A COMANDO" />;
 
   if (showSidebar) {
     return (
@@ -269,6 +327,39 @@ const SIDEBAR_W = 220;
 const SIDEBAR_W_COLLAPSED = 56;
 
 const s = StyleSheet.create({
+  gate: {
+    flex: 1,
+    backgroundColor: palette.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  gateDetalle: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    maxWidth: 320,
+  },
+  gateBtn: {
+    marginTop: spacing.xl,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+  },
+  gateBtnText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1.6 },
+  gateText: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 11,
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
   webRoot: {
     flex: 1,
     flexDirection: 'row',

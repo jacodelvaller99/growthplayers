@@ -41,11 +41,23 @@ const ctx = await nav.newContext({
 const pag = await ctx.newPage();
 
 const cuenta = new Map();   // "WxH · texto" → { n, rutas:Set }
+const sinPintar = [];       // rutas que no llegaron a pintar nada
 
 for (const ruta of rutas) {
   try {
     await pag.goto(`${BASE}/${ruta}`, { waitUntil: 'networkidle', timeout: 45000 });
-    await pag.waitForTimeout(900);
+    await pag.waitForTimeout(1600);
+
+    /**
+     * Una pantalla vacía no es una pantalla limpia.
+     *
+     * Tercera vez en este trabajo que un "0 infracciones" resultaba ser
+     * "todavía no había pintado nada". Los paneles de admin cargan listas
+     * enteras y tardan. Si no hay texto, se declara y no se cuenta: un cero
+     * silencioso se lee como éxito y es justo lo contrario.
+     */
+    const vivo = (await pag.evaluate(() => (document.body.innerText || '').trim())).length;
+    if (vivo === 0) { sinPintar.push(ruta); continue; }
 
     // Sin sesión toda ruta privada cae en la bienvenida y el informe saldría
     // vacío con aspecto de limpio. Mismo fallo que ya costó una galería entera.
