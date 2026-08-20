@@ -926,7 +926,7 @@ export default function LessonScreen() {
         </View>
 
         <View style={styles.bodyPad}>
-        <GoldDivider label="LECCIÓN" />
+        <GoldDivider inset label="LECCIÓN" />
 
         {/* ── Task Section ── */}
         {task ? (

@@ -116,7 +116,7 @@ export default function ConexionesScreen() {
       ) : (
         <>
           {/* Solicitudes recibidas */}
-          <GoldDivider label={`SOLICITUDES (${received.length})`} />
+          <GoldDivider inset label={`SOLICITUDES (${received.length})`} />
           <View style={s.section}>
             {received.length === 0 ? (
               <Text style={s.emptyLine}>Sin solicitudes pendientes.</Text>
@@ -156,7 +156,7 @@ export default function ConexionesScreen() {
           </View>
 
           {/* Mi red */}
-          <GoldDivider label={`CONEXIONES (${accepted.length})`} />
+          <GoldDivider inset label={`CONEXIONES (${accepted.length})`} />
           <View style={s.section}>
             {accepted.length === 0 ? (
               <CircleEmpty

@@ -198,11 +198,27 @@ export function HoverCard({
  * Se conserva el nombre y la firma a propósito: así los 53 sitios adoptan el
  * rótulo nuevo sin tocar ni una llamada.
  */
-export function GoldDivider({ label }: { label?: string }) {
+/**
+ * Rotulo de seccion. `inset` cuando el contenedor NO trae margen lateral.
+ *
+ * POR QUE HACE FALTA DECIRLO: la app tiene dos familias de pantalla. Veintisiete
+ * usan el contenedor compartido `screen.content`, que ya lleva su margen, y el
+ * rotulo hereda. Otras quince traen contenedor propio sin margen lateral y se
+ * lo ponen bloque a bloque -- ahi el rotulo era el unico hijo sin el, y caia
+ * en x=0 mientras las tarjetas de al lado empezaban en 24.
+ *
+ * Un componente no puede saber en cual de las dos esta, asi que se declara.
+ * Medido en El Circulo: rotulos en x=0, tarjetas en x=24.
+ *
+ * No lo causo el rediseno; lo destapo. Cuando esto era una linea a todo lo
+ * ancho, empezar en cero parecia intencionado. Convertido en texto, se lee
+ * como lo que siempre fue: un bloque fuera de la reticula.
+ */
+export function GoldDivider({ label, inset }: { label?: string; inset?: boolean }) {
   if (!label) return <View style={styles.dividerLine} />;
   return (
     <Text
-      style={styles.sectionLabel}
+      style={[styles.sectionLabel, inset && styles.sectionLabelInset]}
       accessible
       accessibilityRole="header"
       accessibilityLabel={label}>
@@ -997,6 +1013,7 @@ const styles = StyleSheet.create({
     color: palette.smoke,
     marginTop: spacing.sm,
   },
+  sectionLabelInset: { paddingHorizontal: spacing.lg },
   dividerLine: {
     backgroundColor: palette.line,
     height: 1,

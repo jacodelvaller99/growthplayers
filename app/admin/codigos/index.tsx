@@ -178,7 +178,7 @@ export default function CodigosScreen() {
       )}
 
       {/* ── Create form ── */}
-      <GoldDivider label="CREAR CÓDIGO NUEVO" />
+      <GoldDivider inset label="CREAR CÓDIGO NUEVO" />
       <PremiumCard style={s.card}>
         {/* Type */}
         <Text style={s.fieldLabel}>TIPO DE ACCESO</Text>
@@ -262,7 +262,7 @@ export default function CodigosScreen() {
       </PremiumCard>
 
       {/* ── Active codes ── */}
-      <GoldDivider label={`CÓDIGOS ACTIVOS (${activeCodes.length})`} />
+      <GoldDivider inset label={`CÓDIGOS ACTIVOS (${activeCodes.length})`} />
       <PremiumCard style={s.card}>
         {loading ? (
           <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />
@@ -283,7 +283,7 @@ export default function CodigosScreen() {
       {/* ── Inactive codes ── */}
       {inactiveCodes.length > 0 && (
         <>
-          <GoldDivider label={`DESACTIVADOS (${inactiveCodes.length})`} />
+          <GoldDivider inset label={`DESACTIVADOS (${inactiveCodes.length})`} />
           <PremiumCard style={s.card}>
             {inactiveCodes.map(c => (
               <CodeRow key={c.id} code={c} onCopy={() => handleCopy(c.code)} onDeactivate={() => {}} />

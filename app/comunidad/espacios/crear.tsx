@@ -75,7 +75,7 @@ export default function CrearEspacioScreen() {
         </View>
         <Text style={s.intro}>Funda un círculo por tema. Tú lo lideras; la hermandad se une.</Text>
 
-        <GoldDivider label="IDENTIDAD DEL ESPACIO" />
+        <GoldDivider inset label="IDENTIDAD DEL ESPACIO" />
 
         <View style={s.form}>
           <Text style={s.fieldLabel}>NOMBRE *</Text>

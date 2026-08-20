@@ -168,7 +168,7 @@ export default function CirculoHubScreen() {
       ) : (
         <>
           {/* Próximos eventos */}
-          <GoldDivider label="PRÓXIMOS EVENTOS" />
+          <GoldDivider inset label="PRÓXIMOS EVENTOS" />
           <View style={s.section}>
             {events.length === 0 ? (
               <CircleEmpty
@@ -199,7 +199,7 @@ export default function CirculoHubScreen() {
           </View>
 
           {/* Mis espacios */}
-          <GoldDivider label={`MIS ESPACIOS (${mySpaces.length})`} />
+          <GoldDivider inset label={`MIS ESPACIOS (${mySpaces.length})`} />
           <View style={s.section}>
             {mySpaces.length === 0 ? (
               <CircleEmpty
@@ -230,7 +230,7 @@ export default function CirculoHubScreen() {
           </View>
 
           {/* Conexiones */}
-          <GoldDivider label="CONEXIONES" />
+          <GoldDivider inset label="CONEXIONES" />
           <View style={s.section}>
             <Pressable
               style={s.rowLink}
@@ -254,7 +254,7 @@ export default function CirculoHubScreen() {
           </View>
 
           {/* Accesos */}
-          <GoldDivider label="TAMBIÉN EN TU COMUNIDAD" />
+          <GoldDivider inset label="TAMBIÉN EN TU COMUNIDAD" />
           <View style={s.section}>
             <Pressable
               style={s.rowLink}

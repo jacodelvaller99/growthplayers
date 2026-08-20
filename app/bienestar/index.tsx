@@ -498,7 +498,7 @@ export default function BienestarHub() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.screenTitle}>BIENESTAR</Text>
-        <Text style={styles.headerSub}>El cuerpo es el primer sistema de armas.</Text>
+        <Text style={styles.headerSub}>El cuerpo es el primer sistema. Lo demás se apoya ahí.</Text>
       </View>
 
       {/* ── UN HÉROE, UNA DECISIÓN ──────────────────────────────────────────

@@ -346,7 +346,7 @@ export default function MembresiasScreen() {
         </View>
 
         {/* List */}
-        <GoldDivider label={`${filterStatus.toUpperCase()} (${displayed.length})`} />
+        <GoldDivider inset label={`${filterStatus.toUpperCase()} (${displayed.length})`} />
         <PremiumCard style={s.card}>
           {loading ? (
             <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />

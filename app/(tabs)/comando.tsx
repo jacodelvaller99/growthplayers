@@ -434,7 +434,7 @@ export default function DashboardScreen() {
     if (lastMentor?.text?.trim()) return lastMentor.text.trim();
     const first = state.profile.name.split(' ')[0] || state.profile.name;
     if (!todayCheckIn) return `Sin lectura de hoy, ${first}. Calibra tu sistema antes de avanzar.`;
-    if (checkIn && checkIn.stress >= 8) return 'Tensión alta detectada. Hoy: una guerra, no diez. Define el objetivo único.';
+    if (checkIn && checkIn.stress >= 8) return 'Tensión alta detectada. Hoy: un frente, no diez. Define el objetivo único.';
     if (checkIn && checkIn.energy <= 3) return 'Energía baja hoy. Cambiamos el protocolo: una sola acción de alto impacto.';
     return `Día ${protocolDay} — ${ACTIVE_MODULE.title.split(':')[0]}. ¿En qué trabajamos hoy?`;
   // eslint-disable-next-line react-hooks/exhaustive-deps

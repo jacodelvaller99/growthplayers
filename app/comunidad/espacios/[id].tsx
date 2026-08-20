@@ -283,7 +283,7 @@ export default function EspacioDetalleScreen() {
             {/* Eventos del espacio */}
             {events.length > 0 && (
               <>
-                <GoldDivider label="EVENTOS DE ESTE ESPACIO" />
+                <GoldDivider inset label="EVENTOS DE ESTE ESPACIO" />
                 <View style={s.section}>
                   {events.map((e) => (
                     <EventCard key={e.id} event={e} onPress={() => router.push(`/comunidad/eventos/${e.id}` as never)} />
@@ -293,7 +293,7 @@ export default function EspacioDetalleScreen() {
             )}
 
             {/* Composer (solo miembros) */}
-            <GoldDivider label="EL MURO" />
+            <GoldDivider inset label="EL MURO" />
             {isMember ? (
               <View style={s.composer}>
                 <TextInput

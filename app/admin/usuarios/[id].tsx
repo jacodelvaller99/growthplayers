@@ -722,7 +722,7 @@ export default function UserDetailScreen() {
         {/* A. IDENTIDAD */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('identity')}>
-          <GoldDivider label="A. IDENTIDAD" />
+          <GoldDivider inset label="A. IDENTIDAD" />
         </View>
         <PremiumCard style={s.card}>
           <View style={s.identityRow}>
@@ -761,7 +761,7 @@ export default function UserDetailScreen() {
         {/* B. MEMBRESÍAS */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('memberships')}>
-          <GoldDivider label="B. MEMBRESÍAS Y ACCESO" />
+          <GoldDivider inset label="B. MEMBRESÍAS Y ACCESO" />
         </View>
         <PremiumCard style={s.card}>
           {/* Current tier badge */}
@@ -879,7 +879,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* C. CURSOS */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="C. ACCESO A CURSOS" />
+        <GoldDivider inset label="C. ACCESO A CURSOS" />
         <PremiumCard style={s.card}>
           {(user.course_access ?? []).length === 0 ? (
             <Text style={s.emptyText}>Sin acceso a cursos activos</Text>
@@ -898,7 +898,7 @@ export default function UserDetailScreen() {
         {/* D. INTELLIGENCE ML */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('ml')}>
-          <GoldDivider label="D. INTELIGENCIA ML" />
+          <GoldDivider inset label="D. INTELIGENCIA ML" />
         </View>
 
         {/* Coach Intelligence v2 — lo PRIMERO que ve el coach: por qué este score
@@ -965,7 +965,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* E. ACTIVIDAD RECIENTE */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label={`E. ACTIVIDAD RECIENTE (${events.length})`} />
+        <GoldDivider inset label={`E. ACTIVIDAD RECIENTE (${events.length})`} />
         <PremiumCard style={s.card}>
           {events.length === 0 ? (
             <Text style={s.emptyText}>Sin actividad registrada</Text>
@@ -989,7 +989,7 @@ export default function UserDetailScreen() {
         {/* "Un cuadro enorme, EXACTAMENTE qué le pregunta a la IA" — solo el
             turno del usuario, texto literal completo, fecha y hora exactas.
             `timeAgo` de abajo sirve para ojear el hilo; esto es para auditar. */}
-        <GoldDivider label={`F. QUÉ LE PREGUNTA A LA IA (${questions.length})`} />
+        <GoldDivider inset label={`F. QUÉ LE PREGUNTA A LA IA (${questions.length})`} />
         <PremiumCard style={s.card}>
           {questions.length === 0 ? (
             <Text style={s.emptyText}>Sin preguntas registradas</Text>
@@ -1003,7 +1003,7 @@ export default function UserDetailScreen() {
           )}
         </PremiumCard>
 
-        <GoldDivider label={`F.bis HILO COMPLETO (${conversations.length})`} />
+        <GoldDivider inset label={`F.bis HILO COMPLETO (${conversations.length})`} />
         <PremiumCard style={s.card}>
           {conversations.length === 0 ? (
             <Text style={s.emptyText}>Sin conversaciones</Text>
@@ -1033,7 +1033,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* G. CHECK-INS HISTÓRICOS */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label={`G. CHECK-INS (${checkIns.length})`} />
+        <GoldDivider inset label={`G. CHECK-INS (${checkIns.length})`} />
         {/* Alarma de bienestar — semáforo de "cómo se va sintiendo" (A1) */}
         {checkIns.length > 0 && <WellbeingAlarmCard alarm={wellbeingAlarm(checkIns)} />}
         <PremiumCard style={s.card}>
@@ -1067,7 +1067,7 @@ export default function UserDetailScreen() {
         {/* M. MENTORÍA (sesiones + tareas) */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('mentorship')}>
-          <GoldDivider label={`M. MENTORÍA (${mentorship.sessions.length} sesiones · ${mentorship.tasks.filter(t => t.completed).length}/${mentorship.tasks.length} tareas)`} />
+          <GoldDivider inset label={`M. MENTORÍA (${mentorship.sessions.length} sesiones · ${mentorship.tasks.filter(t => t.completed).length}/${mentorship.tasks.length} tareas)`} />
         </View>
         <PremiumCard style={s.card}>
           {mentError && <Text style={s.mentError}>{mentError}</Text>}
@@ -1266,7 +1266,7 @@ export default function UserDetailScreen() {
         {/* M3. EJECUCIÓN — tareas + scores + review + intervención */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('execution')}>
-          <GoldDivider label="EJECUCIÓN" />
+          <GoldDivider inset label="EJECUCIÓN" />
         </View>
         <ExecutionScoreCard scores={execution.scores} />
         <InterventionQueueCard items={execution.scores ? buildInterventions(execution.scores, execution.tasks) : []} />
@@ -1290,7 +1290,7 @@ export default function UserDetailScreen() {
         {/* FRICCIONES DETECTADAS — DIJO vs HIZO (Confrontation OS) */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('frictions')}>
-          <GoldDivider label="FRICCIONES DETECTADAS" />
+          <GoldDivider inset label="FRICCIONES DETECTADAS" />
         </View>
         <FriccionesCard items={frictions} onDismiss={handleDismissFriction} />
 
@@ -1298,7 +1298,7 @@ export default function UserDetailScreen() {
         {/* M2. MEMORIA — perfil vivo + briefing operativo + notas */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('memory')}>
-          <GoldDivider label="MEMORIA & BRIEFING" />
+          <GoldDivider inset label="MEMORIA & BRIEFING" />
         </View>
         <PlaudImport
           userId={userId ?? null}
@@ -1320,7 +1320,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* I. PREDICCIÓN & SESIÓN SEMANAL */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label="I. PREDICCIÓN & SESIÓN SEMANAL" />
+        <GoldDivider inset label="I. PREDICCIÓN & SESIÓN SEMANAL" />
         <PremiumCard style={s.card}>
           {burnoutRisk && (
             <View style={s.mlRow}>
@@ -1364,7 +1364,7 @@ export default function UserDetailScreen() {
         {/* K. BIOMÉTRICOS */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('biometrics')}>
-          <GoldDivider label="K. BIOMÉTRICOS" />
+          <GoldDivider inset label="K. BIOMÉTRICOS" />
         </View>
         <BiometricInsightCard insight={bio.latestInsight} variant="admin" />
         <BiometricSparkline series={bio.series} />
@@ -1422,7 +1422,7 @@ export default function UserDetailScreen() {
         {/* L. CUERPO & PROTOCOLO (lo que el cliente HACE) */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('body')}>
-          <GoldDivider label="L. CUERPO & PROTOCOLO" />
+          <GoldDivider inset label="L. CUERPO & PROTOCOLO" />
         </View>
         <HabitsCard habits={activity.habits} logs={activity.habitLogs} />
         <WellnessSessionsCard sessions={activity.wellness} />
@@ -1435,7 +1435,7 @@ export default function UserDetailScreen() {
         {/* N. REFLEXIONES & COMUNIDAD (lo que el cliente PIENSA y CONECTA) */}
         {/* ─────────────────────────────────────────────────── */}
         <View onLayout={onSectionLayout('reflections')}>
-          <GoldDivider label="N. REFLEXIONES & COMUNIDAD" />
+          <GoldDivider inset label="N. REFLEXIONES & COMUNIDAD" />
         </View>
         <JournalCard entries={activity.journal} />
         <CommunityCard
@@ -1448,7 +1448,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* H. AUDITORÍA DE ESTE USUARIO */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider label={`H. AUDITORÍA (${auditLog.length})`} />
+        <GoldDivider inset label={`H. AUDITORÍA (${auditLog.length})`} />
         <PremiumCard style={s.card}>
           {auditLog.length === 0 ? (
             <Text style={s.emptyText}>Sin acciones admin sobre este usuario</Text>

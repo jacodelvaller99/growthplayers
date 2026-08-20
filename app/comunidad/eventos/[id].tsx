@@ -239,7 +239,7 @@ export default function EventoDetalleScreen() {
           </PremiumCard>
 
           {/* Asistentes */}
-          <GoldDivider label={`ASISTIRÁN (${going.length})`} />
+          <GoldDivider inset label={`ASISTIRÁN (${going.length})`} />
           <View style={s.section}>
             {going.length === 0 ? (
               <CircleEmpty icon="group" text="Nadie ha confirmado todavía. Sé el primero." />

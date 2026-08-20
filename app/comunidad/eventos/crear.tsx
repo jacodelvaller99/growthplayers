@@ -129,7 +129,7 @@ export default function CrearEventoScreen() {
         </View>
         <Text style={s.intro}>Un café, una caminata, una llamada de trabajo profundo. Tú convocas.</Text>
 
-        <GoldDivider label="EL EVENTO" />
+        <GoldDivider inset label="EL EVENTO" />
         <View style={s.form}>
           <Text style={s.fieldLabel}>TÍTULO *</Text>
           <TextInput

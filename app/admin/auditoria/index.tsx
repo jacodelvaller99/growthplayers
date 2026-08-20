@@ -119,7 +119,7 @@ export default function AuditoriaScreen() {
         <Text style={s.badge}>{log.length}</Text>
       </View>
 
-      <GoldDivider label="TODAS LAS ACCIONES ADMIN" />
+      <GoldDivider inset label="TODAS LAS ACCIONES ADMIN" />
 
       <PremiumCard style={s.card}>
         {loading ? (

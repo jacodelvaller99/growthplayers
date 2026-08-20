@@ -112,7 +112,7 @@ export default function CursosScreen() {
       </View>
 
       {/* Course cards */}
-      <GoldDivider label="CURSOS DISPONIBLES" />
+      <GoldDivider inset label="CURSOS DISPONIBLES" />
       <View style={s.courseGrid}>
         {COURSES.map(c => (
           <Pressable
@@ -134,7 +134,7 @@ export default function CursosScreen() {
       </View>
 
       {/* Grant access form */}
-      <GoldDivider label={`DAR ACCESO A ${COURSE_LABELS[selectedCourse].toUpperCase()}`} />
+      <GoldDivider inset label={`DAR ACCESO A ${COURSE_LABELS[selectedCourse].toUpperCase()}`} />
       <PremiumCard style={s.card}>
         <Text style={s.fieldLabel}>BUSCAR USUARIO</Text>
         {selectedUser ? (
@@ -180,7 +180,7 @@ export default function CursosScreen() {
       </PremiumCard>
 
       {/* Users with access */}
-      <GoldDivider label={`USUARIOS CON ACCESO (${access.length})`} />
+      <GoldDivider inset label={`USUARIOS CON ACCESO (${access.length})`} />
       <PremiumCard style={s.card}>
         {loading ? (
           <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />

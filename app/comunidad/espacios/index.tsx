@@ -81,7 +81,7 @@ export default function EspaciosScreen() {
       </View>
       <Text style={s.intro}>Círculos por tema, creados por la hermandad. Únete o funda el tuyo.</Text>
 
-      <GoldDivider label={`${spaces.length} ESPACIOS ACTIVOS`} />
+      <GoldDivider inset label={`${spaces.length} ESPACIOS ACTIVOS`} />
 
       {loading ? (
         <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xxxl }} />

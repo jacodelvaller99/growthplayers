@@ -98,7 +98,7 @@ export default function EventosScreen() {
         ))}
       </View>
 
-      <GoldDivider label={`${shown.length} ${tab === 'proximos' ? 'POR VENIR' : 'REALIZADOS'}`} />
+      <GoldDivider inset label={`${shown.length} ${tab === 'proximos' ? 'POR VENIR' : 'REALIZADOS'}`} />
 
       {loading ? (
         <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xxxl }} />

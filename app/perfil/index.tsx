@@ -330,7 +330,7 @@ export default function PerfilSoberanoScreen() {
       {/* ── Earned archetypes ── */}
       {earnedArchetypes.length > 0 && (
         <>
-          <GoldDivider label="ARQUETIPOS CONQUISTADOS" />
+          <GoldDivider inset label="ARQUETIPOS CONQUISTADOS" />
           <View style={styles.archetypeGrid}>
             {earnedArchetypes.map((arch) => (
               <View key={arch} style={styles.archetypeChip}>
@@ -343,7 +343,7 @@ export default function PerfilSoberanoScreen() {
       )}
 
       {/* ── Navigation: Mi Memoria ── */}
-      <GoldDivider label="MI PROCESO" />
+      <GoldDivider inset label="MI PROCESO" />
       <Pressable
         style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
         onPress={() => router.push('/perfil/cliente' as never)}
@@ -360,7 +360,7 @@ export default function PerfilSoberanoScreen() {
       </Pressable>
 
       {/* ── Navigation: Wearables ── */}
-      <GoldDivider label="INTEGRACIONES" />
+      <GoldDivider inset label="INTEGRACIONES" />
       <Pressable
         style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
         onPress={() => router.push('/perfil/wearables' as never)}
@@ -377,7 +377,7 @@ export default function PerfilSoberanoScreen() {
       </Pressable>
 
       {/* ── Navigation: Apariencia ── */}
-      <GoldDivider label="AJUSTES" />
+      <GoldDivider inset label="AJUSTES" />
       <Pressable
         style={({ pressed }) => [styles.navRow, pressed && { opacity: 0.8 }]}
         onPress={() => router.push('/perfil/apariencia' as never)}

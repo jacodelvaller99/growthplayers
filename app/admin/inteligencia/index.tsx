@@ -182,7 +182,7 @@ export default function InteligenciaScreen() {
       {/* A. Engagement overview */}
       {overview && (
         <>
-          <GoldDivider label="A. ENGAGEMENT" />
+          <GoldDivider inset label="A. ENGAGEMENT" />
           <PremiumCard style={s.card}>
             <View style={s.kpiRow}>
               <View style={s.kpiBlock}>
@@ -203,13 +203,13 @@ export default function InteligenciaScreen() {
           </PremiumCard>
 
           {/* B. Churn distribution */}
-          <GoldDivider label="B. DISTRIBUCIÓN DE CHURN" />
+          <GoldDivider inset label="B. DISTRIBUCIÓN DE CHURN" />
           <PremiumCard style={s.card}>
             <ChurnBlock distribution={overview.churn_distribution} />
           </PremiumCard>
 
           {/* C. Cohort map */}
-          <GoldDivider label="C. MAPA DE COHORTES" />
+          <GoldDivider inset label="C. MAPA DE COHORTES" />
           <PremiumCard style={s.card}>
             {Object.entries(overview.cohort_distribution)
               .sort(([, a], [, b]) => b - a)
@@ -219,7 +219,7 @@ export default function InteligenciaScreen() {
           </PremiumCard>
 
           {/* D. Content affinities */}
-          <GoldDivider label="D. AFINIDADES DE CONTENIDO" />
+          <GoldDivider inset label="D. AFINIDADES DE CONTENIDO" />
           <PremiumCard style={s.card}>
             {Object.entries(overview.avg_affinities)
               .sort(([, a], [, b]) => b - a)
@@ -231,7 +231,7 @@ export default function InteligenciaScreen() {
       )}
 
       {/* E. Biometric overview */}
-      <GoldDivider label="E. BIOMÉTRICOS" />
+      <GoldDivider inset label="E. BIOMÉTRICOS" />
       <PremiumCard style={s.card}>
         <View style={s.kpiRow}>
           <View style={s.kpiBlock}>
@@ -260,7 +260,7 @@ export default function InteligenciaScreen() {
       </PremiumCard>
 
       {/* F. At-risk users */}
-      <GoldDivider label={`F. USUARIOS EN RIESGO (${atRisk.length})`} />
+      <GoldDivider inset label={`F. USUARIOS EN RIESGO (${atRisk.length})`} />
       <PremiumCard style={s.card}>
         {atRisk.length === 0 ? (
           <Text style={s.emptyText}>Sin usuarios en riesgo detectados 🟢</Text>

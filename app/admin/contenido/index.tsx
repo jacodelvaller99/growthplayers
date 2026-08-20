@@ -180,7 +180,7 @@ export default function ContenidoScreen() {
         <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xl }} />
       ) : tab === 'diarios' ? (
         <>
-          <GoldDivider label={`ÚLTIMAS ${journals.length} ENTRADAS`} />
+          <GoldDivider inset label={`ÚLTIMAS ${journals.length} ENTRADAS`} />
           {journals.length === 0 ? (
             <Text style={s.emptyText}>Sin entradas de diario</Text>
           ) : (
@@ -195,7 +195,7 @@ export default function ContenidoScreen() {
         </>
       ) : (
         <>
-          <GoldDivider label={`${Object.keys(convsByUser).length} USUARIOS CON CONVERSACIONES`} />
+          <GoldDivider inset label={`${Object.keys(convsByUser).length} USUARIOS CON CONVERSACIONES`} />
           {Object.entries(convsByUser).length === 0 ? (
             <Text style={s.emptyText}>Sin conversaciones</Text>
           ) : (
