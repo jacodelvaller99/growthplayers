@@ -698,7 +698,7 @@ export default function MentorScreen() {
         </PremiumCard>
 
         {/* ── Quick Prompts ── */}
-        <GoldDivider label="CONSULTAS RAPIDAS" />
+        <GoldDivider label="CONSULTAS RÁPIDAS" />
         <View style={styles.promptGrid}>
           {quickPrompts.map((p) => (
             <Pressable
@@ -729,7 +729,7 @@ export default function MentorScreen() {
         {/* ── Message Thread ── */}
         {displayMessages.length > 0 && (
           <>
-            <GoldDivider label="CONVERSACION" />
+            <GoldDivider label="CONVERSACIÓN" />
             {hasMoreMessages && (
               <Pressable
                 onPress={handleLoadMore}
@@ -764,7 +764,7 @@ export default function MentorScreen() {
 
         {displayMessages.length === 0 && !isStreaming && (
           <>
-            <GoldDivider label="CONVERSACION" />
+            <GoldDivider label="CONVERSACIÓN" />
             <View style={styles.thread}>
               <ChatBubble role="mentor">{openingMessage}</ChatBubble>
               {commitmentPrimer ? (

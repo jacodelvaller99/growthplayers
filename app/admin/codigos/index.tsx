@@ -308,7 +308,10 @@ const s = StyleSheet.create({
   fieldLabel: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs, fontSize: 9 },
   input: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, minHeight: 44, paddingHorizontal: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   optGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  optChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
+  // Once chips de radio (tipo de acceso y usos máximos) medían 28 de alto.
+  // Son la elección que define qué otorga el código; equivocarse de chip es
+  // dar acceso distinto al que se quería.
+  optChip: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
   optChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   optText: { ...typography.caption, color: palette.ash, fontSize: 11 },
   optTextActive: { color: palette.goldText },
