@@ -412,7 +412,8 @@ const s = StyleSheet.create({
   },
   filterChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: palette.line,

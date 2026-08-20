@@ -221,7 +221,7 @@ const s = StyleSheet.create({
   privacyBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(212,160,23,0.12)', borderRadius: radii.sm, padding: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.md, borderWidth: 1, borderColor: palette.warning },
   privacyText: { ...typography.caption, color: palette.warning, flex: 1, fontSize: 11 },
   tabRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  tabBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line },
+  tabBtn: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line },
   tabBtnActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   tabText: { ...typography.section, color: palette.ash, fontSize: 10 },
   tabTextActive: { color: palette.goldText },
