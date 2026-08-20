@@ -431,15 +431,12 @@ const s = StyleSheet.create({
   rosterCountSm: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 18, color: palette.ivory },
   rosterStatLbl: { ...typography.label, color: palette.smoke, fontSize: 8, marginTop: 2 },
   rosterVDivider: { width: 1, height: 28, backgroundColor: palette.line },
-  createBtn: {
-    flexDirection: 'row',
+  createBtn: { flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: palette.gold,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
+    paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center' },
   createBtnText: { ...typography.label, color: palette.ink, fontSize: 11, letterSpacing: 1 },
   searchRow: {
     flexDirection: 'row',
@@ -465,13 +462,10 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  filterChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+  filterChip: { paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: palette.line,
-  },
+    borderColor: palette.line, minHeight: 44, justifyContent: 'center' },
   filterChipActive: {
     backgroundColor: palette.goldLight,
     borderColor: palette.gold,

@@ -283,7 +283,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
-  recalcBtn: { backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  recalcBtn: { backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center' },
   recalcText: { ...typography.label, color: palette.ink, fontSize: 9 },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
   kpiRow: { flexDirection: 'row', justifyContent: 'space-around' },
