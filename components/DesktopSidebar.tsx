@@ -38,7 +38,11 @@ const NAV_DOMAINS: NavGroup[] = [
     { label: 'MENTOR', icon: 'chat-bubble-outline', route: '/(tabs)/mentor', match: 'mentor' },
   ] },
   { title: 'RECUPERACIÓN', items: [
-    { label: 'LIFEFLOW', icon: 'spa', route: '/bienestar', match: 'bienestar' },
+    // El destino se titula BIENESTAR en su propia pantalla y en la barra del
+    // móvil. Aquí decía LIFEFLOW: el nombre INTERNO del repositorio, colado en
+    // el único sitio de la interfaz donde alguien lo lee, y solo en escritorio.
+    // El mismo lugar tenía dos nombres según el tamaño de la ventana.
+    { label: 'BIENESTAR', icon: 'spa', route: '/bienestar', match: 'bienestar' },
   ] },
 ];
 
