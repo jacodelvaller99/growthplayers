@@ -2292,7 +2292,7 @@ const shareStyles = StyleSheet.create({
     gap:             spacing.sm,
     justifyContent:  'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    minHeight:       44,
     backgroundColor: 'rgba(179,141,60,0.05)',
   },
   label: {

@@ -441,7 +441,8 @@ const styles = StyleSheet.create({
   connectBtn: {
     backgroundColor: palette.gold,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: radii.sm,
     marginTop: spacing.sm,
   },

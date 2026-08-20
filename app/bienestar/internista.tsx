@@ -216,7 +216,11 @@ export default function InternistaScreen() {
             accessibilityLabel="Entiendo y acepto, activar el internista educativo">
             <Text style={s.consentBtnText}>ENTIENDO Y ACEPTO</Text>
           </Pressable>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Ahora no, volver">
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Ahora no, volver"
+            style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
             <Text style={s.consentSkip}>Ahora no</Text>
           </Pressable>
         </PremiumCard>

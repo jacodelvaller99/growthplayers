@@ -426,7 +426,7 @@ const s = StyleSheet.create({
   rosterEyebrow: { ...typography.section, color: palette.goldText, fontSize: 11 },
   rosterHint: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 2 },
   rosterStats: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rosterStat: { alignItems: 'center', minWidth: 44 },
+  rosterStat: { alignItems: 'center', minWidth: 44, minHeight: 44, justifyContent: 'center' },
   rosterCount: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 28, color: palette.goldText },
   rosterCountSm: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 18, color: palette.ivory },
   rosterStatLbl: { ...typography.label, color: palette.smoke, fontSize: 8, marginTop: 2 },
@@ -473,11 +473,13 @@ const s = StyleSheet.create({
   filterText: { ...typography.label, color: palette.ash },
   filterTextActive: { color: palette.goldText },
 
+  // La fila entera abre el perfil del usuario -- medía 40 de alto.
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.md,
+    minHeight: 44,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
   },
   avatar: {

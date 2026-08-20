@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: spacing.md,
+    minHeight: 44,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: palette.line,

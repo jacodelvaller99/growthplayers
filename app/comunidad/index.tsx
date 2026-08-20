@@ -298,7 +298,7 @@ const s = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory },
   subtitle: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
-  dmBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold },
+  dmBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold },
 
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.md, padding: spacing.lg, gap: spacing.md },
   eulaText: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 19 },
@@ -306,7 +306,7 @@ const s = StyleSheet.create({
   eulaCtaText: { ...typography.label, color: palette.ink, letterSpacing: 1 },
 
   section: { paddingHorizontal: spacing.lg, gap: spacing.sm, marginBottom: spacing.md },
-  seeAll: { alignSelf: 'flex-end', paddingVertical: spacing.sm, paddingHorizontal: spacing.xs, minHeight: 38, justifyContent: 'center' },
+  seeAll: { alignSelf: 'flex-end', paddingHorizontal: spacing.xs, minHeight: 44, justifyContent: 'center' },
   seeAllText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
 
   rowLink: {

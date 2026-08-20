@@ -656,8 +656,8 @@ const styles = StyleSheet.create({
   title:           { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
 
   composeBox:      { flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, gap: 8, borderWidth: 1, borderColor: palette.line },
-  composeInput:    { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, maxHeight: 100, lineHeight: 20 },
-  sendBtn:         { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  composeInput:    { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, minHeight: 44, maxHeight: 100, lineHeight: 20 },
+  sendBtn:         { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line },
   postError:       { color: palette.danger, fontFamily: Fonts.sans, fontSize: 12, lineHeight: 17, marginHorizontal: spacing.md, marginBottom: spacing.sm },
 
@@ -706,7 +706,9 @@ const styles = StyleSheet.create({
   postContent:     { fontFamily: Fonts.sans, fontSize: 14.5, color: palette.ivory, lineHeight: 23, marginBottom: spacing.md },
 
   postActions:     { flexDirection: 'row', gap: spacing.lg, alignItems: 'center' },
-  likeBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 44 },
+  // Reaccionar/comentar: el numero puede ser una sola cifra ("3"), asi que
+  // el contenido por si solo deja una caja mas angosta que un dedo.
+  likeBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 44, minHeight: 44 },
   likeCount:       { fontSize: 13, color: palette.ash, fontFamily: Fonts.mono },
 
   // Action sheet

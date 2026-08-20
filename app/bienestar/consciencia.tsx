@@ -430,6 +430,7 @@ const styles = StyleSheet.create({
     width: '22.5%',
     flexGrow: 1,
     minWidth: 72,
+    minHeight: 44,
     backgroundColor: palette.graphite,
     borderWidth: 1,
     borderColor: palette.line,

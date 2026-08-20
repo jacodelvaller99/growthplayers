@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     borderColor: palette.line,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    minHeight: 44,
     gap: spacing.sm,
     marginBottom: spacing.lg,
   },
