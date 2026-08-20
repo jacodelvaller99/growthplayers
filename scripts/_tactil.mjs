@@ -12,7 +12,7 @@
  *   node scripts/_tactil.mjs comando norte  # solo unas
  */
 import { chromium } from 'playwright';
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const BASE = process.env.AUDIT_BASE || 'http://localhost:8081';

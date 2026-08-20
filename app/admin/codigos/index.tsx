@@ -311,7 +311,7 @@ const s = StyleSheet.create({
   // Once chips de radio (tipo de acceso y usos máximos) medían 28 de alto.
   // Son la elección que define qué otorga el código; equivocarse de chip es
   // dar acceso distinto al que se quería.
-  optChip: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
+  optChip: { paddingHorizontal: spacing.md, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line },
   optChipActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
   optText: { ...typography.caption, color: palette.ash, fontSize: 11 },
   optTextActive: { color: palette.goldText },

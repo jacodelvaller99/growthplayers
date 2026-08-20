@@ -188,6 +188,6 @@ const s = StyleSheet.create({
   quickChip: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.pill, backgroundColor: palette.charcoal },
   quickText: { ...typography.caption, color: palette.ash, fontSize: 11 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  input: { flex: 1, ...typography.body, color: palette.ivory, fontSize: 14, backgroundColor: palette.graphite, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: palette.line, maxHeight: 100 },
+  input: { flex: 1, ...typography.body, color: palette.ivory, fontSize: 14, backgroundColor: palette.graphite, borderRadius: radii.md, paddingHorizontal: spacing.md, minHeight: 44, borderWidth: 1, borderColor: palette.line, maxHeight: 100 },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
 });
