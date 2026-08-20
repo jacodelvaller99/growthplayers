@@ -1144,23 +1144,14 @@ export default function DashboardScreen() {
           {/* ZONA 1 — hero cinematográfico full-width */}
           {deskHero}
 
-          {/* ZONA 2 — instrumentos: fichas reales (mismo lenguaje que móvil) + engagement */}
+          {/* ZONA 2 — engagement. Las fichas biométricas viven en `estadoBlock`
+              (ZONA 3, más abajo) — no se repiten aquí. metricsRow (el
+              MetricCard viejo) se retiró de esta zona sin sustituto: hacerlo
+              con una copia propia habría dibujado las mismas 4 fichas dos
+              veces en la misma pantalla, verificado en el navegador. */}
           <Animated.View
             entering={FadeInDown.delay(120).springify().damping(20).stiffness(180)}
             style={styles.deskZone2}>
-            <View style={styles.tileGrid}>
-              {metricasDia.tiles.map((t) => (
-                <MetricTile
-                  key={t.label}
-                  label={t.label}
-                  value={t.value}
-                  unit={t.unit}
-                  stateLabel={t.stateLabel}
-                  state={t.state}
-                  series={t.series}
-                />
-              ))}
-            </View>
             {engagementBlock}
           </Animated.View>
 
