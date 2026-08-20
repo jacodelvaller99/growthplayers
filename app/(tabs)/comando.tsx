@@ -1242,25 +1242,22 @@ export default function DashboardScreen() {
             {mCheckinCard ? <><HeroRule />{mCheckinCard}</> : null}
           </HeroPanel>
 
-          {/* Señales en tiempo real (solo cuando aplican) */}
+          {/* Señales en tiempo real (solo cuando aplican — no es apilado fijo,
+              es una alerta puntual que desaparece cuando no hay nada que decir) */}
           {northAnchorStrip}
           {anomalyBlock}
 
-          {/* Norman */}
-          {mNormanCard}
-
-          {/* Próxima lección + acceso rápido */}
-          {mNextLessonBlock}
-          {mQuickAccessBlock}
-
           {/* ── LENTES ──────────────────────────────────────────────────
-              Debajo del héroe había SIETE secciones apiladas con su divisor:
-              mentoría, protocolo, estado del día, lifeflow, sesión en vivo,
-              comunidad y norte. Todas siguen aquí con el mismo contenido; lo que
-              cambia es que se elige una en vez de recorrerlas todas cada mañana. */}
+              Antes de esto, Norman, próxima lección y acceso rápido vivían
+              SUELTOS entre el héroe y las pestañas — un segundo héroe de facto,
+              tres veces. "Un héroe, una decisión, lentes en vez de pila" no se
+              cumple si la pila sigue estando, solo que sin divisores. Los tres
+              se mudan dentro de HOY: siguen a un toque de distancia, no encima
+              de la primera pantalla entera. */}
           <LensTabs
             lenses={[
               { id: 'hoy', label: 'HOY', render: () => (<>
+                {mNormanCard}
                 {protocolBlock}
                 {estadoBlock}
                 <View style={{ gap: spacing.sm }}>
@@ -1274,8 +1271,12 @@ export default function DashboardScreen() {
                     ]}
                   />
                 </View>
+                {mNextLessonBlock}
               </>) },
-              { id: 'cuerpo', label: 'CUERPO', render: () => (<>{wellnessBlock}</>) },
+              { id: 'cuerpo', label: 'CUERPO', render: () => (<>
+                {mQuickAccessBlock}
+                {wellnessBlock}
+              </>) },
               { id: 'personas', label: 'PERSONAS', render: () => (<>
                 {mentoriaBlock}
                 {liveSessionBlock}
