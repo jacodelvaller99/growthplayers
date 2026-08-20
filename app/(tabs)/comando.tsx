@@ -15,7 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 
-import { HeroPanel, HeroRule, LensTabs } from '@/components/focus-deck';
+import { HeroPanel, HeroRule, LensTabs, MetricTile } from '@/components/focus-deck';
+import { useMetricasDia } from '@/hooks/use-metricas-dia';
 import {
   AppHeader,
   GoldAccentCard,
@@ -175,6 +176,7 @@ export default function DashboardScreen() {
   const { state, protocolDay, todayCheckIn, latestCheckIn, userId, isLoaded } = useLifeFlow();
   const { user: wellnessUser } = useWellnessStore();
   const { intelligence, engagementTier } = useUserIntelligence(userId);
+  const metricasDia = useMetricasDia();
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   // SETUP del arco: dónde está el usuario en la historia de 90 días.
   // La voz vive en lib/narrativeLogic para que Comando, Progreso y Check-in
@@ -681,7 +683,26 @@ export default function DashboardScreen() {
           tone={todayCheckIn ? 'gold' : 'muted'}
         />
       </View>
-      {checkIn ? (
+      {metricasDia.source !== 'none' ? (
+        <>
+          <View style={styles.tileGrid}>
+            {metricasDia.tiles.map((t) => (
+              <MetricTile
+                key={t.label}
+                label={t.label}
+                value={t.value}
+                unit={t.unit}
+                stateLabel={t.stateLabel}
+                state={t.state}
+                series={t.series}
+              />
+            ))}
+          </View>
+          {metricasDia.source === 'checkin' && (
+            <Text style={styles.tileGridNote}>Según tu check-in — conecta un wearable para lecturas exactas</Text>
+          )}
+        </>
+      ) : checkIn ? (
         <PremiumCard style={styles.meterCard}>
           <StateMeter label="Energía" value={checkIn.energy} />
           <StateMeter label="Enfoque / claridad" value={checkIn.clarity} />
@@ -1731,6 +1752,16 @@ const styles = StyleSheet.create({
   },
   meterCard: {
     gap: spacing.lg,
+  },
+  tileGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  tileGridNote: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 11,
   },
   protocolCard: {
     gap: spacing.lg,

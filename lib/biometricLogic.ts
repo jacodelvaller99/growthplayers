@@ -25,6 +25,9 @@ export interface DailyMetrics {
   body_temp_delta?: number | null;
   strain_score?: number | null;
   signal_confidence?: number | null;
+  activity_score?: number | null;
+  stress_score?: number | null;
+  steps?: number | null;
 }
 
 export interface Baseline {

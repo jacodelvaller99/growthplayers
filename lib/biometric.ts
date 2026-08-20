@@ -27,7 +27,8 @@ import {
 
 const DAILY_COLS =
   'date,provider,sleep_score,sleep_duration_min,sleep_efficiency,rem_min,deep_min,light_min,' +
-  'awake_min,recovery_score,hrv_ms,resting_hr,respiratory_rate,spo2_avg,body_temp_delta,strain_score,signal_confidence';
+  'awake_min,recovery_score,hrv_ms,resting_hr,respiratory_rate,spo2_avg,body_temp_delta,strain_score,signal_confidence,' +
+  'activity_score,stress_score,steps';
 
 const INSIGHT_COLS =
   'user_id,metric_date,sleep_state,recovery_state,coherence_state,fatigue_risk,trend_state,' +
