@@ -344,6 +344,38 @@ export const spacing = {
 // ─── Border radius (quiet luxury — soft but not bubbly) ───────────────────────
 // Upgraded from near-zero (2-3px) to premium rounded (8-12px).
 // Sharp corners = military tactical. Soft-sharp = premium, calm.
+/**
+ * Caja tactil de 44 sin mover el dibujo de sitio.
+ *
+ * POR QUE NO `hitSlop`: react-native-web NO LO IMPLEMENTA. Verificado en
+ * `node_modules/react-native-web` -- la propiedad no aparece por ningun lado.
+ * Cada `hitSlop` del repositorio es correcto en iOS y Android y un no-op en la
+ * PWA, que es una de las tres plataformas que se publican. Una mitigacion de
+ * accesibilidad que no se aplica en un tercio de los usuarios no es una
+ * mitigacion, es una nota al pie.
+ *
+ * COMO FUNCIONA: el elemento tocable crece a 44 y el margen negativo devuelve
+ * los pixeles al layout, asi que el dibujo queda donde estaba. `padding` no
+ * sirve: RNW usa `box-sizing: border-box` y con `width` fijo el relleno come
+ * hacia dentro en vez de crecer hacia fuera.
+ *
+ * USO: va en el Pressable; el circulo o icono pasa a ser un hijo.
+ *
+ *     <Pressable style={hitBox(28)}>
+ *       <View style={styles.circulo} />
+ *     </Pressable>
+ */
+export function hitBox(visual: number) {
+  const sobra = Math.max(0, 44 - visual) / 2;
+  return {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    margin: -sobra,
+  };
+}
+
 export const radii = {
   none: 0,
   xs:   4,    // small chips, tiny pills

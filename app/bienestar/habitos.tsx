@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
+import { palette, spacing, typography, Fonts, radii, hitBox } from '@/constants/theme';
 import {
   HABIT_CATALOG,
   MORNING_HABITS,
@@ -235,17 +236,25 @@ export default function HabitosScreen() {
 
         <View style={[styles.habitCard, habit.completedToday && styles.habitCardDone]}>
           <View style={styles.habitRow}>
+            {/* Marcar un habito es LA accion diaria de esta pantalla, y su
+                circulo mide 28: por debajo del minimo de 44 en las dos guias.
+                Lo cubria `hitSlop`, que react-native-web ignora -- correcto en
+                movil, inerte en la PWA. `hitBox` crece la caja de verdad y el
+                margen negativo devuelve el hueco, asi que el circulo no se
+                mueve ni un pixel. `hitSlop` se queda: en nativo no estorba. */}
             <Pressable
               onPress={() => toggleToday(habit)}
               hitSlop={8}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: habit.completedToday }}
               accessibilityLabel={`Marcar ${habit.name}`}
-              style={[styles.habitCheck, habit.completedToday && styles.habitCheckDone]}
+              style={hitBox(28)}
             >
-              {habit.completedToday && (
-                <MaterialIcons name="check" size={16} color={palette.ink} />
-              )}
+              <View style={[styles.habitCheck, habit.completedToday && styles.habitCheckDone]}>
+                {habit.completedToday && (
+                  <MaterialIcons name="check" size={16} color={palette.ink} />
+                )}
+              </View>
             </Pressable>
 
             <Pressable
