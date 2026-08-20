@@ -204,8 +204,12 @@ export function RowList({ rows }: { rows: { label: string; value: string }[] }) 
     <View style={s.rowList}>
       {rows.map((r, i) => (
         <View key={r.label} style={[s.rowItem, i > 0 && s.rowItemSep]}>
-          <Text style={s.rowItemLabel}>{r.label}</Text>
-          <Text style={s.rowItemValue}>{r.value}</Text>
+          <Text style={s.rowItemLabel} numberOfLines={1}>{r.label}</Text>
+          {/* Sin flexShrink+numberOfLines, un valor largo en RNW no desborda:
+              el Text se aplasta a ancho casi cero y cada letra cae en su
+              propia línea (medido). RowList es para datos cortos — si no
+              caben en una línea, se truncan, nunca se apilan. */}
+          <Text style={s.rowItemValue} numberOfLines={1} ellipsizeMode="tail">{r.value}</Text>
         </View>
       ))}
     </View>
@@ -400,6 +404,7 @@ const s = StyleSheet.create({
   rowItemValue: {
     fontFamily: Fonts.display, fontSize: 17, fontWeight: '800',
     color: palette.ivory, fontVariant: ['tabular-nums'],
+    flexShrink: 1, maxWidth: '55%', textAlign: 'right',
   },
 
   // Lentes

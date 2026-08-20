@@ -1269,7 +1269,7 @@ export default function DashboardScreen() {
                     rows={[
                       { label: 'Racha', value: checkinStreak > 0 ? `${checkinStreak} días seguidos` : 'retomar hoy' },
                       { label: 'Módulo activo', value: `0${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title.split(/[\s:]/)[0]}` },
-                      { label: 'Próxima lección', value: `${nextLesson.lessonTitle} · ${nextLesson.pct}%` },
+                      { label: 'Próxima lección', value: `${nextLesson.pct}% avanzado` },
                       { label: 'Día de protocolo', value: `${protocolDay} / 90` },
                     ]}
                   />
