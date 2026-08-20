@@ -1656,7 +1656,7 @@ const s = StyleSheet.create({
   },
   mentBtn: {
     backgroundColor: palette.gold, borderRadius: radii.sm, paddingVertical: spacing.sm,
-    alignItems: 'center', justifyContent: 'center', minHeight: 40, marginTop: spacing.sm,
+    alignItems: 'center', justifyContent: 'center', minHeight: 44, marginTop: spacing.sm,
   },
   mentBtnText: { ...typography.label, color: palette.ink, fontSize: 12, letterSpacing: 1 },
   sessionHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -1668,7 +1668,7 @@ const s = StyleSheet.create({
   planActionsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },
   planActionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4, borderColor: palette.lineGold, borderWidth: 1,
-    borderRadius: 999, paddingHorizontal: spacing.md, paddingVertical: 6, minHeight: 30,
+    borderRadius: 999, paddingHorizontal: spacing.md, paddingVertical: 6, minHeight: 44,
   },
   planActionText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
 

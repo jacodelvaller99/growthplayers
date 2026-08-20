@@ -129,7 +129,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.xs },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
-  createBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: 8, minHeight: 36 },
+  createBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: 8, minHeight: 44 },
   createBtnText: { ...typography.label, color: palette.ink, fontSize: 9, letterSpacing: 1 },
   intro: { ...typography.caption, color: palette.smoke, paddingHorizontal: spacing.lg, marginBottom: spacing.md, fontSize: 12 },
   list: { paddingHorizontal: spacing.lg, gap: spacing.sm },

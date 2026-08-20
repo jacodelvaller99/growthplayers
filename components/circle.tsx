@@ -381,7 +381,7 @@ const s = StyleSheet.create({
   rsvpPillText: { ...typography.label, color: palette.ash, fontSize: 8, letterSpacing: 0.8 },
 
   rxWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs },
-  rxChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 5, minHeight: 30 },
+  rxChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 5, minHeight: 44 },
   rxChipMine: { borderColor: palette.gold, backgroundColor: palette.goldLight },
   rxEmoji: { fontSize: 13 },
   rxCount: { ...typography.mono, color: palette.smoke, fontSize: 11 },
@@ -412,7 +412,7 @@ const s = StyleSheet.create({
   emptyText: { ...typography.caption, color: palette.smoke, fontSize: 12, textAlign: 'center', lineHeight: 18 },
   emptyCta: {
     borderWidth: 1, borderColor: palette.gold, borderRadius: radii.sm,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 38, justifyContent: 'center',
+    paddingHorizontal: spacing.lg, minHeight: 44, justifyContent: 'center',
   },
   emptyCtaText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
 });

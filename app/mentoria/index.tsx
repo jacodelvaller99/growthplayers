@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   // AI button
   aiBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: palette.gold, borderRadius: 8, paddingHorizontal: 12, minHeight: 36,
+    backgroundColor: palette.gold, borderRadius: 8, paddingHorizontal: 12, minHeight: 44,
   },
   aiBtnDisabled: { opacity: 0.4 },
   aiBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 10, color: palette.ink, letterSpacing: 1 },
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
   weekFocus: { ...typography.body, fontSize: 12.5, color: palette.ash, lineHeight: 18 },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   taskText: { ...typography.body, fontSize: 12.5, color: palette.smoke, flex: 1 },
-  noteLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, minHeight: 36 },
+  noteLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, minHeight: 44 },
   noteLinkText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.goldText, letterSpacing: 1 },
 
   // Note composer
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
   noteWeekRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   noteWeekLabel: { ...typography.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1 },
   weekChips: { flexDirection: 'row', gap: 6 },
-  weekChip: { paddingHorizontal: 12, minHeight: 32, borderRadius: 999, borderWidth: 1, borderColor: palette.lineGoldSubtle, backgroundColor: palette.goldGlow, alignItems: 'center', justifyContent: 'center' },
+  weekChip: { paddingHorizontal: 12, minHeight: 44, borderRadius: 999, borderWidth: 1, borderColor: palette.lineGoldSubtle, backgroundColor: palette.goldGlow, alignItems: 'center', justifyContent: 'center' },
   weekChipOn: { backgroundColor: palette.gold, borderColor: palette.gold },
   weekChipText: { fontFamily: Fonts.mono, fontSize: 10, color: palette.goldMuted, letterSpacing: 0.5 },
   weekChipTextOn: { color: palette.ink, fontWeight: '700' },
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
     flex: 1, minHeight: 44, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: palette.line,
     backgroundColor: palette.graphiteLight, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13,
   },
-  draftAddAction: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
+  draftAddAction: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   draftAddActionText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.goldText, letterSpacing: 1 },
   draftBtns: { flexDirection: 'row', gap: 8, marginTop: 4 },
   draftDiscard: {

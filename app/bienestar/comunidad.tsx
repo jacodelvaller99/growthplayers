@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   postContent:     { fontFamily: Fonts.sans, fontSize: 14.5, color: palette.ivory, lineHeight: 23, marginBottom: spacing.md },
 
   postActions:     { flexDirection: 'row', gap: spacing.lg, alignItems: 'center' },
-  likeBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 32 },
+  likeBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 44 },
   likeCount:       { fontSize: 13, color: palette.ash, fontFamily: Fonts.mono },
 
   // Action sheet

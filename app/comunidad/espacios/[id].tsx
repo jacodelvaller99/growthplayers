@@ -437,7 +437,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.xs },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
-  overflowBtn: { padding: spacing.xs, minWidth: 36, minHeight: 36, alignItems: 'center', justifyContent: 'center' },
+  overflowBtn: { padding: spacing.xs, minWidth: 36, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 
   identity: { alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   identityEmoji: { fontSize: 40 },
@@ -453,7 +453,7 @@ const s = StyleSheet.create({
   composer: { paddingHorizontal: spacing.lg, gap: spacing.sm, marginBottom: spacing.md },
   composerInput: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, minHeight: 60, textAlignVertical: 'top' },
   postError: { ...typography.caption, color: palette.danger, fontSize: 12 },
-  postBtn: { alignSelf: 'flex-end', backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.lg, minHeight: 40, justifyContent: 'center' },
+  postBtn: { alignSelf: 'flex-end', backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.lg, minHeight: 44, justifyContent: 'center' },
   postBtnText: { ...typography.label, color: palette.ink, fontSize: 10, letterSpacing: 1 },
   joinHint: { ...typography.caption, color: palette.smoke, paddingHorizontal: spacing.lg, marginBottom: spacing.md, fontSize: 12, fontStyle: 'italic' },
 
@@ -463,7 +463,7 @@ const s = StyleSheet.create({
   postTime: { ...typography.mono, color: palette.smoke, fontSize: 10 },
   postContent: { ...typography.body, color: palette.ivory, fontSize: 13.5, lineHeight: 20 },
   postFooter: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  commentBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 30, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill },
+  commentBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill },
   commentCount: { ...typography.mono, color: palette.smoke, fontSize: 11 },
 
   notice: { ...typography.caption, color: palette.goldText, textAlign: 'center', paddingHorizontal: spacing.lg, marginTop: spacing.sm, fontSize: 12 },

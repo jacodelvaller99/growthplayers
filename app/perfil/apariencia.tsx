@@ -244,7 +244,7 @@ const s = StyleSheet.create({
   demoInnerBody: { ...typography.caption, color: palette.ash, fontSize: 11, lineHeight: 16 },
   demoGoldLine: { height: 1, backgroundColor: palette.lineGold, marginTop: 4 },
   demoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  demoPill: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radii.sm, minHeight: 34, justifyContent: 'center' },
+  demoPill: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radii.sm, minHeight: 44, justifyContent: 'center' },
   demoPillOutline: { borderWidth: 1 },
   demoPillText: { fontFamily: Fonts.display, fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
   demoRecovery: {
