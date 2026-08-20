@@ -442,11 +442,21 @@ const styles = StyleSheet.create({
   },
 
   // Intensity grid
-  intensityRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'nowrap' },
+  /**
+   * La escala 0-10 SE PARTE en dos filas. No es una preferencia visual.
+   *
+   * Once botones en una sola fila de 390px salen a 33px cada uno con
+   * `minWidth: 26` de suelo: por debajo del minimo tactil, y aqui el dedo
+   * no falla en abstracto -- se registra una intensidad de malestar
+   * distinta de la que la persona sentia, que es el dato entero de la
+   * practica. A 44 no caben once en 390; con `wrap` caben en dos filas
+   * holgadas y cada uno mide lo que debe.
+   */
+  intensityRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   intensityBtn: {
-    flex: 1,
+    minWidth: 44,
+    minHeight: 44,
     aspectRatio: 1,
-    minWidth: 26,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: palette.line,

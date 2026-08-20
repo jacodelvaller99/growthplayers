@@ -100,4 +100,36 @@ for (const [clave, e] of filas.slice(0, 22)) {
   const donde = [...e.rutas].slice(0, 3).join(', ') + (e.rutas.size > 3 ? ` +${e.rutas.size - 3}` : '');
   console.log(`${String(e.n).padStart(3)}x  ${clave.padEnd(38)} ${donde}`);
 }
-if (filas.length > 22) console.log(`\n(${filas.length - 22} formas más, cola larga)`);
+if (filas.length > 22) console.log(`\n(${filas.length - 22} formas más — lista completa en el fichero)`);
+
+/**
+ * La consola corta a 22 filas para ser legible, y con eso la cola larga queda
+ * fuera de alcance: no se puede arreglar lo que no se puede enumerar. El
+ * fichero lleva TODAS, agrupadas por pantalla, para trabajarlas una a una.
+ */
+const porPantalla = new Map();
+for (const [clave, e] of filas) {
+  for (const r of e.rutas) {
+    if (!porPantalla.has(r)) porPantalla.set(r, []);
+    porPantalla.get(r).push(clave);
+  }
+}
+const informe = [...porPantalla.entries()]
+  .sort((a, b) => b[1].length - a[1].length)
+  .map(([r, cs]) => `${r}  (${cs.length})\n` + cs.map((c) => `    ${c}`).join('\n'))
+  .join('\n\n');
+
+/**
+ * El fichero solo se escribe en la pasada COMPLETA.
+ *
+ * Una corrida apuntada a dos pantallas dejaba un informe de dos pantallas
+ * encima del mapa entero. Pasó: comprobar un arreglo destruía la lista que
+ * decía qué quedaba por arreglar, y el trabajo siguiente se quedaba sin mapa.
+ * Verificar algo no puede borrar lo que aún no se ha verificado.
+ */
+if (process.argv.slice(2).length === 0) {
+  writeFileSync('C:/tmp/polaris-tactil.txt', informe);
+  console.log(`lista completa (${porPantalla.size} pantallas) -> C:/tmp/polaris-tactil.txt`);
+} else {
+  console.log('(pasada parcial: no se toca el informe completo)');
+}

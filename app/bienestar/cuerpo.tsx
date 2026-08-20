@@ -353,14 +353,15 @@ const styles = StyleSheet.create({
   inputRow:           { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   inputGroup:         { flex: 1 },
   inputLabel:         { ...typography.label, color: palette.ash, fontSize: 10, marginBottom: 6 },
-  input:              { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 18, borderWidth: 1, borderColor: palette.line },
+  input:              { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, minHeight: 44, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 18, borderWidth: 1, borderColor: palette.line },
 
   subLabel:           { ...typography.label, color: palette.smoke, fontSize: 9, marginBottom: spacing.sm },
   measureGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   measureGroup:       { width: '47%', flexGrow: 1 },
-  measureInput:       { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, paddingVertical: 10, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 15, borderWidth: 1, borderColor: palette.line },
+  measureInput:       { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, minHeight: 44, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 15, borderWidth: 1, borderColor: palette.line },
 
-  saveBtn:            { backgroundColor: palette.gold, borderRadius: radii.md, padding: spacing.md, alignItems: 'center' },
+  saveBtn:            { backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, alignItems: 'center', minHeight: 44, justifyContent: 'center',
+  },
   saveBtnDisabled:    { backgroundColor: palette.graphite },
   saveBtnText:        { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
 
