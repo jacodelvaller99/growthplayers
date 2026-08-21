@@ -164,6 +164,26 @@ export function DesktopSidebar() {
             </View>
           )}
 
+          {/* ── Personalizar (modo · fondo · señal) ──────────────────────
+              Antes, empezar a personalizar exigía: Comando → Perfil →
+              "Ver perfil completo" → Apariencia. Tres saltos para algo que
+              se usa desde el primer día. Un solo acceso directo aquí, junto
+              al toggle de tema (que ES un tercio de lo mismo), lleva a los
+              3 ejes de una — modo funciona también en nativo (se guarda
+              local), así que no depende de `canToggle` como el toggle de
+              arriba. */}
+          <HoverCard
+            style={styles.personalizeRow}
+            hoverStyle={styles.navItemHover}
+            onPress={() => router.push('/perfil/apariencia' as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Personalizar la app — modo, fondo y color"
+          >
+            <MaterialIcons name="tune" size={16} color={palette.goldText} />
+            <Text style={styles.personalizeText}>PERSONALIZAR</Text>
+            <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+          </HoverCard>
+
           {/* ── Tarjeta de usuario (abajo) ── */}
           <HoverCard
             style={styles.userCard}
@@ -343,6 +363,28 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   themeBtnOn: { backgroundColor: palette.gold },
+
+  // Acceso directo a Personalizar (modo · fondo · señal)
+  personalizeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginTop: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    backgroundColor: palette.goldGlow,
+  },
+  personalizeText: {
+    flex: 1,
+    fontFamily: Fonts.mono,
+    fontSize: 10.5,
+    letterSpacing: 1.2,
+    color: palette.goldText,
+    fontWeight: '700',
+  },
   themeBtnText: {
     fontFamily: Fonts.mono,
     fontSize: 9,
