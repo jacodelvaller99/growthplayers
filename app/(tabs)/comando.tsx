@@ -8,6 +8,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -107,7 +108,8 @@ function ScoreRing({
 
   const progress = useSharedValue(0);
   useEffect(() => {
-    progress.value = withTiming(pct, { duration: 900 });
+    // Firma de barrido de la casa (igual que el Dial): 700ms, ease-out fuerte.
+    progress.value = withTiming(pct, { duration: 700, easing: Easing.bezier(0.23, 1, 0.32, 1) });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pct]);
 

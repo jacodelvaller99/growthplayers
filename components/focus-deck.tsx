@@ -20,8 +20,9 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { useAnimatedProps, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 
@@ -46,7 +47,12 @@ export type DirectiveProps = {
 export function Directive({ title, reason, onPress }: DirectiveProps) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        // La acción del día merece confirmación física — mismo patrón que
+        // PrimaryButton. Solo nativo: en web el háptico no existe.
+        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${reason}`}
       style={({ pressed }) => [s.directive, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}>
@@ -325,7 +331,12 @@ export function LensTabs({ lenses, initial }: { lenses: Lens[]; initial?: string
           return (
             <Pressable
               key={l.id}
-              onPress={() => setActive(l.id)}
+              onPress={() => {
+                // Cambio de lente = selección, no impacto (mismo patrón que los
+                // chips de check-in y del tablero).
+                if (Platform.OS !== 'web') Haptics.selectionAsync();
+                setActive(l.id);
+              }}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
               accessibilityLabel={l.label}

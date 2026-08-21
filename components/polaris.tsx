@@ -476,7 +476,8 @@ function SparklineNativeSkia({ label, values, color = palette.gold }: SparklineP
 
   const progress = useSharedValue(0);
   useEffect(() => {
-    progress.value = withTiming(1, { duration: 800 });
+    // Mismo barrido de la casa que el Dial/ScoreRing: 700ms, ease-out fuerte.
+    progress.value = withTiming(1, { duration: 700, easing: Easing.bezier(0.23, 1, 0.32, 1) });
   }, []); // only on mount
 
   // Pre-compute start (flat at bottom) and end (actual) paths
