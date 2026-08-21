@@ -56,6 +56,7 @@ import { JornadaTracker } from '@/components/jornada';
 import { arcForDay } from '@/lib/narrativeLogic';
 import { checkMilestone } from '@/lib/milestoneCheck';
 import { useJornada } from '@/hooks/use-jornada';
+import { JORNADA_LABEL } from '@/lib/jornadaLogic';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
@@ -1154,10 +1155,33 @@ export default function DashboardScreen() {
     lessonTitle: nextLesson.lessonTitle,
     lessonPct: nextLesson.pct,
     onContinueLesson: () => router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } }),
-    guidedStepLabel: 'Paso 1',
-    guidedQuestion: sinLecturas ? '¿Cómo está tu energía ahora mismo?' : turno.headline,
-    guidedTotalSteps: 3,
-    guidedStepIndex: 0,
+    // Guiado espeja la JORNADA persistida del día — el mismo estado que pinta
+    // el héroe. Un wizard con puntos decorativos viola la Biblia; estos son
+    // los pasos reales, y el activo es el primero sin hacer.
+    guidedStepLabel: jornada?.complete ? 'COMPLETA' : JORNADA_LABEL[jornada?.current ?? 'leete'],
+    guidedQuestion: jornada?.complete
+      ? 'Jornada completa. Lo de hoy ya está — mañana se abre otra.'
+      : jornada?.current === 'ejecuta'
+        ? `Tu lección de hoy: ${nextLesson.lessonTitle}.`
+        : jornada?.current === 'regula'
+          ? 'Diez minutos para regular el sistema antes de seguir.'
+          : jornada?.current === 'cierra'
+            ? 'Cierra el día: ¿qué quedó y qué se suelta?'
+            : '¿Cómo entra tu sistema hoy? Empieza por tu lectura.',
+    guidedTotalSteps: 4,
+    guidedStepIndex: Math.min(jornada?.doneCount ?? 0, 3),
+    onGuidedNext: () => {
+      const route = jornada?.complete
+        ? '/(tabs)/progreso'
+        : jornada?.current === 'ejecuta'
+          ? (nextLessonRoute ?? `/module/${ACTIVE_MODULE.id}`)
+          : jornada?.current === 'regula'
+            ? '/bienestar/respiracion'
+            : jornada?.current === 'cierra'
+              ? '/bienestar/diario'
+              : '/checkin';
+      router.push(route as never);
+    },
     onNavigate: (route: string) => router.push(route as never),
   };
 

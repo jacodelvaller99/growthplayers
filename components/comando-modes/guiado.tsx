@@ -9,17 +9,23 @@ export default function GuiadoMode(props: ComandoModeProps) {
         {Array.from({ length: props.guidedTotalSteps }).map((_, i) => (
           <View
             key={i}
-            style={[styles.dot, i === props.guidedStepIndex && styles.dotActive]}
+            style={[
+              styles.dot,
+              i < props.guidedStepIndex && styles.dotDone,
+              i === props.guidedStepIndex && styles.dotActive,
+            ]}
           />
         ))}
       </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>
-          PASO {props.guidedStepIndex + 1} DE {props.guidedTotalSteps}
+          {props.guidedStepLabel === 'COMPLETA'
+            ? 'JORNADA COMPLETA'
+            : `PASO ${props.guidedStepIndex + 1} DE ${props.guidedTotalSteps} · ${props.guidedStepLabel}`}
         </Text>
         <Text style={styles.question}>{props.guidedQuestion}</Text>
-        <Pressable style={styles.button} onPress={props.onDirective}>
+        <Pressable style={styles.button} onPress={props.onGuidedNext}>
           <Text style={styles.buttonText}>SIGUIENTE →</Text>
         </Pressable>
       </View>
@@ -45,6 +51,10 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: palette.line,
+  },
+  // Hecho = oro tenue; activo = oro pleno y ancho. El punto cuenta la verdad.
+  dotDone: {
+    backgroundColor: palette.goldMuted,
   },
   dotActive: {
     width: 20,

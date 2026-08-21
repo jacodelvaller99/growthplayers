@@ -51,11 +51,14 @@ export interface ComandoModeProps {
   lessonPct: number;
   onContinueLesson: () => void;
 
-  // Guiado: el paso actual del wizard (energía/claridad/estrés → check-in)
-  guidedStepLabel: string;       // "Paso 1 de 3"
+  // Guiado — espeja la Jornada real del día (LÉETE→EJECUTA→REGULA→CIERRA),
+  // nunca un stepper decorativo: el punto activo es el primer paso NO hecho.
+  guidedStepLabel: string;       // nombre del paso actual: "LÉETE", o "COMPLETA"
   guidedQuestion: string;
   guidedTotalSteps: number;
-  guidedStepIndex: number;       // 0-based
+  guidedStepIndex: number;       // 0-based = doneCount de la jornada
+  /** Ir al destino del paso actual de la jornada (no a la directiva del turno). */
+  onGuidedNext: () => void;
 
   /** Navegación libre — la usa el modo Logos (lanzador de iconos). */
   onNavigate: (route: string) => void;
