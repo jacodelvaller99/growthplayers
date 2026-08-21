@@ -14,6 +14,9 @@ import React from 'react';
 
 let mockIsDesktop = false;
 
+// Estas suites fuerzan Platform.OS='web' antes del import: reanimated tomaría
+// su camino web (matchMedia/document) en un entorno Node sin DOM. Mock estándar.
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),

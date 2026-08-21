@@ -10,6 +10,9 @@ import { Platform } from 'react-native';
 // Fuerza web para saltar el path nativo de expo-haptics (antes del require de la pantalla).
 (Platform as { OS: string }).OS = 'web';
 
+// Estas suites fuerzan Platform.OS='web' antes del import: reanimated tomaría
+// su camino web (matchMedia/document) en un entorno Node sin DOM. Mock estándar.
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn() }) }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),

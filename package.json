@@ -24,6 +24,7 @@
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@shopify/react-native-skia|react-native-reanimated|react-native-worklets)"
     ],
     "setupFiles": [
+      "<rootDir>/jest.setup.js",
       "react-native-reanimated/mock"
     ],
     "moduleNameMapper": {
