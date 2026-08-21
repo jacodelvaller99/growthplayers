@@ -18,7 +18,7 @@ import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
-import { HeroPanel } from '@/components/focus-deck';
+import { Dial, DialValue, HeroPanel } from '@/components/focus-deck';
 import { GoldDivider } from '@/components/polaris';
 
 const FASTING_STAGES = [
@@ -180,13 +180,17 @@ export default function AyunoScreen() {
           {isActive ? (
             <View style={styles.heroBody}>
               <Text style={styles.timerLabel}>TIEMPO ACTIVO</Text>
-              <Text style={styles.timerDisplay}>{formatDuration(elapsed)}</Text>
-              <Text style={styles.timerProtocol}>
-                Meta: {selectedProtocol.targetHours}h · {(progress * 100).toFixed(0)}%
-              </Text>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progress * 100}%` as any }]} />
-              </View>
+              {/* El reloj de ayuno — el Dial de la casa (mismo instrumento que
+                  el score de Comando). El arco toma el color de la etapa: a
+                  mayor profundidad del ayuno, más denso el oro. La barra
+                  horizontal que había aquí decía lo mismo con menos verdad
+                  visual: esto ES un temporizador circular. */}
+              <Dial pct={progress} size={148} stroke={8} tint={currentStage.color}>
+                <DialValue
+                  value={formatDuration(elapsed)}
+                  caption={`META ${selectedProtocol.targetHours}H · ${(progress * 100).toFixed(0)}%`}
+                />
+              </Dial>
               {/* Etapa actual */}
               <View style={[styles.stageChip, { borderColor: currentStage.color }]}>
                 <Text style={[styles.stageName, { color: currentStage.color }]}>{currentStage.name}</Text>

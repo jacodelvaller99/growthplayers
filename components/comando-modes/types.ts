@@ -36,6 +36,8 @@ export interface ComandoModeProps {
   recoveryLabel: string;         // "RECUPERACIÓN"
   recoveryValue: string;         // "68%" o "SIN DATO"
   recoveryState: 'good' | 'mid' | 'bad' | 'none';
+  /** 0..1 para el anillo de Calma — null si no hay proporción honesta que pintar. */
+  recoveryPct: number | null;
   recoverySuggestion: string;    // "8 minutos de respiración antes de decidir cualquier otra cosa"
   onRecoveryAction: () => void;
 

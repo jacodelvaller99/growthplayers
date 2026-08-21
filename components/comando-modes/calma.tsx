@@ -7,14 +7,20 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ComandoModeProps } from '@/components/comando-modes/types';
+import { Dial } from '@/components/focus-deck';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 
 export default function CalmaMode(props: ComandoModeProps) {
   return (
     <View style={s.container}>
       <View style={s.panel}>
-        <Text style={s.value}>{props.recoveryValue}</Text>
-        <Text style={s.label}>{props.recoveryLabel}</Text>
+        {/* El reloj de la casa (Dial) en su registro más suave: pista fina,
+            arco en el azul de calma. pct null → solo la pista, sin arco
+            inventado. El número plano de antes no respiraba. */}
+        <Dial pct={props.recoveryPct} size={132} stroke={6} tint={palette.calm}>
+          <Text style={s.value}>{props.recoveryValue}</Text>
+          <Text style={s.label}>{props.recoveryLabel}</Text>
+        </Dial>
         <Text style={s.suggestion}>{props.recoverySuggestion}</Text>
         <Pressable
           onPress={props.onRecoveryAction}
@@ -60,9 +66,12 @@ const s = StyleSheet.create({
     gap: spacing.sm,
   },
   value: {
-    fontFamily: Fonts.display,
+    // 24 y no 56: ahora vive DENTRO del anillo de 132px. Mono tabular, como
+    // todos los valores de instrumento de la casa.
+    fontFamily: Fonts.mono,
     fontWeight: '700',
-    fontSize: 56,
+    fontSize: 24,
+    fontVariant: ['tabular-nums'],
     color: palette.goldText,
   },
   label: {

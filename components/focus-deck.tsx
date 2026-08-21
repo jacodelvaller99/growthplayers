@@ -20,11 +20,14 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
+import Animated, { useAnimatedProps, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 
 import { alpha } from '@/constants/themeColors';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 // ─── 1 · Héroe ────────────────────────────────────────────────────────────────
 
@@ -195,6 +198,83 @@ export function MetricTile({
         </View>
       )}
     </View>
+  );
+}
+
+// ─── 2.ter · El reloj — el instrumento circular de la casa ────────────────────
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/**
+ * Dial: el anillo de progreso que comparten todos los "relojes" de la app —
+ * score en Comando, temporizador de ayuno, recuperación en Calma. Una sola
+ * familia visual: pista fina neutra, arco con linecap redondo, barrido de
+ * entrada con ease-out fuerte (~700ms, una vez — es un reveal de dato, no una
+ * animación de UI repetida).
+ *
+ * `pct === null` = sin dato: se pinta SOLO la pista. La ausencia es
+ * información — un anillo vacío honesto vale más que un arco inventado.
+ */
+export function Dial({
+  pct,
+  size = 120,
+  stroke = 7,
+  tint = palette.gold,
+  children,
+}: {
+  /** 0..1, o null para "sin dato" (solo pista). */
+  pct: number | null;
+  size?: number;
+  stroke?: number;
+  tint?: string;
+  /** Contenido del centro (valor + leyenda). */
+  children?: ReactNode;
+}) {
+  const reducedMotion = useReducedMotion();
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const target = pct === null ? 0 : Math.max(0, Math.min(1, pct));
+
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = reducedMotion
+      ? target
+      : withTiming(target, { duration: 700, easing: Easing.bezier(0.23, 1, 0.32, 1) });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, reducedMotion]);
+
+  const dashProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference * (1 - progress.value),
+  }));
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+        <Circle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none" stroke={palette.charcoal} strokeWidth={stroke}
+        />
+        {pct !== null && (
+          <AnimatedCircle
+            cx={size / 2} cy={size / 2} r={r}
+            fill="none" stroke={tint} strokeWidth={stroke} strokeLinecap="round"
+            strokeDasharray={circumference}
+            animatedProps={dashProps}
+          />
+        )}
+      </Svg>
+      <View style={s.dialCenter}>{children}</View>
+    </View>
+  );
+}
+
+/** Valor grande del centro del Dial — mono, tabular, en la voz de los datos. */
+export function DialValue({ value, caption, tint }: { value: string; caption?: string; tint?: string }) {
+  return (
+    <>
+      <Text style={[s.dialValue, tint ? { color: tint } : null]}>{value}</Text>
+      {caption ? <Text style={s.dialCaption}>{caption}</Text> : null}
+    </>
   );
 }
 
@@ -388,6 +468,17 @@ const s = StyleSheet.create({
   tileUnit: { ...typography.caption, color: palette.smoke, fontSize: 11 },
   bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 24 },
   bar: { flex: 1, borderRadius: 1 },
+
+  // El reloj
+  dialCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  dialValue: {
+    fontFamily: Fonts.mono,
+    fontSize: 24,
+    fontWeight: '700',
+    color: palette.ivory,
+    fontVariant: ['tabular-nums'],
+  },
+  dialCaption: { ...typography.caption, color: palette.smoke, fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase' },
 
   // Lista de filas
   rowList: {

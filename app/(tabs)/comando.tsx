@@ -1138,6 +1138,10 @@ export default function DashboardScreen() {
       ? `${recoveryTile.value}${recoveryTile.unit ?? ''}`
       : 'SIN DATO',
     recoveryState: recoveryTile?.state ?? 'none',
+    // Proporción honesta para el anillo de Calma: con check-in, energía/10 es
+    // una fracción real; con wearable el HRV no tiene máximo teórico → null
+    // (el Dial pinta solo la pista — la ausencia es información).
+    recoveryPct: metricasDia.source === 'checkin' && checkIn ? checkIn.energy / 10 : null,
     recoverySuggestion: recoveryTile?.state === 'bad'
       ? 'Tu cuerpo pide ritmo suave hoy. Ocho minutos de respiración antes de decidir cualquier otra cosa.'
       : 'Tu sistema está en rango — igual vale un momento de respiración consciente antes de arrancar.',
