@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
+import { HeroPanel, RowList } from '@/components/focus-deck';
 
 interface Measurement {
   id?: string;
@@ -168,27 +169,31 @@ export default function CuerpoScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
           {/* IMC en tiempo real */}
-          <View style={styles.bmiCard}>
-            <Text style={styles.bmiLabel}>ÍNDICE DE MASA CORPORAL</Text>
-            <Text style={[styles.bmiValue, { color: category.color }]}>
-              {bmi > 0 ? bmi.toFixed(1) : '—'}
-            </Text>
-            <Text style={[styles.bmiCategory, { color: category.color }]}>{category.label}</Text>
-            {/* Barra visual IMC */}
-            <View style={styles.bmiBar}>
-              <View style={[styles.bmiSegment, { flex: 1, backgroundColor: palette.info }]} />
-              <View style={[styles.bmiSegment, { flex: 2, backgroundColor: palette.success }]} />
-              <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.warning }]} />
-              <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.danger }]} />
-            </View>
-            <View style={styles.bmiBarLabels}>
-              <Text style={styles.bmiBarTick}>18.5</Text>
-              <Text style={styles.bmiBarTick}>25</Text>
-              <Text style={styles.bmiBarTick}>30</Text>
-            </View>
-            {bmi > 0 && (
-              <View style={[styles.bmiPointer, { left: `${Math.min(Math.max((bmi - 15) / 20, 0), 1) * 100}%` as any }]} />
-            )}
+          <View style={styles.heroSpacer}>
+            <HeroPanel>
+              <View style={styles.bmiCard}>
+                <Text style={styles.bmiLabel}>ÍNDICE DE MASA CORPORAL</Text>
+                <Text style={[styles.bmiValue, { color: category.color }]}>
+                  {bmi > 0 ? bmi.toFixed(1) : '—'}
+                </Text>
+                <Text style={[styles.bmiCategory, { color: category.color }]}>{category.label}</Text>
+                {/* Barra visual IMC */}
+                <View style={styles.bmiBar}>
+                  <View style={[styles.bmiSegment, { flex: 1, backgroundColor: palette.info }]} />
+                  <View style={[styles.bmiSegment, { flex: 2, backgroundColor: palette.success }]} />
+                  <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.warning }]} />
+                  <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.danger }]} />
+                </View>
+                <View style={styles.bmiBarLabels}>
+                  <Text style={styles.bmiBarTick}>18.5</Text>
+                  <Text style={styles.bmiBarTick}>25</Text>
+                  <Text style={styles.bmiBarTick}>30</Text>
+                </View>
+                {bmi > 0 && (
+                  <View style={[styles.bmiPointer, { left: `${Math.min(Math.max((bmi - 15) / 20, 0), 1) * 100}%` as any }]} />
+                )}
+              </View>
+            </HeroPanel>
           </View>
 
           {/* Formulario */}
@@ -280,39 +285,26 @@ export default function CuerpoScreen() {
           {history.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>REGISTROS</Text>
-              {history.map((m, i) => {
-                const cat = bmiCategory(m.bmi);
-                // medidas extra presentes → línea compacta de detalle
-                const extraParts: string[] = [];
-                if (m.waist_cm != null)         extraParts.push(`Cintura ${m.waist_cm}`);
-                if (m.chest_cm != null)         extraParts.push(`Pecho ${m.chest_cm}`);
-                if (m.hip_cm != null)           extraParts.push(`Cadera ${m.hip_cm}`);
-                if (m.thigh_cm != null)         extraParts.push(`Muslo ${m.thigh_cm}`);
-                if (m.arm_cm != null)           extraParts.push(`Brazo ${m.arm_cm}`);
-                if (m.body_fat_percent != null) extraParts.push(`Grasa ${m.body_fat_percent}%`);
-                if (m.muscle_mass_kg != null)   extraParts.push(`Músculo ${m.muscle_mass_kg}kg`);
-                return (
-                  <View key={m.id ?? i} style={styles.historyCard}>
-                    <View style={styles.historyRow}>
-                      <View style={styles.historyLeft}>
-                        <Text style={styles.historyWeight}>{m.weight_kg} kg</Text>
-                        <Text style={styles.historyMeta}>{m.height_cm} cm · IMC {m.bmi}</Text>
-                      </View>
-                      <View style={styles.historyRight}>
-                        <View style={[styles.categoryBadge, { borderColor: cat.color }]}>
-                          <Text style={[styles.categoryBadgeText, { color: cat.color }]}>{cat.label}</Text>
-                        </View>
-                        <Text style={styles.historyDate}>
-                          {m.created_at ? formatDate(m.created_at) : ''}
-                        </Text>
-                      </View>
-                    </View>
-                    {extraParts.length > 0 && (
-                      <Text style={styles.historyExtra}>{extraParts.join('  ·  ')}</Text>
-                    )}
-                  </View>
-                );
-              })}
+              <RowList
+                rows={history.map((m, i) => {
+                  const cat = bmiCategory(m.bmi);
+                  // medidas extra presentes → línea compacta de detalle
+                  const extraParts: string[] = [];
+                  if (m.waist_cm != null)         extraParts.push(`Cintura ${m.waist_cm}`);
+                  if (m.chest_cm != null)         extraParts.push(`Pecho ${m.chest_cm}`);
+                  if (m.hip_cm != null)           extraParts.push(`Cadera ${m.hip_cm}`);
+                  if (m.thigh_cm != null)         extraParts.push(`Muslo ${m.thigh_cm}`);
+                  if (m.arm_cm != null)           extraParts.push(`Brazo ${m.arm_cm}`);
+                  if (m.body_fat_percent != null) extraParts.push(`Grasa ${m.body_fat_percent}%`);
+                  if (m.muscle_mass_kg != null)   extraParts.push(`Músculo ${m.muscle_mass_kg}kg`);
+                  const value = `${m.weight_kg}kg · IMC ${m.bmi} · ${cat.label}` +
+                    (extraParts.length > 0 ? ` · ${extraParts.join(' · ')}` : '');
+                  return {
+                    label: m.created_at ? formatDate(m.created_at) : `#${i + 1}`,
+                    value,
+                  };
+                })}
+              />
             </View>
           )}
 
@@ -337,7 +329,8 @@ const styles = StyleSheet.create({
 
   content:            { paddingHorizontal: spacing.md, paddingBottom: 40 },
 
-  bmiCard:            { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, alignItems: 'center', marginBottom: spacing.lg, gap: 4 },
+  bmiCard:            { alignItems: 'center', gap: 4 },
+  heroSpacer:         { marginBottom: spacing.lg },
   bmiLabel:           { ...typography.label, color: palette.goldText },
   bmiValue:           { fontFamily: Fonts.display, fontSize: 56, lineHeight: 64 },
   bmiCategory:        { fontFamily: Fonts.sans, fontSize: 14, fontWeight: '600', marginBottom: 12 },
@@ -371,17 +364,6 @@ const styles = StyleSheet.create({
   sparkLabel:         { fontSize: 9, color: palette.smoke },
   sparkRange:         { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   sparkRangeText:     { fontSize: 10, color: palette.smoke },
-
-  historyCard:        { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8 },
-  historyRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  historyExtra:       { fontSize: 11, color: palette.smoke, marginTop: 8, lineHeight: 16 },
-  historyLeft:        { flex: 1 },
-  historyWeight:      { fontFamily: Fonts.display, fontSize: 18, color: palette.ivory },
-  historyMeta:        { fontSize: 12, color: palette.ash, marginTop: 2 },
-  historyRight:       { alignItems: 'flex-end', gap: 4 },
-  categoryBadge:      { borderWidth: 1, borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 2 },
-  categoryBadgeText:  { fontSize: 11, fontWeight: '600' },
-  historyDate:        { fontSize: 11, color: palette.smoke },
 
   emptyState:         { alignItems: 'center', paddingVertical: spacing.xl, gap: 8 },
   emptyText:          { fontFamily: Fonts.display, fontSize: 16, color: palette.ash },

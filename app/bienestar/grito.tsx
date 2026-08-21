@@ -23,7 +23,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useScreen } from '@/components/polaris';
+import { HeroPanel } from '@/components/focus-deck';
+import { GoldDivider, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -266,14 +267,14 @@ export default function GritoScreen() {
         {Header}
         <PhaseSteps phase={phase} />
 
-        <View style={styles.heroCard}>
+        <HeroPanel>
           <Text style={styles.heroEyebrow}>VACÍA EL SISTEMA.</Text>
           <Text style={styles.heroBody}>
             La voz mueve lo que la mente no suelta. Tres minutos para descargar lo que llevas comprimido.
           </Text>
-        </View>
+        </HeroPanel>
 
-        <Text style={styles.sectionLabel}>ANTES DE COMENZAR</Text>
+        <GoldDivider label="ANTES DE COMENZAR" />
         <View style={styles.prepList}>
           {[
             { icon: 'lock' as const,       t: 'Privacidad',      d: 'Asegura un espacio donde nadie te interrumpa.' },
@@ -381,14 +382,14 @@ export default function GritoScreen() {
         <PhaseSteps phase={phase} />
 
         {/* Selected modality recap */}
-        <View style={styles.heroCard}>
+        <HeroPanel>
           <Text style={styles.heroEyebrow}>{sel.label}</Text>
           <Text style={styles.heroBody}>{sel.sub}</Text>
           <View style={styles.repsChip}>
             <MaterialIcons name="repeat" size={14} color={palette.goldText} />
             <Text style={styles.repsText}>{sel.reps}</Text>
           </View>
-        </View>
+        </HeroPanel>
 
         <View style={styles.centerBlock}>
           <View style={styles.integrationIcon}>
@@ -454,19 +455,9 @@ const styles = StyleSheet.create({
   stepSegOn: { backgroundColor: palette.gold },
   stepSegOff: { backgroundColor: palette.charcoal },
 
-  // Hero / gold card
-  heroCard: {
-    backgroundColor: palette.goldLight,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
+  // Hero copy (composed inside HeroPanel — no frame of its own)
   heroEyebrow: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 16, fontWeight: '800', letterSpacing: 1 },
   heroBody: { ...typography.body, color: palette.ivory, lineHeight: 22 },
-
-  sectionLabel: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
 
   // Prep list
   prepList: { gap: spacing.md },
@@ -503,7 +494,7 @@ const styles = StyleSheet.create({
     maxWidth: 290,
   },
 
-  skipBtn: { marginTop: spacing.xl, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  skipBtn: { marginTop: spacing.xl, minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg },
   skipBtnText: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 12, letterSpacing: 1 },
 
   // Modalities
@@ -564,7 +555,7 @@ const styles = StyleSheet.create({
   primaryBtnDisabled: { opacity: 0.4 },
   primaryBtnText: { fontFamily: Fonts.display, color: palette.ink, fontWeight: '700', fontSize: 13, letterSpacing: 1.5 },
 
-  backModalBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
+  backModalBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 44, marginTop: spacing.sm },
   backModalText: { ...typography.caption, color: palette.smoke },
 
   // Done

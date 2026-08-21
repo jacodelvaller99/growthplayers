@@ -20,7 +20,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useScreen } from '@/components/polaris';
+import { FocusHero, HeroPanel } from '@/components/focus-deck';
+import { GoldDivider, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { readLocal, writeLocal } from '@/storage/local';
@@ -252,12 +253,12 @@ export default function ConscienciaScreen() {
         <View style={styles.backBtn} />
       </View>
 
-      {/* Intro gold card */}
-      <View style={styles.introCard}>
-        <Text style={styles.introTitle}>¿DESDE DÓNDE OPERAS?</Text>
-        <Text style={styles.introBody}>
-          Mapa de Hawkins. Bajo 200 gastas FUERZA; desde 200 generas PODER.
-        </Text>
+      {/* Héroe: mapa de Hawkins, sin caja anidada */}
+      <HeroPanel>
+        <FocusHero
+          eyebrow="¿Desde dónde operas?"
+          statement="Bajo 200 gastas FUERZA; desde 200 generas PODER."
+        />
         <View style={styles.zoneBar}>
           <View style={styles.zoneFuerza} />
           <View style={styles.zonePoder} />
@@ -266,14 +267,14 @@ export default function ConscienciaScreen() {
           <Text style={styles.zoneLabelFuerza}>FUERZA · &lt;200</Text>
           <Text style={styles.zoneLabelPoder}>PODER · ≥200</Text>
         </View>
-      </View>
+      </HeroPanel>
 
       <SafetyWarning
         title="HERRAMIENTA DE AUTOEXPLORACIÓN"
         body="Esta es una herramienta de autoexploración, no un diagnóstico ni tratamiento."
       />
 
-      <Text style={styles.sectionLabel}>NIVELES</Text>
+      <GoldDivider label="NIVELES" />
 
       {/* Level grid — 4 columns */}
       <View style={styles.grid}>
@@ -331,7 +332,7 @@ export default function ConscienciaScreen() {
       </View>
 
       {/* Check semanal — autoexploración, no diagnóstico */}
-      <Text style={styles.sectionLabel}>CHECK SEMANAL</Text>
+      <GoldDivider label="CHECK SEMANAL" />
       <View style={styles.weeklyCard}>
         <Text style={styles.weeklyTitle}>¿Qué emociones te habitaron esta semana?</Text>
         <Text style={styles.weeklySub}>
@@ -404,25 +405,13 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.title, color: palette.ivory, fontSize: 14 },
 
-  // Intro card
-  introCard: {
-    backgroundColor: palette.goldLight,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  introTitle: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
-  introBody: { ...typography.caption, color: palette.ivory, fontSize: 13, lineHeight: 20 },
+  // Zona (dentro del héroe)
   zoneBar: { flexDirection: 'row', height: 12, borderRadius: radii.pill, overflow: 'hidden' },
   zoneFuerza: { flex: 1, backgroundColor: palette.danger, opacity: 0.6 },
   zonePoder: { flex: 1, backgroundColor: palette.gold },
   zoneLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   zoneLabelFuerza: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10 },
   zoneLabelPoder: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 10 },
-
-  sectionLabel: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
 
   // Grid — 4 columns
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

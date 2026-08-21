@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii, hitBox } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import {
   HABIT_CATALOG,
   MORNING_HABITS,
@@ -283,7 +284,7 @@ export default function HabitosScreen() {
             <Pressable
               onPress={() => setExpanded(isExpanded ? null : habit.id)}
               hitSlop={8}
-              style={styles.expandBtn}
+              style={hitBox(22)}
               accessibilityRole="button"
               accessibilityLabel={isExpanded ? 'Ocultar detalle' : 'Ver detalle'}
               accessibilityState={{ expanded: isExpanded }}>
@@ -548,13 +549,12 @@ const styles = StyleSheet.create({
   habitPoints:    { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
   habitDot:       { color: palette.smoke, fontSize: 11 },
   habitStreak:    { fontSize: 11, color: palette.smoke },
-  expandBtn:      { padding: 2 },
 
   habitDetail:    { paddingHorizontal: spacing.sm, paddingBottom: spacing.sm, gap: 4, borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.sm },
   detailLabel:    { ...typography.label, color: palette.goldText, marginTop: 4 },
   detailText:     { ...typography.caption, color: palette.ash },
 
-  warningRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, backgroundColor: 'rgba(212,160,23,0.10)', borderRadius: radii.xs, padding: 6 },
+  warningRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, backgroundColor: alpha(palette.warning, '1A'), borderRadius: radii.xs, padding: 6 },
   warningText:    { flex: 1, fontSize: 11, color: palette.warning },
 
   optionRow:      { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 4 },
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   optionDetail:   { fontSize: 11, color: palette.smoke, marginTop: 1 },
 
   detailActions:  { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  detailAction:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  detailAction:   { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 },
   detailActionText:{ fontFamily: Fonts.sansBold, fontSize: 12, color: palette.goldText },
 
   templateRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, gap: spacing.sm },

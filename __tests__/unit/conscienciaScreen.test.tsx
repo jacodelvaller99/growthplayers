@@ -18,9 +18,16 @@ jest.mock('expo-haptics', () => ({
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
-jest.mock('@/components/polaris', () => ({
-  useScreen: () => ({ root: {}, content: {} }),
-}));
+jest.mock('@/components/polaris', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const R = require('react');
+  return {
+    GoldDivider: () => R.createElement(RN.View),
+    useScreen: () => ({ root: {}, content: {} }),
+  };
+});
 jest.mock('@/components/SafetyWarning', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const RN = require('react-native');

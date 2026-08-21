@@ -28,11 +28,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   GoldDivider,
-  PremiumCard,
   ProgressCard,
   SovereignDeltaTag,
   useScreen,
 } from '@/components/polaris';
+import { HeroPanel, HeroRule, StatStack } from '@/components/focus-deck';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
@@ -105,14 +105,16 @@ export default function PerfilSoberanoScreen() {
   const wellnessBreathing  = wellnessSessions.filter((s) => s.type === 'breathing').length;
   const wellnessBinaural   = wellnessSessions.filter((s) => s.type === 'binaural').length;
 
+  // Racha real: el bonus de racha del score premia días CONSECUTIVOS, no el
+  // total histórico de check-ins (que nunca decrece). Se reusa en StatStack.
+  const streak = computeStreak(state.checkIns);
+
   const score = calcSovereignScore({
     energy:           averages.energy ?? 0,
     clarity:          averages.clarity ?? 0,
     stress:           averages.stress ?? 5,
     sleep:            averages.sleep ?? 0,
-    // Racha real: el bonus de racha del score premia días CONSECUTIVOS, no el
-    // total histórico de check-ins (que nunca decrece).
-    streak:           computeStreak(state.checkIns),
+    streak,
     completedLessons: (state.completedLessons ?? []).length,
     completedTasks:   Object.keys(state.completedTasks ?? {}).length,
     wellnessMeditation,
@@ -213,10 +215,11 @@ export default function PerfilSoberanoScreen() {
         </Pressable>
       </View>
 
-      {/* ── Identity Hero Card ── */}
-      <PremiumCard style={styles.heroCard}>
+      {/* ── Héroe consolidado: avatar + nombre + día + score en UNA superficie
+          (antes tres tarjetas apiladas — identidad, score, stats — cada una con
+          su propio marco para el mismo bloque de "quién eres hoy"). ── */}
+      <HeroPanel>
         <View style={styles.avatarRow}>
-          {/* Gold-ring avatar */}
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               <Text style={styles.avatarInitials}>
@@ -224,83 +227,59 @@ export default function PerfilSoberanoScreen() {
               </Text>
             </View>
           </View>
-
-          {/* Name + role + badges */}
           <View style={styles.heroInfo}>
             <Text style={styles.heroName}>{state.profile.name.toUpperCase()}</Text>
-            {state.profile.role ? (
-              <Text style={styles.heroRole}>{state.profile.role}</Text>
-            ) : null}
-            <View style={styles.heroBadgeRow}>
-              <View style={styles.heroBadge}>
-                <MaterialIcons name="calendar-today" size={9} color={palette.goldText} />
-                <Text style={styles.heroBadgeText}>DÍA {protocolDay}/90</Text>
-              </View>
-              {earnedArchetypes.length > 0 && (
-                <View style={[styles.heroBadge, styles.heroBadgeArch]}>
-                  <MaterialIcons name="military-tech" size={9} color={palette.goldText} />
-                  <Text style={styles.heroBadgeText}>
-                    {earnedArchetypes[earnedArchetypes.length - 1]}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Identity declaration — shown only if set */}
-        {state.northStar.identity ? (
-          <View style={styles.declaration}>
-            <Text style={styles.declarationLabel}>DECLARACIÓN DE IDENTIDAD</Text>
-            <Text style={styles.declarationText}>
-              “{state.northStar.identity.slice(0, 140)}”
+            <Text style={styles.heroMeta}>
+              DÍA {protocolDay}/90 · <Text style={{ color: tierColor }}>{tier}</Text>
             </Text>
           </View>
-        ) : null}
-      </PremiumCard>
-
-      {/* ── Score Soberano Hero ── */}
-      <View style={styles.scoreSection}>
-        <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
-
-        {/* Large score display */}
-        <View style={styles.scoreNumRow}>
-          <Text style={[styles.scoreNum, { color: tierColor }]}>{score}</Text>
-          <Text style={styles.scoreMax}>/1000</Text>
         </View>
 
-        {/* Tier badge — borde con el color sólido del tier (no concatenar alpha:
-            tierColor puede ser un token cv() 'var(--c-*)' y 'var(...)55' es CSS inválido). */}
-        <View style={[styles.tierBadge, { borderColor: tierColor }]}>
-          <View style={[styles.tierDot, { backgroundColor: tierColor }]} />
-          <Text style={[styles.tierLabel, { color: tierColor }]}>{tier}</Text>
-        </View>
+        <HeroRule />
 
-        {/* Score bar */}
-        <View style={styles.scoreBar}>
-          <View
-            style={[
-              styles.scoreBarFill,
-              {
-                width: `${Math.round((score / 1000) * 100)}%` as unknown as number,
-                backgroundColor: tierColor,
-              },
-            ]}
-          />
+        <View style={styles.heroScoreBlock}>
+          <View style={styles.scoreNumRow}>
+            <Text style={[styles.scoreNum, { color: tierColor }]}>{score}</Text>
+            <Text style={styles.scoreMax}>/1000 SCORE SOBERANO</Text>
+          </View>
+          {/* Score bar — no concatenar alpha sobre tierColor: puede ser un token
+              cv() 'var(--c-*)' y 'var(...)55' es CSS inválido. */}
+          <View style={styles.scoreBar}>
+            <View
+              style={[
+                styles.scoreBarFill,
+                {
+                  width: `${Math.round((score / 1000) * 100)}%` as unknown as number,
+                  backgroundColor: tierColor,
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.scoreHint}>
+            {score >= 900
+              ? `${firstName}, eso no es un número — es evidencia de quién eres.`
+              : score >= 700
+                ? `${firstName}, ya estás en el cuartil superior. Sigue.`
+                : score >= 500
+                  ? `El sistema está registrando cada acción, ${firstName}.`
+                  : `Cada check-in mueve el número, ${firstName}. El sistema responde.`}
+          </Text>
+          <View style={styles.scoreDeltaRow}>
+            <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+          </View>
         </View>
-        <Text style={styles.scoreHint}>
-          {score >= 900
-            ? `${firstName}, eso no es un número — es evidencia de quién eres.`
-            : score >= 700
-              ? `${firstName}, ya estás en el cuartil superior. Sigue.`
-              : score >= 500
-                ? `El sistema está registrando cada acción, ${firstName}.`
-                : `Cada check-in mueve el número, ${firstName}. El sistema responde.`}
-        </Text>
-        <View style={styles.scoreDeltaRow}>
-          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+      </HeroPanel>
+
+      {/* Declaración de identidad — solo si está definida, fuera del héroe para
+          no anidar su propio marco dentro del de HeroPanel. */}
+      {state.northStar.identity ? (
+        <View style={styles.declaration}>
+          <Text style={styles.declarationLabel}>DECLARACIÓN DE IDENTIDAD</Text>
+          <Text style={styles.declarationText}>
+            “{state.northStar.identity.slice(0, 140)}”
+          </Text>
         </View>
-      </View>
+      ) : null}
 
       {/* ── Protocol Progress ── */}
       <ProgressCard
@@ -309,23 +288,14 @@ export default function PerfilSoberanoScreen() {
         progress={protocolProgress}
       />
 
-      {/* ── Stats triad ── */}
-      <PremiumCard style={styles.statsCard}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNum}>{state.checkIns.length}</Text>
-          <Text style={styles.statLabel}>CHECK{'\n'}INS</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNum}>{(state.completedLessons ?? []).length}</Text>
-          <Text style={styles.statLabel}>LECCIONES{'\n'}COMPLETAS</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNum}>{earnedArchetypes.length}</Text>
-          <Text style={styles.statLabel}>ARQUETIPOS{'\n'}GANADOS</Text>
-        </View>
-      </PremiumCard>
+      {/* ── Tres números ── */}
+      <StatStack
+        stats={[
+          { name: 'RACHA', value: streak > 0 ? `${streak}d` : '—' },
+          { name: 'LECCIONES', value: `${(state.completedLessons ?? []).length}` },
+          { name: 'PRÁCTICAS', value: `${wellnessMeditation + wellnessBreathing + wellnessBinaural}` },
+        ]}
+      />
 
       {/* ── Earned archetypes ── */}
       {earnedArchetypes.length > 0 && (
@@ -474,10 +444,7 @@ const styles = StyleSheet.create({
     width: 44,
   },
 
-  // Hero identity card
-  heroCard: {
-    gap: spacing.lg,
-  },
+  // Hero identity row (dentro de HeroPanel)
   avatarRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -516,36 +483,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     lineHeight: 24,
   },
-  heroRole: {
-    ...typography.body,
+  heroMeta: {
     color: palette.ash,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  heroBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(179,141,60,0.10)',
-    borderColor: palette.line,
-    borderRadius: radii.xs,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  heroBadgeArch: {
-    borderColor: alpha(palette.gold, '55'),
-  },
-  heroBadgeText: {
-    color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
 
@@ -574,24 +515,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Score section — luxury hero
-  scoreSection: {
-    alignItems: 'center',
-    // Token theme-aware (antes 'rgba(10,10,10,0.8)' hardcodeado): en tema claro el
-    // fondo se quedaba negro mientras el texto se invertía a oscuro → hero ilegible.
-    backgroundColor: palette.graphite,
-    borderColor: palette.lineSoft,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl + 8,
-  },
-  scoreEyebrow: {
-    color: palette.smoke,
-    fontFamily: Fonts.mono,
-    fontSize: 9,
-    letterSpacing: 3,
+  // Score — dentro del HeroPanel, sin marco propio (un solo borde ya lo dibuja el panel)
+  heroScoreBlock: {
+    gap: spacing.sm,
   },
   scoreNumRow: {
     alignItems: 'flex-end',
@@ -600,36 +526,17 @@ const styles = StyleSheet.create({
   },
   scoreNum: {
     fontFamily: Fonts.display,
-    fontSize: 80,
+    fontSize: 56,
     fontWeight: '900',
-    letterSpacing: -2,
-    lineHeight: 84,
+    letterSpacing: -1.5,
+    lineHeight: 58,
   },
   scoreMax: {
     color: palette.smoke,
     fontFamily: Fonts.mono,
-    fontSize: 16,
-    lineHeight: 40,
-    marginBottom: 8,
-  },
-  tierBadge: {
-    alignItems: 'center',
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  tierDot: {
-    borderRadius: 4,
-    height: 6,
-    width: 6,
-  },
-  tierLabel: {
-    fontFamily: Fonts.mono,
     fontSize: 11,
-    letterSpacing: 2,
+    letterSpacing: 1,
+    marginBottom: 6,
   },
   scoreBar: {
     backgroundColor: palette.charcoal,
@@ -652,38 +559,6 @@ const styles = StyleSheet.create({
   scoreDeltaRow: {
     alignItems: 'center',
     marginTop: 2,
-  },
-
-  // Stats triad
-  statsCard: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    paddingVertical: spacing.lg,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 4,
-  },
-  statNum: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 32,
-  },
-  statLabel: {
-    color: palette.ash,
-    fontFamily: Fonts.mono,
-    fontSize: 7,
-    letterSpacing: 1.5,
-    textAlign: 'center',
-  },
-  statDivider: {
-    backgroundColor: palette.lineSoft,
-    height: 36,
-    width: 1,
   },
 
   // Archetypes

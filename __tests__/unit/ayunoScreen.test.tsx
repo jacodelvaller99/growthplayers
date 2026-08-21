@@ -11,6 +11,13 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 jest.mock('@/hooks/use-lifeflow', () => ({ useLifeFlow: () => ({ userId: 'u-test' }) }));
+jest.mock('@/components/polaris', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const R = require('react');
+  return { GoldDivider: () => R.createElement(RN.View) };
+});
 jest.mock('@/lib/supabase', () => ({
   db2: {
     fasting: () => ({

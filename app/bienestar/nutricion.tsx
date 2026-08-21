@@ -16,6 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { FocusHero, HeroPanel } from '@/components/focus-deck';
+import { GoldDivider } from '@/components/polaris';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
 
 const DIET_TYPES = [
@@ -187,29 +189,23 @@ export default function NutricionScreen() {
   const progressPct = `${((step - 1) / TOTAL_STEPS) * 100}%` as any;
 
   // Sección reutilizable: plan de nutrición (subir/ver el plan del nutriólogo).
+  // Hero compacto sin métrica: el plan no tiene un número protagonista, solo
+  // un estado (guardado o no) — así que FocusHero va sin la prop `metric`.
   const PlanSection = (
-    <View style={styles.planCard}>
-      <View style={styles.planHeader}>
-        <MaterialIcons name="description" size={18} color={palette.goldText} />
-        <Text style={styles.planTitle}>PLAN DE NUTRICIÓN</Text>
-      </View>
+    <View style={styles.planSection}>
+      <HeroPanel>
+        <FocusHero
+          eyebrow="PLAN DE NUTRICIÓN"
+          statement={
+            savedPlanUrl
+              ? `Plan guardado${savedNutritionist ? ` · Por ${savedNutritionist}` : ''}.`
+              : 'Sube el plan que te entregó tu nutriólogo (enlace a un PDF o imagen) para tenerlo siempre a mano.'
+          }
+          directive={savedPlanUrl ? { title: 'ABRIR PLAN', reason: 'Ver el documento subido', onPress: openPlan } : undefined}
+        />
+      </HeroPanel>
 
-      {savedPlanUrl ? (
-        <Pressable onPress={openPlan} style={styles.planSaved} accessibilityRole="button" accessibilityLabel="Abrir plan de nutrición guardado">
-          <MaterialIcons name="insert-drive-file" size={22} color={palette.goldText} />
-          <View style={styles.planSavedText}>
-            <Text style={styles.planSavedLabel} numberOfLines={1}>Plan guardado</Text>
-            {!!savedNutritionist && (
-              <Text style={styles.planSavedMeta} numberOfLines={1}>Por {savedNutritionist}</Text>
-            )}
-          </View>
-          <MaterialIcons name="open-in-new" size={18} color={palette.ash} />
-        </Pressable>
-      ) : (
-        <Text style={styles.planEmptyText}>
-          Sube el plan que te entregó tu nutriólogo (enlace a un PDF o imagen) para tenerlo siempre a mano.
-        </Text>
-      )}
+      <GoldDivider />
 
       <Text style={styles.planInputLabel}>ENLACE DEL PLAN (PDF / IMAGEN)</Text>
       <TextInput
@@ -480,7 +476,7 @@ const styles = StyleSheet.create({
 
   optionRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, gap: spacing.sm, borderWidth: 1, borderColor: 'transparent' },
   optionRowActive:  { backgroundColor: palette.gold, borderColor: palette.gold },
-  optionIcon:       { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(212,175,55,0.1)', alignItems: 'center', justifyContent: 'center' },
+  optionIcon:       { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.goldLight, alignItems: 'center', justifyContent: 'center' },
   optionIconActive: { backgroundColor: 'rgba(0,0,0,0.15)' },
   optionText:       { flex: 1 },
   optionLabel:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600' },
@@ -513,14 +509,7 @@ const styles = StyleSheet.create({
   doneBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: 14, paddingHorizontal: 32, marginTop: spacing.lg, alignSelf: 'center' },
   doneBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
-  planCard:         { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.lg, borderWidth: 1, borderColor: palette.lineGoldSubtle, gap: spacing.sm },
-  planHeader:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  planTitle:        { ...typography.label, color: palette.goldText, fontSize: 11 },
-  planEmptyText:    { fontSize: 12, color: palette.ash, lineHeight: 18 },
-  planSaved:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: palette.goldLight, borderRadius: radii.sm, padding: spacing.sm, borderWidth: 1, borderColor: palette.lineGold },
-  planSavedText:    { flex: 1 },
-  planSavedLabel:   { fontFamily: Fonts.sans, fontSize: 13, color: palette.ivory, fontWeight: '600' },
-  planSavedMeta:    { fontSize: 11, color: palette.ash, marginTop: 2 },
+  planSection:      { marginTop: spacing.lg, gap: spacing.sm },
   planInputLabel:   { ...typography.label, color: palette.ash, fontSize: 9, marginTop: 4 },
   planInput:        { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.md, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13, minHeight: 44, justifyContent: 'center' },
   planSaveBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, marginTop: 4, minHeight: 44 },

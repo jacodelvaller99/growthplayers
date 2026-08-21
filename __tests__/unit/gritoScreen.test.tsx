@@ -24,9 +24,16 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/hooks/use-lifeflow', () => ({
   useLifeFlow: () => ({ saveWellnessSession: jest.fn().mockResolvedValue(undefined) }),
 }));
-jest.mock('@/components/polaris', () => ({
-  useScreen: () => ({ root: {}, content: {} }),
-}));
+jest.mock('@/components/polaris', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const R = require('react');
+  return {
+    GoldDivider: () => R.createElement(RN.View),
+    useScreen: () => ({ root: {}, content: {} }),
+  };
+});
 jest.mock('@/components/SafetyWarning', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const RN = require('react-native');

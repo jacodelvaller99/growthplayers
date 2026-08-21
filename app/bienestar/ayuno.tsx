@@ -17,16 +17,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
+import { HeroPanel } from '@/components/focus-deck';
+import { GoldDivider } from '@/components/polaris';
 
 const FASTING_STAGES = [
   { h: [0,  4],  name: 'Digestión activa',   info: 'El cuerpo procesa los nutrientes. Insulina elevada.',           color: palette.smoke },
   { h: [4,  8],  name: 'Post-absorción',      info: 'Glucosa se normaliza. El cuerpo empieza a usar glucógeno.',     color: palette.smoke },
-  { h: [8,  12], name: 'Estado de ayuno',     info: 'Glucógeno casi agotado. Transición hacia grasas.',             color: '#EDBA01' },
-  { h: [12, 16], name: 'Cetosis temprana',    info: 'Producción de cetonas. Muchos reportan más claridad mental.',  color: '#E8A000' },
-  { h: [16, 20], name: 'Autofagia activa',    info: 'El reciclaje celular (autofagia) se intensifica. Mecanismo del Nobel 2016; evidencia en humanos aún en estudio.', color: '#D4AF37' },
-  { h: [20, 24], name: 'Cetosis profunda',    info: 'Estudios pequeños reportan más hormona de crecimiento y menos inflamación.', color: '#C8A020' },
-  { h: [24, 48], name: 'Autofagia sostenida', info: 'Glucógeno agotado; el cuerpo recurre a la grasa. Autofagia sostenida (evidencia mayormente preclínica).', color: '#C8A020' },
-  { h: [48, 72], name: 'Cambio metabólico',   info: 'Modelos preclínicos sugieren recambio inmune; en humanos no está confirmado. Solo con supervisión.', color: '#B8901C' },
+  // Gradiente de intensidad por opacidad sobre palette.gold — no un hex nuevo
+  // por etapa. A mayor duración del ayuno, más opaco (más "profundo") el oro.
+  { h: [8,  12], name: 'Estado de ayuno',     info: 'Glucógeno casi agotado. Transición hacia grasas.',             color: palette.goldDim },
+  { h: [12, 16], name: 'Cetosis temprana',    info: 'Producción de cetonas. Muchos reportan más claridad mental.',  color: alpha(palette.gold, '99') },
+  { h: [16, 20], name: 'Autofagia activa',    info: 'El reciclaje celular (autofagia) se intensifica. Mecanismo del Nobel 2016; evidencia en humanos aún en estudio.', color: alpha(palette.gold, 'B3') },
+  { h: [20, 24], name: 'Cetosis profunda',    info: 'Estudios pequeños reportan más hormona de crecimiento y menos inflamación.', color: alpha(palette.gold, 'CC') },
+  { h: [24, 48], name: 'Autofagia sostenida', info: 'Glucógeno agotado; el cuerpo recurre a la grasa. Autofagia sostenida (evidencia mayormente preclínica).', color: alpha(palette.gold, 'E6') },
+  { h: [48, 72], name: 'Cambio metabólico',   info: 'Modelos preclínicos sugieren recambio inmune; en humanos no está confirmado. Solo con supervisión.', color: palette.gold },
 ];
 
 const PROTOCOLS = [
@@ -170,10 +175,10 @@ export default function AyunoScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Timer central */}
-        <View style={styles.timerCard}>
+        {/* Timer central — el temporizador ES el estado protagonista cuando hay ayuno activo. */}
+        <HeroPanel>
           {isActive ? (
-            <>
+            <View style={styles.heroBody}>
               <Text style={styles.timerLabel}>TIEMPO ACTIVO</Text>
               <Text style={styles.timerDisplay}>{formatDuration(elapsed)}</Text>
               <Text style={styles.timerProtocol}>
@@ -187,20 +192,20 @@ export default function AyunoScreen() {
                 <Text style={[styles.stageName, { color: currentStage.color }]}>{currentStage.name}</Text>
               </View>
               <Text style={styles.stageInfo}>{currentStage.info}</Text>
-            </>
+            </View>
           ) : (
-            <>
-              <MaterialIcons name="timer" size={48} color={palette.goldText} />
+            <View style={styles.heroBody}>
+              <Text style={styles.timerLabel}>AYUNO</Text>
               <Text style={styles.timerIdleText}>Sin ayuno activo</Text>
               <Text style={styles.timerSub}>Selecciona un protocolo e inicia</Text>
-            </>
+            </View>
           )}
-        </View>
+        </HeroPanel>
 
         {/* Protocolo selector */}
         {!isActive && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>PROTOCOLO</Text>
+            <GoldDivider label="PROTOCOLO" />
             {PROTOCOLS.map(p => (
               <Pressable
                 key={p.label}
@@ -225,7 +230,7 @@ export default function AyunoScreen() {
 
         {/* Etapas científicas */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ETAPAS DEL AYUNO</Text>
+          <GoldDivider label="ETAPAS DEL AYUNO" />
           {FASTING_STAGES.map((s, i) => {
             const reached = elapsedHours >= s.h[0];
             return (
@@ -244,7 +249,7 @@ export default function AyunoScreen() {
 
         {/* GUÍA — preparar, hidratar y romper el ayuno */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>GUÍA</Text>
+          <GoldDivider label="GUÍA" />
           {GUIDE_SECTIONS.map((g, i) => (
             <View key={i} style={styles.guideCard}>
               <View style={styles.guideHeader}>
@@ -346,7 +351,7 @@ const styles = StyleSheet.create({
 
   content:          { paddingHorizontal: spacing.md, paddingBottom: 40 },
 
-  timerCard:        { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, alignItems: 'center', marginBottom: spacing.lg, gap: 8 },
+  heroBody:         { alignItems: 'center', gap: 8 },
   timerLabel:       { ...typography.label, color: palette.goldText },
   timerDisplay:     { fontFamily: Fonts.mono, fontSize: 48, color: palette.ivory, letterSpacing: 4 },
   timerProtocol:    { ...typography.caption, color: palette.ash },
@@ -359,7 +364,6 @@ const styles = StyleSheet.create({
   timerSub:         { ...typography.caption, color: palette.ash },
 
   section:          { marginBottom: spacing.lg },
-  sectionLabel:     { ...typography.label, color: palette.goldText, marginBottom: spacing.sm },
 
   protocolRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.md, minHeight: 44, marginBottom: 8, gap: spacing.sm },
   protocolRowActive:{ backgroundColor: palette.gold },
@@ -381,7 +385,7 @@ const styles = StyleSheet.create({
   guidePointText:   { flex: 1, fontSize: 12, color: palette.ash, lineHeight: 18 },
 
   ctaBtn:           { backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, alignItems: 'center', marginTop: 8, minHeight: 44, justifyContent: 'center' },
-  ctaBtnEnd:        { backgroundColor: 'rgba(212,175,55,0.2)', borderWidth: 1, borderColor: palette.gold },
+  ctaBtnEnd:        { backgroundColor: alpha(palette.gold, '33'), borderWidth: 1, borderColor: palette.gold },
   ctaBtnText:       { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
@@ -389,13 +393,13 @@ const styles = StyleSheet.create({
   modalTitle:       { fontFamily: Fonts.display, fontSize: 16, color: palette.goldText, letterSpacing: 2, marginBottom: 12 },
   modalBody:        { fontSize: 14, color: palette.ash, lineHeight: 22, textAlign: 'center' },
   modalActions:     { flexDirection: 'row', gap: 12, marginTop: spacing.lg, width: '100%' },
-  modalCancel:      { flex: 1, padding: 12, backgroundColor: palette.graphite, borderRadius: radii.sm, alignItems: 'center' },
+  modalCancel:      { flex: 1, minHeight: 44, justifyContent: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, alignItems: 'center' },
   modalCancelText:  { color: palette.ash, fontSize: 13 },
-  modalConfirm:     { flex: 2, padding: 12, backgroundColor: palette.gold, borderRadius: radii.sm, alignItems: 'center' },
+  modalConfirm:     { flex: 2, minHeight: 44, justifyContent: 'center', backgroundColor: palette.gold, borderRadius: radii.sm, alignItems: 'center' },
   modalConfirmText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 12, letterSpacing: 1 },
 
   breakInput:       { width: '100%', backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, marginTop: spacing.md },
   breakChips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm, justifyContent: 'center' },
-  breakChip:        { borderWidth: 1, borderColor: palette.lineGold, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: palette.goldLight },
+  breakChip:        { borderWidth: 1, borderColor: palette.lineGold, borderRadius: radii.pill, paddingHorizontal: 12, minHeight: 44, justifyContent: 'center', backgroundColor: palette.goldLight },
   breakChipText:    { fontSize: 11, color: palette.goldText, fontFamily: Fonts.sans },
 });

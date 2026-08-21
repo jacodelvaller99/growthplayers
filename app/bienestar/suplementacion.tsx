@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii, hitBox } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 
 type Tab = 'energia' | 'sueno' | 'cognitivo';
 
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
   backBtn:       { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title:         { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
 
-  disclaimer:    { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: 'rgba(212,175,55,0.08)', borderRadius: radii.sm, padding: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)' },
+  disclaimer:    { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: alpha(palette.gold, '14'), borderRadius: radii.sm, padding: 10, borderWidth: 1, borderColor: alpha(palette.gold, '33') },
   disclaimerText:{ flex: 1, fontSize: 11, color: palette.ash, lineHeight: 16 },
 
   tabRow:        { flexDirection: 'row', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: 4, gap: 4 },
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   cardHeader:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   colorDot:      { width: 10, height: 10, borderRadius: 5 },
   cardName:      { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory, fontWeight: '700', flex: 1 },
-  doseChip:      { backgroundColor: 'rgba(212,175,55,0.15)', borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  doseChip:      { backgroundColor: alpha(palette.gold, '26'), borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 3 },
   doseText:      { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
   editBtn:       { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight },
   timingRow:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
@@ -311,7 +312,7 @@ const styles = StyleSheet.create({
   editInput:     { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.sm, paddingVertical: 8, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13 },
 
   saveBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, marginTop: spacing.sm, minHeight: 44 },
-  saveBtnSaved:  { backgroundColor: 'rgba(212,175,55,0.3)', borderWidth: 1, borderColor: palette.gold },
+  saveBtnSaved:  { backgroundColor: alpha(palette.gold, '4D'), borderWidth: 1, borderColor: palette.gold },
   saveBtnText:   { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
 
   footnote:      { ...typography.caption, color: palette.smoke, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
