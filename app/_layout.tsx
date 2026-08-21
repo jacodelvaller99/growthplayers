@@ -141,6 +141,8 @@ function MainStack() {
         <Stack.Screen name="perfil/apariencia" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
         <Stack.Screen name="admin/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/mission-control" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/mentor/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="admin/usuarios/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/usuarios/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="admin/membresias/index" options={{ headerShown: false }} />
@@ -151,6 +153,7 @@ function MainStack() {
         <Stack.Screen name="admin/mentores/ejecucion" options={{ headerShown: false }} />
         <Stack.Screen name="admin/biometria" options={{ headerShown: false }} />
         <Stack.Screen name="admin/contenido/index" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/plaud" options={{ headerShown: false }} />
         <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/comunidad/index" options={{ headerShown: false }} />
       </Stack.Protected>
@@ -164,10 +167,13 @@ function AppShell() {
   const { isDesktop } = useBreakpoint();
   const segments = useSegments();
 
-  // Hide sidebar during auth and onboarding flows for full-focus immersion.
+  // Hide sidebar during auth and onboarding flows for full-focus immersion,
+  // and inside admin — app/admin/_layout.tsx paints its own Sidebar, so both
+  // together doubled the nav chrome on desktop.
   const isImmersive =
     (segments as string[])[0] === '(auth)' ||
-    (segments as string[])[0] === '(onboarding)';
+    (segments as string[])[0] === '(onboarding)' ||
+    (segments as string[])[0] === 'admin';
   const showSidebar = Platform.OS === 'web' && isDesktop && !isImmersive;
 
   if (showSidebar) {

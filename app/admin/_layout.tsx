@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { palette, spacing, typography, radii, Fonts } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { AdminRoleProvider } from '@/hooks/use-admin-role';
 import { intel } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
 
@@ -36,7 +37,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { route: '/admin',               label: 'Mission Control',  icon: 'dashboard',      group: 'top' },
+  { route: '/admin',               label: 'Escritorio',       icon: 'dashboard',      group: 'top' },
+  { route: '/admin/mission-control', label: 'Mission Control', icon: 'insights',      group: 'top' },
   { route: '/admin/usuarios',      label: 'Usuarios',         icon: 'people',         group: 'top' },
   { route: '/admin/ranking',       label: 'Ranking',          icon: 'leaderboard',    group: 'top' },
   { route: '/admin/copilot',       label: 'Copiloto IA',      icon: 'smart-toy',      group: 'top' },
@@ -48,6 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   { route: '/admin/mentores/ejecucion', label: 'Ejecución',   icon: 'task-alt',       group: 'data' },
   { route: '/admin/biometria',     label: 'Biométricos',      icon: 'monitor-heart',  group: 'data' },
   { route: '/admin/contenido',     label: 'Contenido',        icon: 'article',        group: 'data' },
+  { route: '/admin/plaud',         label: 'Plaud',            icon: 'mic',            group: 'data' },
   { route: '/admin/comunidad',     label: 'Moderación',       icon: 'flag',           group: 'data' },
   { route: '/admin/auditoria',     label: 'Auditoría',        icon: 'history',        group: 'data' },
 ];
@@ -124,10 +127,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 // El admin en móvil no tenía navegación persistente. 4 destinos clave + "Más"
 // (abre una hoja con todas las secciones). Bottom nav ≤5 ítems con label+icono.
 const BOTTOM_TABS: NavItem[] = [
-  { route: '/admin',            label: 'Inicio',     icon: 'dashboard' },
-  { route: '/admin/usuarios',   label: 'Usuarios',   icon: 'people' },
-  { route: '/admin/membresias', label: 'Membresías', icon: 'credit-card' },
-  { route: '/admin/ranking',    label: 'Ranking',    icon: 'leaderboard' },
+  { route: '/admin',                  label: 'Inicio',     icon: 'dashboard' },
+  { route: '/admin/usuarios',         label: 'Usuarios',   icon: 'people' },
+  { route: '/admin/mission-control',  label: 'Control',    icon: 'insights' },
+  { route: '/admin/membresias',       label: 'Membresías', icon: 'credit-card' },
 ];
 
 function AdminBottomNav() {
@@ -226,10 +229,34 @@ function AdminGateState({
   );
 }
 
+/** Chrome liviano del mentor restringido — sin sidebar ni bottom nav de 16
+ * secciones: el mentor solo tiene 2 destinos reales (su Escritorio y el
+ * Espacio de cada cliente), ninguno necesita un menú. */
+function MentorChrome({ topInset }: { topInset: number }) {
+  const router = useRouter();
+  return (
+    <View style={[s.mentorBar, { paddingTop: topInset + spacing.sm }]}>
+      <MaterialIcons name="dashboard-customize" size={18} color={palette.goldText} />
+      <Text style={s.mentorBarTitle}>ESCRITORIO DEL MENTOR</Text>
+      <Pressable
+        onPress={() => router.replace('/(tabs)/comando' as never)}
+        style={s.mentorBarExit}
+        accessibilityRole="button"
+        accessibilityLabel="Salir, volver a la app">
+        <Text style={s.mentorBarExitText}>SALIR</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+type GateState = 'loading' | 'denied' | 'admin' | 'mentor';
+
 export default function AdminLayout() {
   const router = useRouter();
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const { userId, isLoaded } = useLifeFlow();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [gate, setGate] = useState<GateState>('loading');
   // "Verificando" eterno es un callejon sin salida con mejor letra. Si a los
   // 12s no se resolvio -- token caducado, red caida, RLS mal aplicada -- hay
   // que DECIRLO y dar salida, no dejar a alguien mirando la misma linea.
@@ -248,7 +275,7 @@ export default function AdminLayout() {
     // admin (era la causa de "a veces entro, a veces no" en un hiccup de red):
     // reintentamos una vez y, si sigue fallando, quedamos en loading (null →
     // no renderiza, pero tampoco rebota). El acceso SOLO se concede con
-    // is_admin === true confirmado — sin regresión de seguridad (RLS manda).
+    // is_admin/is_mentor === true confirmado — sin regresión de seguridad (RLS manda).
     const check = async (attempt = 0): Promise<void> => {
       // "La sesion todavia no cargo" NO es "no eres admin".
       //
@@ -260,26 +287,39 @@ export default function AdminLayout() {
       //
       // `isLoaded` es la senal que ya usa el guard de (tabs); aqui faltaba.
       if (!isLoaded) return;
-      if (!userId) { if (!cancelled) setIsAdmin(false); return; }
+      if (!userId) { if (!cancelled) setGate('denied'); return; }
       const { data, error } = await intel.profiles()
-        .select('is_admin')
+        .select('is_admin, is_mentor')
         .eq('id', userId)
         .maybeSingle();
       if (cancelled) return;
       if (error) {
-        logSilentError('admin._layout.isAdmin', error);
+        logSilentError('admin._layout.role', error);
         if (attempt < 1) setTimeout(() => { if (!cancelled) check(attempt + 1); }, 1200);
         return; // mantener loading; nunca conceder acceso ante error
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const admin = (data as any)?.is_admin === true;
-      setIsAdmin(admin);
-      if (!admin) router.replace('/(tabs)/comando' as never);
+      const row = data as { is_admin?: boolean; is_mentor?: boolean } | null;
+      if (row?.is_admin === true) { setGate('admin'); return; }
+      if (row?.is_mentor === true) { setGate('mentor'); return; }
+      setGate('denied');
+      router.replace('/(tabs)/comando' as never);
     };
     check();
     const reloj = setTimeout(() => { if (!cancelled) setTardando(true); }, 12000);
     return () => { cancelled = true; clearTimeout(reloj); };
   }, [userId, isLoaded, router]);
+
+  // Un mentor restringido solo puede estar en su Escritorio o en el Espacio de
+  // un cliente — cualquier otra ruta admin lo rebota de vuelta a /admin, no
+  // fuera del todo. Efecto SEPARADO del de arriba: debe reaccionar a cada
+  // cambio de `pathname`, no solo correr una vez al montar el layout (Expo
+  // Router mantiene este _layout montado entre navegaciones hermanas bajo
+  // /admin/*, solo cambia lo que pinta <Slot/>).
+  useEffect(() => {
+    if (gate !== 'mentor') return;
+    const allowed = pathname === '/admin' || pathname.startsWith('/admin/mentor/');
+    if (!allowed) router.replace('/admin' as never);
+  }, [gate, pathname, router]);
 
   // Ni una ni otra puede ser una pantalla en negro.
   //
@@ -288,7 +328,7 @@ export default function AdminLayout() {
   // is_admin === true confirmado -- pero eso dejaba al mentor mirando un
   // rectangulo negro sin saber si carga, si esta roto o si le denegaron.
   // La postura de seguridad no cambia; lo que cambia es que ahora se dice.
-  if (isAdmin === null) {
+  if (gate === 'loading') {
     return tardando
       ? (
         <AdminGateState
@@ -299,27 +339,44 @@ export default function AdminLayout() {
       )
       : <AdminGateState texto="VERIFICANDO ACCESO" />;
   }
-  if (isAdmin === false) return <AdminGateState texto="SIN ACCESO · VOLVIENDO A COMANDO" />;
+  if (gate === 'denied') return <AdminGateState texto="SIN ACCESO · VOLVIENDO A COMANDO" />;
+
+  if (gate === 'mentor') {
+    return (
+      <AdminRoleProvider role="mentor">
+        <View style={s.mobileRoot}>
+          <MentorChrome topInset={insets.top} />
+          <View style={s.mobileContent}>
+            <Slot />
+          </View>
+        </View>
+      </AdminRoleProvider>
+    );
+  }
 
   if (showSidebar) {
     return (
-      <View style={s.webRoot}>
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
-        <View style={s.webContent}>
-          <Slot />
+      <AdminRoleProvider role="admin">
+        <View style={s.webRoot}>
+          <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
+          <View style={s.webContent}>
+            <Slot />
+          </View>
         </View>
-      </View>
+      </AdminRoleProvider>
     );
   }
 
   // Móvil (nativo o web angosto): contenido + barra inferior persistente.
   return (
-    <View style={s.mobileRoot}>
-      <View style={s.mobileContent}>
-        <Slot />
+    <AdminRoleProvider role="admin">
+      <View style={s.mobileRoot}>
+        <View style={s.mobileContent}>
+          <Slot />
+        </View>
+        <AdminBottomNav />
       </View>
-      <AdminBottomNav />
-    </View>
+    </AdminRoleProvider>
   );
 }
 
@@ -382,6 +439,21 @@ const s = StyleSheet.create({
   // ── Móvil: contenido + barra inferior ──
   mobileRoot: { flex: 1, backgroundColor: palette.black },
   mobileContent: { flex: 1, overflow: 'hidden' as const },
+
+  // ── Chrome del mentor restringido ──
+  mentorBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: palette.graphite,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.line,
+  },
+  mentorBarTitle: { ...typography.label, color: palette.ivory, fontSize: 11, flex: 1 },
+  mentorBarExit: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
+  mentorBarExitText: { ...typography.label, color: palette.smoke, fontSize: 10 },
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: palette.graphite,

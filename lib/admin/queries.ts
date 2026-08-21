@@ -355,10 +355,11 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
   const tierMap: Record<string, string> = {};
   const adminMap: Record<string, boolean> = {};
   const superMap: Record<string, boolean> = {};
+  const mentorMap: Record<string, boolean> = {};
   if (ids.length > 0) {
     const [membRes, profRes] = await Promise.allSettled([
       supa.from('user_memberships').select('user_id, product').eq('status', 'active').in('user_id', ids),
-      intel.profiles().select('id, is_admin, is_superadmin').in('id', ids),
+      intel.profiles().select('id, is_admin, is_superadmin, is_mentor').in('id', ids),
     ]);
     if (membRes.status === 'fulfilled') {
       for (const m of (membRes.value.data ?? []) as Array<{ user_id: string; product: string }>) {
@@ -371,9 +372,10 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
       }
     }
     if (profRes.status === 'fulfilled') {
-      for (const p of (profRes.value.data ?? []) as Array<{ id: string; is_admin: boolean; is_superadmin: boolean }>) {
+      for (const p of (profRes.value.data ?? []) as Array<{ id: string; is_admin: boolean; is_superadmin: boolean; is_mentor: boolean }>) {
         adminMap[p.id] = p.is_admin === true;
         superMap[p.id] = p.is_superadmin === true;
+        mentorMap[p.id] = p.is_mentor === true;
       }
     }
   }
@@ -389,6 +391,7 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
     streak: p.streak as number | undefined,
     is_admin: adminMap[p.user_id] ?? false,
     is_superadmin: superMap[p.user_id] ?? false,
+    is_mentor: mentorMap[p.user_id] ?? false,
     created_at: p.last_checkin_date as string ?? '',
   }));
 
@@ -405,8 +408,8 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail |
     supa.from('user_progress').select('*').eq('user_id', userId).single(),
     supa.from('user_memberships').select('*').eq('user_id', userId).eq('status', 'active'),
     supa.from('user_course_access').select('*').eq('user_id', userId).eq('is_active', true),
-    // is_admin/is_superadmin viven en profiles, NO en la vista user_progress.
-    intel.profiles().select('is_admin, is_superadmin').eq('id', userId).maybeSingle(),
+    // is_admin/is_superadmin/is_mentor viven en profiles, NO en la vista user_progress.
+    intel.profiles().select('is_admin, is_superadmin, is_mentor').eq('id', userId).maybeSingle(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -431,6 +434,7 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail |
     role: profile.tier,
     is_admin: flags.is_admin ?? false,
     is_superadmin: flags.is_superadmin ?? false,
+    is_mentor: flags.is_mentor ?? false,
     created_at: profile.protocol_start_date ?? '',
     sovereign_score: profile.sovereign_score,
     engagement_score: int?.engagement_score,
@@ -493,6 +497,7 @@ export interface AdminMentorshipSession {
   notes: string | null;
   action_plan: unknown[];
   created_at: string;
+  client_id: string | null;
 }
 
 export interface AdminMentorshipTask {
@@ -514,7 +519,7 @@ export async function fetchUserMentorship(userId: string): Promise<AdminMentorsh
     const [sessRes, taskRes] = await Promise.all([
       supa
         .from('mentorship_sessions')
-        .select('id, week, session_date, notes, action_plan, created_at')
+        .select('id, week, session_date, notes, action_plan, created_at, client_id')
         .eq('user_id', userId)
         .order('session_date', { ascending: false, nullsFirst: false })
         .limit(20),
@@ -533,6 +538,7 @@ export async function fetchUserMentorship(userId: string): Promise<AdminMentorsh
       notes: s.notes ?? null,
       action_plan: Array.isArray(s.action_plan) ? s.action_plan : [],
       created_at: s.created_at,
+      client_id: s.client_id ?? null,
     })) as AdminMentorshipSession[];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tasks = ((taskRes.data ?? []) as any[]).map((t: any) => ({
@@ -1071,4 +1077,50 @@ export async function fetchUserById(id: string): Promise<AdminUser | null> {
     is_admin: false,
     created_at: '',
   };
+}
+
+// ─── Mentor Assignments (Focus Desk) ────────────────────────────────────────
+// Tabla mentor_assignments (migración 20260821000000) no está en los tipos
+// generados → `supa` sin tipar, degrada a vacío si la migración no está aplicada.
+
+export interface MentorAssignment {
+  user_id: string;
+  mentor_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+}
+
+export async function fetchMentorAssignments(): Promise<MentorAssignment[]> {
+  try {
+    const { data } = await supa
+      .from('mentor_assignments')
+      .select('user_id, mentor_id, assigned_by, assigned_at');
+    return (data ?? []) as MentorAssignment[];
+  } catch {
+    return []; // tabla aún no migrada / RLS
+  }
+}
+
+export interface MentorInfo {
+  id: string;
+  name: string;
+}
+
+/** Mentores = admins actuales. Nombres vía user_progress (mismo patrón que fetchExecutionDashboard). */
+export async function fetchMentorsList(): Promise<MentorInfo[]> {
+  try {
+    // Elegibles: admins (mentorean de paso) O mentores dedicados (is_mentor,
+    // sin is_admin — el rango restringido).
+    const { data: profs } = await intel.profiles().select('id').or('is_admin.eq.true,is_mentor.eq.true');
+    const ids = ((profs ?? []) as Array<{ id: string }>).map((p) => p.id);
+    if (ids.length === 0) return [];
+    const nameMap: Record<string, string> = {};
+    try {
+      const { data: prog } = await supa.from('user_progress').select('user_id,name').in('user_id', ids);
+      for (const p of (prog ?? []) as Array<{ user_id: string; name: string }>) nameMap[p.user_id] = p.name;
+    } catch { /* noop */ }
+    return ids.map((id) => ({ id, name: nameMap[id] ?? 'Mentor' }));
+  } catch {
+    return [];
+  }
 }

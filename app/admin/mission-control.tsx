@@ -1,0 +1,543 @@
+/**
+ * Admin CMI — Mission Control
+ *
+ * Real-time overview: KPIs, alerts, live event feed, section shortcuts.
+ */
+
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { GoldDivider, PremiumCard, StatusPill, useScreen } from '@/components/polaris';
+import { getTierColor, getTierLabel } from '@/constants/subscriptions';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
+import {
+  fetchAtRiskUsers, fetchDashboardKPIs, fetchLiveEvents, fetchPracticeSignal,
+  fetchProtocolFunnel, fetchRetention90d, fetchTierCounts,
+} from '@/lib/admin/queries';
+import { fetchNotesByUsers, type NoteSummary } from '@/lib/memory';
+import { NoteBadge, PolarStarCard, PracticeSignalCard, ProtocolFunnelCard } from '@/components/admin-decision';
+import type {
+  AtRiskUser, DashboardKPIs, LiveEvent, PracticeSignal, ProtocolFunnel, RetentionStat,
+} from '@/lib/admin/types';
+import { recalculateAllMLAction } from '@/lib/admin/actions';
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function KpiCard({ value, label, accent }: { value: string | number; label: string; accent?: string }) {
+  return (
+    <PremiumCard style={s.kpiCard}>
+      <Text style={[s.kpiValue, accent ? { color: accent } : {}]}>{value}</Text>
+      <Text style={s.kpiLabel}>{label}</Text>
+    </PremiumCard>
+  );
+}
+
+function AlertCard({
+  icon, title, body, tone,
+}: {
+  icon: string; title: string; body: string; tone: 'danger' | 'warning' | 'success';
+}) {
+  const bg = tone === 'danger' ? palette.dangerMuted
+    : tone === 'warning' ? 'rgba(212,160,23,0.12)'
+    : palette.successMuted;
+  const col = tone === 'danger' ? palette.danger
+    : tone === 'warning' ? palette.warning
+    : palette.success;
+  return (
+    <View style={[s.alertCard, { backgroundColor: bg, borderColor: col }]}>
+      <Text style={{ fontSize: 18 }}>{icon}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[s.alertTitle, { color: col }]}>{title}</Text>
+        <Text style={s.alertBody}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+function EventRow({ event }: { event: LiveEvent }) {
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    if (diff < 60000) return `${Math.round(diff / 1000)}s`;
+    if (diff < 3600000) return `${Math.round(diff / 60000)}m`;
+    return `${Math.round(diff / 3600000)}h`;
+  };
+
+  const iconMap: Record<string, string> = {
+    screen_view:      '👁',
+    lesson_start:     '📖',
+    lesson_complete:  '✅',
+    checkin_submit:   '🎯',
+    binaural_complete:'🎵',
+    breathing_complete:'💨',
+    meditation_complete:'🧘',
+  };
+
+  return (
+    <View style={s.eventRow}>
+      <Text style={s.eventIcon}>{iconMap[event.event_type] ?? '⚡'}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={s.eventType}>{event.event_type.replace(/_/g, ' ').toUpperCase()}</Text>
+        {event.screen ? <Text style={s.eventScreen}>{event.screen}</Text> : null}
+      </View>
+      <Text style={s.eventTime}>{timeAgo(event.created_at)}</Text>
+    </View>
+  );
+}
+
+interface SectionCard {
+  route: string;
+  label: string;
+  icon: string;
+  desc: string;
+}
+
+const SECTIONS: SectionCard[] = [
+  { route: '/admin/usuarios',     label: 'Usuarios',        icon: '👤', desc: 'Gestionar perfiles' },
+  { route: '/admin/ranking',      label: 'Ranking',         icon: '🏆', desc: 'Comparar y ponderar' },
+  { route: '/admin/copilot',      label: 'Copiloto IA',     icon: '🤖', desc: 'Decisiones del equipo' },
+  { route: '/admin/membresias',   label: 'Membresías',      icon: '💳', desc: 'Activar accesos' },
+  { route: '/admin/cursos',       label: 'Cursos',          icon: '🎓', desc: 'Control de acceso' },
+  { route: '/admin/codigos',      label: 'Códigos',         icon: '🔑', desc: 'Crear y gestionar' },
+  { route: '/admin/inteligencia', label: 'ML',              icon: '🧠', desc: 'Dashboard completo' },
+  { route: '/admin/contenido',    label: 'Contenido',       icon: '📝', desc: 'Diarios y chats' },
+  { route: '/admin/plaud',        label: 'Plaud',           icon: '🎙️', desc: 'Mentorías grabadas' },
+  // Apunta al perfil a propósito: la pantalla es la MISMA que ve el cliente, no
+  // una copia de admin. Un laboratorio aparte se desincronizaría del producto.
+  { route: '/perfil/apariencia',  label: 'Apariencia',      icon: '🎨', desc: 'Paletas de color' },
+  { route: '/admin/comunidad',    label: 'Moderación',      icon: '🚩', desc: 'Cola de reportes' },
+  { route: '/admin/auditoria',    label: 'Auditoría',       icon: '📋', desc: 'Log de acciones' },
+];
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+export default function MissionControl() {
+  const sc = useScreen();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { userId } = useLifeFlow();
+
+  const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [events, setEvents] = useState<LiveEvent[]>([]);
+  const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
+  const [atRiskUsers, setAtRiskUsers] = useState<AtRiskUser[]>([]);
+  const [notes, setNotes] = useState<Record<string, NoteSummary>>({});
+  const [retention, setRetention] = useState<RetentionStat | null>(null);
+  const [funnel, setFunnel] = useState<ProtocolFunnel | null>(null);
+  const [practice, setPractice] = useState<PracticeSignal | null>(null);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [mlRecalculating, setMlRecalculating] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  const loadData = useCallback(async () => {
+    // allSettled: una query que falle NO debe dejar el dashboard en spinner infinito.
+    // Cada panel se actualiza con lo que llegó; lo que falló conserva su último valor.
+    try {
+      const [kpiRes, evtRes, tierRes, riskRes, retRes, funRes, pracRes] = await Promise.allSettled([
+        fetchDashboardKPIs(),
+        fetchLiveEvents(8),
+        fetchTierCounts(),
+        fetchAtRiskUsers(),
+        fetchRetention90d(),
+        fetchProtocolFunnel(),
+        fetchPracticeSignal(),
+      ]);
+      if (kpiRes.status === 'fulfilled') setKpis(kpiRes.value);
+      if (evtRes.status === 'fulfilled') setEvents(evtRes.value);
+      if (tierRes.status === 'fulfilled') setTierCounts(tierRes.value);
+      if (retRes.status === 'fulfilled') setRetention(retRes.value);
+      if (funRes.status === 'fulfilled') setFunnel(funRes.value);
+      if (pracRes.status === 'fulfilled') setPractice(pracRes.value);
+      if (riskRes.status === 'fulfilled') {
+        setAtRiskUsers(riskRes.value);
+        // Notas privadas de los usuarios en riesgo — impregnadas en las filas.
+        fetchNotesByUsers(riskRes.value.map(u => u.user_id)).then(setNotes).catch(() => {});
+      }
+      setLastSyncAt(new Date());
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // Clock tick
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const onRefresh = () => { setRefreshing(true); loadData(); };
+
+  const handleRecalculateML = async () => {
+    if (mlRecalculating || !userId) return;
+    setMlRecalculating(true);
+    await recalculateAllMLAction(userId);
+    setMlRecalculating(false);
+  };
+
+  // Colombia time (UTC-5)
+  const colombiaTime = new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/Bogota',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(now);
+
+  if (loading) {
+    return (
+      <View style={[sc.root, s.center]}>
+        <ActivityIndicator color={palette.goldText} size="large" />
+        <Text style={s.loadingText}>Cargando CMI...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + spacing.lg }]}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.gold} />
+      }>
+      {/* ── Header ── */}
+      <View style={s.header}>
+        <View>
+          <Text style={s.headerEyebrow}>POLARIS GROWTH INSTITUTE</Text>
+          <Text style={s.headerTitle}>CUADRO DE MANDO</Text>
+          <Text style={s.headerSub}>
+            Colombia {colombiaTime} · actualizado hace {lastSyncAt ? Math.max(0, Math.floor((now.getTime() - lastSyncAt.getTime()) / 1000)) : 0}s
+          </Text>
+        </View>
+        <StatusPill label="ADMIN" tone="gold" dot />
+      </View>
+
+      {/* La navegación móvil ahora es la barra inferior persistente del _layout. */}
+
+      {/* ════ 1. ESTRELLA POLAR — RETENCIÓN (el número que dice si vamos bien) ════ */}
+      {retention && <PolarStarCard stat={retention} />}
+
+      {/* ════ 2. RESUMEN EJECUTIVO — las cifras de un vistazo (glance móvil) ════ */}
+      {kpis && (
+        <View style={s.kpiGrid}>
+          <KpiCard
+            value={atRiskUsers.length}
+            label="A CONTACTAR HOY"
+            accent={atRiskUsers.length > 0 ? palette.warning : palette.ivory}
+          />
+          <KpiCard value={kpis.active_today} label="ACTIVOS HOY" />
+          <KpiCard value={kpis.avg_engagement} label="ENGAGEMENT /100" />
+          <KpiCard value={`${kpis.avg_sovereign}`} label="SOVEREIGN /1000" />
+        </View>
+      )}
+
+      {/* ════ 3. A QUIÉN CONTACTAR HOY — la decisión diaria (accionable) ════ */}
+      <GoldDivider label="A QUIÉN CONTACTAR HOY" />
+      <PremiumCard style={s.feedCard}>
+        {atRiskUsers.length === 0 ? (
+          <Text style={s.emptyText}>Nadie urgente — todos estables hoy ✓</Text>
+        ) : (
+          atRiskUsers.slice(0, 6).map((u) => (
+            <Pressable
+              key={u.user_id}
+              onPress={() => router.push(`/admin/usuarios/${u.user_id}` as never)}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`${u.name ?? 'Usuario'}, riesgo de abandono ${Math.round(u.churn_risk * 100)} por ciento. Abrir dossier`}
+              style={({ pressed }) => [s.riskRow, pressed && { opacity: 0.7 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.riskName}>{u.name ?? 'Usuario'}</Text>
+                <Text style={s.riskMeta} numberOfLines={1}>
+                  {notes[u.user_id]?.last
+                    ? `📝 ${notes[u.user_id]?.last}`
+                    : `${u.churn_risk_label.toUpperCase()} · ${u.days_since_last_act}d sin actividad${u.anomaly_detected ? ' · ⚠ anomalía' : ''}`}
+                </Text>
+              </View>
+              <NoteBadge count={notes[u.user_id]?.count ?? 0} preview={notes[u.user_id]?.last} />
+              <Text style={[s.riskScore, { color: u.churn_risk_label === 'critical' ? palette.danger : palette.warning }]}>
+                {Math.round(u.churn_risk * 100)}%
+              </Text>
+              <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+            </Pressable>
+          ))
+        )}
+      </PremiumCard>
+
+      {/* ════ 4. PRODUCTO / APRENDIZAJE — qué retiene, dónde se caen (perspectiva destacada) ════ */}
+      <GoldDivider label="🌱 PRODUCTO & APRENDIZAJE" />
+      {funnel && <ProtocolFunnelCard funnel={funnel} />}
+      {practice && <PracticeSignalCard signal={practice} />}
+
+      {/* ════ 5. PERSPECTIVAS SECUNDARIAS (compactas) ════ */}
+      {/* 💰 Financiera — membresías por tier */}
+      <GoldDivider label="💰 MEMBRESÍAS POR TIER" />
+      <View style={s.kpiGrid}>
+        {(['free', 'premium', 'premium_plus', 'polaris', 'growthplayers'] as const).map((tier) => {
+          const tierCol = getTierColor(tier);
+          // El tier premium es #FFC804 (gold brillante). Como TEXTO del conteo sobre
+          // la tarjeta graphite (theme-aware) es ilegible en claro → goldText.
+          const tierText = tierCol === palette.gold ? palette.goldText : tierCol;
+          return (
+          <Pressable
+            key={tier}
+            style={[s.tierCountCard, { borderColor: tierCol + '55' }]}
+            onPress={() => router.push('/admin/membresias' as never)}
+            accessibilityRole="button"
+            accessibilityLabel={`${getTierLabel(tier)}: ${tierCounts[tier] ?? 0} miembros`}>
+            <View style={[s.tierDot, { backgroundColor: tierCol }]} />
+            <Text style={[s.tierCountValue, { color: tierText }]}>
+              {tierCounts[tier] ?? 0}
+            </Text>
+            <Text style={s.tierCountLabel}>{getTierLabel(tier).toUpperCase()}</Text>
+          </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Alertas críticas (si las hay) */}
+      {kpis && kpis.critical_churn > 0 && (
+        <View style={s.alertsSection}>
+          <AlertCard
+            icon="🔴"
+            title={`${kpis.critical_churn} usuarios en riesgo CRÍTICO`}
+            body="Requieren intervención inmediata. Ver Inteligencia ML."
+            tone="danger"
+          />
+        </View>
+      )}
+
+      {/* ⚙️ Procesos — actividad en vivo (colapsado) */}
+      <GoldDivider label="⚙️ ACTIVIDAD EN TIEMPO REAL" />
+      <PremiumCard style={s.feedCard}>
+        {events.length === 0 ? (
+          <Text style={s.emptyText}>Sin actividad reciente</Text>
+        ) : (
+          events.map(evt => <EventRow key={evt.id} event={evt} />)
+        )}
+      </PremiumCard>
+
+      {/* ── Quick Actions ── */}
+      <GoldDivider label="ACCIONES RÁPIDAS" />
+      <View style={s.actionsRow}>
+        <Pressable
+          style={[s.actionBtn, mlRecalculating && { opacity: 0.5 }]}
+          onPress={handleRecalculateML}
+          disabled={mlRecalculating}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: mlRecalculating }}
+          accessibilityLabel="Recalcular inteligencia de machine learning">
+          <MaterialIcons name="psychology" size={18} color={palette.goldText} />
+          <Text style={s.actionBtnText}>
+            {mlRecalculating ? 'CALCULANDO...' : 'RECALCULAR ML'}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={s.actionBtn}
+          onPress={() => router.push('/admin/copilot' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Copiloto IA">
+          <MaterialIcons name="smart-toy" size={18} color={palette.goldText} />
+          <Text style={s.actionBtnText}>COPILOTO IA</Text>
+        </Pressable>
+        <Pressable
+          style={s.actionBtn}
+          onPress={() => router.push('/admin/ranking' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Ranking de usuarios">
+          <MaterialIcons name="leaderboard" size={18} color={palette.goldText} />
+          <Text style={s.actionBtnText}>RANKING</Text>
+        </Pressable>
+      </View>
+
+      {/* ── Section shortcuts (también es la nav en la app móvil) ── */}
+      <GoldDivider label="MÓDULOS DEL CMI" />
+      <View style={s.sectionGrid}>
+        {SECTIONS.map(sec => (
+          <Pressable
+            key={sec.route}
+            style={s.sectionCard}
+            onPress={() => router.push(sec.route as never)}
+            accessibilityRole="button"
+            accessibilityLabel={`${sec.label}: ${sec.desc}`}>
+            <Text style={s.sectionIcon}>{sec.icon}</Text>
+            <Text style={s.sectionLabel}>{sec.label}</Text>
+            <Text style={s.sectionDesc}>{sec.desc}</Text>
+            <MaterialIcons name="arrow-forward" size={14} color={palette.goldText} style={{ marginTop: spacing.xs }} />
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={{ height: insets.bottom + spacing.xxxl }} />
+    </ScrollView>
+  );
+}
+
+const s = StyleSheet.create({
+  center: { alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  loadingText: { ...typography.caption, color: palette.ash },
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.xl,
+  },
+  headerEyebrow: { ...typography.label, color: palette.smoke, marginBottom: 2 },
+  headerTitle: { ...typography.title, color: palette.ivory },
+  headerSub: { ...typography.mono, color: palette.ash, marginTop: 4 },
+
+  // At-risk users — accionable, va al dossier
+  riskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.lineSoft,
+  },
+  riskName: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },
+  riskMeta: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
+  riskScore: { ...typography.label, fontSize: 13, marginRight: 2 },
+
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  kpiCard: {
+    flex: 1,
+    minWidth: 100,
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  kpiValue: {
+    fontFamily: Fonts.display,
+    fontSize: 28,
+    color: palette.ivory,
+    letterSpacing: 1,
+  },
+  kpiLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+
+  alertsSection: { gap: spacing.sm, marginBottom: spacing.md },
+  alertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+  },
+  alertTitle: { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 13 },
+  alertBody: { ...typography.caption, color: palette.ash, marginTop: 2 },
+
+  feedCard: { padding: spacing.md, gap: spacing.sm },
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.lineSoft,
+  },
+  eventIcon: { fontSize: 16, width: 24, textAlign: 'center' },
+  eventType: { ...typography.label, color: palette.ivory, fontSize: 10 },
+  eventScreen: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  eventTime: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', paddingVertical: spacing.md },
+
+  tierCountCard: {
+    alignItems: 'center',
+    backgroundColor: palette.graphite,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    minWidth: 80,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  tierDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  tierCountValue: {
+    fontFamily: Fonts.display,
+    fontSize: 24,
+    letterSpacing: 1,
+  },
+  tierCountLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 8,
+    textAlign: 'center',
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    flexWrap: 'wrap',
+  },
+  actionBtn: {
+    flex: 1,
+    minWidth: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  actionBtnText: {
+    ...typography.label,
+    color: palette.goldText,
+    fontSize: 9,
+  },
+
+  sectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  sectionCard: {
+    flex: 1,
+    minWidth: 130,
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: 2,
+  },
+  sectionIcon: { fontSize: 24, marginBottom: spacing.xs },
+  sectionLabel: { ...typography.section, color: palette.ivory, fontSize: 10, textAlign: 'center' },
+  sectionDesc: { ...typography.caption, color: palette.smoke, fontSize: 11, textAlign: 'center' },
+});

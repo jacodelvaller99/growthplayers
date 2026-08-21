@@ -315,6 +315,7 @@ export default function UserDetailScreen() {
   // Memory OS state
   const [memory, setMemory] = useState<UserMemoryBundle>({ profile: null, summaries: [], briefing: null, notes: [] });
   const [genBrief, setGenBrief] = useState(false);
+  const [briefError, setBriefError] = useState<string | null>(null);
   const [noteBusy, setNoteBusy] = useState(false);
 
   // Mentor Execution OS state
@@ -447,9 +448,11 @@ export default function UserDetailScreen() {
   const handleGenerateBriefing = useCallback(async () => {
     if (!userId) return;
     setGenBrief(true);
+    setBriefError(null);
     try {
       const { generateAdminBriefing } = await import('@/lib/memorySummarizer');
-      await generateAdminBriefing(userId, { userName: user?.name });
+      const result = await generateAdminBriefing(userId, { userName: user?.name });
+      if (!result) { setBriefError('No se pudo generar el briefing — reintenta.'); return; }
       setMemory(await fetchUserMemory(userId));
     } finally {
       setGenBrief(false);
@@ -699,6 +702,13 @@ export default function UserDetailScreen() {
             <Text style={s.headerTitle}>{user.name}</Text>
             <Text style={s.headerSub}>{user.role ?? 'Aprendiz'}</Text>
           </View>
+          <Pressable
+            onPress={() => router.push(`/admin/mentor/${userId}` as never)}
+            style={s.mentorSpaceLink}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir espacio del mentor">
+            <Text style={s.mentorSpaceLinkText}>ESPACIO DEL MENTOR →</Text>
+          </Pressable>
         </View>
 
         {/* ── Chip strip sticky: navegación entre secciones ── */}
@@ -794,18 +804,20 @@ export default function UserDetailScreen() {
           {(() => {
             const currentRole: AppRole = user.is_superadmin ? 'superadmin'
               : user.is_admin ? 'admin'
+              : user.is_mentor ? 'mentor'
               : (user.memberships ?? []).some(m => m.status === 'active' && !['free', 'lifeflow_free'].includes(String(m.product))) ? 'premium'
               : 'inicial';
             const ROLE_DESC: Record<AppRole, string> = {
               superadmin: 'Control total, incluso sobre admins',
               admin:      'Acceso completo al panel admin',
+              mentor:     'Restringido a sus propios clientes asignados',
               premium:    'Cliente con acceso completo',
               inicial:    'Cliente básico (free)',
             };
             return (
               <View style={s.rolePanel}>
                 <Text style={s.rolePanelTitle}>NIVEL DE ACCESO</Text>
-                {(['superadmin', 'admin', 'premium', 'inicial'] as AppRole[]).map((r) => {
+                {(['superadmin', 'admin', 'mentor', 'premium', 'inicial'] as AppRole[]).map((r) => {
                   const active = currentRole === r;
                   const locked = (r === 'admin' || r === 'superadmin') && !viewerSuper;
                   return (
@@ -1307,6 +1319,7 @@ export default function UserDetailScreen() {
           onProcessed={handleGenerateBriefing}
         />
         <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} />
+        {briefError && <Text style={s.mentError}>{briefError}</Text>}
         <ProfileSynopsisCard profile={memory.profile} variant="admin" />
         <CommitmentsCard
           open={memory.profile?.commitments_open}
@@ -1529,6 +1542,8 @@ const s = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { ...typography.title, color: palette.ivory, fontSize: 18, letterSpacing: 0.5 },
   headerSub: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 0.8, marginTop: 2 },
+  mentorSpaceLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
+  mentorSpaceLinkText: { ...typography.label, color: palette.goldText, fontSize: 9 },
 
   // Chip strip de navegación (sticky)
   navStrip: {

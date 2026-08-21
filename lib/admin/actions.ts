@@ -10,6 +10,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { supabase, intel } from '@/lib/supabase';
+import { deskClientId } from '@/lib/mentorDeskLogic';
 import type { AccessCodeType, CourseId, MembershipProduct } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -345,11 +346,12 @@ export async function updateUserProfile(params: {
 // del LLAMANTE en el servidor (solo SuperAdmin asigna admin/superadmin). El cambio
 // de privilegio no puede hacerse con un UPDATE directo (el trigger anti-escalada
 // lo bloquea desde el cliente) — la RPC corre como rol dueño y el trigger la permite.
-export type AppRole = 'superadmin' | 'admin' | 'premium' | 'inicial';
+export type AppRole = 'superadmin' | 'admin' | 'mentor' | 'premium' | 'inicial';
 
 export const APP_ROLE_LABEL: Record<AppRole, string> = {
   superadmin: 'SuperAdmin',
   admin:      'Admin',
+  mentor:     'Mentor',
   premium:    'Cliente Premium',
   inicial:    'Cliente Inicial',
 };
@@ -763,6 +765,79 @@ export async function adminDeleteMentorshipSession(params: {
     session_id: params.sessionId,
   });
   return { success: true };
+}
+
+// ─── Mentor Assignments (Focus Desk) ───────────────────────────────────────────
+
+export async function assignMentor(params: {
+  adminId: string;
+  userId: string;
+  mentorId: string | null; // null = quitar asignación
+}): Promise<{ success: boolean; error?: string }> {
+  const { adminId, userId, mentorId } = params;
+  if (mentorId === null) {
+    const { error } = await supa.from('mentor_assignments').delete().eq('user_id', userId);
+    if (error) return { success: false, error: error.message };
+  } else {
+    const { data, error } = await supa
+      .from('mentor_assignments')
+      .upsert(
+        { user_id: userId, mentor_id: mentorId, assigned_by: adminId, assigned_at: new Date().toISOString() },
+        { onConflict: 'user_id' },
+      )
+      .select('user_id');
+    if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { success: false, error: 'RLS bloqueó la asignación (¿migración mentor_assignments aplicada?)' };
+    }
+  }
+  await auditLog(adminId, 'assign_mentor', 'user', userId, { mentor_id: mentorId });
+  return { success: true };
+}
+
+// ─── Autosave de notas de sesión (Espacio del Mentor) ──────────────────────────
+// Una fila por (cliente, semana): client_id = deskClientId(week) hace el upsert
+// idempotente — cada autosave pisa la misma fila. NUNCA incluye action_plan en
+// el payload: el upsert solo toca columnas provistas, así el plan (que se edita
+// por adminUpdateActionPlan) no se pisa entre sí.
+const lastNoteAudit = new Map<string, number>(); // `${userId}:${week}` → epoch ms
+const NOTE_AUDIT_THROTTLE_MS = 5 * 60 * 1000; // ponytail: sin esto, una sesión de escritura mete ~50 filas de audit
+
+export async function adminUpsertSessionNote(params: {
+  adminId: string;
+  userId: string;
+  week: number;
+  text: string;
+}): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+  const { adminId, userId, week, text } = params;
+  const { data, error } = await supa
+    .from('mentorship_sessions')
+    .upsert(
+      {
+        user_id: userId,
+        client_id: deskClientId(week),
+        week,
+        session_date: new Date().toISOString().split('T')[0],
+        notes: text,
+      },
+      { onConflict: 'user_id,client_id' },
+    )
+    .select('id')
+    .maybeSingle();
+  if (error) return { success: false, error: error.message };
+  if (!data) {
+    return { success: false, error: 'RLS bloqueó el upsert (¿migraciones de mentorship_sessions client_id aplicadas?)' };
+  }
+  const throttleKey = `${userId}:${week}`;
+  const now = Date.now();
+  if (now - (lastNoteAudit.get(throttleKey) ?? 0) > NOTE_AUDIT_THROTTLE_MS) {
+    lastNoteAudit.set(throttleKey, now);
+    await auditLog(adminId, 'mentorship_note_autosaved', 'user', userId, {
+      week,
+      preview: text.substring(0, 100),
+    });
+  }
+  return { success: true, sessionId: (data as { id: string }).id };
 }
 
 // ─── ML Recalculation ─────────────────────────────────────────────────────────

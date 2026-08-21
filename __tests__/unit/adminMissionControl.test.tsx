@@ -47,7 +47,7 @@ jest.mock('@/lib/admin/actions', () => ({ recalculateAllMLAction: jest.fn().mock
 jest.mock('@/lib/supabase', () => ({ intel: { events: jest.fn() } }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const MissionControl = require('@/app/admin/index').default;
+const MissionControl = require('@/app/admin/mission-control').default;
 
 describe('MissionControl (CMI) — render smoke', () => {
   it('renderiza (loading → dashboard) sin throw', () => {

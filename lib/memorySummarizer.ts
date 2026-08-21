@@ -230,7 +230,18 @@ export async function generateAdminBriefing(
       recent_progress:             splitList(extractSection(out, 'PROGRESO')),
       risk_level:                  parseRisk(extractSection(out, 'RIESGO')),
     };
-    if (!briefing.summary && (briefing.suggested_mentorship_topics?.length ?? 0) === 0) return null;
+    // Sin marcadores ===LABEL=== (p.ej. streamMentorResponse degradó a la
+    // simulación local por falta de ai-proxy — texto libre, sin estructura),
+    // extractSection no encuentra nada y ANTES esto retornaba null en
+    // silencio: el botón "GENERAR" no hacía nada visible, sin loggear, sin
+    // avisar. Degradar en vez de descartar — el texto crudo como resumen es
+    // mejor que nada, y sigue distinguiendo "no llegó nada" (out vacío, error
+    // real) de "llegó algo sin la forma esperada".
+    const hasStructure = !!briefing.summary || (briefing.suggested_mentorship_topics?.length ?? 0) > 0;
+    if (!hasStructure) {
+      if (!out.trim()) return null;
+      briefing.summary = out.trim().slice(0, 800);
+    }
     await insertBriefing(briefing);
     return briefing;
   } catch {

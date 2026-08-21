@@ -54,13 +54,18 @@ function MemberBadge({ tier }: { tier?: string }) {
   );
 }
 
-/** Badge del rol de acceso (SuperAdmin / Admin). Para clientes se usa MemberBadge (tier). */
-function RoleBadge({ kind }: { kind: 'superadmin' | 'admin' }) {
+/** Badge del rol de acceso (SuperAdmin / Admin / Mentor restringido). Para clientes se usa MemberBadge (tier). */
+function RoleBadge({ kind }: { kind: 'superadmin' | 'admin' | 'mentor' }) {
   const isSuper = kind === 'superadmin';
+  const isMentor = kind === 'mentor';
   return (
-    <View style={[rb.pill, isSuper && { backgroundColor: palette.gold, borderColor: palette.gold }, !isSuper && { borderColor: palette.goldText }]}>
-      <Text style={[rb.pillText, { color: isSuper ? palette.ink : palette.goldText }]}>
-        {isSuper ? 'SUPERADMIN' : 'ADMIN'}
+    <View style={[
+      rb.pill,
+      isSuper && { backgroundColor: palette.gold, borderColor: palette.gold },
+      !isSuper && { borderColor: isMentor ? palette.line : palette.goldText },
+    ]}>
+      <Text style={[rb.pillText, { color: isSuper ? palette.ink : isMentor ? palette.ash : palette.goldText }]}>
+        {isSuper ? 'SUPERADMIN' : isMentor ? 'MENTOR' : 'ADMIN'}
       </Text>
     </View>
   );
@@ -68,7 +73,7 @@ function RoleBadge({ kind }: { kind: 'superadmin' | 'admin' }) {
 
 function UserRow({ user, notes, onPress }: { user: AdminUser; notes?: NoteSummary; onPress: () => void }) {
   const initials = user.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-  const roleLabel = user.is_superadmin ? 'SuperAdmin' : user.is_admin ? 'Admin' : (user.subscription_tier ?? 'free');
+  const roleLabel = user.is_superadmin ? 'SuperAdmin' : user.is_admin ? 'Admin' : user.is_mentor ? 'Mentor' : (user.subscription_tier ?? 'free');
   return (
     <Pressable
       style={s.row}
@@ -87,9 +92,10 @@ function UserRow({ user, notes, onPress }: { user: AdminUser; notes?: NoteSummar
       </View>
       <View style={s.rowBadges}>
         <NoteBadge count={notes?.count ?? 0} preview={notes?.last} />
-        {/* Nivel de acceso: SuperAdmin/Admin (staff) → badge de rol; cliente → tier real */}
+        {/* Nivel de acceso: SuperAdmin/Admin/Mentor (staff) → badge de rol; cliente → tier real */}
         {user.is_superadmin ? <RoleBadge kind="superadmin" />
           : user.is_admin ? <RoleBadge kind="admin" />
+          : user.is_mentor ? <RoleBadge kind="mentor" />
           : <MemberBadge tier={user.subscription_tier} />}
       </View>
       <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />

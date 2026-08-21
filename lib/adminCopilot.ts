@@ -80,21 +80,35 @@ export function buildAdminCopilotPrompt(ctx: AdminCopilotContext): string {
 
 export type CopilotTurn = { role: 'user' | 'assistant'; text: string };
 
-export async function streamAdminCopilot(
-  ctx: AdminCopilotContext,
-  userMessage: string,
-  history: CopilotTurn[],
+// Red de seguridad — mismo rol que streamDevSimulation en lib/mentor.ts, tono
+// propio (operativo, no de coaching al cliente). Antes, sin proveedor o con
+// los 4 caídos, el copiloto imprimía un string de error crudo — a diferencia
+// de Norman, que siempre "responde" algo. Copy propio en vez de reusar
+// DEV_RESPONSES de mentor.ts: esas líneas están escritas en voz de Norman
+// hablándole al cliente, tono equivocado para un admin.
+const COPILOT_FALLBACK = [
+  'No pude conectar con ningún proveedor de IA en este momento. Verifica el estado del ai-proxy o intenta de nuevo en unos segundos.',
+  'La cadena de proveedores de IA no respondió — puede ser transitorio. Reintenta la pregunta.',
+];
+
+async function streamDevFallback(onChunk: (delta: string) => void): Promise<string> {
+  const reply = COPILOT_FALLBACK[Math.floor(Math.random() * COPILOT_FALLBACK.length)];
+  let full = '';
+  for (const char of reply) {
+    await new Promise<void>((r) => setTimeout(r, 12));
+    full += char;
+    onChunk(char);
+  }
+  return full;
+}
+
+async function streamWithFallback(
+  messages: ChatMessage[],
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {
   if (signal?.aborted) return '';
   const isAbort = (err: unknown) => signal?.aborted || (err as Error)?.name === 'AbortError';
-
-  const messages: ChatMessage[] = [
-    { role: 'system', content: buildAdminCopilotPrompt(ctx) },
-    ...history.slice(-8).map((m) => ({ role: m.role, content: m.text })),
-    { role: 'user', content: userMessage },
-  ];
 
   // Claude → NVIDIA → Groq → OpenAI, todos vía ai-proxy: las claves son secrets
   // del servidor (un EXPO_PUBLIC_* se inlinea en el bundle y se lee en
@@ -106,8 +120,78 @@ export async function streamAdminCopilot(
     }
   }
 
-  // Sin proveedor: degradación honesta.
-  const msg = 'No hay un proveedor de IA configurado para el copiloto. Activa el ai-proxy (EXPO_PUBLIC_AI_PROXY_URL).';
-  onChunk(msg);
-  return msg;
+  return streamDevFallback(onChunk);
+}
+
+export async function streamAdminCopilot(
+  ctx: AdminCopilotContext,
+  userMessage: string,
+  history: CopilotTurn[],
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  if (signal?.aborted) return '';
+  const messages: ChatMessage[] = [
+    { role: 'system', content: buildAdminCopilotPrompt(ctx) },
+    ...history.slice(-8).map((m) => ({ role: m.role, content: m.text })),
+    { role: 'user', content: userMessage },
+  ];
+  return streamWithFallback(messages, onChunk, signal);
+}
+
+// ─── Copiloto de sesión — un solo cliente (Espacio del Mentor) ─────────────────
+
+export interface ClientDeskContext {
+  adminName?: string;
+  clientName: string;
+  week?: number;
+  /** Agenda de la sesión, ya digerida (execution_state, said_would_do, top_questions...). */
+  agenda?: string[];
+  /** Resumen de memoria del cliente (summary + temas sugeridos), ya digerido. */
+  briefing?: string[];
+  /** Primeros ~500 caracteres de la nota que el mentor está escribiendo ahora. */
+  notesExcerpt?: string;
+}
+
+export function buildClientDeskPrompt(ctx: ClientDeskContext): string {
+  return [
+    `Eres el COPILOTO DE SESIÓN del mentor durante su reunión con ${ctx.clientName}` +
+      (ctx.week ? ` (SEMANA ${ctx.week}).` : '.'),
+    'NO eres Norman (el mentor IA del cliente). NO hablas con el cliente — hablas con el MENTOR HUMANO.',
+    '',
+    'Tu trabajo: ayudar al mentor a preparar y conducir ESTA sesión — qué preguntar,',
+    'qué confrontar, qué celebrar. Respuestas cortas y accionables.',
+    '',
+    'REGLAS:',
+    '- CITA el dato concreto (agenda, briefing, nota en curso). NUNCA inventes.',
+    '- Si no tienes el dato, dilo — no rellenes con generalidades de coaching.',
+    '- Castellano neutro, tono operativo, sin floreo.',
+    '',
+    `MENTOR: ${ctx.adminName ?? 'Coach'}`,
+    '',
+    'AGENDA DE LA SESIÓN:',
+    listOrNone(ctx.agenda ?? []),
+    '',
+    'BRIEFING DEL CLIENTE:',
+    listOrNone(ctx.briefing ?? []),
+    '',
+    'NOTA EN CURSO (lo que el mentor lleva escrito hoy):',
+    ctx.notesExcerpt?.trim() ? `  "${ctx.notesExcerpt.trim()}"` : '  (aún no ha escrito nada)',
+  ].join('\n');
+}
+
+export async function streamClientDesk(
+  ctx: ClientDeskContext,
+  userMessage: string,
+  history: CopilotTurn[],
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  if (signal?.aborted) return '';
+  const messages: ChatMessage[] = [
+    { role: 'system', content: buildClientDeskPrompt(ctx) },
+    ...history.slice(-8).map((m) => ({ role: m.role, content: m.text })),
+    { role: 'user', content: userMessage },
+  ];
+  return streamWithFallback(messages, onChunk, signal);
 }
