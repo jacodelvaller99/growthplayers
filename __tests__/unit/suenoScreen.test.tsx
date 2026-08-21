@@ -13,6 +13,9 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Medium: 'medium' },
 }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jest.fn() }) }));
+// La pantalla ahora lee la lectura de sueño para su razón-de-ser (banner
+// personalizado); el hook real arrastra lib/supabase, que exige env.
+jest.mock('@/hooks/use-lifeflow', () => ({ useLifeFlow: () => ({ latestCheckIn: null }) }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
