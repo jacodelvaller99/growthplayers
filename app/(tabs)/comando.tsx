@@ -16,6 +16,16 @@ import { AnimatedNumber } from '@/components/AnimatedNumber';
 
 import { HeroPanel, HeroRule, LensTabs, MetricTile, RowList } from '@/components/focus-deck';
 import { useMetricasDia } from '@/hooks/use-metricas-dia';
+import { useAppMode } from '@/hooks/use-app-mode';
+// EspecificoMode (components/comando-modes/especifico.tsx) no se usa aquí a
+// propósito: el modo "Específico" ES la composición móvil/escritorio que ya
+// existe abajo — reescribirla con el componente nuevo es riesgo sin
+// beneficio. El componente queda listo para cuando otras pantallas lo
+// necesiten como referencia del patrón completo.
+import EsencialMode from '@/components/comando-modes/esencial';
+import OperadorMode from '@/components/comando-modes/operador';
+import CalmaMode from '@/components/comando-modes/calma';
+import GuiadoMode from '@/components/comando-modes/guiado';
 import {
   AppHeader,
   GoldAccentCard,
@@ -174,6 +184,7 @@ export default function DashboardScreen() {
   const { user: wellnessUser } = useWellnessStore();
   const { intelligence, engagementTier } = useUserIntelligence(userId);
   const metricasDia = useMetricasDia();
+  const { mode: appMode } = useAppMode();
   const progress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   // SETUP del arco: dónde está el usuario en la historia de 90 días.
   // La voz vive en lib/narrativeLogic para que Comando, Progreso y Check-in
@@ -1095,6 +1106,77 @@ export default function DashboardScreen() {
       <View style={styles.deskHeroCheckin}>{mCheckinCard}</View>
     </Animated.View>
   ) : null;
+
+  // ── El tercer eje: MODO ─────────────────────────────────────────────────
+  // Los 4 modos no-especifico son composiciones PRESENTACIONALES alternativas
+  // sobre los MISMOS datos ya calculados arriba — nunca recalculan nada, así
+  // nunca pueden desincronizarse entre sí. 'especifico' sigue el camino de
+  // siempre (móvil/escritorio tal como estaban) para cero regresión.
+  const recoveryTile = metricasDia.tiles.find((t) => t.label === 'HRV') ?? metricasDia.tiles[0];
+  const modeProps = {
+    isDesktop,
+    eyebrow: `PROTOCOLO SOBERANO · DÍA ${protocolDay} DE 90`,
+    statement: arc.line,
+    score: sinLecturas ? 0 : sovereignScore,
+    scoreMax: 1000,
+    scoreTier: sovereignTier,
+    sinLecturas,
+    directiveTitle: turno.verb,
+    directiveReason: turno.why,
+    onDirective: () => router.push(turno.route as never),
+    tiles: metricasDia.tiles,
+    tilesSource: metricasDia.source,
+    rows: [
+      { label: 'Racha', value: checkinStreak > 0 ? `${checkinStreak} días seguidos` : 'retomar hoy' },
+      { label: 'Módulo activo', value: `0${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title.split(/[\s:]/)[0]}` },
+      { label: 'Próxima lección', value: `${nextLesson.pct}% avanzado` },
+      { label: 'Día de protocolo', value: `${protocolDay} / 90` },
+    ],
+    recoveryLabel: recoveryTile?.label ?? 'RECUPERACIÓN',
+    recoveryValue: recoveryTile && recoveryTile.stateLabel !== 'SIN DATO'
+      ? `${recoveryTile.value}${recoveryTile.unit ?? ''}`
+      : 'SIN DATO',
+    recoveryState: recoveryTile?.state ?? 'none',
+    recoverySuggestion: recoveryTile?.state === 'bad'
+      ? 'Tu cuerpo pide ritmo suave hoy. Ocho minutos de respiración antes de decidir cualquier otra cosa.'
+      : 'Tu sistema está en rango — igual vale un momento de respiración consciente antes de arrancar.',
+    onRecoveryAction: () => router.push('/bienestar/respiracion' as never),
+    normanLine: normanInsight,
+    onOpenNorman: () => router.push('/(tabs)/mentor' as never),
+    moduleLabel: `MÓDULO ${ACTIVE_MODULE.order} · ${(ACTIVE_MODULE.arquetipo ?? ACTIVE_MODULE.title.split(/[\s:]/)[0]).toUpperCase()}`,
+    lessonTitle: nextLesson.lessonTitle,
+    lessonPct: nextLesson.pct,
+    onContinueLesson: () => router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } }),
+    guidedStepLabel: 'Paso 1',
+    guidedQuestion: sinLecturas ? '¿Cómo está tu energía ahora mismo?' : turno.headline,
+    guidedTotalSteps: 3,
+    guidedStepIndex: 0,
+  };
+
+  if (appMode !== 'especifico') {
+    const ModeComponent = {
+      esencial: EsencialMode,
+      operador: OperadorMode,
+      calma: CalmaMode,
+      guiado: GuiadoMode,
+    }[appMode];
+    return (
+      <ScrollView
+        style={sc.root}
+        contentContainerStyle={
+          isDesktop
+            ? styles.contentDesktop
+            : [sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]
+        }
+        showsVerticalScrollIndicator={false}
+        bounces
+        overScrollMode="never"
+        keyboardShouldPersistTaps="handled">
+        {isDesktop && <AppHeader title="POLARIS" />}
+        <ModeComponent {...modeProps} />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView

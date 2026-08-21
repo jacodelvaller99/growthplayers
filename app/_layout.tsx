@@ -20,6 +20,7 @@ import PWAInstallBanner from '@/components/PWAInstallBanner';
 import { DesktopSidebar } from '@/components/DesktopSidebar';
 import { ToastProvider } from '@/context/ToastContext';
 import { AppThemeProvider } from '@/hooks/use-app-theme';
+import { AppModeProvider } from '@/hooks/use-app-mode';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { HeroMoments } from '@/components/hero-moments';
 import { TourButton } from '@/components/tour/TourButton';
@@ -279,20 +280,22 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <AppThemeProvider>
-        <ThemeProvider value={SovereignTheme}>
-          <LifeFlowProvider>
-            <ToastProvider>
-            <AnalyticsInitializer />
-            <SmartNotificationsInitializer />
-            <OfflineBanner />
-            <PWAInstallBanner />
-            <HeroMoments />
-            <TourButton />
-            {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
-            <AppShell />
-            </ToastProvider>
-          </LifeFlowProvider>
-        </ThemeProvider>
+        <AppModeProvider>
+          <ThemeProvider value={SovereignTheme}>
+            <LifeFlowProvider>
+              <ToastProvider>
+              <AnalyticsInitializer />
+              <SmartNotificationsInitializer />
+              <OfflineBanner />
+              <PWAInstallBanner />
+              <HeroMoments />
+              <TourButton />
+              {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
+              <AppShell />
+              </ToastProvider>
+            </LifeFlowProvider>
+          </ThemeProvider>
+        </AppModeProvider>
       </AppThemeProvider>
     </ErrorBoundary>
   );

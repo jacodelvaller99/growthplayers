@@ -20,6 +20,7 @@ import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { SIGNAL_VARS, THEME_VARS, type BackdropId, type SignalId } from '@/constants/themeColors';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { APP_MODES, useAppMode, type AppMode } from '@/hooks/use-app-mode';
 
 // ─── Catálogo ─────────────────────────────────────────────────────────────────
 // Cada nota dice qué DECIDE la opción o para quién es, no cómo se ve: el cómo se
@@ -93,6 +94,7 @@ export default function AparienciaScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { mode, setMode, signal, setSignal, canToggle } = useAppTheme();
+  const { mode: appMode, setMode: setAppMode } = useAppMode();
 
   return (
     <ScrollView
@@ -111,10 +113,10 @@ export default function AparienciaScreen() {
       <PremiumCard style={s.infoCard}>
         <MaterialIcons name="palette" size={26} color={palette.goldText} />
         <View style={{ flex: 1 }}>
-          <Text style={s.infoTitle}>TU APP, TU COLOR</Text>
+          <Text style={s.infoTitle}>TU APP, A TU MANERA</Text>
           <Text style={s.infoSub}>
-            Dos decisiones que se combinan: la tinta del fondo y qué comunica el color.
-            Se aplican al instante en toda la app, sobre tus datos reales.
+            Tres decisiones que se combinan: cuánto se muestra (el modo), la tinta del
+            fondo y qué comunica el color. Se aplican al instante, sobre tus datos reales.
           </Text>
         </View>
       </PremiumCard>
@@ -127,6 +129,20 @@ export default function AparienciaScreen() {
             ? 'Tu elección se guarda en este navegador. Si entras desde otro equipo, arranca en el original.'
             : 'En la app del teléfono estos ajustes todavía no cambian el color: ahí va fijo en Smoky + Oro. Ábrela desde el escritorio o el navegador para elegir.'}
         </Text>
+      </View>
+
+      <GoldDivider label="MODO · CUÁNTO SE MUESTRA" />
+      <View style={s.grid} accessibilityRole="radiogroup">
+        {APP_MODES.map((m: { id: AppMode; label: string; description: string }) => (
+          <OptionCard
+            key={m.id}
+            name={m.label}
+            note={m.description}
+            active={appMode === m.id}
+            onPress={() => setAppMode(m.id)}>
+            <View />
+          </OptionCard>
+        ))}
       </View>
 
       <GoldDivider label="FONDO · LA TINTA" />
