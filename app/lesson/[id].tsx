@@ -928,6 +928,31 @@ export default function LessonScreen() {
         <View style={styles.bodyPad}>
         <GoldDivider inset label="LECCIÓN" />
 
+        {/* ── Recursos de la lección (guías de Skool) ── */}
+        {(lesson.resources ?? []).length > 0 && (
+          <View style={styles.resourcesWrap}>
+            {(lesson.resources ?? []).map((r) => (
+              <Pressable
+                key={r.url}
+                onPress={() => { void Linking.openURL(r.url); }}
+                accessibilityRole="link"
+                accessibilityLabel={`Abrir ${r.title}`}
+                style={({ pressed }) => [styles.resourceRow, pressed && { opacity: 0.8 }]}>
+                <MaterialIcons name="description" size={18} color={palette.goldText} />
+                <View style={styles.resourceCopy}>
+                  <Text style={styles.resourceTitle}>{r.title.toUpperCase()}</Text>
+                  <Text style={styles.resourceSub}>
+                    {r.url.includes('docs.google.com/document') && r.url.endsWith('/copy')
+                      ? 'Se crea tu propia copia del documento'
+                      : 'Se abre en el navegador'}
+                  </Text>
+                </View>
+                <MaterialIcons name="open-in-new" size={16} color={palette.smoke} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {/* ── Task Section ── */}
         {task ? (
           <View style={styles.taskCard}>
@@ -958,7 +983,7 @@ export default function LessonScreen() {
                 ))}
                 {normanInsight ? (
                   <View style={styles.normanInsightBox}>
-                    <Text style={styles.normanInsightLabel}>NORMAN</Text>
+                    <Text style={styles.normanInsightLabel}>NORMAN IA</Text>
                     <Text style={styles.normanInsightText}>{normanInsight}</Text>
                   </View>
                 ) : null}
@@ -1216,6 +1241,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: spacing.lg,
   },
+
+  // Recursos de la lección (guías de Skool)
+  resourcesWrap: { gap: spacing.sm, marginBottom: spacing.lg },
+  resourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 56,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    borderRadius: radii.md,
+    backgroundColor: palette.goldGlow,
+  },
+  resourceCopy: { flex: 1, gap: 2, minWidth: 0 },
+  resourceTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: palette.goldText,
+  },
+  resourceSub: { ...typography.caption, color: palette.smoke, fontSize: 11 },
 
   // Task card
   taskCard: {

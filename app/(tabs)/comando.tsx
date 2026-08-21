@@ -703,7 +703,7 @@ export default function DashboardScreen() {
           <MaterialIcons name="psychology" size={18} color={palette.goldText} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.normanQPName}>NORMAN · MENTOR IA</Text>
+          <Text style={styles.normanQPName}>NORMAN IA</Text>
           <Text style={styles.normanQPMeta}>Protocolo Soberano · Día {protocolDay}</Text>
         </View>
         <View style={styles.normanQPOnline} />
@@ -982,7 +982,7 @@ export default function DashboardScreen() {
           <MaterialIcons name="psychology" size={22} color={palette.goldText} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={mob.normanName}>NORMAN · MENTOR IA</Text>
+          <Text style={mob.normanName}>NORMAN IA</Text>
           <View style={mob.normanStatusRow}>
             <View style={mob.normanDot} />
             <Text style={mob.normanStatusText}>ACTIVO</Text>
@@ -1255,7 +1255,7 @@ export default function DashboardScreen() {
               entering={FadeInDown.delay(360).springify().damping(20).stiffness(180)}
               style={styles.deskColRail}>
               <View style={[styles.deskRailInner, deskRailSticky]}>
-                <GoldDivider label="NORMAN · MENTOR IA" />
+                <GoldDivider label="NORMAN IA" />
                 {normanQuickPanel}
                 <GoldDivider label="MENTORÍA" />
                 {mentoriaBlock}

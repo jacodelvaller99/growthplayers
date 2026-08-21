@@ -25,7 +25,7 @@ const DESTINATIONS: { icon: IconName; label: string; route: string }[] = [
   { icon: 'view-module',         label: 'PROGRAMA',  route: '/(tabs)/programas' },
   { icon: 'route',               label: 'MENTORÍA',  route: '/mentoria' },
   { icon: 'insights',            label: 'PROGRESO',  route: '/(tabs)/progreso' },
-  { icon: 'chat-bubble-outline', label: 'NORMAN',    route: '/(tabs)/mentor' },
+  { icon: 'chat-bubble-outline', label: 'NORMAN IA',    route: '/(tabs)/mentor' },
   { icon: 'spa',                 label: 'BIENESTAR', route: '/bienestar' },
 ];
 

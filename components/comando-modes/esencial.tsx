@@ -13,7 +13,7 @@ export default function EsencialMode(props: ComandoModeProps) {
           <Text style={s.buttonText}>{props.directiveTitle}</Text>
         </Pressable>
         <Pressable style={s.link} onPress={props.onOpenNorman}>
-          <Text style={s.linkText}>o habla con Norman</Text>
+          <Text style={s.linkText}>o habla con Norman IA</Text>
         </Pressable>
       </View>
     </HeroPanel>

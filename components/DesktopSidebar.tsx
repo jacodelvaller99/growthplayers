@@ -34,7 +34,7 @@ const NAV_DOMAINS: NavGroup[] = [
     { label: 'MENTORÍA', icon: 'route',       route: '/mentoria',         match: 'mentoria'  },
     { label: 'PROGRESO', icon: 'insights',    route: '/(tabs)/progreso',  match: 'progreso'  },
   ] },
-  { title: 'NORMAN', items: [
+  { title: 'NORMAN IA', items: [
     { label: 'MENTOR', icon: 'chat-bubble-outline', route: '/(tabs)/mentor', match: 'mentor' },
   ] },
   { title: 'RECUPERACIÓN', items: [

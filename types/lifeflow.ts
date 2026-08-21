@@ -4,6 +4,12 @@ import type { BodyPoint } from '@/lib/bodyPointLogic';
 export type LessonStatus = 'completed' | 'active' | 'locked' | 'available';
 export type ModuleStatus = 'completed' | 'active' | 'locked' | 'coming_soon';
 
+/** Documento/herramienta adjunto a una lección (guías prácticas de Skool). */
+export type LessonResource = {
+  title: string;
+  url: string;
+};
+
 export type Lesson = {
   id: string;
   order: number;
@@ -12,6 +18,8 @@ export type Lesson = {
   status: LessonStatus;
   skoolUrl?: string;
   vimeoId?: string;
+  /** Guías/documentos de la lección — mismos recursos que en Skool. */
+  resources?: LessonResource[];
 };
 
 export type PolarisModule = {

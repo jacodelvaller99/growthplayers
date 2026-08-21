@@ -28,7 +28,7 @@ export default function OperadorMode(props: ComandoModeProps) {
         </View>
 
         <View style={s.cell}>
-          <Text style={s.cellLabel}>NORMAN</Text>
+          <Text style={s.cellLabel}>NORMAN IA</Text>
           <Text style={s.normanLine} numberOfLines={4}>{props.normanLine}</Text>
         </View>
 

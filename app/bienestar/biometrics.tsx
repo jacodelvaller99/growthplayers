@@ -333,7 +333,7 @@ export default function BiometricsScreen() {
       {/* Norman insight */}
       {normanInsight && (
         <>
-          <GoldDivider label="NORMAN DICE" />
+          <GoldDivider label="NORMAN IA DICE" />
           <PremiumCard style={styles.normanCard}>
             <MaterialIcons name="psychology" size={20} color={palette.goldText} />
             <Text style={styles.normanText}>
