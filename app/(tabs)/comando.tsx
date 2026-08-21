@@ -575,21 +575,8 @@ export default function DashboardScreen() {
     </View>
   );
 
-  const protocolBlock = (
-    <PremiumCard style={styles.protocolCard}>
-      <StatusPill label={`MÓDULO ${ACTIVE_MODULE.order} · ACTIVO`} />
-      <Text style={styles.protocolTitle}>{ACTIVE_MODULE.title}</Text>
-      <Text style={styles.protocolBody}>
-        Próxima acción: completa la lección activa y ejecuta un bloque mercader de 90 minutos
-        sin mensajería.
-      </Text>
-      <PrimaryButton
-        label="CONTINUAR LECCIÓN"
-        icon="play-arrow"
-        onPress={() => router.push({ pathname: '/module/[id]', params: { id: ACTIVE_MODULE.id } })}
-      />
-    </PremiumCard>
-  );
+  // protocolBlock (tarjeta "MÓDULO · ACTIVO" + CONTINUAR LECCIÓN) se retiró:
+  // era la misma acción que mNextLessonBlock, dibujada dos veces.
 
   const wellnessBlock = (
     <PremiumCard style={styles.wellnessCard}>
@@ -1257,8 +1244,12 @@ export default function DashboardScreen() {
           <LensTabs
             lenses={[
               { id: 'hoy', label: 'HOY', render: () => (<>
-                {mNormanCard}
-                {protocolBlock}
+                {/* Los datos primero, la conversación después — igual que el
+                    mockup: fichas + lista antes que cualquier tarjeta de acción.
+                    `protocolBlock` salió de aquí: era la MISMA acción de
+                    "continuar lección" que `mNextLessonBlock`, dibujada dos
+                    veces con dos estilos distintos (detectado en captura de
+                    página completa). */}
                 {estadoBlock}
                 <View style={{ gap: spacing.sm }}>
                   <Text style={screen.sectionTitle}>Estado del día</Text>
@@ -1272,6 +1263,7 @@ export default function DashboardScreen() {
                   />
                 </View>
                 {mNextLessonBlock}
+                {mNormanCard}
               </>) },
               { id: 'cuerpo', label: 'CUERPO', render: () => (<>
                 {mQuickAccessBlock}
