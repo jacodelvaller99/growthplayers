@@ -46,7 +46,7 @@ export function Directive({ title, reason, onPress }: DirectiveProps) {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${reason}`}
-      style={({ pressed }) => [s.directive, pressed && { opacity: 0.85 }]}>
+      style={({ pressed }) => [s.directive, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}>
       <View style={s.directiveMark} />
       <View style={s.directiveCopy}>
         <Text style={s.directiveTitle}>{title}</Text>
@@ -249,7 +249,7 @@ export function LensTabs({ lenses, initial }: { lenses: Lens[]; initial?: string
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
               accessibilityLabel={l.label}
-              style={({ pressed }) => [s.tab, on && s.tabOn, pressed && { opacity: 0.8 }]}>
+              style={({ pressed }) => [s.tab, on && s.tabOn, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}>
               <Text style={[s.tabText, on && s.tabTextOn]}>{l.label}</Text>
             </Pressable>
           );
@@ -275,7 +275,7 @@ export function LensRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}. ${sub}`}
-      style={({ pressed }) => [s.row, pressed && { opacity: 0.8 }]}>
+      style={({ pressed }) => [s.row, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}>
       <View style={s.rowIcon}>
         <MaterialIcons name={icon} size={20} color={palette.goldText} />
       </View>

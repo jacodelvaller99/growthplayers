@@ -39,7 +39,7 @@ export default function LogosMode(props: ComandoModeProps) {
             onPress={() => props.onNavigate(d.route)}
             accessibilityRole="button"
             accessibilityLabel={d.label}
-            style={({ pressed }) => [s.item, pressed && { opacity: 0.7 }]}>
+            style={({ pressed }) => [s.item, pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] }]}>
             <View style={s.circle}>
               <MaterialIcons name={d.icon} size={30} color={palette.ivory} />
             </View>

@@ -132,10 +132,13 @@ type WebPressableState = PressableStateCallbackType & {
 };
 
 // Transición suave del lift/borde en web; en nativo no existe la propiedad.
+// Curva ease-out FUERTE (cubic-bezier 0.23,1,0.32,1): las easing de fábrica
+// son débiles — el movimiento arranca ya, que es el instante que el ojo mira.
 const hoverTransition = Platform.select<ViewStyle | undefined>({
   web: {
     transitionProperty: 'transform, border-color, background-color',
     transitionDuration: '160ms',
+    transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)',
   } as unknown as ViewStyle,
   default: undefined,
 });
@@ -176,7 +179,10 @@ export function HoverCard({
           style,
           hovered && (hoverStyle ?? hoverLift),
           focused && focusRing,
-          pressed && { opacity: 0.9 },
+          // scale y no solo opacity: el botón que se ENCOGE bajo el dedo es la
+          // señal de que la interfaz escuchó. 0.98 (sutil) porque HoverCard
+          // suele ser una tarjeta grande, no un botón chico.
+          pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
         ];
       }}>
       {children}
