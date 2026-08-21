@@ -19,7 +19,6 @@ import {
   ProgressCard,
   SecondaryButton,
   SovereignDeltaTag,
-  SovereignScore,
   WeeklySparkline,
   screen,
   useScreen,
@@ -842,28 +841,64 @@ export default function ProgresoScreen() {
           overScrollMode="never"
           keyboardShouldPersistTaps="handled">
 
-          {/* ── ZONA 1: Top row ── */}
+          {/* ── ZONA 1: héroe consolidado — paridad con móvil ──────────────
+              Antes: AppHeader → SovereignScore (su propia PremiumCard) →
+              SovereignDeltaTag → narrativeCard suelto. Cuatro superficies
+              para una sola lectura, y SovereignScore metida en HeroPanel
+              habría sido caja-dentro-de-caja (PremiumCard dentro del panel
+              dorado). Se porta la MISMA composición sin marco que ya usa
+              móvil (líneas ~1166-1229) — no se reescribe, se reusa. */}
           <AppHeader title="PROGRESO" />
-          <SovereignScore score={score} />
-          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
-          {/* El arco FUERA del condicional: `narrativeBlock` exige identidad
-              con día>=7, o lecciones, o tareas, así que el usuario de los días
-              1 a 6 no veía dónde estaba — justo cuando más importa. Dónde
-              estás no depende de cuánta historia haya que contar.
-              Y `compact` pasa a ser condicional: se puso para no repetir la
-              frase encima de tres párrafos. Sin párrafos no hay repetición. */}
-          <View style={styles.narrativeCard}>
-            <ArcHeader
-              arc={arcForDay(protocolDay, arcoSuyas)}
-              compact={narrativeBlock.length > 0}
-            />
-            {narrativeBlock.length > 0 && (
-              <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-            )}
-            {narrativeBlock.map((line, i) => (
-              <Text key={i} style={styles.narrativeLine}>{line}</Text>
-            ))}
-          </View>
+          <HeroPanel>
+            <View style={styles.scoreCard}>
+              <View style={styles.scoreTopRow}>
+                <View>
+                  <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
+                  <View style={styles.scoreNumberRow}>
+                    <Text style={styles.scoreNumber}>{sinLecturas ? '—' : score}</Text>
+                    {analytics.scoreDelta !== 0 && (
+                      <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
+                        {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+              {analytics.score14.length >= 2 && (
+                <View style={styles.scoreSpark}>
+                  <Text style={styles.scoreCaption}>ÚLTIMOS 14 DÍAS</Text>
+                  <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
+                </View>
+              )}
+              <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+            </View>
+
+            <Pressable
+              style={shareStyles.row}
+              onPress={() => router.push('/perfil' as never)}
+              accessibilityRole="button"
+              accessibilityLabel="Ver y compartir tarjeta soberana">
+              <MaterialIcons name="share" size={16} color={palette.goldText} />
+              <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
+              <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+            </Pressable>
+
+            {/* El arco FUERA del condicional: `narrativeBlock` exige identidad
+                con día>=7, o lecciones, o tareas, así que el usuario de los días
+                1 a 6 no veía dónde estaba — justo cuando más importa. */}
+            <View style={styles.narrativeCard}>
+              <ArcHeader
+                arc={arcForDay(protocolDay, arcoSuyas)}
+                compact={narrativeBlock.length > 0}
+              />
+              {narrativeBlock.length > 0 && (
+                <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
+              )}
+              {narrativeBlock.map((line, i) => (
+                <Text key={i} style={styles.narrativeLine}>{line}</Text>
+              ))}
+            </View>
+          </HeroPanel>
 
           {/* ── ZONA 2: Middle two-column row ── */}
           <View style={deskStyles.desktopMiddle}>
