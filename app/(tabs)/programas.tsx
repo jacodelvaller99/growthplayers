@@ -13,6 +13,8 @@ import {
   StatusPill,
   useScreen,
 } from '@/components/polaris';
+import { LensTabs } from '@/components/focus-deck';
+import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
@@ -77,6 +79,27 @@ export default function ProgramasScreen() {
   const overallProgress = totalLessons > 0
     ? Math.round((completedLessons.length / totalLessons) * 100)
     : 0;
+
+  // ── Agrupación para lentes ACTIVO/COMPLETADOS/POR VENIR ────────────────────
+  // Duplica el mismo cálculo que ya vive dentro de renderModuleCard (isAllDone/
+  // isLocked) — a propósito: mover esa lógica afuera para compartirla habría
+  // sido tocar un renderer que ya funciona por un beneficio que un `useMemo`
+  // de 6 líneas ya da sin el riesgo.
+  type ModuleGroup = 'activo' | 'completado' | 'porvenir';
+  const moduleGroup = (module: typeof POLARIS_MODULES[number], idx: number): ModuleGroup => {
+    const isComingSoon = module.status === 'coming_soon';
+    const unlocked = isModuleUnlocked(POLARIS_MODULES, idx, completedLessons);
+    const isLocked = !unlocked && !isComingSoon;
+    const moduleDone = module.lessons.filter((l) => completedLessons.includes(l.id)).length;
+    const isAllDone = module.lessons.length > 0 && moduleDone === module.lessons.length;
+    if (isAllDone) return 'completado';
+    if (isLocked || isComingSoon) return 'porvenir';
+    return 'activo';
+  };
+  const groupedModules: Record<ModuleGroup, [typeof POLARIS_MODULES[number], number][]> = {
+    activo: [], completado: [], porvenir: [],
+  };
+  POLARIS_MODULES.forEach((m, i) => groupedModules[moduleGroup(m, i)].push([m, i]));
 
   // ── Module card renderer (shared between mobile and desktop) ──────────────
   // Vertical "compass" card: module nº top-left, state indicator top-right,
@@ -295,13 +318,33 @@ export default function ProgramasScreen() {
             </View>
           </View>
 
-          {/* Module grid — 2 columns */}
+          {/* Módulos — lentes en vez de los 9 en una sola pila */}
           <GoldDivider label="MÓDULOS" />
-          <View style={styles.desktopModuleGrid}>
-            {POLARIS_MODULES.map((module, idx) =>
-              renderModuleCard(module, idx, styles.desktopModuleItem),
-            )}
-          </View>
+          <LensTabs
+            lenses={[
+              { id: 'activo', label: `ACTIVO (${groupedModules.activo.length})`, render: () => (
+                <View style={styles.desktopModuleGrid}>
+                  {groupedModules.activo.length > 0
+                    ? groupedModules.activo.map(([m, i]) => renderModuleCard(m, i, styles.desktopModuleItem))
+                    : <EmptyState icon="play-circle-outline" title="Nada activo ahora mismo" />}
+                </View>
+              ) },
+              { id: 'completado', label: `COMPLETADOS (${groupedModules.completado.length})`, render: () => (
+                <View style={styles.desktopModuleGrid}>
+                  {groupedModules.completado.length > 0
+                    ? groupedModules.completado.map(([m, i]) => renderModuleCard(m, i, styles.desktopModuleItem))
+                    : <EmptyState icon="military-tech" title="Todavía ningún módulo cerrado" body="Cuando termines el primero, aparece aquí." />}
+                </View>
+              ) },
+              { id: 'porvenir', label: `POR VENIR (${groupedModules.porvenir.length})`, render: () => (
+                <View style={styles.desktopModuleGrid}>
+                  {groupedModules.porvenir.length > 0
+                    ? groupedModules.porvenir.map(([m, i]) => renderModuleCard(m, i, styles.desktopModuleItem))
+                    : <EmptyState icon="check-circle-outline" title="Nada pendiente — vas al día" />}
+                </View>
+              ) },
+            ]}
+          />
         </ScrollView>
 
         {/* Toast */}
@@ -347,12 +390,32 @@ export default function ProgramasScreen() {
           <Text style={styles.routePct}>{overallProgress}%</Text>
         </PremiumCard>
 
-        {/* ── Module grid (2 columns) ── */}
-        <View style={styles.grid}>
-          {POLARIS_MODULES.map((module, idx) =>
-            renderModuleCard(module, idx, styles.gridItem),
-          )}
-        </View>
+        {/* ── Módulos — lentes en vez de los 9 en una sola pila ── */}
+        <LensTabs
+          lenses={[
+            { id: 'activo', label: `ACTIVO (${groupedModules.activo.length})`, render: () => (
+              <View style={styles.grid}>
+                {groupedModules.activo.length > 0
+                  ? groupedModules.activo.map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
+                  : <EmptyState icon="play-circle-outline" title="Nada activo ahora mismo" />}
+              </View>
+            ) },
+            { id: 'completado', label: `COMPLETADOS (${groupedModules.completado.length})`, render: () => (
+              <View style={styles.grid}>
+                {groupedModules.completado.length > 0
+                  ? groupedModules.completado.map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
+                  : <EmptyState icon="military-tech" title="Todavía ningún módulo cerrado" body="Cuando termines el primero, aparece aquí." />}
+              </View>
+            ) },
+            { id: 'porvenir', label: `POR VENIR (${groupedModules.porvenir.length})`, render: () => (
+              <View style={styles.grid}>
+                {groupedModules.porvenir.length > 0
+                  ? groupedModules.porvenir.map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
+                  : <EmptyState icon="check-circle-outline" title="Nada pendiente — vas al día" />}
+              </View>
+            ) },
+          ]}
+        />
       </ScrollView>
 
       {/* ── Toast ── */}
