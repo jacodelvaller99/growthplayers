@@ -906,10 +906,11 @@ export default function CheckInScreen() {
                   icon="center-focus-strong"
                 />
                 <ScaleSelector
-                  label="CARGA DEL SISTEMA"
+                  label="NIVEL DE SATURACIÓN"
                   value={stress}
                   onChange={setStress}
                   icon="device-thermostat"
+                  guide="1-3 Despejado · 4-7 Cargado · 8-10 Saturado"
                 />
                 <ScaleSelector
                   label="CALIDAD DE SUEÑO"
@@ -1019,10 +1020,11 @@ export default function CheckInScreen() {
           icon="adjust"
         />
         <ScaleSelector
-          label="CARGA DEL SISTEMA"
+          label="NIVEL DE SATURACIÓN"
           value={stress}
           onChange={setStress}
           icon="device-thermostat"
+          guide="1-3 Despejado · 4-7 Cargado · 8-10 Saturado"
         />
         <ScaleSelector label="CALIDAD DE SUEÑO" value={sleep} onChange={setSleep} icon="bedtime" />
       </PremiumCard>

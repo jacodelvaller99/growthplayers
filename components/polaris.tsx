@@ -567,12 +567,17 @@ export function ScaleSelector({
   value,
   onChange,
   icon,
+  guide,
 }: {
   label: string;
   /** `null` = el usuario todavía no ha elegido. NO es lo mismo que un 5. */
   value: number | null;
   onChange: (value: number) => void;
   icon?: IconName;
+  /** Guía corta de rangos bajo la escala (p.ej. "1-3 Despejado · 4-7
+   *  Cargado · 8-10 Saturado") — opcional: solo los campos donde el número
+   *  solo no basta para calibrar la respuesta la necesitan. */
+  guide?: string;
 }) {
   return (
     <View style={styles.scaleBlock}>
@@ -619,6 +624,7 @@ export function ScaleSelector({
           </Pressable>
         ))}
       </View>
+      {guide ? <Text style={styles.scaleGuide}>{guide}</Text> : null}
     </View>
   );
 }
@@ -1237,6 +1243,12 @@ const styles = StyleSheet.create({
   // diario, y un toque errado ensucia el dato que alimenta a Norman.
   // minWidth pone el suelo y flexWrap deja que baje de fila en vez de encogerse;
   // en escritorio (≥476px de contenido) los 10 siguen cabiendo en una sola fila.
+  scaleGuide: {
+    color: palette.ash,
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
   scaleRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
