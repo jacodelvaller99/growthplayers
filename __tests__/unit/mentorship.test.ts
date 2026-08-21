@@ -5,6 +5,9 @@ import {
   currentWeekNumber,
   weekStatus,
   formatWeekRange,
+  effectiveWeekNumber,
+  effectiveWeekStatus,
+  effectiveWeekDateRange,
   TOTAL_WEEKS,
 } from '@/data/mentorship';
 
@@ -73,5 +76,56 @@ describe('formatWeekRange', () => {
     const text = formatWeekRange(weekDateRange(1, '2026-01-05T00:00:00'));
     expect(text).toContain('–');
     expect(text.length).toBeGreaterThan(5);
+  });
+});
+
+describe('effectiveWeekNumber — si no se termina, se corre', () => {
+  it('con todas las semanas al día, coincide con el calendario', () => {
+    // día 15 → calendario semana 3; 1 y 2 completadas
+    expect(effectiveWeekNumber(15, new Set([1, 2]))).toBe(3);
+  });
+
+  it('semana atrasada sin sesión detiene la ruta ahí, aunque el calendario siga', () => {
+    // día 22 → calendario semana 4, pero la 2 nunca tuvo sesión
+    expect(effectiveWeekNumber(22, new Set([1]))).toBe(2);
+  });
+
+  it('sin ninguna sesión, la ruta nunca avanza de la semana 1', () => {
+    expect(effectiveWeekNumber(50, new Set())).toBe(1);
+  });
+
+  it('clampa a TOTAL_WEEKS', () => {
+    const allDone = new Set(Array.from({ length: TOTAL_WEEKS }, (_, i) => i + 1));
+    expect(effectiveWeekNumber(10_000, allDone)).toBe(TOTAL_WEEKS);
+  });
+});
+
+describe('effectiveWeekStatus', () => {
+  it('completada exige sesión registrada, no solo calendario pasado', () => {
+    // día 22 → calendario semana 4; semana 2 nunca tuvo sesión
+    expect(effectiveWeekStatus(1, 22, new Set([1]))).toBe('completada');
+    expect(effectiveWeekStatus(2, 22, new Set([1]))).toBe('actual');   // no completada aún
+    expect(effectiveWeekStatus(3, 22, new Set([1]))).toBe('proxima');  // calendario dice "pasada" pero no lo es
+  });
+});
+
+describe('effectiveWeekDateRange — el resto de la ruta se corre', () => {
+  it('sin atrasos, coincide con weekDateRange normal', () => {
+    const eff = effectiveWeekDateRange(3, '2026-01-05T00:00:00', 15, new Set([1, 2]));
+    const base = weekDateRange(3, '2026-01-05T00:00:00');
+    expect(eff.start.getTime()).toBe(base.start.getTime());
+  });
+
+  it('una semana atrasada corre TODAS las siguientes un bloque de 7 días', () => {
+    // semana 1 nunca tuvo sesión; hoy es día 15 (calendario semana 3)
+    const eff = effectiveWeekDateRange(2, '2026-01-05T00:00:00', 15, new Set());
+    const shifted = weekDateRange(3, '2026-01-05T00:00:00'); // 2 + 1 atraso = 3
+    expect(eff.start.getTime()).toBe(shifted.start.getTime());
+  });
+
+  it('dos semanas atrasadas corren dos bloques', () => {
+    const eff = effectiveWeekDateRange(3, '2026-01-05T00:00:00', 22, new Set());
+    const shifted = weekDateRange(5, '2026-01-05T00:00:00'); // 3 + 2 atrasos = 5
+    expect(eff.start.getTime()).toBe(shifted.start.getTime());
   });
 });

@@ -156,6 +156,57 @@ export function weekDateRange(
   return { start, end };
 }
 
+/**
+ * Semana EFECTIVA de la ruta: el calendario propone, la sesión confirma.
+ *
+ * `currentWeekNumber` solo mira el calendario — si la semana 3 nunca tuvo
+ * sesión, el calendario igual "avanza" a la 4 y la ruta muestra una semana
+ * que nunca se trabajó como si ya hubiera pasado. Aquí la ruta se detiene en
+ * la primera semana SIN sesión registrada, así el calendario ya haya seguido:
+ * si no se termina, el resto se corre.
+ */
+export function effectiveWeekNumber(
+  protocolDay: number,
+  completedWeeks: ReadonlySet<number>,
+): number {
+  const calendarWeek = currentWeekNumber(protocolDay);
+  let w = 1;
+  while (w < calendarWeek && completedWeeks.has(w)) w++;
+  return Math.min(w, TOTAL_WEEKS);
+}
+
+/**
+ * Estado real de una semana: "completada" exige sesión registrada, no solo
+ * que el calendario ya haya pasado por ahí — a diferencia de `weekStatus`.
+ */
+export function effectiveWeekStatus(
+  week: number,
+  protocolDay: number,
+  completedWeeks: ReadonlySet<number>,
+): WeekStatus {
+  if (completedWeeks.has(week)) return 'completada';
+  return week === effectiveWeekNumber(protocolDay, completedWeeks) ? 'actual' : 'proxima';
+}
+
+/**
+ * Rango de fechas de la semana N, corrido un bloque de 7 días por cada
+ * semana anterior que quedó sin sesión aunque su ventana ya cerró — "si no
+ * se termina, se corre" aplicado a las fechas mostradas, no solo al estado.
+ */
+export function effectiveWeekDateRange(
+  week: number,
+  protocolStartDate: string | Date,
+  protocolDay: number,
+  completedWeeks: ReadonlySet<number>,
+): WeekDateRange {
+  const calendarWeek = currentWeekNumber(protocolDay);
+  let overdue = 0;
+  for (let w = 1; w < Math.min(week, calendarWeek); w++) {
+    if (!completedWeeks.has(w)) overdue++;
+  }
+  return weekDateRange(week + overdue, protocolStartDate);
+}
+
 /** Formatea un rango de semana como texto corto en español (ej. "12 ene – 18 ene"). */
 export function formatWeekRange(range: WeekDateRange): string {
   const fmt = (d: Date) => {

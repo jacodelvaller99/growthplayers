@@ -9,7 +9,7 @@
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -39,11 +39,10 @@ import { useMentorship, type SessionNote, type ActionItem, type SessionDraft } f
 import {
   MENTORSHIP_PROGRAM,
   TOTAL_WEEKS,
-  currentWeek,
-  currentWeekNumber,
+  effectiveWeekDateRange,
+  effectiveWeekNumber,
+  effectiveWeekStatus,
   formatWeekRange,
-  weekDateRange,
-  weekStatus,
   type MentorshipWeek,
 } from '@/data/mentorship';
 
@@ -81,11 +80,6 @@ function deriveThemes(text: string): string[] {
   return hits;
 }
 
-/** Etiqueta del rango de fechas de una semana, a partir del inicio del protocolo. */
-function weekRangeLabel(week: number, protocolStartDate: string): string {
-  return formatWeekRange(weekDateRange(week, protocolStartDate));
-}
-
 export default function MentoriaScreen() {
   const sc = useScreen();
   const { isDesktop } = useBreakpoint();
@@ -94,13 +88,20 @@ export default function MentoriaScreen() {
   const { state, protocolDay } = useLifeFlow();
   const m = useMentorship();
 
-  const weekNum = currentWeekNumber(protocolDay);
-  const week = currentWeek(protocolDay);
+  // La ruta avanza con la SESIÓN, no con el calendario: si una semana se
+  // queda sin nota registrada, la ruta entera se corre — en vivo, apenas
+  // se confirma una nota (m.notes cambia y esto recalcula solo).
+  const completedWeeks = useMemo(() => new Set(m.notes.map((n) => n.week)), [m.notes]);
+  const weekNum = effectiveWeekNumber(protocolDay, completedWeeks);
+  const week = MENTORSHIP_PROGRAM[weekNum - 1];
   const startDate = useMemo(() => fmtDate(state.protocolStartDate), [state.protocolStartDate]);
-  const currentRange = useMemo(
-    () => weekRangeLabel(weekNum, state.protocolStartDate),
-    [weekNum, state.protocolStartDate],
+  // Reemplaza al viejo `weekRangeLabel` de módulo: ahora necesita protocolDay
+  // y completedWeeks (el atraso), que solo existen dentro del componente.
+  const weekRangeLabel = useCallback(
+    (week: number) => formatWeekRange(effectiveWeekDateRange(week, state.protocolStartDate, protocolDay, completedWeeks)),
+    [state.protocolStartDate, protocolDay, completedWeeks],
   );
+  const currentRange = useMemo(() => weekRangeLabel(weekNum), [weekRangeLabel, weekNum]);
 
   const [noteText, setNoteText] = useState('');
   const [noteWeek, setNoteWeek] = useState(weekNum);
@@ -238,8 +239,8 @@ export default function MentoriaScreen() {
           <WeekRow
             key={w.week}
             w={w}
-            status={weekStatus(w.week, protocolDay)}
-            dateRange={weekRangeLabel(w.week, state.protocolStartDate)}
+            status={effectiveWeekStatus(w.week, protocolDay, completedWeeks)}
+            dateRange={weekRangeLabel(w.week)}
             onPickForNote={() => setNoteWeek(w.week)}
             selectedForNote={noteWeek === w.week}
           />
@@ -260,7 +261,7 @@ export default function MentoriaScreen() {
       {m.draft ? (
         <DraftEditor
           draft={m.draft}
-          weekRange={weekRangeLabel(m.draft.week, state.protocolStartDate)}
+          weekRange={weekRangeLabel(m.draft.week)}
           onChangeNotes={(t) => m.updateDraft({ notes: t })}
           onChangeAction={(i, t) => {
             const next = m.draft!.actions.slice();
@@ -392,7 +393,7 @@ export default function MentoriaScreen() {
               <NoteCard
                 key={n.id}
                 n={n}
-                weekRange={weekRangeLabel(n.week, state.protocolStartDate)}
+                weekRange={weekRangeLabel(n.week)}
                 onRemove={() => m.removeNote(n.id)}
               />
             ))}
@@ -455,7 +456,7 @@ function ActionRow({ item, onToggle, onRemove }: { item: ActionItem; onToggle: (
       </Pressable>
       <Text style={[styles.itemText, item.done && styles.itemTextDone]}>{item.text}</Text>
       {item.source === 'ia' && <MaterialIcons name="auto-awesome" size={13} color={palette.goldText} style={{ marginRight: 4 }} />}
-      <Pressable onPress={onRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel="Eliminar acción">
+      <Pressable onPress={onRemove} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Eliminar acción">
         <MaterialIcons name="close" size={15} color={palette.smoke} />
       </Pressable>
     </View>
@@ -464,7 +465,7 @@ function ActionRow({ item, onToggle, onRemove }: { item: ActionItem; onToggle: (
 
 function WeekRow({
   w, status, dateRange, onPickForNote, selectedForNote,
-}: { w: MentorshipWeek; status: ReturnType<typeof weekStatus>; dateRange: string; onPickForNote: () => void; selectedForNote: boolean }) {
+}: { w: MentorshipWeek; status: ReturnType<typeof effectiveWeekStatus>; dateRange: string; onPickForNote: () => void; selectedForNote: boolean }) {
   const [open, setOpen] = useState(status === 'actual');
   const dot =
     status === 'completada' ? <MaterialIcons name="check" size={13} color={palette.ink} />
@@ -522,7 +523,7 @@ function NoteCard({ n, weekRange, onRemove }: { n: SessionNote; weekRange: strin
             {fromVoice ? 'LO QUE NORMAN VIO' : 'TU REGISTRO'}
           </Text>
         </View>
-        <Pressable onPress={onRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel="Eliminar nota">
+        <Pressable onPress={onRemove} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Eliminar nota">
           <MaterialIcons name="close" size={14} color={palette.smoke} />
         </Pressable>
       </View>
@@ -607,7 +608,7 @@ function DraftEditor({
             selectionColor={palette.gold}
             style={styles.draftActionInput}
           />
-          <Pressable onPress={() => onRemoveAction(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Quitar acción">
+          <Pressable onPress={() => onRemoveAction(i)} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Quitar acción">
             <MaterialIcons name="close" size={15} color={palette.smoke} />
           </Pressable>
         </View>
@@ -679,7 +680,10 @@ const styles = StyleSheet.create({
   emptyText: { ...typography.body, fontSize: 12.5, color: palette.smoke, textAlign: 'center' },
   itemList: { gap: 2 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, minHeight: 44 },
-  check: { padding: 2 },
+  check: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  // Botón de icono suelto (cerrar/quitar): hitSlop no amplía el área pulsable
+  // en RNW, así que el objetivo de 44×44 tiene que ser real, no simulado.
+  iconBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   checkBox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: palette.lineHard, alignItems: 'center', justifyContent: 'center' },
   checkBoxOn: { backgroundColor: palette.gold, borderColor: palette.gold },
   itemText: { flex: 1, ...typography.body, fontSize: 13.5, color: palette.ivory, lineHeight: 19 },
