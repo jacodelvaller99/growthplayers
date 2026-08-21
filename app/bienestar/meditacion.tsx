@@ -428,7 +428,14 @@ export default function MeditacionScreen() {
   const router = useRouter();
   const { focus: focusParam } = useLocalSearchParams<{ focus?: string | string[] }>();
   const insets = useSafeAreaInsets();
-  const { saveWellnessSession, state } = useLifeFlow();
+  const { saveWellnessSession, state, latestCheckIn } = useLifeFlow();
+  // Razón de ser HOY: si la saturación viene alta, la pantalla lo dice con el
+  // dato. Sin lectura alta, la línea de siempre — no se dramatiza sin dato.
+  const stressReading = latestCheckIn?.stress ?? null;
+  const introLine =
+    stressReading !== null && stressReading >= 7
+      ? `Tu saturación está en ${stressReading}/10 — diez minutos aquí valen más que una hora de pantalla. Auriculares puestos.`
+      : 'El único momento del día en que no se te pide nada. Usa auriculares para mejor experiencia.';
   const [active, setActive] = useState<MeditationSession | null>(null);
   const contextualFocusId = parseEnergyFocusId(focusParam);
   const contextualFocus = contextualFocusId ? energyFocusById(contextualFocusId) : null;
@@ -529,9 +536,7 @@ const done = completedIds.has(session.id);
         <View style={{ width: 36 }} />
       </View>
 
-      <Text style={styles.intro}>
-        Sesiones guiadas con audio ambiental. Usa auriculares para mejor experiencia.
-      </Text>
+      <Text style={styles.intro}>{introLine}</Text>
 
       <SafetyWarning
         body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria. Si durante la práctica aumenta la angustia, sientes desconexión de tu cuerpo o del entorno, o aparece miedo intenso, detén la sesión y abre los ojos: parar es la respuesta correcta, no algo que haya que atravesar."

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Aura } from '@/components/aura';
 import { palette, radii, spacing, typography } from '@/constants/theme';
@@ -128,6 +129,22 @@ const SLEEP_CATEGORIES: {
 
 export default function SuenoScreen() {
   const sc = useScreen();
+  // Razón de ser HOY: la pantalla abre con TU lectura, no con un eslogan.
+  // Sin lectura, cae a la pregunta de siempre — no se inventa un dato.
+  const { latestCheckIn } = useLifeFlow();
+  const sleepReading = latestCheckIn?.sleep ?? null;
+  const bannerTitle =
+    sleepReading !== null && sleepReading <= 4
+      ? `Anoche marcaste sueño ${sleepReading}/10.`
+      : sleepReading !== null && sleepReading >= 8
+        ? `Sueño ${sleepReading}/10 — lo estás haciendo bien.`
+        : 'Estás durmiendo, pero ¿estás descansando?';
+  const bannerSub =
+    sleepReading !== null && sleepReading <= 4
+      ? 'Esta pantalla existe exactamente para noches como la que viene.'
+      : sleepReading !== null && sleepReading >= 8
+        ? 'Esta noche, protégelo: misma hora, mismo ritual.'
+        : 'El sueño de calidad es el cimiento de toda la performance.';
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const engine = useBinauralEngine();
@@ -181,10 +198,8 @@ export default function SuenoScreen() {
       <PremiumCard style={styles.bannerCard}>
         <MaterialIcons name="bedtime" size={28} color={palette.ash} />
         <View style={styles.bannerBody}>
-          <Text style={styles.bannerTitle}>Estás durmiendo, pero ¿estás descansando?</Text>
-          <Text style={styles.bannerSub}>
-            El sueño de calidad es el cimiento de toda la performance.
-          </Text>
+          <Text style={styles.bannerTitle}>{bannerTitle}</Text>
+          <Text style={styles.bannerSub}>{bannerSub}</Text>
         </View>
       </PremiumCard>
 
