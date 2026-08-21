@@ -758,17 +758,20 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
       await persist({ ...state, northStar });
       const uid = uidRef.current;
       if (!uid) return;
-      try {
-        await db.profiles().upsert({
-          user_id:         uid,
-          purpose:         northStar.purpose,
-          identity:        northStar.identity,
-          non_negotiables: northStar.nonNegotiables,
-          daily_reminder:  northStar.dailyReminder,
-        }, { onConflict: 'user_id' });
-      } catch (e) {
-        console.warn('[Supabase] updateNorthStar:', e);
-      }
+      // Sin try/catch: el error de Supabase SUBE al caller. Antes se tragaba
+      // con console.warn y norte.tsx mostraba "NORTE DECLARADO ✓" sobre un
+      // guardado que nunca llegó a la base — el usuario recargaba y veía su
+      // texto viejo sin ninguna pista de por qué. El estado local ya quedó
+      // persistido arriba (no se pierde nada); lo que no puede pasar es
+      // fingir que la sincronización ocurrió.
+      const { error } = await db.profiles().upsert({
+        user_id:         uid,
+        purpose:         northStar.purpose,
+        identity:        northStar.identity,
+        non_negotiables: northStar.nonNegotiables,
+        daily_reminder:  northStar.dailyReminder,
+      }, { onConflict: 'user_id' });
+      if (error) throw error;
     },
     [persist, state],
   );

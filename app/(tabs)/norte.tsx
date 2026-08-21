@@ -165,12 +165,15 @@ export default function NorteScreen() {
               <PremiumCard style={styles.form}>
                 <View style={styles.fieldGroup}>
                   <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
+                  <Text style={styles.guideQuestion}>
+                    ¿Qué tiene que haber pasado en estos 90 días para que Polaris haya valido la pena?
+                  </Text>
                   <PremiumInput
                     value={purpose}
                     onChangeText={setPurpose}
                     multiline
                     style={styles.textArea}
-                    placeholder="¿Por qué operas a este nivel?"
+                    placeholder="Describe el resultado, no la intención…"
                     accessibilityLabel="Propósito principal"
                   />
                 </View>
@@ -292,12 +295,17 @@ export default function NorteScreen() {
 
       {/* ── Dirección maestra ── */}
       <GoldDivider label="DIRECCIÓN MAESTRA" />
+      {/* La pregunta que convierte un deseo vago en un propósito evaluable:
+          obliga a describir el resultado, no la intención. */}
+      <Text style={styles.guideQuestion}>
+        ¿Qué tiene que haber pasado en estos 90 días para que Polaris haya valido la pena?
+      </Text>
       <PremiumInput
         value={purpose}
         onChangeText={setPurpose}
         multiline
         style={styles.textArea}
-        placeholder="¿Por qué operas? ¿A qué le sirves?"
+        placeholder="Describe el resultado, no la intención…"
         accessibilityLabel="Dirección maestra"
       />
 
@@ -627,6 +635,15 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     gap: spacing.sm,
+  },
+  // La pregunta guía del propósito — caja baja a propósito: es una pregunta
+  // que se lee, no un rótulo que grita.
+  guideQuestion: {
+    ...typography.body,
+    color: palette.smoke,
+    fontSize: 13,
+    lineHeight: 19,
+    fontStyle: 'italic' as const,
   },
   fieldLabel: {
     fontFamily: Fonts.display,
