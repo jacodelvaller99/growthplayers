@@ -13,7 +13,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 import { readLocal, writeLocal } from '@/storage/local';
 
-export type AppMode = 'especifico' | 'esencial' | 'operador' | 'calma' | 'guiado';
+export type AppMode = 'especifico' | 'esencial' | 'operador' | 'calma' | 'guiado' | 'logos';
 
 export const APP_MODES: { id: AppMode; label: string; description: string }[] = [
   { id: 'especifico', label: 'Específico', description: 'Todo el detalle: fichas, lista y pestañas' },
@@ -21,6 +21,7 @@ export const APP_MODES: { id: AppMode; label: string; description: string }[] = 
   { id: 'operador', label: 'Operador', description: 'Cockpit denso, todo a la vista' },
   { id: 'calma', label: 'Calma', description: 'La recuperación primero, protocolo atenuado' },
   { id: 'guiado', label: 'Guiado', description: 'Un paso a la vez' },
+  { id: 'logos', label: 'Logos', description: 'Solo los iconos, centrados — silencio visual' },
 ];
 
 const STORAGE_KEY = 'polaris:appMode';

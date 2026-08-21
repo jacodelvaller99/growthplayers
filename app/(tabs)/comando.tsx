@@ -26,6 +26,7 @@ import EsencialMode from '@/components/comando-modes/esencial';
 import OperadorMode from '@/components/comando-modes/operador';
 import CalmaMode from '@/components/comando-modes/calma';
 import GuiadoMode from '@/components/comando-modes/guiado';
+import LogosMode from '@/components/comando-modes/logos';
 import {
   AppHeader,
   GoldAccentCard,
@@ -1151,6 +1152,7 @@ export default function DashboardScreen() {
     guidedQuestion: sinLecturas ? '¿Cómo está tu energía ahora mismo?' : turno.headline,
     guidedTotalSteps: 3,
     guidedStepIndex: 0,
+    onNavigate: (route: string) => router.push(route as never),
   };
 
   if (appMode !== 'especifico') {
@@ -1159,6 +1161,7 @@ export default function DashboardScreen() {
       operador: OperadorMode,
       calma: CalmaMode,
       guiado: GuiadoMode,
+      logos: LogosMode,
     }[appMode];
     return (
       <ScrollView

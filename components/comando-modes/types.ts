@@ -54,4 +54,7 @@ export interface ComandoModeProps {
   guidedQuestion: string;
   guidedTotalSteps: number;
   guidedStepIndex: number;       // 0-based
+
+  /** Navegación libre — la usa el modo Logos (lanzador de iconos). */
+  onNavigate: (route: string) => void;
 }
