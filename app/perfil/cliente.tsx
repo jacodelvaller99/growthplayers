@@ -7,14 +7,16 @@
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CommitmentsCard, ConversationTimeline, ProfileSynopsisCard } from '@/components/memory';
 import { BiometricInsightCard, ReflectionComposer } from '@/components/biometric';
 import { GoldAccentCard, PremiumCard, useScreen } from '@/components/polaris';
-import { palette, radii, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { POLARIS_MODULES } from '@/data/modules';
+import { buildHistoria } from '@/lib/narrativeLogic';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { fetchLatestSummaries, fetchMemoryProfile, type MemoryProfile, type MemorySummaryRow } from '@/lib/memory';
 import { clientSafeProfile } from '@/lib/memoryLogic';
@@ -38,7 +40,29 @@ export default function ClienteMemoriaScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userId, isSubscribed } = useLifeFlow();
+  const { userId, isSubscribed, state, protocolDay, averages } = useLifeFlow();
+  // La historia completa — la MISMA voz de lib/narrativeLogic que Progreso y
+  // el perfil propio. Sale del estado local del cliente, no de la memoria IA:
+  // es lo que HIZO, no lo que Norman resumió.
+  const earnedArchetypes = useMemo(() => {
+    const completed = state.completedLessons ?? [];
+    return POLARIS_MODULES
+      .filter((m) => m.arquetipo)
+      .filter((m) => m.lessons.length > 0 && m.lessons.every((l) => completed.includes(l.id)))
+      .map((m) => m.arquetipo!.toUpperCase());
+  }, [state.completedLessons]);
+  const historia = useMemo(() => buildHistoria({
+    protocolDay,
+    painPoint: state.profile.painPoint,
+    purpose: state.northStar.purpose,
+    identity: state.northStar.identity,
+    completedLessonCount: (state.completedLessons ?? []).length,
+    taskCount: Object.keys(state.completedTasks ?? {}).length,
+    checkInsCount: state.checkIns.length,
+    avgEnergy: averages.energy ?? 0,
+    archetypesEarned: earnedArchetypes,
+  }), [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, earnedArchetypes]);
+
   const [profile, setProfile] = useState<MemoryProfile | null>(null);
   const [summaries, setSummaries] = useState<MemorySummaryRow[]>([]);
   const [tasks, setTasks] = useState<MentorTask[]>([]);
@@ -148,6 +172,17 @@ export default function ClienteMemoriaScreen() {
               <Text style={s.narrativeWhy}>{narrative.why}</Text>
             </GoldAccentCard>
           )}
+
+          {/* ── Tu historia — capítulo a capítulo, desde los datos, no la memoria IA ── */}
+          <PremiumCard style={s.historiaCard}>
+            <Text style={s.label}>TU HISTORIA</Text>
+            {historia.map((c) => (
+              <View key={c.label} style={s.historiaChapter}>
+                <Text style={s.historiaLabel}>{c.label}</Text>
+                <Text style={s.historiaText}>{c.text}</Text>
+              </View>
+            ))}
+          </PremiumCard>
 
           <ProfileSynopsisCard profile={profile} variant="client" />
 
@@ -272,6 +307,18 @@ function AccountabilityPrompt({
 }
 
 const s = StyleSheet.create({
+  historiaCard: { gap: spacing.md },
+  historiaChapter: { gap: 3 },
+  historiaLabel: {
+    fontFamily: Fonts.display,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: palette.goldText,
+    textTransform: 'uppercase',
+  },
+  historiaText: { ...typography.body, color: palette.ivory, fontSize: 13.5, lineHeight: 20 },
+
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18 },

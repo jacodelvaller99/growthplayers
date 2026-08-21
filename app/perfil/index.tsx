@@ -33,6 +33,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { HeroPanel, HeroRule, StatStack } from '@/components/focus-deck';
+import { buildHistoria } from '@/lib/narrativeLogic';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
@@ -148,6 +149,19 @@ export default function PerfilSoberanoScreen() {
   const tier       = scoreTierLabel(score);
   const tierColor  = scoreTierColor(score);
   const firstName  = state.profile.name.split(' ')[0] ?? state.profile.name;
+
+  // La historia completa — misma fuente que Progreso (buildHistoria).
+  const historia = useMemo(() => buildHistoria({
+    protocolDay,
+    painPoint: state.profile.painPoint,
+    purpose: state.northStar.purpose,
+    identity: state.northStar.identity,
+    completedLessonCount: (state.completedLessons ?? []).length,
+    taskCount: Object.keys(state.completedTasks ?? {}).length,
+    checkInsCount: state.checkIns.length,
+    avgEnergy: averages.energy ?? 0,
+    archetypesEarned: earnedArchetypes,
+  }), [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, earnedArchetypes]);
 
   // ── Share handler ───────────────────────────────────────────────────────────
   const handleShare = async () => {
@@ -296,6 +310,20 @@ export default function PerfilSoberanoScreen() {
           { name: 'PRÁCTICAS', value: `${wellnessMeditation + wellnessBreathing + wellnessBinaural}` },
         ]}
       />
+
+      {/* ── Tu historia — la voz única de lib/narrativeLogic (buildHistoria),
+          la misma que Progreso y el perfil de cliente. Capítulo a capítulo:
+          umbral → declaración → arco → evidencia → hoy. Solo aparecen los
+          capítulos con dato real: una historia corta es verdad, no defecto. */}
+      <GoldDivider inset label="TU HISTORIA" />
+      <View style={styles.historiaWrap}>
+        {historia.map((c) => (
+          <View key={c.label} style={styles.historiaChapter}>
+            <Text style={styles.historiaLabel}>{c.label}</Text>
+            <Text style={styles.historiaText}>{c.text}</Text>
+          </View>
+        ))}
+      </View>
 
       {/* ── Earned archetypes ── */}
       {earnedArchetypes.length > 0 && (
@@ -562,6 +590,19 @@ const styles = StyleSheet.create({
   },
 
   // Archetypes
+  // Tu historia
+  historiaWrap: { gap: spacing.lg },
+  historiaChapter: { gap: 4 },
+  historiaLabel: {
+    fontFamily: Fonts.display,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: palette.goldText,
+    textTransform: 'uppercase',
+  },
+  historiaText: { ...typography.body, color: palette.ivory, fontSize: 14, lineHeight: 21 },
+
   archetypeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

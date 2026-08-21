@@ -10,7 +10,22 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn() }) }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
-jest.mock('@/hooks/use-lifeflow', () => ({ useLifeFlow: () => ({ userId: 'u-test', isSubscribed: true }) }));
+jest.mock('@/hooks/use-lifeflow', () => ({
+  useLifeFlow: () => ({
+    userId: 'u-test',
+    isSubscribed: true,
+    protocolDay: 1,
+    averages: { energy: 0, clarity: 0, stress: 0, sleep: 0 },
+    // Forma mínima real del estado que la pantalla lee para buildHistoria.
+    state: {
+      profile: { name: 'Test', role: '' },
+      northStar: { purpose: '', identity: '', nonNegotiables: [], dailyReminder: '' },
+      checkIns: [],
+      completedLessons: [],
+      completedTasks: {},
+    },
+  }),
+}));
 
 const viewMock = () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports

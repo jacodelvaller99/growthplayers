@@ -29,7 +29,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { arcForDay } from '@/lib/narrativeLogic';
+import { arcForDay, buildHistoria } from '@/lib/narrativeLogic';
 import { ArcHeader } from '@/components/narrative';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
@@ -668,30 +668,25 @@ export default function ProgresoScreen() {
   );
 
   // Transformation narrative
+  // La historia vive en lib/narrativeLogic (buildHistoria) — la MISMA voz que
+  // Perfil y el perfil de cliente. Aquí se muestra compacta (sin el capítulo
+  // EL ARCO, que el ArcHeader de arriba ya pinta, y a máximo 3 líneas).
   const narrativeBlock = useMemo(() => {
-    const completedLessonCount = (state.completedLessons ?? []).length;
-    const taskCount = Object.keys(state.completedTasks ?? {}).length;
-    const avgEnergy = Math.round(averages.energy ?? 0);
-
-    const lines: string[] = [];
-
-    if (state.northStar.identity && protocolDay >= 7) {
-      // «» y no comillas rectas: es la cita del mismo usuario que el
-      // ArcHeader de tres líneas más arriba pinta con «» en oro. Dos juegos de
-      // comillas en la misma tarjeta era la gramática contradiciéndose sola.
-      lines.push(`Tu identidad declarada: «${state.northStar.identity.slice(0, 100)}». Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`);
-    } else if (completedLessonCount > 0) {
-      lines.push(`${completedLessonCount} lección${completedLessonCount === 1 ? '' : 'es'} completada${completedLessonCount === 1 ? '' : 's'}. Cada una reconfiguró algo — aunque no lo hayas notado todavía.`);
-    }
-    if (taskCount > 0) {
-      lines.push(`${taskCount} tarea${taskCount === 1 ? '' : 's'} de reflexión escritas. Eso es más autoconocimiento real que la mayoría acumula en un año.`);
-    }
-    if (avgEnergy >= 7 && state.checkIns.length >= 5) {
-      lines.push(`Tu energía promedio es ${avgEnergy}/10. El sistema está funcionando.`);
-    }
-
-    return lines.slice(0, 3);
-  }, [protocolDay, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy]);
+    return buildHistoria({
+      protocolDay,
+      painPoint: state.profile.painPoint,
+      purpose: state.northStar.purpose,
+      identity: state.northStar.identity,
+      completedLessonCount: (state.completedLessons ?? []).length,
+      taskCount: Object.keys(state.completedTasks ?? {}).length,
+      checkInsCount: state.checkIns.length,
+      avgEnergy: averages.energy ?? 0,
+      archetypesEarned: archetypes.filter((a) => a.earned).map((a) => a.name),
+    })
+      .filter((c) => c.label !== 'EL ARCO')
+      .map((c) => c.text)
+      .slice(0, 3);
+  }, [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, archetypes]);
 
   const toggleNotifications = async (value: boolean) => {
     if (value) {

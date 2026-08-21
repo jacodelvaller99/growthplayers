@@ -280,3 +280,92 @@ export function milestoneCrossed(
   }
   return null;
 }
+
+// ─── La historia completa ─────────────────────────────────────────────────────
+
+export interface HistoriaInput {
+  protocolDay: number;
+  painPoint?: string;
+  purpose?: string;
+  identity?: string;
+  completedLessonCount: number;
+  taskCount: number;
+  checkInsCount: number;
+  /** Promedio de energía 1..10 (0 si no hay lecturas). */
+  avgEnergy: number;
+  /** Nombres de arquetipos ya conquistados (módulo completo). */
+  archetypesEarned: string[];
+}
+
+export interface HistoriaChapter {
+  /** Rótulo en versalitas del capítulo. */
+  label: string;
+  text: string;
+}
+
+/**
+ * La historia completa del cliente, en capítulos — la MISMA voz para
+ * Progreso, Perfil propio y el perfil de cliente. Antes vivía incrustada en
+ * progreso.tsx (3 líneas sin rótulo); extraerla es la regla de gobernanza
+ * "un solo módulo por mensaje": si dos pantallas cuentan la historia, la
+ * cuentan desde aquí.
+ *
+ * Cada capítulo solo aparece si su dato existe — la historia no se infla
+ * con relleno: un usuario del día 2 tiene una historia corta, y eso es
+ * verdad, no un defecto.
+ */
+export function buildHistoria(input: HistoriaInput): HistoriaChapter[] {
+  const chapters: HistoriaChapter[] = [];
+  const cap = (s: string, n: number) => (s.length > n ? `${s.slice(0, n).trimEnd()}…` : s);
+
+  if (input.painPoint?.trim()) {
+    chapters.push({
+      label: 'EL UMBRAL',
+      text: `Llegaste diciendo: «${cap(input.painPoint.trim(), 120)}». Ese fue el punto de partida — todo lo demás se mide contra eso.`,
+    });
+  }
+
+  if (input.identity?.trim() && input.protocolDay >= 7) {
+    chapters.push({
+      label: 'LA DECLARACIÓN',
+      text: `Tu identidad declarada: «${cap(input.identity.trim(), 100)}». Cada acción que tomaste en el protocolo es evidencia de que eso ya es real.`,
+    });
+  }
+
+  const arc = arcForDay(input.protocolDay, {
+    painPoint: input.painPoint,
+    purpose: input.purpose,
+    identity: input.identity,
+  });
+  chapters.push({ label: 'EL ARCO', text: arc.line });
+
+  const evidencia: string[] = [];
+  if (input.completedLessonCount > 0) {
+    // "lección" pierde la tilde en plural: lecciones, no "lecciónes".
+    evidencia.push(`${input.completedLessonCount} ${input.completedLessonCount === 1 ? 'lección' : 'lecciones'}`);
+  }
+  if (input.taskCount > 0) {
+    evidencia.push(`${input.taskCount} tarea${input.taskCount === 1 ? '' : 's'} de reflexión escrita${input.taskCount === 1 ? '' : 's'}`);
+  }
+  if (input.checkInsCount > 0) {
+    evidencia.push(`${input.checkInsCount} lectura${input.checkInsCount === 1 ? '' : 's'} de estado`);
+  }
+  if (input.archetypesEarned.length > 0) {
+    evidencia.push(`el arquetipo del ${input.archetypesEarned.join(', el ')} conquistado`);
+  }
+  if (evidencia.length > 0) {
+    chapters.push({
+      label: 'LA EVIDENCIA',
+      text: `Lo que queda registrado: ${evidencia.join(' · ')}. Nada de esto es opinión — es lo que hiciste.`,
+    });
+  }
+
+  if (input.avgEnergy >= 7 && input.checkInsCount >= 5) {
+    chapters.push({
+      label: 'HOY',
+      text: `Tu energía promedio es ${Math.round(input.avgEnergy)}/10. El sistema está funcionando.`,
+    });
+  }
+
+  return chapters;
+}

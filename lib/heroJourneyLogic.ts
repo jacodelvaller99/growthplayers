@@ -90,7 +90,13 @@ export function selectMoment(input: {
     return {
       kind: 'ai_echo',
       summaryId: latestSummary.id,
-      message: `${greeting(name)} La última vez me dijiste: «${echo}». Sigo aquí, y lo recuerdo.`,
+      // «me dijiste» era mentira estructural: `echo` es la primera frase del
+      // RESUMEN que la IA escribió (tercera persona — "Juan inició el
+      // protocolo…"), no palabras del usuario. Citarlo como dicho por él
+      // producía la incoherencia más visible de la app, en su voz más íntima.
+      // El framing honesto presenta el recuerdo como lo que es: algo que
+      // Norman retuvo, no algo que el usuario dijo.
+      message: `${greeting(name)} De nuestra última conversación me quedó esto: «${echo}». Sigo aquí, y lo recuerdo.`,
     };
   }
 

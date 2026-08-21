@@ -237,3 +237,68 @@ describe('arcForDay cita al usuario — la voz diaria de los 90 dias', () => {
     }
   });
 });
+
+// ─── buildHistoria — la historia completa, capítulo a capítulo ────────────────
+import { buildHistoria } from '@/lib/narrativeLogic';
+
+const historiaBase = {
+  protocolDay: 30,
+  completedLessonCount: 0,
+  taskCount: 0,
+  checkInsCount: 0,
+  avgEnergy: 0,
+  archetypesEarned: [] as string[],
+};
+
+describe('buildHistoria', () => {
+  it('usuario nuevo sin datos: solo EL ARCO — la historia corta es verdad, no defecto', () => {
+    const h = buildHistoria({ ...historiaBase, protocolDay: 2 });
+    expect(h.map((c) => c.label)).toEqual(['EL ARCO']);
+  });
+
+  it('el umbral cita las palabras del usuario con «»', () => {
+    const h = buildHistoria({ ...historiaBase, painPoint: 'No logro sostener el foco' });
+    expect(h[0].label).toBe('EL UMBRAL');
+    expect(h[0].text).toContain('«No logro sostener el foco»');
+  });
+
+  it('la declaración exige día >= 7 — antes de la semana 1 no hay identidad que citar', () => {
+    const conIdentidad = { ...historiaBase, identity: 'Soy alguien que decide con calma' };
+    expect(buildHistoria({ ...conIdentidad, protocolDay: 3 }).some((c) => c.label === 'LA DECLARACIÓN')).toBe(false);
+    expect(buildHistoria({ ...conIdentidad, protocolDay: 10 }).some((c) => c.label === 'LA DECLARACIÓN')).toBe(true);
+  });
+
+  it('la evidencia junta lecciones, tareas, lecturas y arquetipos en una sola línea', () => {
+    const h = buildHistoria({
+      ...historiaBase,
+      completedLessonCount: 5,
+      taskCount: 2,
+      checkInsCount: 14,
+      archetypesEarned: ['GUERRERO'],
+    });
+    const ev = h.find((c) => c.label === 'LA EVIDENCIA');
+    expect(ev).toBeDefined();
+    expect(ev!.text).toContain('5 lecciones');
+    expect(ev!.text).toContain('2 tareas');
+    expect(ev!.text).toContain('14 lecturas');
+    expect(ev!.text).toContain('GUERRERO');
+  });
+
+  it('HOY solo aparece con energía >= 7 y >= 5 lecturas — no celebra sin datos', () => {
+    expect(buildHistoria({ ...historiaBase, avgEnergy: 8, checkInsCount: 3 }).some((c) => c.label === 'HOY')).toBe(false);
+    expect(buildHistoria({ ...historiaBase, avgEnergy: 8, checkInsCount: 6 }).some((c) => c.label === 'HOY')).toBe(true);
+  });
+
+  it('vocabulario: sin lenguaje clínico ni bélico en ningún capítulo', () => {
+    const h = buildHistoria({
+      ...historiaBase,
+      painPoint: 'x', identity: 'y', protocolDay: 45,
+      completedLessonCount: 3, taskCount: 1, checkInsCount: 10, avgEnergy: 8,
+      archetypesEarned: ['GUERRERO'],
+    });
+    const all = h.map((c) => c.text).join(' ').toLowerCase();
+    for (const prohibida of ['patológic', 'deficiente', 'anormal', 'guerra', 'batalla', 'arma', 'enemigo']) {
+      expect(all).not.toContain(prohibida);
+    }
+  });
+});
