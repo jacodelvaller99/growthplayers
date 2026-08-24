@@ -18,6 +18,7 @@ import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { HeroPanel, HeroRule, LensTabs, MetricTile, RowList } from '@/components/focus-deck';
 import { useMetricasDia } from '@/hooks/use-metricas-dia';
 import { useAppMode } from '@/hooks/use-app-mode';
+import { NovedadesNorman } from '@/components/NovedadesNorman';
 // EspecificoMode (components/comando-modes/especifico.tsx) no se usa aquí a
 // propósito: el modo "Específico" ES la composición móvil/escritorio que ya
 // existe abajo — reescribirla con el componente nuevo es riesgo sin
@@ -1252,6 +1253,8 @@ export default function DashboardScreen() {
               al eyebrow. El Mando sigue siendo lo único grande. */}
           <ArcHeader arc={arc} />
           {northAnchorStrip}
+          {/* Novedades — una vez por versión, en voz de Norman IA */}
+          <NovedadesNorman />
 
           {/* ZONA 1 — hero cinematográfico full-width */}
           {deskHero}
@@ -1358,6 +1361,8 @@ export default function DashboardScreen() {
               es una alerta puntual que desaparece cuando no hay nada que decir) */}
           {northAnchorStrip}
           {anomalyBlock}
+          {/* Novedades — una vez por versión, en voz de Norman IA */}
+          <NovedadesNorman />
 
           {/* ── LENTES ──────────────────────────────────────────────────
               Antes de esto, Norman, próxima lección y acceso rápido vivían
