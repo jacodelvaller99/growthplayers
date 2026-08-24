@@ -11,12 +11,15 @@ export const SUBSCRIPTION_TIERS = {
     color: '#888888',
     features: [
       'Check-in diario',
-      'Mentor Norman (5 mensajes/día)',
+      'Mentor Norman IA',
       'Módulo 1 completo',
       'Binaurales básicos (3)',
     ],
     limits: {
-      mentor_messages_per_day: 5,
+      // Sin tope real en el código (nadie lo lee — ver useSubscription.canAccessMentor,
+      // siempre true). El "5 mensajes/día" que decía este bullet era fricción
+      // publicitada: le prometía al usuario free un límite que nunca se aplicó.
+      mentor_messages_per_day: -1,
       modules_unlocked: ['module_1'],
       binaural_presets: 3,
     },
