@@ -49,6 +49,31 @@ import type { CheckIn, MentorMessage } from '@/types/lifeflow';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Ata `promise` al AbortSignal del timeout de 45s. Sin esto, un cuelgue en
+ * memoria/confrontaciones (llamadas de red sin guard propio, a diferencia de
+ * la cadena de IA que sí tiene createStreamGuard) deja `isStreaming` en true
+ * para siempre — el timeout dispara `controller.abort()` pero nadie escucha,
+ * así que "escribiendo…" nunca se resuelve ni se muestra el toast de retry.
+ */
+function raceSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) {
+    const err = new Error('Aborted'); err.name = 'AbortError';
+    return Promise.reject(err);
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      const err = new Error('Aborted'); err.name = 'AbortError';
+      reject(err);
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (v) => { signal.removeEventListener('abort', onAbort); resolve(v); },
+      (e) => { signal.removeEventListener('abort', onAbort); reject(e); },
+    );
+  });
+}
+
 function getOpeningMessage(params: {
   name: string;
   protocolDay: number;
@@ -401,11 +426,14 @@ export default function MentorScreen() {
         : 'Explorador';
 
       // ── Step 1: Semantic memory search + narrative memory (parallel) ──────
-      const memoriesPromise = searchMemories(clean, 3);
-      const clientMemoryPromise = buildMentorMemoryContext(userId ?? '');
+      // raceSignal: ninguna de estas 3 llamadas tiene guard propio (a diferencia
+      // de streamMentorResponse) — sin esto, un cuelgue aquí ignora el timeout
+      // de 45s y "escribiendo…" nunca se resuelve.
+      const memoriesPromise = raceSignal(searchMemories(clean, 3), controller.signal);
+      const clientMemoryPromise = raceSignal(buildMentorMemoryContext(userId ?? ''), controller.signal);
       // Confrontaciones: top 2 con severity high+ (gates ya verificados en confrontation.ts).
       const topConfrontationsPromise = userId
-        ? getTopConfrontationsForMentor(userId, 2).catch(() => null)
+        ? raceSignal(getTopConfrontationsForMentor(userId, 2).catch(() => null), controller.signal)
         : Promise.resolve(null);
 
       // ── Step 2: Build context with Intelligence fields ─────────────────────
