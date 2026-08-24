@@ -885,11 +885,21 @@ export default function DashboardScreen() {
         <Text style={mob.headerDate}>{todayLabel()}</Text>
         <Text style={mob.headerTitle}>CENTRO DE COMANDO</Text>
       </View>
+      {/* Personalizar — en escritorio vive en la barra lateral; el teléfono no
+          la tiene, y llegar a los 3 ejes exigía Perfil → Apariencia. Un toque
+          desde la pantalla que se abre a diario. */}
+      <Pressable
+        onPress={() => router.push('/perfil/apariencia' as never)}
+        accessibilityRole="button"
+        accessibilityLabel="Personalizar la app — modo, fondo y color"
+        style={({ pressed }) => [mob.headerAction, pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] }]}>
+        <MaterialIcons name="tune" size={20} color={palette.goldText} />
+      </Pressable>
       <Pressable
         onPress={() => router.push('/(tabs)/norte')}
         accessibilityRole="button"
         accessibilityLabel="Ir a Mi Norte"
-        style={({ pressed }) => [mob.headerAction, pressed && { opacity: 0.7 }]}>
+        style={({ pressed }) => [mob.headerAction, pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] }]}>
         <MaterialIcons name="explore" size={20} color={palette.goldText} />
       </Pressable>
     </View>
