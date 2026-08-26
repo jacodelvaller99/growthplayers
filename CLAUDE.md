@@ -418,4 +418,6 @@ Motor "DIJO vs HIZO": cuando el cliente declara explícitamente algo (commitment
 
 ## Launch readiness docs
 
-Launch-prep documentation (security audit, legal drafts, QA plan, store metadata, runbooks) lives in `docs/launch/` — start with `docs/launch/00_EXECUTIVE_LAUNCH_VERDICT.md` and `docs/launch/KNOWN_ISSUES_REGISTER.md`.
+Launch-prep documentation (security audit, legal drafts, QA plan, store metadata, runbooks) lives in `docs/launch/` — el corte de estado vigente es `docs/launch/ESTADO_ACTUAL_2026-08-03.md` (los docs de veredicto de junio fueron borrados por desactualizados).
+
+**Círculo de Evaluación** — el dictamen de fase (F0–F5) y de "¿podemos salir al cliente?" lo emite el Círculo: skill en `.claude/skills/circulo-evaluacion/SKILL.md` (8 sillas evaluadoras, nota global = mínimo, vetos con evidencia `file:line`), veredictos fechados en `docs/evaluacion/`. Último: **2026-08-26 → F1, nota 4.5/10, 11 vetos hacia F2** (`docs/evaluacion/VEREDICTO_CIRCULO_2026-08-26.md`). Re-evaluar tras cada lote grande de merges o cada 2 semanas.
