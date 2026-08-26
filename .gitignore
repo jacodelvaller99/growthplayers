@@ -44,8 +44,9 @@ app-example
 /ios
 /android
 
-# Claude Code
-.claude/
+# Claude Code (config local y worktrees fuera; los skills del repo SÍ se versionan)
+.claude/*
+!.claude/skills/
 
 # Supabase temp
 supabase/.temp/
