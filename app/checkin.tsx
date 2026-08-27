@@ -2,7 +2,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -22,6 +23,7 @@ import { alpha } from '@/constants/themeColors';
 import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { ConsequenceCard, MilestoneToast } from '@/components/narrative';
 import { analytics } from '@/lib/analytics';
 import { checkMilestone } from '@/lib/milestoneCheck';
@@ -94,23 +96,36 @@ function MicroRitual({
   const [cycles, setCycles] = useState(0);
   const [postTension, setPostTension] = useState<number | null>(null);
 
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const scale = useSharedValue(0.9);
+  const reducedMotion = useReducedMotion();
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
+
+  const orbStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const animatePhase = useCallback(
     (idx: number) => {
       const p = BOX_PHASES[idx];
-      Animated.timing(scaleAnim, {
-        toValue: p.scale,
-        duration: p.duration * 1000,
-        useNativeDriver: true,
-      }).start();
+      // Spring, no timing (audit "Fluidez Polaris" §Fase 3 "03"/"04"):
+      // interrumpibilidad nativa — reasignar `.value` retoma desde el
+      // valor/velocidad actuales sin stopAnimation() manual (ver endEarly y
+      // el auto-cierre más abajo). `duration`+`dampingRatio:1` en vez de
+      // damping/stiffness crudos porque necesitamos que el resorte tarde
+      // los mismos ~4s que la fase real de respiración — la firma rápida de
+      // un botón (animation.spring.*) no sirve aquí. Reduced motion: salta
+      // directo al tamaño de la fase, igual que ritual.tsx (mismo patrón en
+      // onboarding) — sin la firma de "cross-fade" no existe hoy en ningún
+      // lado del repo, se sigue la referencia real, no una inventada.
+      scale.value = reducedMotion
+        ? p.scale
+        : withSpring(p.scale, { duration: p.duration * 1000, dampingRatio: 1 });
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     },
-    [scaleAnim],
+    [scale, reducedMotion],
   );
 
   // Phase countdown (1s tick)
@@ -137,8 +152,7 @@ function MicroRitual({
     if (phase === 'breathing' && cycles >= RITUAL_CYCLES) {
       const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
       if (tickRef.current) clearInterval(tickRef.current);
-      scaleAnim.stopAnimation();
-      Animated.timing(scaleAnim, { toValue: 0.9, duration: 400, useNativeDriver: true }).start();
+      scale.value = reducedMotion ? 0.9 : withSpring(0.9, { duration: 400, dampingRatio: 1 });
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -146,7 +160,7 @@ function MicroRitual({
       setPhase('post');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cycles, phase]);
+  }, [cycles, phase, reducedMotion]);
 
   const startBreathing = () => {
     setPhase('breathing');
@@ -163,8 +177,7 @@ function MicroRitual({
   const endEarly = () => {
     const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
     if (tickRef.current) clearInterval(tickRef.current);
-    scaleAnim.stopAnimation();
-    Animated.timing(scaleAnim, { toValue: 0.9, duration: 300, useNativeDriver: true }).start();
+    scale.value = reducedMotion ? 0.9 : withSpring(0.9, { duration: 300, dampingRatio: 1 });
     if (cycles > 0) onLog(elapsed, cycles);
     setPhase('post');
   };
@@ -193,7 +206,7 @@ function MicroRitual({
         <Text style={styles.ritualTag}>RESPIRACIÓN EN CAJA · CICLO {Math.min(cycles + 1, RITUAL_CYCLES)}/{RITUAL_CYCLES}</Text>
         <View style={styles.orbStage}>
           <View style={styles.orbRing} />
-          <Animated.View style={[styles.orb, { transform: [{ scale: scaleAnim }] }]}>
+          <Animated.View style={[styles.orb, orbStyle]}>
             <Text style={styles.orbPhase}>{currentPhase.label}</Text>
             <Text style={styles.orbCount}>{phaseLeft}</Text>
           </Animated.View>
@@ -629,7 +642,7 @@ export default function CheckInScreen() {
           style={[
             styles.coherenceFill,
             {
-              width: `${coherence * 10}%` as `${number}%`,
+              transform: [{ scaleX: coherence / 10 }],
               backgroundColor: coherenceStrong ? palette.gold : palette.smoke,
             },
           ]}
@@ -1155,6 +1168,8 @@ const styles = StyleSheet.create({
   },
   coherenceFill: {
     height: '100%',
+    width: '100%',
+    transformOrigin: 'left',
   },
   coherenceStatus: {
     fontFamily: Fonts.display,

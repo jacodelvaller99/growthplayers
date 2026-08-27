@@ -722,7 +722,7 @@ export function ProgressCard({
         <Text style={styles.progressValue}>{value}</Text>
       </View>
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${Math.max(0, Math.min(progress, 100))}%` }]} />
+        <View style={[styles.progressFill, { transform: [{ scaleX: Math.max(0, Math.min(progress, 100)) / 100 }] }]} />
       </View>
     </PremiumCard>
   );
@@ -1322,6 +1322,8 @@ const styles = StyleSheet.create({
   progressFill: {
     backgroundColor: palette.gold,
     height: '100%',
+    width: '100%',
+    transformOrigin: 'left',
   },
 
   // State meter

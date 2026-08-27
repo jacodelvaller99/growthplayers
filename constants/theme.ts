@@ -531,6 +531,12 @@ export const animation = {
     press:  { damping: 15, stiffness: 300, mass: 0.8 },
     entry:  { damping: 20, stiffness: 200, mass: 1.0 },
     bounce: { damping: 10, stiffness: 150, mass: 1.0 },
+    // Barrido de dial/ring "vivo" (score, engagement): reacciona a datos que
+    // cambian, no es un one-shot de carga — audit "Fluidez Polaris" §Fase 3
+    // (`04`) pide spring aquí en vez de timing, pero sin rebote (no viene de
+    // un gesto con momentum). damping/stiffness dan ratio ~0.94 — crítico,
+    // sin overshoot visible.
+    critical: { damping: 30, stiffness: 220, mass: 1.0 },
   },
   duration: {
     instant:  80,
