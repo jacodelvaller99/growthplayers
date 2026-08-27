@@ -26,7 +26,7 @@ export default function CalmaMode(props: ComandoModeProps) {
           onPress={props.onRecoveryAction}
           accessibilityRole="button"
           accessibilityLabel="Atender ahora"
-          style={({ pressed }) => [s.action, pressed && { opacity: 0.85 }]}>
+          style={({ pressed }) => [s.action, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}>
           <Text style={s.actionText}>ATENDER AHORA</Text>
         </Pressable>
       </View>
@@ -36,7 +36,7 @@ export default function CalmaMode(props: ComandoModeProps) {
           onPress={props.onContinueLesson}
           accessibilityRole="button"
           accessibilityLabel={`${props.moduleLabel}, ${props.lessonPct} por ciento completado`}
-          style={s.protocolRow}>
+          style={({ pressed }) => [s.protocolRow, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
           <Text style={s.protocolText}>{props.moduleLabel}</Text>
           <Text style={s.protocolText}>{props.lessonPct}%</Text>
         </Pressable>
@@ -44,7 +44,7 @@ export default function CalmaMode(props: ComandoModeProps) {
           onPress={props.onDirective}
           accessibilityRole="button"
           accessibilityLabel={props.directiveTitle}
-          style={s.protocolRow}>
+          style={({ pressed }) => [s.protocolRow, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
           <Text style={s.protocolText} numberOfLines={1}>{props.directiveTitle}</Text>
         </Pressable>
       </View>

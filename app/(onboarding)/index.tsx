@@ -1,7 +1,14 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  FadeInRight,
+  FadeOutLeft,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { redeemAccessCode } from '@/lib/admin/actions';
@@ -19,6 +26,7 @@ import {
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { logSilentError } from '@/lib/observability';
 import { intel } from '@/lib/supabase';
@@ -57,10 +65,29 @@ const CONSENT_ITEMS: { key: ConsentKey; label: string; route: '/legal/terminos' 
   { key: 'softwareLearning',  label: 'Acepto el tratamiento de mis datos para el aprendizaje y mejora del software', route: '/legal/privacidad' },
 ];
 
+// Segmento del indicador de paso. El "fill" es la opacidad de la capa dorada
+// superpuesta (no un interpolateColor: palette.gold/charcoal son tokens
+// cv() — var(--c-*) en web — y Reanimated no puede interpolar eso en un
+// worklet, ver __tests__/unit/themeVarInAnimation.test.ts).
+function StepSeg({ active, reduced }: { active: boolean; reduced: boolean }) {
+  const fill = useSharedValue(active ? 1 : 0);
+  useEffect(() => {
+    fill.value = reduced ? (active ? 1 : 0) : withTiming(active ? 1 : 0, { duration: 200 });
+  }, [active, reduced, fill]);
+  const fillStyle = useAnimatedStyle(() => ({ opacity: fill.value }));
+  return (
+    <View style={styles.stepSeg}>
+      <Animated.View style={[styles.stepSegActive, fillStyle]} />
+    </View>
+  );
+}
+
 export default function OnboardingScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
+  const scrollRef = useRef<ScrollView>(null);
   const { completeOnboarding, state, userId } = useLifeFlow();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(state.profile.name);
@@ -90,6 +117,13 @@ export default function OnboardingScreen() {
   const toggleConsent = (key: ConsentKey) => {
     setConsents((c) => ({ ...c, [key]: !c[key] }));
   };
+
+  // Cada step puede montar a una altura de scroll distinta de la del anterior
+  // (formularios más largos o más cortos) — sin esto, el siguiente step podía
+  // aparecer a mitad de card en vez de arriba.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [step]);
 
   const acceptConsentAndContinue = async () => {
     if (!allConsented) return;
@@ -189,6 +223,7 @@ export default function OnboardingScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top}>
     <ScrollView
+      ref={scrollRef}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
@@ -202,7 +237,7 @@ export default function OnboardingScreen() {
         accessibilityLabel={`Paso ${step + 1} de ${TOTAL_STEPS}`}
         accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: step + 1 }}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <View key={i} style={[styles.stepSeg, i <= step && styles.stepSegActive]} />
+          <StepSeg key={i} active={i <= step} reduced={reducedMotion} />
         ))}
         {/* La barra es la ÚNICA que numera. Las píldoras de cada pantalla
             decían "PASO 1" sobre el paso 3 de 6 —contaban solo los pasos con
@@ -211,6 +246,13 @@ export default function OnboardingScreen() {
         <Text style={styles.stepCounter}>{step + 1}/{TOTAL_STEPS}</Text>
       </View>
 
+      {/* Un solo wrapper para el step activo (los 6 bloques son mutuamente
+          excluyentes): key={step} lo remonta al cambiar de paso, disparando
+          entering/exiting — sin esto el corte entre steps era seco. */}
+      <Animated.View
+        key={`step-${step}`}
+        entering={reducedMotion ? undefined : FadeInRight.duration(220)}
+        exiting={reducedMotion ? undefined : FadeOutLeft.duration(160)}>
       {/* ─────────────────────────────────────────── STEP 0 — BIENVENIDA ── */}
       {step === 0 && (
         <View style={styles.welcomeWrap}>
@@ -515,7 +557,10 @@ export default function OnboardingScreen() {
               <Pressable
                 style={[styles.applyBtn, (!accessCode.trim() || codeStatus === 'checking') && { opacity: 0.5 }]}
                 onPress={handleApplyCode}
-                disabled={!accessCode.trim() || codeStatus === 'checking'}>
+                disabled={!accessCode.trim() || codeStatus === 'checking'}
+                accessibilityRole="button"
+                accessibilityLabel="Aplicar código de acceso"
+                accessibilityState={{ disabled: !accessCode.trim() || codeStatus === 'checking' }}>
                 {codeStatus === 'checking' ? (
                   <ActivityIndicator color={palette.ink} size="small" />
                 ) : (
@@ -524,7 +569,10 @@ export default function OnboardingScreen() {
               </Pressable>
             </View>
             {codeMessage ? (
-              <Text style={[styles.codeMsg, { color: codeStatus === 'ok' ? palette.success : palette.danger }]}>
+              <Text
+                style={[styles.codeMsg, { color: codeStatus === 'ok' ? palette.success : palette.danger }]}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite">
                 {codeMessage}
               </Text>
             ) : null}
@@ -555,6 +603,7 @@ export default function OnboardingScreen() {
           ) : null}
         </PremiumCard>
       )}
+      </Animated.View>
     </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -571,8 +620,10 @@ const styles = StyleSheet.create({
     backgroundColor: palette.charcoal,
     flex: 1,
     height: 2,
+    overflow: 'hidden',
   },
   stepSegActive: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: palette.gold,
   },
   stepCounter: {
@@ -794,7 +845,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 36,
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },

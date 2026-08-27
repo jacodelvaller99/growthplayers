@@ -9,6 +9,7 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Aura } from '@/components/aura';
 import { palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { SLEEP_MUSIC } from '@/data/wellness';
 import { getSleepScript, sleepSegmentsToPhases } from '@/data/sleep';
 import { useBinauralEngine } from '@/hooks/useBinauralEngine';
@@ -221,7 +222,7 @@ export default function SuenoScreen() {
                 styles.itemCard,
                 pressed && { opacity: 0.75 },
               ]}>
-              <View style={[styles.itemIcon, { backgroundColor: cat.color + '22' }]}>
+              <View style={[styles.itemIcon, { backgroundColor: alpha(cat.color, '22') }]}>
                 <MaterialIcons name={item.icon} size={22} color={cat.color} />
               </View>
               <View style={styles.itemBody}>

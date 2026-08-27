@@ -133,7 +133,11 @@ export default function ConexionesScreen() {
                     <Text style={s.rowSub}>quiere conectar contigo</Text>
                   </Pressable>
                   <Pressable
-                    style={[s.acceptBtn, busyId === row.connection.id && { opacity: 0.5 }]}
+                    style={({ pressed }) => [
+                      s.acceptBtn,
+                      busyId === row.connection.id && { opacity: 0.5 },
+                      pressed && busyId !== row.connection.id && { opacity: 0.75 },
+                    ]}
                     disabled={busyId === row.connection.id}
                     onPress={() => handleAccept(row)}
                     accessibilityRole="button"
@@ -142,7 +146,11 @@ export default function ConexionesScreen() {
                     <MaterialIcons name="check" size={18} color={palette.ink} />
                   </Pressable>
                   <Pressable
-                    style={[s.rejectBtn, busyId === row.connection.id && { opacity: 0.5 }]}
+                    style={({ pressed }) => [
+                      s.rejectBtn,
+                      busyId === row.connection.id && { opacity: 0.5 },
+                      pressed && busyId !== row.connection.id && { opacity: 0.75 },
+                    ]}
                     disabled={busyId === row.connection.id}
                     onPress={() => handleReject(row)}
                     accessibilityRole="button"
@@ -174,7 +182,7 @@ export default function ConexionesScreen() {
                   <Avatar id={row.peerId} name={row.peerName} uri={row.peerAvatar ?? undefined} size={36} />
                   <Text style={[s.rowName, { flex: 1 }]}>{row.peerName}</Text>
                   <Pressable
-                    style={s.dmBtn}
+                    style={({ pressed }) => [s.dmBtn, pressed && { opacity: 0.75 }]}
                     onPress={() => router.push(`/comunidad/chat/${row.peerId}?id=${row.peerId}&name=${encodeURIComponent(row.peerName)}` as never)}
                     accessibilityRole="button"
                     accessibilityLabel={`Enviar mensaje a ${row.peerName}`}>
@@ -200,7 +208,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, padding: spacing.md, minHeight: 60 },
   rowName: { ...typography.body, color: palette.ivory, fontSize: 14, fontWeight: '600' },
   rowSub: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
-  acceptBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
-  rejectBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: palette.line, alignItems: 'center', justifyContent: 'center' },
-  dmBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, alignItems: 'center', justifyContent: 'center' },
+  acceptBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  rejectBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: palette.line, alignItems: 'center', justifyContent: 'center' },
+  dmBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, alignItems: 'center', justifyContent: 'center' },
 });

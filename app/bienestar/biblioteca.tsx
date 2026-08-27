@@ -140,7 +140,7 @@ export default function BibliotecaScreen() {
               !cat.route && { opacity: 0.7 },
               pressed && { opacity: 0.8 },
             ]}>
-            <View style={[styles.catIcon, { backgroundColor: cat.color + '22' }]}>
+            <View style={[styles.catIcon, { backgroundColor: alpha(cat.color, '22') }]}>
               <MaterialIcons name={cat.icon} size={24} color={cat.color} />
             </View>
             <Text style={[styles.catLabel, { color: cat.color }]}>{cat.label}</Text>
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(201,160,0,0.06)',
+    backgroundColor: alpha(palette.gold, '0F'),
     borderColor: alpha(palette.gold, '33'),
     borderWidth: 1,
     borderRadius: radii.md,

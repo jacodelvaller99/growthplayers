@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { stopBinauralGlobal } from '@/hooks/useBinauralEngine';
 
@@ -21,12 +22,14 @@ const TYPE_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name
   binaural:  'graphic-eq',
   meditation:'self-improvement',
   breathing: 'air',
+  movement:  'directions-walk',
 };
 
 const TYPE_COLOR: Record<string, string> = {
   binaural:  palette.warning,
   meditation: palette.purple,
   breathing: palette.success,
+  movement:  palette.info,
 };
 
 export function WellnessMiniPlayer() {
@@ -62,6 +65,7 @@ export function WellnessMiniPlayer() {
       binaural:  '/bienestar/binaurales',
       meditation:'/bienestar/meditacion',
       breathing: '/bienestar/respiracion',
+      movement:  '/bienestar/movimiento',
     };
     const route = routes[player.type ?? ''];
     if (route) router.push(route as never);
@@ -70,6 +74,8 @@ export function WellnessMiniPlayer() {
   return (
     <Pressable
       onPress={handleTap}
+      accessibilityRole="button"
+      accessibilityLabel={`${player.sessionName}, ${player.isPaused ? 'en pausa' : 'reproduciendo'}. Toca para abrir la sesión.`}
       style={[styles.container, { bottom: tabBarHeight + 8 }]}>
 
       {/* Progress bar */}
@@ -81,7 +87,7 @@ export function WellnessMiniPlayer() {
 
       <View style={styles.row}>
         {/* Icon */}
-        <View style={[styles.iconBox, { backgroundColor: color + '22' }]}>
+        <View style={[styles.iconBox, { backgroundColor: alpha(color, '22') }]}>
           <MaterialIcons name={icon} size={18} color={color} />
         </View>
 

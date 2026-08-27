@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Animated, {
+  Easing,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
@@ -23,9 +24,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SkoolVideo } from '@/components/SkoolVideo';
 import { GoldDivider, PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
+import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
@@ -99,8 +101,8 @@ function TextAreaField({
           onChangeText={onChange}
           placeholder={field.placeholder ?? ''}
           placeholderTextColor={palette.smoke}
-          onFocus={() => { focused.value = withTiming(1, { duration: 200 }); }}
-          onBlur={() => { focused.value = withTiming(0, { duration: 200 }); }}
+          onFocus={() => { focused.value = withTiming(1, { duration: 200, easing: Easing.bezier(...EASING_HOUSE) }); }}
+          onBlur={() => { focused.value = withTiming(0, { duration: 200, easing: Easing.bezier(...EASING_HOUSE) }); }}
           textAlignVertical="top"
         />
       </Animated.View>
@@ -139,7 +141,11 @@ function CheckboxField({
         return (
           <Pressable
             key={opt}
-            style={[styles.checkItem, checked && styles.checkItemSelected]}
+            style={({ pressed }) => [
+              styles.checkItem,
+              checked && styles.checkItemSelected,
+              pressed && { opacity: 0.8 },
+            ]}
             onPress={() => toggle(opt)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked }}
@@ -469,9 +475,11 @@ function LessonCelebrationModal({
 
   useEffect(() => {
     if (!visible) return;
-    opacity.value  = withTiming(1, { duration: 280 });
-    scale.value    = withTiming(1, { duration: 280 });
-    barWidth.value = withTiming(100, { duration: 2500 });
+    opacity.value  = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
+    scale.value    = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
+    // Barra de tiempo restante: avance constante, no ease-out — regla de la
+    // casa para "constante (progress bar) → linear" (APPLE_GRADE_BRIEF.md).
+    barWidth.value = withTiming(100, { duration: 2500, easing: Easing.linear });
 
     const timer = setTimeout(onContinue, 2600);
     return () => clearTimeout(timer);
@@ -830,8 +838,13 @@ export default function LessonScreen() {
   if (!meta) {
     return (
       <View style={[sc.root, styles.center]}>
-        <Text style={styles.errorText}>Lección no encontrada.</Text>
-        <SecondaryButton label="VOLVER" icon="arrow-back" onPress={() => router.back()} />
+        <EmptyState
+          icon="explore-off"
+          title="LECCIÓN NO ENCONTRADA"
+          body="Ese enlace ya no apunta a ninguna lección del protocolo."
+          actionLabel="VOLVER"
+          onAction={() => router.back()}
+        />
       </View>
     );
   }
@@ -888,13 +901,17 @@ export default function LessonScreen() {
             </View>
           ) : (
             <View style={styles.videoComingSoon}>
-              <Text style={styles.videoComingSoonIcon}>⏳</Text>
+              <MaterialIcons name="schedule" size={24} color={palette.smoke} />
               <Text style={styles.videoComingSoonText}>Video próximamente</Text>
             </View>
           )}
           {/* Floating back button */}
           <Pressable
-            style={[styles.backBtn, { top: insets.top + 8 }]}
+            style={({ pressed }) => [
+              styles.backBtn,
+              { top: insets.top + 8 },
+              pressed && { opacity: 0.7 },
+            ]}
             onPress={() => router.back()}
             accessibilityRole="button"
             accessibilityLabel="Volver">
@@ -1157,9 +1174,6 @@ const styles = StyleSheet.create({
     height: 232,
     justifyContent: 'center',
   },
-  videoComingSoonIcon: {
-    fontSize: 32,
-  },
   classroomBtn: {
     alignItems: 'center',
     backgroundColor: palette.gold,
@@ -1398,7 +1412,7 @@ const styles = StyleSheet.create({
 
   // Norman insight box
   normanInsightBox: {
-    backgroundColor: 'rgba(179,141,60,0.08)',
+    backgroundColor: alpha(palette.gold, '14'),
     borderColor: palette.gold,
     borderLeftWidth: 2,
     borderRadius: 4,
@@ -1448,7 +1462,7 @@ const styles = StyleSheet.create({
 
   // Next lesson teaser
   nextLessonTeaser: {
-    backgroundColor: 'rgba(201, 160, 0, 0.06)',
+    backgroundColor: alpha(palette.gold, '0F'),
     borderColor: alpha(palette.gold, '44'),
     borderLeftWidth: 3,
     borderRadius: radii.sm,
@@ -1532,14 +1546,6 @@ const styles = StyleSheet.create({
     fontFamily:  Fonts.mono,
     fontSize:    10,
     letterSpacing: 1.5,
-  },
-
-  // Error
-  errorText: {
-    ...typography.body,
-    color: palette.ash,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
   },
 });
 

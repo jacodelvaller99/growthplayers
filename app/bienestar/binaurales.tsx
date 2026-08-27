@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import {
   AMBIENCE_OPTIONS,
   BINAURAL_PRESETS,
@@ -573,7 +574,7 @@ function WebRing({ progress, color, label }: { progress: number; color: string; 
 
 function NativeRing({ progress, color, label }: { progress: number; color: string; label: string }) {
   return (
-    <View style={[ring.outer, { borderColor: color + '44' }]}>
+    <View style={[ring.outer, { borderColor: alpha(color, '44') }]}>
       <View style={[ring.inner, { borderColor: color }]}>
         <Text style={[ring.label, { color }]}>{label}</Text>
       </View>

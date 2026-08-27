@@ -476,6 +476,30 @@ export const theme = {
   },
 } as const;
 
+// ─── Easing "de la casa" ────────────────────────────────────────────────────
+// Ya se usaba repetido e igual, sin estar centralizado (comando.tsx dial,
+// polaris.tsx sparkline, focus-deck.tsx): ease-out fuerte, no el
+// `Easing.ease` plano de fábrica — arranca movido desde el primer frame, que
+// es el instante que el ojo mira. Nunca ease-in en UI.
+//
+// Puntos de control crudos, NO un Easing ya construido: theme.ts es un
+// archivo foundational que importan módulos que nunca tocan animación (lógica
+// pura, pantallas admin). Importar 'react-native-reanimated' aquí arrastra su
+// rama web (createAnimatedComponent) y revienta "document is not defined" en
+// cualquier test que fuerce Platform.OS='web' sin mock local de reanimated —
+// pasó en 5 suites reales. Igual que `animation.spring.*` más abajo: theme.ts
+// da datos, cada consumidor arma su propio Easing.bezier(...EASING_HOUSE) con
+// el Reanimated que YA importa para sus withTiming/useAnimatedStyle.
+export const EASING_HOUSE = [0.23, 1, 0.32, 1] as const;
+
+// Duraciones nombradas para usar junto a EASING_HOUSE. `sweep` reproduce el
+// número real que ya comparten el dial de comando.tsx y el sparkline de
+// polaris.tsx ("firma de barrido de la casa": 700ms) — no un redondeo nuevo.
+export const DURATION_HOUSE = {
+  selection: 200,  // toggle de chip/selección
+  sweep: 700,      // barrido de contador/sparkline/dial
+} as const;
+
 // ─── Animation tokens (Reanimated spring configs) ─────────────────────────────
 export const animation = {
   spring: {

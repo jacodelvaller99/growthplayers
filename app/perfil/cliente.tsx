@@ -149,7 +149,7 @@ export default function ClienteMemoriaScreen() {
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <Text style={s.title}>MI MEMORIA</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
       <Text style={s.intro}>Tu proceso, en un solo lugar. Norman recuerda lo que trabajas para acompañarte mejor.</Text>
 
@@ -288,7 +288,7 @@ function AccountabilityPrompt({
       <View style={s.acctRow}>
         <Pressable
           onPress={() => onDone(task)}
-          style={[s.acctBtn, s.acctBtnPrimary]}
+          style={({ pressed }) => [s.acctBtn, s.acctBtnPrimary, pressed && { opacity: 0.75 }]}
           accessibilityRole="button"
           accessibilityLabel="Sí, lo hice — marcar como completado">
           <MaterialIcons name="check" size={16} color={palette.ink} />
@@ -296,7 +296,7 @@ function AccountabilityPrompt({
         </Pressable>
         <Pressable
           onPress={() => onSkip(task)}
-          style={[s.acctBtn, s.acctBtnGhost]}
+          style={({ pressed }) => [s.acctBtn, s.acctBtnGhost, pressed && { opacity: 0.75 }]}
           accessibilityRole="button"
           accessibilityLabel="Aún no lo he hecho">
           <Text style={s.acctBtnGhostText}>AÚN NO</Text>

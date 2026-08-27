@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -19,6 +19,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { logSilentError } from '@/lib/observability';
 
 export default function NorteScreen() {
@@ -39,6 +40,27 @@ export default function NorteScreen() {
   // Guard anti-doble-tap: updateNorthStar es async → deshabilita durante la escritura.
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Toast "NORTE FIJADO EN EL SISTEMA" — mismo fade+translateY que MilestoneToast
+  // (components/narrative.tsx), que cita este toast como su origen. Antes
+  // aparecía con corte seco: era la única celebración del camino principal
+  // sin la animación que su propio descendiente ya tiene.
+  const reducedMotion = useReducedMotion();
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!saved) return;
+    if (reducedMotion) {
+      toastAnim.setValue(1);
+      return;
+    }
+    toastAnim.setValue(0);
+    Animated.timing(toastAnim, {
+      toValue: 1,
+      duration: 420,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [saved, reducedMotion, toastAnim]);
 
   // Norte completeness — 4 fields, each contributes 25%
   const norteScore = [
@@ -127,7 +149,7 @@ export default function NorteScreen() {
                   onPress={() => router.push('/(onboarding)' as never)}
                   accessibilityRole="button"
                   accessibilityLabel="Configurar tu Norte ahora"
-                  style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
+                  style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}>
                   <MaterialIcons name="explore" size={20} color={palette.goldText} />
                   <Text style={styles.emptyCtaText}>
                     Tu Norte guía cada decisión. Configúralo ahora →
@@ -198,7 +220,7 @@ export default function NorteScreen() {
                           onPress={() => setNonNegotiables((prev) => prev ? `${prev}\n${s}` : s)}
                           accessibilityRole="button"
                           accessibilityLabel={`Añadir no-negociable: ${s}`}
-                          style={({ pressed }) => [styles.suggestionPill, pressed && { opacity: 0.7 }]}>
+                          style={({ pressed }) => [styles.suggestionPill, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
                           <Text style={styles.suggestionText}>+ {s}</Text>
                         </Pressable>
                       ))}
@@ -270,7 +292,7 @@ export default function NorteScreen() {
           accessibilityRole="button"
           accessibilityLabel="Volver al centro de comando"
           hitSlop={8}
-          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.65 }]}>
+          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.65, transform: [{ scale: 0.97 }] }]}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
         <View style={styles.headerCopy}>
@@ -285,7 +307,7 @@ export default function NorteScreen() {
           onPress={() => router.push('/(onboarding)' as never)}
           accessibilityRole="button"
           accessibilityLabel="Configurar tu Norte ahora"
-          style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8 }]}>
+          style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}>
           <MaterialIcons name="explore" size={20} color={palette.goldText} />
           <Text style={styles.emptyCtaText}>
             Tu Norte guía cada decisión. Configúralo ahora →
@@ -328,7 +350,7 @@ export default function NorteScreen() {
             onPress={() => removeValue(i)}
             accessibilityRole="button"
             accessibilityLabel={`Quitar ${v}`}
-            style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}>
+            style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
             <Text style={styles.chipText}>{v}</Text>
             <MaterialIcons name="close" size={13} color={palette.ink} />
           </Pressable>
@@ -354,7 +376,7 @@ export default function NorteScreen() {
             onPress={() => setAddingValue(true)}
             accessibilityRole="button"
             accessibilityLabel="Añadir valor núcleo"
-            style={({ pressed }) => [styles.chipAdd, pressed && { opacity: 0.7 }]}>
+            style={({ pressed }) => [styles.chipAdd, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
             <MaterialIcons name="add" size={14} color={palette.ash} />
             <Text style={styles.chipAddText}>Añadir</Text>
           </Pressable>
@@ -390,14 +412,21 @@ export default function NorteScreen() {
 
     {/* ── Toast: NORTE FIJADO EN EL SISTEMA ── */}
     {saved ? (
-      <View
-        style={[styles.toast, { bottom: insets.bottom + 24 }]}
+      <Animated.View
+        style={[
+          styles.toast,
+          {
+            bottom: insets.bottom + 24,
+            opacity: toastAnim,
+            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+          },
+        ]}
         pointerEvents="none"
         accessibilityLiveRegion="polite"
         accessibilityRole="alert">
         <MaterialIcons name="check" size={16} color={palette.ink} />
         <Text style={styles.toastText}>NORTE FIJADO EN EL SISTEMA</Text>
-      </View>
+      </Animated.View>
     ) : null}
     </KeyboardAvoidingView>
   );

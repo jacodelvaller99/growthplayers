@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppHeader, PremiumCard, PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
+import { AppHeader, PremiumCard, PressableScale, PrimaryButton, SecondaryButton, SkeletonBar, useScreen } from '@/components/polaris';
+import ErrorState from '@/components/ErrorState';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { VERIFIED_TESTIMONIALS } from '@/data/testimonials';
@@ -41,6 +41,23 @@ export default function PaywallScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring]   = useState(false);
 
+  // 3 estados explícitos del CTA de compra — antes null/vacío dejaba el botón
+  // deshabilitado sin explicación (cargando y roto se veían igual).
+  const [offeringsState, setOfferingsState] = useState<'loading' | 'unavailable' | 'ready'>('loading');
+
+  async function loadOfferings() {
+    setOfferingsState('loading');
+    const offerings = await getOfferings();
+    const pkgs = offerings?.current?.availablePackages ?? [];
+    if (pkgs.length === 0) {
+      setOfferingsState('unavailable');
+      return;
+    }
+    setPackages(pkgs);
+    setSelected(pkgs.find((p) => p.packageType === 'ANNUAL') ?? pkgs[0]);
+    setOfferingsState('ready');
+  }
+
   // Web lead capture — el visitante web no puede comprar aquí (RevenueCat es
   // nativo); en vez de un dead-end capturamos su email para avisarle.
   const [leadEmail, setLeadEmail]   = useState('');
@@ -59,13 +76,7 @@ export default function PaywallScreen() {
 
   // Load RevenueCat offerings on mount
   useEffect(() => {
-    getOfferings().then((offerings) => {
-      const pkgs = offerings?.current?.availablePackages ?? [];
-      setPackages(pkgs);
-      // Pre-select annual (or first available) package
-      const annual = pkgs.find((p) => p.packageType === 'ANNUAL') ?? pkgs[0] ?? null;
-      setSelected(annual);
-    });
+    loadOfferings();
   }, []);
 
   async function handlePurchase() {
@@ -247,7 +258,7 @@ export default function PaywallScreen() {
                 onSubmitEditing={handleLeadSubmit}
                 accessibilityLabel="Tu correo electrónico"
               />
-              <Pressable
+              <PressableScale
                 style={[
                   styles.leadBtn,
                   (leadStatus === 'sending' || leadEmail.trim().length === 0) && { opacity: 0.5 },
@@ -262,7 +273,7 @@ export default function PaywallScreen() {
                 ) : (
                   <Text style={styles.leadBtnText}>AVÍSAME</Text>
                 )}
-              </Pressable>
+              </PressableScale>
             </View>
           )}
           {leadStatus === 'error' && (
@@ -281,22 +292,40 @@ export default function PaywallScreen() {
       {/* Maquinaria de compra: solo en nativo (RevenueCat no opera en web). */}
       {Platform.OS !== 'web' && (
         <>
+      {/* Estado 1/3: cargando ofertas de RevenueCat */}
+      {offeringsState === 'loading' && (
+        <View style={styles.offeringsLoading}>
+          <SkeletonBar height={64} />
+          <SkeletonBar height={52} />
+        </View>
+      )}
+
+      {/* Estado 2/3: getOfferings() devolvió null o vacío — nunca un botón
+          deshabilitado sin explicación */}
+      {offeringsState === 'unavailable' && (
+        <ErrorState
+          message="No pudimos cargar los planes de suscripción. Revisa tu conexión e inténtalo de nuevo."
+          onRetry={loadOfferings}
+        />
+      )}
+
+      {/* Estado 3/3: ofertas cargadas */}
+      {offeringsState === 'ready' && (
+        <>
       {/* Package selector — only shown when RC offerings loaded */}
       {packages.length > 1 && (
-        <View style={styles.packagesRow}>
+        <View style={styles.packagesRow} accessibilityRole="radiogroup">
           {packages.map((pkg) => {
             const isSelected = selected?.packageType === pkg.packageType;
             return (
-              <Pressable
+              <PressableScale
                 key={pkg.packageType}
+                haptic
                 style={[styles.packageCard, isSelected && styles.packageCardSelected]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isSelected }}
                 accessibilityLabel={`${pkg.packageType === 'ANNUAL' ? 'Plan anual' : 'Plan mensual'}, ${pkg.product.priceString}`}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelected(pkg);
-                }}>
+                onPress={() => setSelected(pkg)}>
                 <Text style={[styles.packageType, isSelected && styles.packageTypeSelected]}>
                   {pkg.packageType === 'ANNUAL' ? 'ANUAL' : 'MENSUAL'}
                 </Text>
@@ -308,13 +337,13 @@ export default function PaywallScreen() {
                     <Text style={styles.bestValueText}>MEJOR VALOR</Text>
                   </View>
                 )}
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
       )}
 
-      {/* Price display when single package or none loaded */}
+      {/* Price display when single package */}
       {packages.length <= 1 && selected && (
         <PremiumCard style={styles.priceCard}>
           <Text style={styles.priceLabel}>PRECIO</Text>
@@ -323,25 +352,23 @@ export default function PaywallScreen() {
       )}
 
       <PrimaryButton
-        label={
-          purchasing
-            ? 'PROCESANDO...'
-            : packages.length === 0
-            ? 'COMPROMETERSE CON EL PROTOCOLO'
-            : `ME COMPROMETO — ${selected?.product.priceString ?? ''}`
-        }
+        label={purchasing ? 'PROCESANDO...' : `ME COMPROMETO — ${selected?.product.priceString ?? ''}`}
         icon={purchasing ? undefined : 'military-tech'}
         onPress={handlePurchase}
-        disabled={isLoading || packages.length === 0}
+        disabled={isLoading}
       />
 
       {/* Auto-renew disclosure — required by App Store / Google Play */}
       <Text style={styles.autoRenew}>
         La suscripción se renueva automáticamente al precio indicado salvo que la canceles al menos 24 h antes del fin del período. Gestiónala en los ajustes de tu cuenta de la tienda.
       </Text>
+        </>
+      )}
 
-      {/* Restore — required by Apple App Store guidelines */}
-      <Pressable
+      {/* Restore — required by Apple App Store guidelines. Independiente del
+          estado de offerings: una compra previa puede restaurarse aunque la
+          carga de ofertas actuales haya fallado. */}
+      <PressableScale
         style={[styles.restoreBtn, isLoading && { opacity: 0.5 }]}
         onPress={handleRestore}
         disabled={isLoading}
@@ -353,7 +380,7 @@ export default function PaywallScreen() {
         ) : (
           <Text style={styles.restoreText}>Restaurar compras anteriores</Text>
         )}
-      </Pressable>
+      </PressableScale>
         </>
       )}
 
@@ -393,7 +420,7 @@ const styles = StyleSheet.create({
     color: palette.ivory,
     fontFamily: Fonts.display,
     fontSize: 24,
-    fontWeight: '400',
+    fontWeight: '700',
     letterSpacing: 2,
     lineHeight: 30,
     textTransform: 'uppercase',
@@ -490,6 +517,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  offeringsLoading: {
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
   packagesRow: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -507,7 +538,7 @@ const styles = StyleSheet.create({
   },
   packageCardSelected: {
     borderColor: palette.gold,
-    backgroundColor: 'rgba(255,200,4,0.06)',
+    backgroundColor: alpha(palette.gold, '0F'),
   },
   packageType: {
     ...typography.label,
@@ -528,7 +559,7 @@ const styles = StyleSheet.create({
   },
   bestValueBadge: {
     backgroundColor: palette.gold,
-    borderRadius: radii.none,
+    borderRadius: radii.xs,
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginTop: 4,
@@ -650,7 +681,7 @@ const styles = StyleSheet.create({
 
   guaranteeRow: {
     alignItems: 'center',
-    backgroundColor: 'rgba(77, 170, 87, 0.08)',
+    backgroundColor: alpha(palette.success, '14'),
     borderColor: alpha(palette.success, '44'),
     borderRadius: radii.md,
     borderWidth: 1,

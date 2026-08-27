@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { CircleEmpty } from '@/components/circle';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
@@ -255,7 +256,7 @@ export default function ChatThreadScreen() {
             <Avatar id={peerId ?? ''} name={peerName} size={32} />
             <Text style={styles.headerName} numberOfLines={1}>{peerName}</Text>
           </View>
-          <View style={{ width: 38 }} />
+          <View style={{ width: 44 }} />
         </View>
 
         {loading ? (
@@ -270,10 +271,7 @@ export default function ChatThreadScreen() {
             contentContainerStyle={rows.length === 0 ? styles.emptyWrap : { padding: spacing.md, gap: spacing.xs }}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              <View style={styles.empty}>
-                <MaterialIcons name="chat-bubble-outline" size={48} color={palette.line} />
-                <Text style={styles.emptyText}>Inicia la conversación con {peerName}.</Text>
-              </View>
+              <CircleEmpty icon="chat-bubble-outline" text={`Inicia la conversación con ${peerName}.`} />
             }
             renderItem={({ item }) => {
               if (item.kind === 'divider') {
@@ -371,7 +369,11 @@ export default function ChatThreadScreen() {
               accessibilityRole="button"
               accessibilityLabel="Enviar mensaje"
               accessibilityState={{ disabled: sending || !draft.trim() }}
-              style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}>
+              style={({ pressed }) => [
+                styles.sendBtn,
+                (!draft.trim() || sending) && styles.sendBtnDisabled,
+                pressed && draft.trim() && !sending && { opacity: 0.75 },
+              ]}>
               <MaterialIcons name="send" size={20} color={!draft.trim() || sending ? palette.ash : palette.ink} />
             </Pressable>
           </View>
@@ -390,8 +392,6 @@ const styles = StyleSheet.create({
 
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap:   { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
-  empty:       { alignItems: 'center', gap: 12, paddingHorizontal: spacing.xl },
-  emptyText:   { ...typography.caption, color: palette.smoke, textAlign: 'center', maxWidth: 280, lineHeight: 18 },
 
   divider:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
   dividerLine: { flex: 1, height: 1, backgroundColor: palette.lineSoft },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
 
   composer:    { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: palette.lineSoft, backgroundColor: palette.black },
   input:       { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, maxHeight: 110, minHeight: 40, backgroundColor: palette.graphite, borderRadius: radii.md, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 10 },
-  sendBtn:     { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  sendBtn:     { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line },
 
   blockedBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.lg, paddingHorizontal: spacing.lg, borderTopWidth: 1, borderTopColor: palette.lineSoft },

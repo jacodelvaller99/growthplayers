@@ -110,7 +110,7 @@ export default function CirculoHubScreen() {
           llega pronto a tu hermandad.
         </Text>
         <Pressable
-          style={s.soonCta}
+          style={({ pressed }) => [s.soonCta, pressed && { opacity: 0.75 }]}
           onPress={() => router.push('/comunidad/mensajes' as never)}
           accessibilityRole="button"
           accessibilityLabel="Ir a mensajes">
@@ -139,7 +139,7 @@ export default function CirculoHubScreen() {
           <Text style={s.subtitle}>Tu hermandad, en movimiento</Text>
         </View>
         <Pressable
-          style={s.dmBtn}
+          style={({ pressed }) => [s.dmBtn, pressed && { opacity: 0.75 }]}
           onPress={() => router.push('/comunidad/mensajes' as never)}
           accessibilityRole="button"
           accessibilityLabel="Mensajes directos">
@@ -154,7 +154,7 @@ export default function CirculoHubScreen() {
             Antes de entrar a El Círculo, acepta el Código de la Hermandad en la plaza general.
           </Text>
           <Pressable
-            style={s.eulaCta}
+            style={({ pressed }) => [s.eulaCta, pressed && { opacity: 0.75 }]}
             onPress={() => router.push('/bienestar/comunidad' as never)}
             accessibilityRole="button"
             accessibilityLabel="Ir a la plaza para aceptar el código">

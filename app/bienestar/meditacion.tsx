@@ -19,6 +19,7 @@ import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/compo
 import SafetyWarning from '@/components/SafetyWarning';
 import { EvidenceBadge } from '@/components/EvidenceBadge';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import {
   MEDITATION_CATEGORY_MUSIC,
   MEDITATION_SESSIONS,
@@ -487,7 +488,7 @@ const done = completedIds.has(session.id);
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
       <PremiumCard style={styles.cardInner}>
         <View style={styles.cardTop}>
-          <View style={[styles.iconBox, { backgroundColor: catColor + '22' }]}>
+          <View style={[styles.iconBox, { backgroundColor: alpha(catColor, '22') }]}>
             <MaterialIcons name={catIcon} size={26} color={catColor} />
           </View>
           <View style={styles.cardMeta}>

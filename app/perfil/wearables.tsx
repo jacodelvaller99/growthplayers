@@ -356,7 +356,7 @@ const connStyles = StyleSheet.create({
   sub:  { ...typography.mono,    color: palette.smoke, fontSize: 10, marginTop: 2 },
   activeBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(100,200,100,0.10)',
+    backgroundColor: alpha(palette.success, '14'),
     paddingHorizontal: spacing.sm, paddingVertical: 5,
     borderRadius: radii.sm,
   },
@@ -418,7 +418,11 @@ function DisconnectedCard({
       </View>
 
       <Pressable
-        style={[discStyles.connectBtn, isConnecting && { opacity: 0.6 }]}
+        style={({ pressed }) => [
+          discStyles.connectBtn,
+          isConnecting && { opacity: 0.6 },
+          pressed && !isConnecting && { opacity: 0.8 },
+        ]}
         onPress={onConnect}
         disabled={isConnecting}
         accessibilityRole="button"
@@ -545,7 +549,11 @@ function AggregatorHeroCard({
       )}
 
       <Pressable
-        style={[heroStyles.connectBtn, isConnecting && { opacity: 0.6 }]}
+        style={({ pressed }) => [
+          heroStyles.connectBtn,
+          isConnecting && { opacity: 0.6 },
+          pressed && !isConnecting && { opacity: 0.8 },
+        ]}
         onPress={onConnect}
         disabled={isConnecting}
         accessibilityRole="button"
@@ -1092,8 +1100,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderRadius: radii.md, borderWidth: 1, marginBottom: spacing.sm,
   },
-  bannerSuccess: { backgroundColor: 'rgba(100,200,100,0.08)', borderColor: alpha(palette.success, '44') },
-  bannerError:   { backgroundColor: 'rgba(200,60,60,0.08)',   borderColor: alpha(palette.danger, '44') },
+  bannerSuccess: { backgroundColor: alpha(palette.success, '14'), borderColor: alpha(palette.success, '44') },
+  bannerError:   { backgroundColor: alpha(palette.danger, '14'),  borderColor: alpha(palette.danger, '44') },
   bannerInfo:    { backgroundColor: palette.goldGlow,         borderColor: palette.lineGold },
   bannerText:    { ...typography.body, flex: 1, fontSize: 13 },
 

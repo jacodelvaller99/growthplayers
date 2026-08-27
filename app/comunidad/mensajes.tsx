@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { CircleEmpty } from '@/components/circle';
 import { usePresence } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -149,7 +150,7 @@ export default function MensajesScreen() {
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <Text style={styles.title}>MENSAJES</Text>
-        <View style={{ width: 38 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       {/* Señal de pertenencia: derivada de datos reales (tu red de hermanos en
@@ -179,17 +180,14 @@ export default function MensajesScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={palette.gold} />
           }
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <MaterialIcons name="forum" size={52} color={palette.line} />
-              <Text style={styles.emptyTitle}>Sin conversaciones</Text>
-              <Text style={styles.emptySub}>
-                Abre el perfil de un miembro desde la comunidad para iniciar un mensaje directo.
-              </Text>
-            </View>
+            <CircleEmpty
+              icon="forum"
+              text={'Sin conversaciones.\nAbre el perfil de un miembro desde la comunidad para iniciar un mensaje directo.'}
+            />
           }
           renderItem={({ item }) => (
             <Pressable
-              style={styles.row}
+              style={({ pressed }) => [styles.row, pressed && { opacity: 0.75 }]}
               accessibilityRole="button"
               accessibilityLabel={`Conversación con ${item.peerName}.${item.unread ? ' Mensaje sin leer.' : ''} ${item.lastBody}. Hace ${timeAgo(item.lastAt)}`}
               onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: item.peerId, name: item.peerName } } as never)}>
@@ -229,9 +227,6 @@ const styles = StyleSheet.create({
 
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap:   { flexGrow: 1, justifyContent: 'center' },
-  empty:       { alignItems: 'center', gap: 12, paddingHorizontal: spacing.xl },
-  emptyTitle:  { fontFamily: Fonts.display, fontSize: 16, color: palette.ash, letterSpacing: 1 },
-  emptySub:    { ...typography.caption, color: palette.smoke, textAlign: 'center', maxWidth: 300, lineHeight: 18 },
 
   row:         { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 64 },
   rowMain:     { flex: 1, gap: 3 },

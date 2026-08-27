@@ -28,6 +28,9 @@ jest.mock('@/components/polaris', () => {
   return {
     AppHeader: () => R.createElement(RN.View),
     PremiumCard: V, PrimaryButton: Btn, SecondaryButton: Btn,
+    // Primitivos nuevos de la pasada Apple-grade — el paywall los usa para el
+    // feedback de press (leadBtn) y el estado de carga de ofertas.
+    PressableScale: RN.Pressable, SkeletonBar: V,
     screen: {}, useScreen: () => ({ root: {}, content: {} }),
   };
 });

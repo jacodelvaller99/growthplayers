@@ -1,0 +1,1103 @@
+{
+  "summary": "Auditoría de diseño Apple-grade sobre 8 dominios de pantallas de Polaris, contra el brief destilado",
+  "agentCount": 9,
+  "logs": [
+    "60 findings crudos de 8/8 dominios"
+  ],
+  "result": {
+    "domainsAudited": 8,
+    "totalDomains": 8,
+    "rawFindings": [
+      {
+        "screen": "Onboarding — wizard de 6 pasos",
+        "issue": "Los 6 steps (bienvenida/consentimiento → intro → identidad → norte → obstáculo → código) cambian con corte seco puro: cero Reanimated en todo el archivo, pese a ser el screen de mayor drop-off del producto y a que el mismo dominio ya tiene el patrón resuelto (Fade/Beat en umbral.tsx, a metros de distancia).",
+        "category": "motion_faltante",
+        "severity": "P0",
+        "fix_sugerido": "Envolver el contenido de cada step en Animated.View con entering={FadeInRight.duration(220)} / exiting={FadeOutLeft.duration(160)} (Reanimated 3 layout animations, no requiere shared values), keyed por `step`; gatear con useReducedMotion() igual que welcome.tsx. La barra de progreso puede animar su fill con withTiming en vez de salto instantáneo de flex.",
+        "files": [
+          "app/(onboarding)/index.tsx"
+        ],
+        "domain": "auth_onboarding",
+        "domainLabel": "Auth + Onboarding"
+      },
+      {
+        "screen": "Onboarding — wizard de 6 pasos",
+        "issue": "setStep() nunca resetea el scroll: en un step largo (p.ej. paso 3 'Mi Norte', 3 textareas) el usuario scrollea, toca CONTINUAR, y el siguiente step monta manteniendo la posición de scroll anterior — puede aterrizar a mitad de card, viendo solo ATRAS/CONTINUAR sin título ni contexto del paso nuevo.",
+        "category": "antipatron_layout",
+        "severity": "P1",
+        "fix_sugerido": "Agregar `const scrollRef = useRef<ScrollView>(null)`, pasar ref={scrollRef} al ScrollView, y en `useEffect(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), [step])` forzar el reset al cambiar de paso.",
+        "files": [
+          "app/(onboarding)/index.tsx"
+        ],
+        "domain": "auth_onboarding",
+        "domainLabel": "Auth + Onboarding"
+      },
+      {
+        "screen": "Login / Registro — selector de modo",
+        "issue": "Los tabs INICIAR SESIÓN / REGISTRARSE (primer control interactivo de toda la app) no tienen feedback de press — ni scale ni cambio de estado en press — mientras que PrimaryButton/SecondaryButton en el mismo archivo sí lo tienen (scale 0.95-0.96 + spring), dejando el control más visible de la pantalla como el único mudo.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Envolver cada Pressable del modeSwitcher en Animated.View con useSharedValue+withSpring igual que PrimaryButton (mismo patrón, mismos damping/stiffness), o extraer un componente Chip/Tab reanimado reutilizable en Fase C.",
+        "files": [
+          "app/(auth)/index.tsx"
+        ],
+        "domain": "auth_onboarding",
+        "domainLabel": "Auth + Onboarding"
+      },
+      {
+        "screen": "Login / Registro — cambio de modo y feedback",
+        "issue": "Al cambiar mode (login↔registro↔forgot) el bloque de campos se sustituye entero de golpe, y el feedbackBox de error/éxito aparece/desaparece sin transición — mismo patrón de 'corte seco' que el brief marca como categoría de motion faltante, en la pantalla de entrada de toda la app.",
+        "category": "motion_faltante",
+        "severity": "P1",
+        "fix_sugerido": "Envolver `styles.form` (keyed por mode) y `feedbackBox` en Animated.View con entering={FadeIn.duration(180)} — Reanimated ya está importado indirectamente vía PrimaryButton, solo falta importar en este archivo.",
+        "files": [
+          "app/(auth)/index.tsx"
+        ],
+        "domain": "auth_onboarding",
+        "domainLabel": "Auth + Onboarding"
+      },
+      {
+        "screen": "Onboarding paso 5 — Código de acceso",
+        "issue": "El botón 'APLICAR' es el único Pressable de todo el archivo sin accessibilityRole/accessibilityLabel/accessibilityState (todos los demás — tabs, checkboxes, chips, skip-links — sí los tienen) y sin feedback de press; además el mensaje de resultado (codeMessage) no lleva accessibilityLiveRegion, a diferencia de finishError unas líneas más abajo en el mismo archivo, que sí lo tiene.",
+        "category": "hueco_a11y",
+        "severity": "P1",
+        "fix_sugerido": "Agregar accessibilityRole='button', accessibilityLabel='Aplicar código de acceso', accessibilityState={{ disabled: !accessCode.trim() || codeStatus==='checking' }} al Pressable; agregar accessibilityRole='alert' accessibilityLiveRegion='polite' al Text de codeMessage; envolver el botón en el mismo scale(0.97) que el resto de los CTA del archivo.",
+        "files": [
+          "app/(onboarding)/index.tsx"
+        ],
+        "domain": "auth_onboarding",
+        "domainLabel": "Auth + Onboarding"
+      },
+      {
+        "screen": "Onboarding paso 4 — Obstáculo (chips de ejemplo)",
+        "issue": "Los chips de ejemplo de obstáculo miden minHeight: 36, por debajo del piso de 44×44 que el brief define como regla dura sin excepciones para touch targets.",
+        "category": "antipatron_layout",
+        "severity": "P2",
+        "fix_sugerido": "Subir minHeight a 44 en el estilo `chip`, o si se quiere conservar el alto visual de 36 por consistencia con el btn-chip documentado en CLAUDE.md, envolver el pill en un contenedor Pressable con minHeight:44 y centrar el chip visual adentro.",
+        "files": [
+          "app/(onboarding)/index.tsx"
+        ],
+        "domain": "auth_onboarding",
+        "domainLabel": "Auth + Onboarding"
+      },
+      {
+        "screen": "Welcome desktop — halo visual detrás del logo",
+        "issue": "desktopVisualGlow hardcodea 'rgba(255,200,4,0.05)' dos veces (backgroundColor y boxShadow) en vez de derivarlo del token con alpha(palette.gold, hex2) de themeColors.ts — exactamente el patrón que el comentario de theme.ts:43 pide evitar.",
+        "category": "token_roto",
+        "severity": "P2",
+        "fix_sugerido": "Importar alpha de '@/constants/themeColors' y reemplazar ambos literales por alpha(palette.gold, '0D') (≈5%).",
+        "files": [
+          "app/(auth)/welcome.tsx"
+        ],
+        "domain": "auth_onboarding",
+        "domainLabel": "Auth + Onboarding"
+      },
+      {
+        "screen": "Comando — modos Esencial / Guiado / Calma",
+        "issue": "El único CTA de los modos Esencial y Guiado (y las dos filas de protocolo en Calma) usan `style={s.button}` como objeto estático en vez de la función `({pressed}) => [...]` — Pressable no aplica ningún feedback visual, ni siquiera opacidad, al tocarlos.",
+        "category": "feedback_press_ausente",
+        "severity": "P0",
+        "fix_sugerido": "Sustituir el Pressable a mano por `PrimaryButton` de components/polaris.tsx (ya trae spring scale 0.95 + haptic + disabled state) en esencial.tsx:12 y guiado.tsx:28 — es literalmente el mismo botón dorado full-width que PrimaryButton ya resuelve, cero código nuevo. En calma.tsx:39/47, extender al patrón `pressed &&` que el propio archivo ya usa en la línea 29 (agregando además `transform:[{scale:0.97}]`, que hoy falta incluso ahí).",
+        "files": [
+          "components/comando-modes/esencial.tsx",
+          "components/comando-modes/guiado.tsx",
+          "components/comando-modes/calma.tsx"
+        ],
+        "domain": "comando_norte",
+        "domainLabel": "Comando (home) + Norte"
+      },
+      {
+        "screen": "Comando — JornadaTracker (mando del día, hero móvil + desktop)",
+        "issue": "La tarjeta con la única decisión del día (JornadaTracker, montada en cada carga de Comando) no dispara haptic al tocarla, mientras que `Directive` en focus-deck.tsx — el componente hermano para exactamente 'la acción del día' — sí lo hace y lo justifica en su propio comentario ('la acción del día merece confirmación física').",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "En jornada.tsx, envolver `onPressCta` con `if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);` antes de invocar la prop, igual que Directive (focus-deck.tsx:50-55). Importar Platform y Haptics.",
+        "files": [
+          "components/jornada.tsx",
+          "components/focus-deck.tsx"
+        ],
+        "domain": "comando_norte",
+        "domainLabel": "Comando (home) + Norte"
+      },
+      {
+        "screen": "Comando — StepsRow (LÉETE → EJECUTA → REGULA → CIERRA)",
+        "issue": "El punto de cada paso pasa de pendiente a 'hecho' (aparece el check, el conector se pone dorado) con un cambio de estilo plano — corte seco sin ninguna transición Reanimated, justo el ejemplo textual de 'motion_faltante' del brief (seleccionado→no seleccionado).",
+        "category": "motion_faltante",
+        "severity": "P1",
+        "fix_sugerido": "Animar `stepDot`/`connector` con `useAnimatedStyle` + `withTiming` (200-300ms, easing bezier(0.23,1,0.32,1)) al cambiar `state`, o envolver el check entrante en un `entering={ZoomIn.duration(160)}` de Reanimated. Respetar `useReducedMotion()` como ya hace Dial en el mismo archivo focus-deck.tsx.",
+        "files": [
+          "components/jornada.tsx"
+        ],
+        "domain": "comando_norte",
+        "domainLabel": "Comando (home) + Norte"
+      },
+      {
+        "screen": "Norte — toast 'NORTE FIJADO EN EL SISTEMA'",
+        "issue": "El toast de éxito en norte.tsx (líneas 392-401) aparece con un corte seco (`{saved ? <View>...}`, sin animación), pese a que el comentario de `MilestoneToast` en narrative.tsx cita textualmente ESTE toast como el patrón que reutiliza — pero MilestoneToast sí anima (fade + translateY 10→0, respetando reduced motion) y el original en norte.tsx nunca se actualizó a la misma versión.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P1",
+        "fix_sugerido": "Envolver el toast de norte.tsx en un Animated.View con la misma firma que MilestoneToast (narrative.tsx:137-179): opacity 0→1 + translateY 10→0, 420ms, Easing.out(Easing.quad), gate con useReducedMotion. Idealmente extraer un `Toast` compartido a polaris.tsx para que ningún tercer sitio repita la divergencia.",
+        "files": [
+          "app/(tabs)/norte.tsx",
+          "components/narrative.tsx"
+        ],
+        "domain": "comando_norte",
+        "domainLabel": "Comando (home) + Norte"
+      },
+      {
+        "screen": "Norte (pantalla completa)",
+        "issue": "norte.tsx no importa react-native-reanimated y todos sus Pressable a mano (backBtn, emptyCta, chips de quitar valor, chipAdd, promptSuggestions) solo bajan opacidad al presionar — sin el scale(0.97) que la regla 5 del brief exige y que HoverCard/PrimaryButton ya aplican en Comando, una pantalla a un toque de distancia.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Agregar `transform:[{scale:0.97}]` a cada `pressed && {...}` existente en norte.tsx (son ~7 sitios, cambio mecánico), o migrar esas tarjetas pulsables a `HoverCard`/`GoldAccentCard(onPress)` de components/polaris.tsx, que ya resuelven esto sin código nuevo.",
+        "files": [
+          "app/(tabs)/norte.tsx"
+        ],
+        "domain": "comando_norte",
+        "domainLabel": "Comando (home) + Norte"
+      },
+      {
+        "screen": "Comando — franjas de acento dorado (Norman avatar, North anchor, Community icon, Live card, Wearable CTA, Anomaly card)",
+        "issue": "comando.tsx mezcla `alpha(palette.gold, 'XX')` (correcto) con 6 literales `rgba(...)` escritos a mano para el mismo propósito ('fondo dorado tenue'); dos de ellos (`rgba(200,160,80,...)`, `rgba(179,141,60,...)`) ni siquiera son el oro de marca (#FFC804/255,200,4) sino un dorado más apagado — el acento dorado cambia de tono entre tarjetas de la misma pantalla sin que nadie lo haya decidido.",
+        "category": "token_roto",
+        "severity": "P2",
+        "fix_sugerido": "Reemplazar las 6 apariciones de `rgba(...)` (líneas ~1539, 1610-1611, 1640, 1902, 2111) por `alpha(palette.gold, '1F')` / etc. con el hex2 equivalente, usando la MISMA técnica que ya conviven en el archivo (`alpha(palette.gold, '33')`, `alpha(palette.gold, '55')`). `rgba(10,10,10,0.85)` en liveCard es un overlay oscuro, no dorado — revisar aparte si corresponde un token de superficie en vez de hex crudo.",
+        "files": [
+          "app/(tabs)/comando.tsx"
+        ],
+        "domain": "comando_norte",
+        "domainLabel": "Comando (home) + Norte"
+      },
+      {
+        "screen": "Comando — Panel rápido de Norman y accesos rápidos",
+        "issue": "Varios Pressable a mano en el mismo screen (botón abrir Norman, chips de prompt, 'RESPONDER A NORMAN', tarjeta Norman móvil, tiles de Acceso Rápido, filas de CommunityPreview) solo aplican opacidad al presionar, mientras casi todas las demás tarjetas pulsables de la MISMA pantalla usan HoverCard con scale(0.98) — dos intensidades de feedback conviviendo en un solo scroll.",
+        "category": "feedback_press_ausente",
+        "severity": "P2",
+        "fix_sugerido": "Añadir `transform:[{scale:0.97}]` a los `pressed && {opacity:...}` de esos Pressable (normanQPOpen, normanChip, normanWeeklyBtn, mNormanCard, quickTile, cp.post/cp.viewAll) para igualar el estándar ya vigente en HoverCard en la misma pantalla.",
+        "files": [
+          "app/(tabs)/comando.tsx"
+        ],
+        "domain": "comando_norte",
+        "domainLabel": "Comando (home) + Norte"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — TypingBubble (Norman escribiendo)",
+        "issue": "El indicador de 'Norman está pensando' (tres puntos) es completamente estático — cero animación — en la única pantalla del golden path que hoy no importa ni un solo import de Reanimated.",
+        "category": "motion_faltante",
+        "severity": "P1",
+        "fix_sugerido": "Reusar el idioma ya establecido en SkeletonBar (components/polaris.tsx): withRepeat + withTiming sobre opacity/scale por punto con stagger de ~150ms entre los 3, gateado por useReducedMotion() (estático a media opacidad si está activo, igual que SkeletonBar). Es el loading state más visto de todo el producto y hoy se siente 'muerto'.",
+        "files": [
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — selector de modo (Diagnóstico/Decisión/Cuentas/Reflexión)",
+        "issue": "Los chips de modo no tienen NINGÚN feedback de press — ni scale, ni cambio de opacidad, ni haptic — a diferencia de los chips de 'CONSULTAS RÁPIDAS' inmediatamente arriba en la misma pantalla, que sí usan promptPressStyle + Haptics.impactAsync.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Aplicar el mismo patrón que promptPressStyle (scale 0.97 en pressed) + Haptics.impactAsync(Light) en el onPress del chip de modo — es un control primario que cambia cómo responde Norman, merece al menos el mismo feedback que un chip de sugerencia.",
+        "files": [
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — texto de chips de modo",
+        "issue": "styles.modeChipText usa fontSize: 10, por debajo del mínimo duro de 11pt para cualquier label visible que fija el brief — en un control siempre visible sobre la barra de input.",
+        "category": "otro",
+        "severity": "P1",
+        "fix_sugerido": "Subir fontSize a 11 en modeChipText (línea ~1200). Si el chip queda muy angosto en 4 columnas, reducir paddingHorizontal en vez de bajar el tamaño de fuente.",
+        "files": [
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — StatusPill 'RESPONDIENDO'/'EN LINEA' en el header",
+        "issue": "pillText en components/polaris.tsx usa fontSize: 8 — 3pt por debajo del mínimo de 11pt del brief. Es el indicador de estado del chat, visible en cada visita a Mentor.",
+        "category": "otro",
+        "severity": "P2",
+        "fix_sugerido": "Subir pillText.fontSize a 11 (o al menos 9-10 si el espacio del pill es una restricción real de layout en otras pantallas que también usan StatusPill). Como polaris.tsx es archivo compartido, este fix lo debe aplicar el agente dedicado de Fase C, no un agente de dominio — reportar el hallazgo para que quede en su cola.",
+        "files": [
+          "components/polaris.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — burbujas de conversación (entrada de mensaje nuevo)",
+        "issue": "Cada burbuja nueva (usuario o Norman) aparece con corte seco al hacer push al array — sin transición de entrada — a pesar de que el mismo archivo compartido (components/polaris.tsx) ya tiene el idioma establecido `Animated.View entering={FadeInDown.delay(d).springify().damping(20).stiffness(180)}` usado en MetricCard.",
+        "category": "motion_faltante",
+        "severity": "P1",
+        "fix_sugerido": "Envolver cada ChatBubble nuevo (solo el último mensaje del array, no un replay de todo el historial cargado) en Animated.View con el mismo FadeInDown.springify() ya usado en MetricCard — reutiliza el patrón existente, no inventa uno nuevo. Gatear con useReducedMotion() (fallback: aparecer sin animación).",
+        "files": [
+          "components/polaris.tsx",
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — panel 'ANALIZO EN BASE A' (transparencia)",
+        "issue": "El expand/collapse del panel de transparencia (showBasis) monta/desmonta la lista con un `? <View> : null` — sin transición de altura/opacidad — y el ícono chevron (expand-less/expand-more) cambia sin animación.",
+        "category": "motion_faltante",
+        "severity": "P2",
+        "fix_sugerido": "Envolver basisList en Animated.View con entering={FadeIn} / exiting={FadeOut} (o LayoutAnimation si se prefiere no tocar Reanimated aquí), gateado por useReducedMotion(). Uso poco frecuente por sesión, por eso P2 y no P1.",
+        "files": [
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — TypingBubble y StatusPill durante streaming",
+        "issue": "No hay ninguna señal de accesibilidad para el estado 'Norman está escribiendo': TypingBubble no tiene accessibilityLabel/live-region durante la fase de solo-puntos, y el cambio de texto del StatusPill del header ('EN LINEA' → 'RESPONDIENDO') tampoco está anunciado — un usuario de lector de pantalla recibe silencio total mientras Norman piensa.",
+        "category": "hueco_a11y",
+        "severity": "P1",
+        "fix_sugerido": "Agregar accessibilityLiveRegion=\"polite\" (Android) / accessibilityRole=\"text\" con accessibilityLabel dinámico (\"Norman está escribiendo\" / el texto ya generado) al contenedor de TypingBubble, y accessibilityLiveRegion en el StatusPill del header cuando isStreaming cambia.",
+        "files": [
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — mentorBubble (burbuja de Norman)",
+        "issue": "mentorBubble usa borderLeftColor: palette.gold + borderLeftWidth: 2 como 'acento editorial de marca' (comentario en el código) — exactamente el anti-patrón de 'borde lateral tipo side-stripe' que el brief marca como 'nunca intencional', aplicado a cada burbuja de Norman en el chat central del producto.",
+        "category": "antipatron_layout",
+        "severity": "P2",
+        "fix_sugerido": "Reemplazar el borde lateral por un fill tintado (backgroundColor con alpha(palette.gold, ...) más marcado que el actual graphiteLight) o un ícono líder pequeño (avatar/mark de Norman) al inicio de la burbuja, como pide el brief. Archivo compartido — coordinar con el agente de Fase C ya que ChatBubble hoy solo lo consume Mentor, pero vive en polaris.tsx.",
+        "files": [
+          "components/polaris.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — auto-scroll durante el streaming",
+        "issue": "scrollToBottom() dispara un setTimeout(..., 80) nuevo y sin cancelar en CADA delta del stream (llamado en el callback de streamMentorResponse en cada chunk SSE) — con una respuesta que llega en muchos deltas pequeños esto apila decenas de timers de scrollToEnd superpuestos, causa directa de cualquier jitter visible en el scroll mientras se lee una respuesta en vivo.",
+        "category": "otro",
+        "severity": "P1",
+        "fix_sugerido": "Debounce/throttle scrollToBottom durante streaming: guardar el timer en un ref y limpiar el anterior antes de programar uno nuevo (clearTimeout), o usar un flag 'scrollPending' con requestAnimationFrame en vez de setTimeout repetido.",
+        "files": [
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/mentor.tsx — botón CHATS, cerrar del modal de historial, filas de thread",
+        "issue": "El botón 'CHATS' del header usa TouchableOpacity (activeOpacity default 0.2, sin scale, sin haptic) en vez de Pressable, y tanto el botón 'Cerrar' del modal de historial como cada fila de thread son Pressable sin ningún estilo reactivo a `pressed` — feedback de press inconsistente dentro de la misma pantalla, que en todo lo demás usa Pressable + scale(0.95-0.97) + opacity.",
+        "category": "feedback_press_ausente",
+        "severity": "P2",
+        "fix_sugerido": "Migrar chatsBtn de TouchableOpacity a Pressable con el mismo patrón opacity/scale del resto de la pantalla, y agregar un style callback con `pressed && {opacity:0.7}` a threadsClose y threadRow.",
+        "files": [
+          "app/(tabs)/mentor.tsx"
+        ],
+        "domain": "mentor_chat",
+        "domainLabel": "Mentor (Norman) chat"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — Progreso (PROMEDIOS DE LA SEMANA en móvil vs BIOMETRÍA PROMEDIO 7D en desktop)",
+        "issue": "El grid móvil 'PROMEDIOS DE LA SEMANA' dibuja energía/claridad con MiniSparkline (SVG casero, estático, sin entrada animada) mientras la sección 'BIOMETRÍA PROMEDIO (7D)' —que solo existe en la rama desktop— usa WeeklySparkline, el componente que ya vive en polaris.tsx con entrada animada withTiming de 700-800ms y fallback de barras en web; energyValues/clarityValues/hasCheckIns se calculan arriba del componente pero el layout móvil nunca los consume. El usuario móvil, que es el caso primario de una app Expo, nunca ve la versión pulida y encima el color de la línea difiere (palette.gold por defecto en MiniSparkline vs palette.goldText explícito en el WeeklySparkline de desktop) para la misma serie de datos.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P1",
+        "fix_sugerido": "Sustituir MiniSparkline dentro de WeeklyMetricCard por WeeklySparkline (o portar su patrón de entrada withTiming/Easing.bezier a MiniSparkline) y llevar la sección BIOMETRÍA PROMEDIO (7D) también al layout móvil para que ambas plataformas compartan la misma pieza de dataviz y el mismo token de color.",
+        "files": [
+          "app/(tabs)/progreso.tsx",
+          "components/polaris.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — Progreso · lente SEÑAL · tarjeta 'Carga sistema'",
+        "issue": "En WeeklyMetricCard, la flecha (▲/▼) de 'Carga sistema' usa el signo crudo de analytics.loadTrend, pero el color (trendUp = loadTrend < 0) usa la polaridad invertida a propósito porque más estrés es malo. Resultado: cuando el estrés SUBE se ve '▲' en gris, y cuando BAJA se ve '▼' en verde — justo lo opuesto al patrón de Energía/Claridad/Coherencia en la misma grilla de 2x2, donde ▲ siempre es verde-favorable. El mismo símbolo significa cosas distintas en cuatro tarjetas idénticas visualmente, lo que puede hacer que el usuario lea mal su propia tendencia de estrés.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P1",
+        "fix_sugerido": "Derivar también la flecha de trendUp (`trendUp ? '▲' : '▼'`) en vez del signo crudo de loadTrend, así las 4 tarjetas comparten la misma convención (▲ verde = favorable, sin importar si la métrica es 'más es mejor' o 'menos es mejor').",
+        "files": [
+          "app/(tabs)/progreso.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — Progreso: POLARIS PARA TU EMPRESA",
+        "issue": "El botón 'SOLICITAR INFORMACIÓN' (styles.b2bBtn) es un Pressable con fondo dorado y flecha que visualmente invita al tap, pero no tiene onPress, ni accessibilityRole, ni accessibilityLabel: al tocarlo no pasa nada, ni siquiera el feedback de escala/haptic estándar del resto de la pantalla.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Darle un onPress real (mailto:, ruta a un formulario, o el mismo flujo de contacto que use el resto de la app) más accessibilityRole='button' y accessibilityLabel, o retirar la tarjeta si B2B todavía no tiene a dónde enrutar la solicitud.",
+        "files": [
+          "app/(tabs)/progreso.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — Score Soberano, racha 42 días, tarjetas semanales",
+        "issue": "El número del Score Soberano (styles.scoreNumber), el contador '/30 días' del heatmap (calStyles.statNum) y los promedios de WeeklyMetricCard (wmStyles.value) se pintan como <Text> estático, aunque components/AnimatedNumber.tsx —conteo 0→valor, respeta useReducedMotion, pensado exactamente para esto— ya existe en el repo sin usarse en esta pantalla; sus vecinos directos en el mismo archivo importado (WeeklySparkline y SovereignScore en polaris.tsx) sí animan su entrada.",
+        "category": "motion_faltante",
+        "severity": "P2",
+        "fix_sugerido": "Reemplazar esos <Text>{valor}</Text> por <AnimatedNumber value={...} style={...} /> — mismo estilo, cero lógica nueva, respeta reduced-motion de fábrica.",
+        "files": [
+          "app/(tabs)/progreso.tsx",
+          "components/AnimatedNumber.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — RACHA · ÚLTIMOS 42 DÍAS",
+        "issue": "calStyles.wrap pinta backgroundColor: 'rgba(10,10,10,0.6)' a mano en vez de reusar PremiumCard, que este mismo archivo ya importa y usa para cada otra tarjeta de la pantalla — el heatmap es la única superficie con un fondo distinto. Al ser un string rgba() y no un #hex, __tests__/unit/themeCoverage.test.ts (cuyo regex solo detecta comillas con #) no lo atrapa: nadie ha verificado si ese fondo es legible en tema claro.",
+        "category": "token_roto",
+        "severity": "P2",
+        "fix_sugerido": "Envolver StreakCalendar en <PremiumCard style={...}> igual que el resto de tarjetas de la pantalla y borrar backgroundColor/borderColor/borderRadius propios de calStyles.wrap.",
+        "files": [
+          "app/(tabs)/progreso.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — ADN DE COMPORTAMIENTO · aviso de riesgo de abandono",
+        "issue": "dnaStyles.riskRow usa 'rgba(255,200,4,0.06)' y 'rgba(255,200,4,0.3)' —Philippine Yellow crudo— en vez de alpha(palette.gold, ...), que este mismo archivo ya importa y usa dos bloques más arriba (b2bIconBox). Si el eje de señal del tema cambia el dorado a ámbar, este aviso no lo sigue; y al no ser #hex, tampoco lo detecta el test de cobertura de tema.",
+        "category": "token_roto",
+        "severity": "P2",
+        "fix_sugerido": "Sustituir los dos literales por alpha(palette.gold, '0F') y alpha(palette.gold, '4D') (o el par que iguale el porcentaje actual), igual que ya se hace para b2bIconBox en el mismo archivo.",
+        "files": [
+          "app/(tabs)/progreso.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — MÓDULOS (anillo de progreso)",
+        "issue": "ScoreRing (Svg/Circle/strokeDasharray hecho a mano) es una de 8 implementaciones independientes del mismo anillo circular de progreso en el repo (comando, meditacion, focus-deck, grito, binaurales, body-scan-report.web, progreso) — components/polaris.tsx, el archivo de sistema de diseño, no tiene ninguna versión compartida. Además dibuja el arco de golpe, sin el barrido animado (withTiming) que sí tiene su vecino SovereignScore en el mismo archivo importado.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P2",
+        "fix_sugerido": "Corto plazo dentro de este dominio: animar el trazo de ScoreRing con withTiming (mismo patrón/easing que WeeklySparkline, 700ms, Easing.bezier de la casa). Consolidar las 8 implementaciones en un único Dial de polaris.tsx es trabajo de Fase C sobre archivo compartido, no de este agente — dejarlo señalado, no tocarlo aquí.",
+        "files": [
+          "app/(tabs)/progreso.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "app/(tabs)/progreso.tsx — RACHA · ÚLTIMOS 42 DÍAS",
+        "issue": "Las 42 celdas del heatmap son <View> sin accessibilityLabel ni accessibilityRole: un lector de pantalla no anuncia qué día representa cada celda ni si hubo check-in ese día — la única lectura accesible del historial completo es el resumen agregado ('X / 30 días').",
+        "category": "hueco_a11y",
+        "severity": "P2",
+        "fix_sugerido": "Añadir accessibilityLabel por celda (p. ej. `${day.dateStr}: ${day.hasCheckin ? 'check-in hecho' : 'sin check-in'}`); si 42 focos individuales son demasiado ruido para VoiceOver/TalkBack, agrupar cada fila de 7 con un solo accessibilityLabel resumido en vez de dejarlas mudas.",
+        "files": [
+          "app/(tabs)/progreso.tsx"
+        ],
+        "domain": "progreso_dataviz",
+        "domainLabel": "Progreso + dataviz"
+      },
+      {
+        "screen": "Mini-player global + binaurales + meditación + sueño + biblioteca",
+        "issue": "Concatenación de string para opacidad (`color + 'NN'`) sobre tokens themeable (palette.ash/gold/warning/success) rompe el color en silencio en web — viola directamente la regla dura de theme.ts:41.",
+        "category": "token_roto",
+        "severity": "P0",
+        "fix_sugerido": "Reemplazar cada `X.color + 'NN'` por `alpha(X.color, 'NN')` (ya importado y usado correctamente en ayuno.tsx como referencia). Puntos concretos: WellnessMiniPlayer.tsx:84 (`color + '22'` — binaural=palette.warning y breathing=palette.success, ambos cv()); biblioteca.tsx:143 (`cat.color + '22'`, las 10 categorías = palette.ash); meditacion.tsx:490 (`catColor + '22'`, catColor cae a palette.gold cuando la categoría no matchea CATEGORY_COLOR); sueno.tsx:224 (`cat.color + '22'`, 3 de 4 SLEEP_CATEGORIES = palette.ash); binaurales.tsx:576 (NativeRing `color + '44'` sobre borderColor).",
+        "files": [
+          "components/WellnessMiniPlayer.tsx",
+          "app/bienestar/biblioteca.tsx",
+          "app/bienestar/meditacion.tsx",
+          "app/bienestar/sueno.tsx",
+          "app/bienestar/binaurales.tsx"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "habitos, ayuno, diario, cuerpo, suplementacion, nutricion, biometrics, comunidad, consciencia (16 de 22 pantallas)",
+        "issue": "La mayoría del dominio Bienestar no tiene motion propio: loading→loaded, seleccionado→no-seleccionado (chips de diario, selector de nivel en consciencia, protocolo en ayuno) e idle→activo (Dial de ayuno) son cortes secos sin Reanimated.",
+        "category": "motion_faltante",
+        "severity": "P1",
+        "fix_sugerido": "Extender el patrón ya usado en binaurales/meditacion/respiracion/grito/tapping: withTiming(150-250ms, Easing.bezier(0.23,1,0.32,1)) para transiciones de selección/estado, con useReducedMotion() guard. Empezar por los selectores de chip (diario ENTRY_TYPES, ayuno PROTOCOLS, consciencia level picker) que son el punto de contacto más frecuente.",
+        "files": [
+          "app/bienestar/habitos.tsx",
+          "app/bienestar/ayuno.tsx",
+          "app/bienestar/diario.tsx",
+          "app/bienestar/consciencia.tsx"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "habitos (toggle diario), ayuno (CTA iniciar/romper), diario (guardar), consciencia (selector de nivel)",
+        "issue": "Solo 6 de 22 pantallas aplican siquiera opacidad de press (`({pressed})`); las acciones primarias de las demás pantallas no dan ninguna señal visual al presionar. En consciencia.tsx el haptic (línea 30-32) dispara pero sin acompañamiento visual — se siente desconectado.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Aplicar scale(0.97) en press-in / vuelta en press-out vía Reanimated en los Pressables de acción primaria: habitos.tsx habitCheck (toggleToday, la acción más repetida del dominio), ayuno.tsx ctaBtn, diario.tsx saveBtn, consciencia.tsx selector de nivel (línea 285) — combinado con el haptic que ya existe ahí, no duplicado.",
+        "files": [
+          "app/bienestar/habitos.tsx",
+          "app/bienestar/ayuno.tsx",
+          "app/bienestar/diario.tsx",
+          "app/bienestar/consciencia.tsx"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "habitos",
+        "issue": "5 llamadas a Alert.alert() crudo (crear hábito, sin horario, permiso requerido, recordatorio activado) — diálogos nativos del SO con títulos genéricos ('Error', 'Permiso requerido') que rompen la voz de marca, mientras la misma pantalla de diario.tsx (mismo dominio) sí resuelve sus errores con un banner en voz propia.",
+        "category": "copy_generico",
+        "severity": "P1",
+        "fix_sugerido": "Reemplazar los 5 Alert.alert (líneas 131, 182, 187, 202-205) por el mismo patrón de banner inline en voz de Norman que ya usa diario.tsx (errorBanner con accessibilityLiveRegion), o un toast propio del sistema.",
+        "files": [
+          "app/bienestar/habitos.tsx"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "biblioteca — aviso de curaduría",
+        "issue": "backgroundColor: 'rgba(201,160,0,0.06)' es hex/rgba crudo nuevo tipeado a mano en vez de un token — viola 'Cero hex crudo nuevo' y no participa del eje de color themeable (data-signal), a diferencia del mismo tipo de caja tintada en gold que ayuno.tsx sí resuelve con alpha(palette.gold, 'NN').",
+        "category": "token_roto",
+        "severity": "P1",
+        "fix_sugerido": "Sustituir por alpha(palette.gold, '0F') (o el hex que dé el mismo ~6% de opacidad), igual que hace ayuno.tsx para sus etapas.",
+        "files": [
+          "app/bienestar/biblioteca.tsx"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "Mini-player global — sesiones de movimiento",
+        "issue": "store/wellnessStore.ts define SessionType incluyendo 'movement' (usado por movimiento.tsx), pero WellnessMiniPlayer.tsx solo mapea 'binaural'|'meditation'|'breathing' en TYPE_ICON/TYPE_COLOR/routes. Con una sesión de movimiento minimizada, el pill muestra un ícono de nota musical genérico y tocar la tarjeta no navega a ningún lado (routes['movement'] es undefined) — un control que parece tappable pero no hace nada.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P1",
+        "fix_sugerido": "Añadir 'movement' a TYPE_ICON (p.ej. 'directions-walk'), TYPE_COLOR y al mapa de routes ('/bienestar/movimiento') en WellnessMiniPlayer.tsx.",
+        "files": [
+          "components/WellnessMiniPlayer.tsx",
+          "store/wellnessStore.ts"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "~20 pantallas de bienestar (biblioteca, diario, sueno, habitos, ayuno, cuerpo, suplementacion, nutricion, comunidad, biometrics, index, examenes, internista, escaneo, movimiento...)",
+        "issue": "El header (flecha atrás Pressable 44×44 + título centrado + View espaciadora) se reimplementa a mano en cada pantalla en vez de usar AppHeader de components/polaris.tsx, y el ancho de la View espaciadora es inconsistente entre archivos (36px en la mayoría, 38px en ayuno/comunidad/cuerpo/habitos/nutricion/suplementacion) mientras el botón de volver siempre mide 44px — el título queda descentrado 6-8px en todas las pantallas del dominio.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P2",
+        "fix_sugerido": "Extraer un <ScreenHeader title onBack /> compartido (candidato de Fase C para polaris.tsx, ya que es shared) con espaciador = ancho real del backBtn; migrar las ~20 pantallas de bienestar a usarlo.",
+        "files": [
+          "app/bienestar/biblioteca.tsx",
+          "app/bienestar/diario.tsx",
+          "app/bienestar/sueno.tsx",
+          "app/bienestar/habitos.tsx",
+          "app/bienestar/ayuno.tsx",
+          "app/bienestar/cuerpo.tsx",
+          "app/bienestar/nutricion.tsx",
+          "app/bienestar/suplementacion.tsx",
+          "app/bienestar/comunidad.tsx",
+          "app/bienestar/biometrics.tsx"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "Mini-player global",
+        "issue": "El Pressable contenedor (líneas 71-73, tap-to-navigate a la pantalla de la práctica) no tiene accessibilityRole ni accessibilityLabel — solo los botones internos de pausa/detener lo tienen. Un usuario de lector de pantalla no sabe que la tarjeta entera es tappable ni a dónde lleva.",
+        "category": "hueco_a11y",
+        "severity": "P2",
+        "fix_sugerido": "Añadir accessibilityRole=\"button\" y accessibilityLabel={`Abrir ${player.sessionName}`} al Pressable contenedor.",
+        "files": [
+          "components/WellnessMiniPlayer.tsx"
+        ],
+        "domain": "bienestar",
+        "domainLabel": "Bienestar (hub + prácticas + player)"
+      },
+      {
+        "screen": "app/paywall.tsx",
+        "issue": "Cuando getOfferings() devuelve null/[] (RC sin key, o el eas.projectId placeholder documentado en CLAUDE.md — el estado real hoy), el CTA dorado queda deshabilitado sin ninguna explicación: no hay loading state mientras carga ni ErrorState/EmptyState cuando falla, así que 'cargando' y 'roto' se ven exactamente igual — un botón inerte.",
+        "category": "otro",
+        "severity": "P0",
+        "fix_sugerido": "Distinguir los 3 estados de `packages` explícitamente: loading (spinner o SkeletonBar mientras getOfferings() está en vuelo), error (reusar components/ErrorState.tsx con onRetry={() => getOfferings()...}, ya usado en mentor.tsx/progreso.tsx/programas.tsx — no crear uno nuevo), y success. Nunca dejar el botón deshabilitado sin copy que explique por qué.",
+        "files": [
+          "app/paywall.tsx",
+          "components/ErrorState.tsx",
+          "components/EmptyState.tsx"
+        ],
+        "domain": "paywall_pricing",
+        "domainLabel": "Paywall + Pricing"
+      },
+      {
+        "screen": "app/pricing.tsx + app/paywall.tsx",
+        "issue": "pricing.tsx (el único destino real de upgrade — progreso.tsx apunta ahí 2 veces) no muestra precio en ningún tier y PlanCard no tiene botón de acción; la única vía de conversión es un input de código que el usuario ya debe poseer. paywall.tsx sí tiene precio y CTA de compra, pero un grep del repo entero confirma cero `router.push('/paywall')` fuera de docs/tests — es inalcanzable desde la navegación real de la app.",
+        "category": "otro",
+        "severity": "P0",
+        "fix_sugerido": "En pricing.tsx: añadir precio (aunque sea 'desde $X' o 'a medida — habla con tu asesor' para tiers custom) y un CTA por PlanCard ('Hablar con un asesor' / 'Actualizar' según tier). Enlazar /paywall desde algún punto real de la navegación (o si paywall.tsx quedó deprecado a favor del flujo por código, eliminarlo/redirigirlo en vez de dejarlo huérfano y mantenido).",
+        "files": [
+          "app/pricing.tsx",
+          "app/paywall.tsx"
+        ],
+        "domain": "paywall_pricing",
+        "domainLabel": "Paywall + Pricing"
+      },
+      {
+        "screen": "app/paywall.tsx + app/pricing.tsx",
+        "issue": "El headline principal de ambas pantallas ('¿ESTÁS LISTO PARA COMPROMETERTE?', 'PLANES Y ACCESO') y el botón CANJEAR usan `fontFamily: Fonts.display` sin `fontWeight:'700'+` (paywall.tsx incluso lo fuerza a '400' explícito) — en web, donde Fonts.display es solo el nombre de familia y el peso real lo elige el CSS `font-weight` vía los @font-face de +html.tsx, esto renderiza en GrandisExtended-Regular, no Bold. Es exactamente la combinación mayúsculas+peso liviano que el propio comentario de typography.statement en theme.ts describe como 'se lee como un grito' — y encima duplica a mano la forma de `typography.title` (que sí trae fontWeight 700) sin reusarlo.",
+        "category": "token_roto",
+        "severity": "P1",
+        "fix_sugerido": "Reusar `typography.title` (o `typography.section`) de constants/theme.ts en vez de hand-rollear fontFamily+fontSize+letterSpacing; si se mantiene custom, añadir `fontWeight: '700'` explícito. Aplica a paywall.tsx `title` (L392-400) y pricing.tsx `title` (L240-245), `planName` (L289-294) y `codeBtnText` (L355-360).",
+        "files": [
+          "app/paywall.tsx",
+          "app/pricing.tsx"
+        ],
+        "domain": "paywall_pricing",
+        "domainLabel": "Paywall + Pricing"
+      },
+      {
+        "screen": "app/paywall.tsx + app/pricing.tsx",
+        "issue": "Los Pressable que sí toman una decisión de compra no tienen el feedback scale(0.97)+spring que ya existe en PrimaryButton/SecondaryButton (components/polaris.tsx): el selector de paquete anual/mensual (packageCard) — la única elección real de la pantalla — cambia de borde/fondo con corte seco y solo dispara haptic; el botón CANJEAR (pricing.tsx) y AVÍSAME (paywall.tsx, lead web) tampoco tienen scale, solo opacity condicional cuando disabled.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Envolver packageCard, codeBtn y leadBtn en el mismo patrón Animated.View + useSharedValue + withSpring(0.96-0.97) que ya usan PrimaryButton/SecondaryButton en polaris.tsx — no reinventar, copiar el patrón existente.",
+        "files": [
+          "app/paywall.tsx",
+          "app/pricing.tsx"
+        ],
+        "domain": "paywall_pricing",
+        "domainLabel": "Paywall + Pricing"
+      },
+      {
+        "screen": "app/paywall.tsx",
+        "issue": "`guaranteeRow.backgroundColor` usa `'rgba(77, 170, 87, 0.08)'` hardcodeado mientras su propio `borderColor` en la misma tarjeta sí usa `alpha(palette.success, '44')` (theme-aware) — en tema claro web el borde resuelve a `#2F6647` (valor light real de --c-success) pero el fill se queda fijo en el verde de tema oscuro, desincronizando border/fill del mismo badge. `packageCardSelected.backgroundColor: 'rgba(255,200,4,0.06)'` tiene el mismo anti-patrón (menos grave porque gold es constante).",
+        "category": "token_roto",
+        "severity": "P1",
+        "fix_sugerido": "Reemplazar por `alpha(palette.success, '14')` (guaranteeRow) y `alpha(palette.gold, '0F')` (packageCardSelected) — el helper `alpha()` de themeColors.ts ya está importado en el archivo, solo falta usarlo en estas dos líneas.",
+        "files": [
+          "app/paywall.tsx"
+        ],
+        "domain": "paywall_pricing",
+        "domainLabel": "Paywall + Pricing"
+      },
+      {
+        "screen": "app/paywall.tsx vs app/pricing.tsx",
+        "issue": "El mismo patrón semántico ('badge de opción destacada') se resuelve con radio distinto en las dos pantallas del mismo dominio: pricing.tsx `planBadge` usa `radii.xs` (el uso documentado del token: 'small chips, tiny pills'), pero paywall.tsx `bestValueBadge` usa `radii.none` (esquinas rectas) para el mismo tipo de badge.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P2",
+        "fix_sugerido": "Cambiar `bestValueBadge.borderRadius` de `radii.none` a `radii.xs` en app/paywall.tsx para que coincida con el badge equivalente de pricing.tsx.",
+        "files": [
+          "app/paywall.tsx",
+          "app/pricing.tsx"
+        ],
+        "domain": "paywall_pricing",
+        "domainLabel": "Paywall + Pricing"
+      },
+      {
+        "screen": "app/paywall.tsx",
+        "issue": "El selector de paquete (packagesRow) marca cada Pressable con `accessibilityRole=\"radio\"` pero el contenedor no tiene `accessibilityRole=\"radiogroup\"`, así que un lector de pantalla no anuncia el conjunto como mutuamente excluyente.",
+        "category": "hueco_a11y",
+        "severity": "P2",
+        "fix_sugerido": "Añadir `accessibilityRole=\"radiogroup\"` al `<View style={styles.packagesRow}>`.",
+        "files": [
+          "app/paywall.tsx"
+        ],
+        "domain": "paywall_pricing",
+        "domainLabel": "Paywall + Pricing"
+      },
+      {
+        "screen": "comunidad/chat/[id].tsx, comunidad/conexiones.tsx",
+        "issue": "Varios botones circulares primarios (enviar mensaje, aceptar/rechazar solicitud de conexión, abrir DM) miden 36-40px, por debajo del mínimo 44×44 que el brief marca como regla dura de Layout.",
+        "category": "antipatron_layout",
+        "severity": "P0",
+        "fix_sugerido": "Subir sendBtn (chat/[id].tsx) y acceptBtn/rejectBtn/dmBtn (conexiones.tsx) a 44×44 mínimo (borderRadius a 22), o envolverlos en un contenedor pulsable de 44×44 con el círculo visual más chico centrado adentro si el diámetro de 40 es la decisión estética.",
+        "files": [
+          "app/comunidad/chat/[id].tsx",
+          "app/comunidad/conexiones.tsx"
+        ],
+        "domain": "mentoria_perfil_comunidad",
+        "domainLabel": "Mentoría + Perfil + Comunidad"
+      },
+      {
+        "screen": "Todo el dominio (mentoria, perfil/wearables, perfil/cliente, comunidad/*)",
+        "issue": "95 de ~100 Pressable del dominio no tienen feedback de press (ni opacity ni scale en press-in) — botones primarios como GRABAR SESIÓN, GUARDAR NOTA, GENERAR CON NORMAN, CONECTAR <dispositivo>, SÍ HECHO/AÚN NO, y todas las filas de lista en comunidad quedan mudas al tocar. El componente compartido components/circle.tsx SÍ usa `style={({pressed}) => [..., pressed && {opacity:0.75}]}` en SpaceCard/EventCard, y perfil/index.tsx + perfil/apariencia.tsx también lo hacen — pero ese patrón no se extendió al resto del dominio.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Adoptar el patrón `style={({pressed}) => [styles.x, pressed && { opacity: 0.75 }]}` ya usado en components/circle.tsx / perfil/index.tsx en cada Pressable de acción primaria de mentoria/index.tsx, perfil/wearables.tsx, perfil/cliente.tsx, comunidad/mensajes.tsx, comunidad/chat/[id].tsx, comunidad/conexiones.tsx, comunidad/index.tsx y comunidad/perfil/[id].tsx. Empezar por los CTAs de acción (grabar, guardar, conectar, aceptar/rechazar) antes que por filas de navegación.",
+        "files": [
+          "app/mentoria/index.tsx",
+          "app/perfil/wearables.tsx",
+          "app/perfil/cliente.tsx",
+          "app/comunidad/mensajes.tsx",
+          "app/comunidad/chat/[id].tsx",
+          "app/comunidad/conexiones.tsx",
+          "app/comunidad/index.tsx",
+          "app/comunidad/perfil/[id].tsx"
+        ],
+        "domain": "mentoria_perfil_comunidad",
+        "domainLabel": "Mentoría + Perfil + Comunidad"
+      },
+      {
+        "screen": "comunidad/mensajes.tsx, comunidad/chat/[id].tsx vs comunidad/index.tsx/conexiones.tsx vs mentoria/index.tsx",
+        "issue": "El mismo concepto (lista sin contenido) tiene 3 implementaciones distintas dentro del propio dominio: el componente compartido `CircleEmpty` (usado en comunidad/index.tsx y conexiones.tsx), markup ad-hoc con MaterialIcons+Text propio en comunidad/mensajes.tsx y comunidad/chat/[id].tsx, y otro bloque ad-hoc en mentoria/index.tsx (`styles.empty`/`emptyText`). El `EmptyState` genérico de components/EmptyState.tsx (construido para este propósito exacto, ver CLAUDE.md) no se usa en ningún archivo del dominio.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P1",
+        "fix_sugerido": "Unificar sobre `CircleEmpty` (ya es el estándar de facto dentro de comunidad/) en mensajes.tsx y chat/[id].tsx, y evaluar reemplazar el bloque manual de mentoria/index.tsx (plan de acción vacío) por el `EmptyState` compartido de components/EmptyState.tsx en vez de mantener un cuarto patrón visual.",
+        "files": [
+          "app/comunidad/mensajes.tsx",
+          "app/comunidad/chat/[id].tsx",
+          "app/mentoria/index.tsx"
+        ],
+        "domain": "mentoria_perfil_comunidad",
+        "domainLabel": "Mentoría + Perfil + Comunidad"
+      },
+      {
+        "screen": "perfil/wearables.tsx, perfil/index.tsx",
+        "issue": "Colores raw rgba/hex mezclados con tokens en el mismo objeto de estilo: en wearables.tsx, `bannerSuccess`/`bannerError` usan `alpha(palette.success,'44')`/`alpha(palette.danger,'44')` para el borde pero `rgba(100,200,100,0.08)`/`rgba(200,60,60,0.08)` crudo para el fondo — el mismo patrón de riesgo que el comentario de theme.ts:41 advierte evitar. `activeBadge` (wearables.tsx) y `archetypeChip`/`navIcon` (perfil/index.tsx) también usan rgba crudo. Estos valores no pasan por los tests de paridad dark/light que protegen los tokens.",
+        "category": "token_roto",
+        "severity": "P1",
+        "fix_sugerido": "Reemplazar cada rgba crudo por `alpha(palette.success, '14')` / `alpha(palette.danger, '14')` / `alpha(palette.gold, '14')` según corresponda (mismo helper que ya se usa para el borde en la línea de al lado), para que el color quede cubierto por la verificación de contraste AA en ambos temas.",
+        "files": [
+          "app/perfil/wearables.tsx",
+          "app/perfil/index.tsx"
+        ],
+        "domain": "mentoria_perfil_comunidad",
+        "domainLabel": "Mentoría + Perfil + Comunidad"
+      },
+      {
+        "screen": "mentoria/index.tsx (WeekRow, flujo de grabación), perfil/cliente.tsx (AccountabilityPrompt), perfil/wearables.tsx (banner)",
+        "issue": "El dominio entero (16 archivos, ~6300 líneas) no tiene ni un solo uso de Reanimated — grep confirma cero imports de Animated/useAnimatedStyle/withSpring/withTiming. Las transiciones de estado más notorias son cortes secos: el acordeón de semana (WeekRow) abre/cierra sin animación, la máquina de estados de grabación (idle→grabando→procesando→borrador de Norman) cambia de bloque completo sin transición, el AccountabilityPrompt (confrontación 'ayer te comprometiste a X') aparece de golpe, y los banners de estado en wearables.tsx aparecen/desaparecen sin fade.",
+        "category": "motion_faltante",
+        "severity": "P2",
+        "fix_sugerido": "Extender el patrón ya usado en HomeSkeleton/AnimatedNumber: fade+height en el acordeón de WeekRow (Layout de Reanimated o LayoutAnimation), crossfade entre los 4 estados de recordBox, y entrada con opacity 0→1 + scale 0.95→1 (ease-out, ~200ms) para AccountabilityPrompt y el banner de wearables — todo detrás de `useReducedMotion()`.",
+        "files": [
+          "app/mentoria/index.tsx",
+          "app/perfil/cliente.tsx",
+          "app/perfil/wearables.tsx"
+        ],
+        "domain": "mentoria_perfil_comunidad",
+        "domainLabel": "Mentoría + Perfil + Comunidad"
+      },
+      {
+        "screen": "perfil/index.tsx, perfil/wearables.tsx, perfil/cliente.tsx, comunidad/mensajes.tsx, comunidad/index.tsx, comunidad/conexiones.tsx, comunidad/perfil/[id].tsx",
+        "issue": "La fila de header 'volver + título' se reimplementa a mano en cada pantalla con una estrategia de centrado distinta y no reutilizable: unas usan un spacer fantasma para balancear el ancho (cliente.tsx: width 36, mensajes.tsx: width 38 — ninguno coincide con los 44px del backBtn real, así que el título no queda realmente centrado), otras alinean el título a la izquierda en un contenedor flex:1 (comunidad/index.tsx), y otras no intentan centrar (wearables.tsx, perfil/index.tsx usan space-between simple).",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P2",
+        "fix_sugerido": "Extraer un `DetailHeader`/`ScreenHeader` a components/polaris.tsx (backBtn 44×44 + título + slot derecho opcional, con la misma lógica de centrado en todos lados) y reemplazar las 7 implementaciones locales.",
+        "files": [
+          "app/perfil/index.tsx",
+          "app/perfil/wearables.tsx",
+          "app/perfil/cliente.tsx",
+          "app/comunidad/mensajes.tsx",
+          "app/comunidad/index.tsx",
+          "app/comunidad/conexiones.tsx",
+          "app/comunidad/perfil/[id].tsx"
+        ],
+        "domain": "mentoria_perfil_comunidad",
+        "domainLabel": "Mentoría + Perfil + Comunidad"
+      },
+      {
+        "screen": "checkin.tsx / module/[id].tsx / lesson/[id].tsx",
+        "issue": "4 fills usan rgba crudo aproximando oro en vez de alpha(palette.gold, hex2) — exactamente el error que theme.ts:41-45 advierte por comentario ('NO concatenes... el color se pierde en silencio'); en los 4 casos el borde de la misma tarjeta ya usa alpha() bien, solo la fill quedó hardcodeada.",
+        "category": "token_roto",
+        "severity": "P1",
+        "fix_sugerido": "Reemplazar: checkin.tsx:1226 needPill.backgroundColor 'rgba(201,160,0,0.08)' → alpha(palette.gold,'14'); module/[id].tsx:509 completionBanner.backgroundColor 'rgba(201,160,0,0.06)' → alpha(palette.gold,'0F'); lesson/[id].tsx:1401 normanInsightBox.backgroundColor 'rgba(179,141,60,0.08)' → alpha(palette.gold,'14'); lesson/[id].tsx:1451 nextLessonTeaser.backgroundColor 'rgba(201,160,0,0.06)' → alpha(palette.gold,'0F'). Así siguen tema claro/oscuro y el eje ámbar de señal.",
+        "files": [
+          "app/checkin.tsx",
+          "app/module/[id].tsx",
+          "app/lesson/[id].tsx"
+        ],
+        "domain": "lesson_checkin_states",
+        "domainLabel": "Module/Lesson/Checkin + estados globales"
+      },
+      {
+        "screen": "module/[id].tsx",
+        "issue": "El Pressable que envuelve cada fila de lección (línea ~203-247) — el elemento más pulsado de la pantalla, navegación primaria a cada lección — no tiene ningún feedback de press: ni opacity ni scale, solo onPress.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Cambiar style={[styles.lessonRow, isActive && styles.lessonRowActive]} dentro de PremiumCard por style={({pressed}) => [pressed && {opacity: 0.75}]} en el Pressable exterior (mínimo viable); o extender con Reanimated scale(0.97) por consistencia con la regla 5 del brief.",
+        "files": [
+          "app/module/[id].tsx"
+        ],
+        "domain": "lesson_checkin_states",
+        "domainLabel": "Module/Lesson/Checkin + estados globales"
+      },
+      {
+        "screen": "lesson/[id].tsx",
+        "issue": "El botón flotante 'volver' sobre el video (línea ~896) y cada opción de CheckboxField (línea ~140) usan style={[...]} como array plano sin pressed — sin ningún feedback — mientras decenas de otros Pressables en el MISMO archivo (resourceRow, notesSaveBtn, nextLessonTeaser, etc.) sí implementan style={({pressed}) => [...]} con opacity.",
+        "category": "feedback_press_ausente",
+        "severity": "P1",
+        "fix_sugerido": "Convertir ambos a style={({pressed}) => [styles.backBtn, {top:...}, pressed && {opacity: 0.7}]} y style={({pressed}) => [styles.checkItem, checked && styles.checkItemSelected, pressed && {opacity: 0.8}]}, siguiendo el patrón ya establecido en el resto del archivo.",
+        "files": [
+          "app/lesson/[id].tsx"
+        ],
+        "domain": "lesson_checkin_states",
+        "domainLabel": "Module/Lesson/Checkin + estados globales"
+      },
+      {
+        "screen": "module/[id].tsx y lesson/[id].tsx",
+        "issue": "Ambos estados '(módulo/lección) no encontrado' reinventan a mano el patrón que EmptyState.tsx ya resuelve (icono + título + cuerpo + acción) en vez de reusarlo — el de lesson/[id].tsx (línea 830-837) es aún más pobre: solo un renglón de texto gris sin ícono ni jerarquía, pese a que EmptyState está en uso activo en el resto del golden path según CLAUDE.md.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P1",
+        "fix_sugerido": "Reemplazar ambos bloques por <EmptyState icon=\"explore-off\" title=\"...\" body=\"...\" actionLabel=\"VOLVER\"/\"VER TODOS LOS MÓDULOS\" onAction={...} />, eliminando los estilos ad hoc notFound*/errorText que quedan huérfanos.",
+        "files": [
+          "app/module/[id].tsx",
+          "app/lesson/[id].tsx",
+          "components/EmptyState.tsx"
+        ],
+        "domain": "lesson_checkin_states",
+        "domainLabel": "Module/Lesson/Checkin + estados globales"
+      },
+      {
+        "screen": "lesson/[id].tsx",
+        "issue": "El placeholder 'video próximamente' (sin vimeoId ni skoolUrl) renderiza un emoji '⏳' crudo como texto + una línea gris, rompiendo el sistema de íconos MaterialIcons usado en TODO el resto de la pantalla — incluida la rama hermana del mismo ternario (mod.skoolUrl), que sí tiene ícono MaterialIcons + botón. El emoji además rinde distinto en iOS/Android/web.",
+        "category": "inconsistencia_cross_dominio",
+        "severity": "P2",
+        "fix_sugerido": "Sustituir el <Text style={videoComingSoonIcon}>⏳</Text> por <MaterialIcons name=\"schedule\" size={24} color={palette.smoke} />, igualando el tratamiento visual de la rama de arriba.",
+        "files": [
+          "app/lesson/[id].tsx"
+        ],
+        "domain": "lesson_checkin_states",
+        "domainLabel": "Module/Lesson/Checkin + estados globales"
+      },
+      {
+        "screen": "ErrorState (compartido)",
+        "issue": "ErrorState.tsx no se anuncia a lectores de pantalla al montar — sin accessibilityRole=\"alert\" ni accessibilityLiveRegion, un usuario de VoiceOver/TalkBack no recibe aviso automático cuando una sección falla y este componente aparece.",
+        "category": "hueco_a11y",
+        "severity": "P2",
+        "fix_sugerido": "Agregar accessibilityRole=\"alert\" (o accessibilityLiveRegion=\"assertive\" en web) al View contenedor en components/ErrorState.tsx.",
+        "files": [
+          "components/ErrorState.tsx"
+        ],
+        "domain": "lesson_checkin_states",
+        "domainLabel": "Module/Lesson/Checkin + estados globales"
+      },
+      {
+        "screen": "lesson/[id].tsx",
+        "issue": "Los dos withTiming() del archivo (foco de TextAreaField y la animación de entrada/timer de LessonCelebrationModal) no pasan easing, cayendo al curve por defecto de Reanimated en vez del ease-out Easing.bezier(0.23,1,0.32,1) que el brief fija como default de la casa.",
+        "category": "motion_faltante",
+        "severity": "P2",
+        "fix_sugerido": "Añadir easing: Easing.bezier(0.23, 1, 0.32, 1) a los withTiming de TextAreaField (línea ~102-103) y de LessonCelebrationModal (línea ~472-474), importando Easing de react-native-reanimated.",
+        "files": [
+          "app/lesson/[id].tsx"
+        ],
+        "domain": "lesson_checkin_states",
+        "domainLabel": "Module/Lesson/Checkin + estados globales"
+      }
+    ],
+    "systemicIssues": [
+      {
+        "pattern": "feedback_press_ausente — Pressables sin scale/opacity/haptic al tocar. Es el patrón más repetido de las 8 auditorías: cada dominio tiene un subconjunto de Pressables 'a mano' (style={s.button} objeto estático o pressed && {opacity} sin scale) que nunca copia el spring scale(0.95-0.97) que PrimaryButton/SecondaryButton/HoverCard YA resuelven en components/polaris.tsx. Findings: 2,4,7,8,13,15,23,26,34,43,48,54,55 — 48 lo nombra explícito: '95 de ~100 Pressable del dominio' en mentoria_perfil_comunidad.",
+        "affected_domains": [
+          "auth_onboarding",
+          "comando_norte",
+          "mentor_chat",
+          "progreso_dataviz",
+          "bienestar",
+          "paywall_pricing",
+          "mentoria_perfil_comunidad",
+          "lesson_checkin_states"
+        ],
+        "shared_files": [
+          "components/polaris.tsx"
+        ],
+        "shared_fix_sugerido": "Extraer UN primitive reusable en components/polaris.tsx (p.ej. `PressableScale` — Animated.View + useSharedValue + withSpring(0.95-0.97) en press-in/out, prop opcional haptic) que ya encapsula lo que PrimaryButton/SecondaryButton/HoverCard reimplementan cada uno por separado. Migrar los Pressables 'mudos' de los 8 dominios a ese primitive en vez de que cada agente de dominio parchee `pressed && {opacity}` a mano — mismo diff repetido 40+ veces si se hace por pantalla."
+      },
+      {
+        "pattern": "token_roto — colores dorado/success/danger escritos como rgba()/hex crudo o como `color + 'NN'` (string concat) en vez de `alpha(palette.X, hex2)` de themeColors.ts. Es la violación explícita de la regla dura de theme.ts:41 ('NO concatenes, el color se pierde en silencio'), y ninguna de las dos formas la atrapa el test de cobertura de tema (solo detecta comillas con #, ver finding 28). Aparece en 7 de 8 dominios.",
+        "affected_domains": [
+          "auth_onboarding",
+          "comando_norte",
+          "progreso_dataviz",
+          "bienestar",
+          "paywall_pricing",
+          "mentoria_perfil_comunidad",
+          "lesson_checkin_states"
+        ],
+        "shared_files": [
+          "constants/themeColors.ts",
+          "__tests__/unit/themeCoverage.test.ts"
+        ],
+        "shared_fix_sugerido": "No es un fix de componente sino de disciplina + red de seguridad: (1) barrido único reemplazando cada rgba(...)/hex crudo y cada `color + 'NN'` por `alpha(palette.X, 'NN')` (findings 6,12,29,32,36,44,50,53 son la misma clase de bug con distinta línea/archivo — tratar como UN sweep, no 8 tickets); (2) extender themeCoverage.test.ts para además fallar sobre regex de `rgba(` y `+ '[0-9A-Fa-f]{2}'` en archivos de estilos, así la próxima instancia no vuelve a colarse sin test que la atrape."
+      },
+      {
+        "pattern": "motion_faltante — transiciones de estado/selección/entrada con corte seco (sin Reanimated), o withTiming() sin el easing de la casa. El idioma ya existe (binaurales/meditacion/welcome.tsx/MetricCard/WeeklySparkline/SkeletonBar/AnimatedNumber) pero no se propaga: dominios y screens enteros (mentoria_perfil_comunidad: 0 imports de Reanimated en 16 archivos; bienestar: 16/22 pantallas) nunca lo adoptaron, y donde sí hay withTiming falta el easing.bezier(0.23,1,0.32,1) por defecto (finding 59).",
+        "affected_domains": [
+          "auth_onboarding",
+          "comando_norte",
+          "mentor_chat",
+          "progreso_dataviz",
+          "bienestar",
+          "mentoria_perfil_comunidad",
+          "lesson_checkin_states"
+        ],
+        "shared_files": [
+          "constants/theme.ts",
+          "components/polaris.tsx",
+          "components/AnimatedNumber.tsx"
+        ],
+        "shared_fix_sugerido": "Exportar desde constants/theme.ts un token de motion único — `export const EASING_HOUSE = Easing.bezier(0.23,1,0.32,1)` + duraciones estándar (150-250ms selección, 700-800ms sweep/contador) — para que ningún withTiming vuelva a caer al curve por defecto o inventar su propio timing. Promover el uso de AnimatedNumber (ya existe, subutilizado — finding 27) y un `FadeSwap`/chip de selección animado compartido en polaris.tsx para que step-dots, chips y toasts de cada dominio dejen de reimplementar (o de directamente omitir) la misma transición."
+      },
+      {
+        "pattern": "Header 'volver + título' reimplementado a mano por pantalla, con el ancho del spacer fantasma inconsistente entre archivos (36px/38px vs 44px del backBtn real) — el título queda descentrado 6-8px de forma distinta en cada pantalla. Dos auditorías de dominios distintos llegaron a la misma pieza faltante de forma independiente.",
+        "affected_domains": [
+          "bienestar",
+          "mentoria_perfil_comunidad"
+        ],
+        "shared_files": [
+          "components/polaris.tsx"
+        ],
+        "shared_fix_sugerido": "Extraer `<ScreenHeader title onBack rightSlot? />` a components/polaris.tsx con spacer = ancho real del backBtn (44px), y migrar las ~27 implementaciones locales (20 en bienestar + 7 en mentoria/perfil/comunidad) de una sola vez — es la misma pieza, no dos fixes de dominio separados."
+      },
+      {
+        "pattern": "EmptyState/ErrorState (components/EmptyState.tsx, components/ErrorState.tsx) ya existen y ya se usan en el golden path según CLAUDE.md, pero 3 dominios distintos los reinventan ad hoc en vez de reusarlos: bloques de texto suelto, un cuarto patrón visual paralelo a CircleEmpty, o directamente ningún estado explícito de loading/error (paywall).",
+        "affected_domains": [
+          "mentoria_perfil_comunidad",
+          "lesson_checkin_states",
+          "paywall_pricing"
+        ],
+        "shared_files": [
+          "components/EmptyState.tsx",
+          "components/ErrorState.tsx"
+        ],
+        "shared_fix_sugerido": "No requiere código nuevo compartido — requiere adopción: reemplazar los bloques ad hoc de mentoria/index.tsx, module/[id].tsx, lesson/[id].tsx y el botón inerte de paywall.tsx por los componentes ya existentes (mismo patrón que ya usan mentor.tsx/progreso.tsx/programas.tsx). Evaluar si CircleEmpty (estándar de facto en comunidad/) debería ser el único wrapper de EmptyState para ese dominio en vez de un cuarto patrón visual."
+      },
+      {
+        "pattern": "Touch targets por debajo del mínimo duro 44×44 que el brief fija sin excepciones — chips de ejemplo (36px) en un dominio, botones circulares de acción primaria (36-40px) en otro.",
+        "affected_domains": [
+          "auth_onboarding",
+          "mentoria_perfil_comunidad"
+        ],
+        "shared_files": [],
+        "shared_fix_sugerido": "Ajuste local por componente (minHeight/diámetro a 44, o envolver el visual más chico en un contenedor pulsable de 44×44) — no amerita un componente compartido nuevo, pero sí vale la pena un lint/test de accesibilidad que falle sobre minHeight/width < 44 en Pressable para que no seguir apareciendo dominio por dominio."
+      },
+      {
+        "pattern": "Contenido dinámico (mensajes de error, estado de streaming/typing, banners) sin accessibilityLiveRegion/accessibilityRole='alert' — un lector de pantalla recibe silencio en el momento exacto en que algo cambió.",
+        "affected_domains": [
+          "auth_onboarding",
+          "mentor_chat",
+          "lesson_checkin_states"
+        ],
+        "shared_files": [
+          "components/ErrorState.tsx"
+        ],
+        "shared_fix_sugerido": "Fijar accessibilityRole='alert' en el componente compartido ErrorState.tsx (finding 58) cubre gratis a cualquier dominio que ya lo consuma; para los casos sin componente compartido (codeMessage en onboarding, TypingBubble/StatusPill en mentor.tsx) replicar el mismo patrón accessibilityLiveRegion='polite' — mismo problema, misma solución de una línea, tres sitios."
+      },
+      {
+        "pattern": "Anillo de progreso circular (Dial/ScoreRing, SVG+strokeDasharray hecho a mano) reimplementado independientemente 8 veces en el repo sin barrido animado consistente — components/polaris.tsx, el archivo de sistema de diseño, no tiene ninguna versión compartida pese a que SovereignScore/WeeklySparkline (mismo archivo) sí resuelven el patrón de barrido con withTiming.",
+        "affected_domains": [
+          "comando_norte",
+          "bienestar",
+          "progreso_dataviz"
+        ],
+        "shared_files": [
+          "components/polaris.tsx"
+        ],
+        "shared_fix_sugerido": "Consolidar en un único `<Dial value radius strokeWidth animated />` en components/polaris.tsx (mismo patrón/easing que WeeklySparkline, 700ms) y migrar las 8 implementaciones (comando, meditacion, focus-deck, grito, binaurales, body-scan-report.web, progreso, +1) — trabajo de Fase C sobre archivo compartido, no de un agente de dominio individual."
+      }
+    ]
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Auditoría"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Consolidación"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "audit:auth_onboarding",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "ade193d01fc713a05",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782235104,
+      "queuedAt": 1787782233651,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Auth + Onboarding",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Auth + Onboarding\nDominio: pantallas de autenticación y onboarding — la primera impresión del produ…",
+      "lastProgressAt": 1787782497514,
+      "tokens": 152612,
+      "toolCalls": 25,
+      "durationMs": 262406,
+      "resultPreview": "{\"domain\":\"Auth + Onboarding\",\"findings\":[{\"screen\":\"Onboarding — wizard de 6 pasos\",\"issue\":\"Los 6 steps (bienvenida/consentimiento → intro → identidad → norte → obstáculo → código) cambian con corte seco puro: cero Reanimated en todo el archivo, pese a ser el screen de mayor drop-off del producto y a que el mismo dominio ya tiene el patrón resuelto (Fade/Beat en umbral.tsx, a metros de distancia…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "audit:comando_norte",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "ae8ad578df5243490",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782235239,
+      "queuedAt": 1787782233652,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Comando (home) + Norte",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Comando (home) + Norte\nDominio: el home de la app — app/(tabs)/comando.tsx (dashboard con catálogo …",
+      "lastProgressAt": 1787782525305,
+      "tokens": 210014,
+      "toolCalls": 34,
+      "durationMs": 288455,
+      "resultPreview": "{\"domain\":\"Comando (home) + Norte\",\"findings\":[{\"screen\":\"Comando — modos Esencial / Guiado / Calma\",\"issue\":\"El único CTA de los modos Esencial y Guiado (y las dos filas de protocolo en Calma) usan `style={s.button}` como objeto estático en vez de la función `({pressed}) => [...]` — Pressable no aplica ningún feedback visual, ni siquiera opacidad, al tocarlos.\",\"category\":\"feedback_press_ausente\"…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "audit:mentor_chat",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "a8dd4a9b3850dcd2b",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782235131,
+      "queuedAt": 1787782233652,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Mentor (Norman) chat — app/(tabs)/mentor.tsx",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Mentor (Norman) chat\nDominio: app/(tabs)/mentor.tsx y componentes de chat asociados (streaming, chi…",
+      "lastProgressAt": 1787782534258,
+      "tokens": 139356,
+      "toolCalls": 17,
+      "durationMs": 297409,
+      "resultPreview": "{\"domain\":\"Mentor (Norman) chat — app/(tabs)/mentor.tsx\",\"findings\":[{\"screen\":\"app/(tabs)/mentor.tsx — TypingBubble (Norman escribiendo)\",\"issue\":\"El indicador de 'Norman está pensando' (tres puntos) es completamente estático — cero animación — en la única pantalla del golden path que hoy no importa ni un solo import de Reanimated.\",\"category\":\"motion_faltante\",\"severity\":\"P1\",\"fix_sugerido\":\"Reu…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "audit:progreso_dataviz",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "a2dd948a2bb9e2a56",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782235125,
+      "queuedAt": 1787782233652,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "progreso-dataviz",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Progreso + dataviz\nDominio: app/(tabs)/progreso.tsx — sparklines, heatmap de streak de 42 días, Sov…",
+      "lastProgressAt": 1787782561109,
+      "tokens": 174136,
+      "toolCalls": 20,
+      "durationMs": 324261,
+      "resultPreview": "{\"domain\":\"progreso-dataviz\",\"findings\":[{\"screen\":\"app/(tabs)/progreso.tsx — Progreso (PROMEDIOS DE LA SEMANA en móvil vs BIOMETRÍA PROMEDIO 7D en desktop)\",\"issue\":\"El grid móvil 'PROMEDIOS DE LA SEMANA' dibuja energía/claridad con MiniSparkline (SVG casero, estático, sin entrada animada) mientras la sección 'BIOMETRÍA PROMEDIO (7D)' —que solo existe en la rama desktop— usa WeeklySparkline, el c…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "audit:bienestar",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "a694162ddd218c6e2",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782235120,
+      "queuedAt": 1787782233652,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Bienestar (hub + prácticas + player)",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Bienestar (hub + prácticas + player)\nDominio: app/bienestar/* completo (index/hub, binaurales, medi…",
+      "lastProgressAt": 1787782594449,
+      "tokens": 175721,
+      "toolCalls": 38,
+      "durationMs": 357601,
+      "resultPreview": "{\"domain\":\"Bienestar (hub + prácticas + player)\",\"findings\":[{\"screen\":\"Mini-player global + binaurales + meditación + sueño + biblioteca\",\"issue\":\"Concatenación de string para opacidad (`color + 'NN'`) sobre tokens themeable (palette.ash/gold/warning/success) rompe el color en silencio en web — viola directamente la regla dura de theme.ts:41.\",\"category\":\"token_roto\",\"severity\":\"P0\",\"fix_sugerido…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "audit:paywall_pricing",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "a2a4dab2ff2bf41e1",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782235159,
+      "queuedAt": 1787782233652,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Paywall + Pricing (app/paywall.tsx, app/pricing.tsx)",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Paywall + Pricing\nDominio: app/paywall.tsx, app/pricing.tsx. Aquí se cobra USD 5-25k — es la pantal…",
+      "lastProgressAt": 1787782702497,
+      "tokens": 154332,
+      "toolCalls": 32,
+      "durationMs": 465648,
+      "resultPreview": "{\"domain\":\"Paywall + Pricing (app/paywall.tsx, app/pricing.tsx)\",\"findings\":[{\"screen\":\"app/paywall.tsx\",\"issue\":\"Cuando getOfferings() devuelve null/[] (RC sin key, o el eas.projectId placeholder documentado en CLAUDE.md — el estado real hoy), el CTA dorado queda deshabilitado sin ninguna explicación: no hay loading state mientras carga ni ErrorState/EmptyState cuando falla, así que 'cargando' y …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "audit:mentoria_perfil_comunidad",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "a221f8ccf5434a434",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782500559,
+      "queuedAt": 1787782233652,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Mentoría + Perfil + Comunidad",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Mentoría + Perfil + Comunidad\nDominio: app/mentoria/* (journey semanal + grabación de sesión), app/…",
+      "lastProgressAt": 1787782787313,
+      "tokens": 210646,
+      "toolCalls": 27,
+      "durationMs": 286752,
+      "resultPreview": "{\"domain\":\"Mentoría + Perfil + Comunidad\",\"findings\":[{\"screen\":\"comunidad/chat/[id].tsx, comunidad/conexiones.tsx\",\"issue\":\"Varios botones circulares primarios (enviar mensaje, aceptar/rechazar solicitud de conexión, abrir DM) miden 36-40px, por debajo del mínimo 44×44 que el brief marca como regla dura de Layout.\",\"category\":\"antipatron_layout\",\"severity\":\"P0\",\"fix_sugerido\":\"Subir sendBtn (chat…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "audit:lesson_checkin_states",
+      "phaseIndex": 1,
+      "phaseTitle": "Auditoría",
+      "agentId": "a1ec192b62c28bcc4",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782528245,
+      "queuedAt": 1787782233652,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Module/Lesson/Checkin + estados globales (EmptyState/ErrorS…",
+      "promptPreview": "Eres un auditor de diseño Apple-grade para la app Polaris (React Native/Expo, Spanish-language fitness/coaching app).\n\nPRIMERO: lee el archivo docs/design/APPLE_GRADE_BRIEF.md completo — es el contrato de diseño, tus hallazgos deben citarlo (qué regla del brief se viola) cuando aplique.\n\nTU DOMINIO: Module/Lesson/Checkin + estados globales\nDominio: app/module/[id].tsx, app/lesson/[id].tsx, app/che…",
+      "lastProgressAt": 1787782805958,
+      "tokens": 174083,
+      "toolCalls": 16,
+      "durationMs": 277712,
+      "resultPreview": "{\"domain\":\"Module/Lesson/Checkin + estados globales (EmptyState/ErrorState/HomeSkeleton/SkeletonBar)\",\"findings\":[{\"screen\":\"checkin.tsx / module/[id].tsx / lesson/[id].tsx\",\"issue\":\"4 fills usan rgba crudo aproximando oro en vez de alpha(palette.gold, hex2) — exactamente el error que theme.ts:41-45 advierte por comentario ('NO concatenes... el color se pierde en silencio'); en los 4 casos el bord…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 9,
+      "label": "consolidate",
+      "phaseIndex": 2,
+      "phaseTitle": "Consolidación",
+      "agentId": "ace7a809c3e9eede4",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1787782809072,
+      "queuedAt": 1787782807493,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "- Findings 38 (bienestar) y 52 (mentoria_perfil_comunidad) …",
+      "promptPreview": "Tienes 60 findings de diseño crudos de 8 auditorías independientes sobre la app Polaris (ver lista abajo). Tu trabajo: detectar PATRONES SISTÉMICOS — el mismo problema (ej. mismo antipatrón de card, mismo hueco de motion, mismo token mal usado) apareciendo en 2+ dominios distintos. Esos van a un fix compartido en components/polaris.tsx o constants/theme.ts en vez de repetirse por pantalla. Lee doc…",
+      "lastProgressAt": 1787782935534,
+      "tokens": 107603,
+      "toolCalls": 1,
+      "durationMs": 126461,
+      "resultPreview": "{\"systemic_issues\":[{\"pattern\":\"feedback_press_ausente — Pressables sin scale/opacity/haptic al tocar. Es el patrón más repetido de las 8 auditorías: cada dominio tiene un subconjunto de Pressables 'a mano' (style={s.button} objeto estático o pressed && {opacity} sin scale) que nunca copia el spring scale(0.95-0.97) que PrimaryButton/SecondaryButton/HoverCard YA resuelven en components/polaris.tsx…"
+    }
+  ],
+  "totalTokens": 1498503,
+  "totalToolCalls": 210
+}

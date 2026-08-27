@@ -72,6 +72,40 @@ export function AppHeader({
   );
 }
 
+// ─── Screen Header ───────────────────────────────────────────────────────────
+// Back button + título centrado + slot derecho opcional.
+//
+// POR QUÉ HACE FALTA: ~27 pantallas arman este header a mano con un back button
+// de 44×44 y un espaciador fantasma al otro lado para centrar el título — pero
+// el espaciador copia un ancho antiguo (36-38px) en vez del real (44px), así
+// que el título queda descentrado 6-8px. Un componente único no puede
+// "olvidar" el ancho del botón porque lo comparte con él.
+
+export function ScreenHeader({
+  title,
+  onBack,
+  right,
+}: {
+  title: string;
+  onBack: () => void;
+  right?: React.ReactNode;
+}) {
+  return (
+    <View style={styles.screenHeader}>
+      <PressableScale
+        onPress={onBack}
+        haptic
+        accessibilityRole="button"
+        accessibilityLabel="Volver"
+        style={styles.screenHeaderBack}>
+        <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
+      </PressableScale>
+      <Text style={styles.screenHeaderTitle} numberOfLines={1}>{title}</Text>
+      {right ?? <View style={styles.screenHeaderSpacer} />}
+    </View>
+  );
+}
+
 // ─── Premium Card ────────────────────────────────────────────────────────────
 
 export function PremiumCard({ children, style, ...props }: ViewProps) {
@@ -187,6 +221,40 @@ export function HoverCard({
       }}>
       {children}
     </Pressable>
+  );
+}
+
+// ─── Pressable Scale ─────────────────────────────────────────────────────────
+// Primitivo de feedback de press reusable. Mismos valores de damping/stiffness
+// que PrimaryButton/SecondaryButton (la firma de press de la casa) — así
+// cualquier elemento presionable nuevo no inventa su propio resorte.
+
+export function PressableScale({
+  children,
+  haptic = false,
+  onPressIn,
+  onPressOut,
+  ...props
+}: PressableProps & { haptic?: boolean }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Pressable
+        {...props}
+        onPressIn={(e) => {
+          scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
+          if (haptic && Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPressIn?.(e);
+        }}
+        onPressOut={(e) => {
+          scale.value = withSpring(1, { damping: 12, stiffness: 250 });
+          onPressOut?.(e);
+        }}>
+        {children}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -834,14 +902,23 @@ export const ChatBubble = memo(function ChatBubble({
   children: React.ReactNode;
 }) {
   const textStyle = [styles.chatText, role === 'user' && styles.userChatText];
+  const reducedMotion = useReducedMotion();
+  const bubbleStyle = [styles.chatBubble, role === 'user' ? styles.userBubble : styles.mentorBubble];
+  const content = typeof children === 'string' ? (
+    <MarkdownText text={children} style={textStyle} />
+  ) : (
+    <Text style={textStyle}>{children}</Text>
+  );
+
+  if (reducedMotion) {
+    return <View style={bubbleStyle}>{content}</View>;
+  }
+  // Mismo entering que MetricCard — corte seco en burbujas nuevas, resuelto
+  // con la misma firma de entrada de la casa (no una nueva).
   return (
-    <View style={[styles.chatBubble, role === 'user' ? styles.userBubble : styles.mentorBubble]}>
-      {typeof children === 'string' ? (
-        <MarkdownText text={children} style={textStyle} />
-      ) : (
-        <Text style={textStyle}>{children}</Text>
-      )}
-    </View>
+    <Animated.View style={bubbleStyle} entering={FadeInDown.springify().damping(20).stiffness(180)}>
+      {content}
+    </Animated.View>
   );
 });
 
@@ -965,6 +1042,30 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.title,
     color: palette.ivory,
+  },
+
+  // Screen header (back + título centrado + slot derecho)
+  screenHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  screenHeaderBack: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  screenHeaderTitle: {
+    ...typography.title,
+    color: palette.ivory,
+    flex: 1,
+    textAlign: 'center',
+  },
+  // Mismo ancho que screenHeaderBack — no un número aproximado. Ver comentario
+  // en ScreenHeader.
+  screenHeaderSpacer: {
+    width: 44,
   },
 
   // Polaris mark
@@ -1378,10 +1479,12 @@ const styles = StyleSheet.create({
   },
   mentorBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: palette.graphiteLight,
-    borderColor: palette.line,
-    borderLeftColor: palette.gold,
-    borderLeftWidth: 2,        // gold left accent — brand editorial signature
+    // Era un borde lateral dorado de 2px como acento — el anti-patrón
+    // "side-stripe" que el brief de diseño prohíbe. Fill tintado en su lugar,
+    // con los mismos tokens que ya usa el resto de la app para paneles con
+    // acento dorado (ver `belong` en comunidad/mensajes.tsx).
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
     borderWidth: 1,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
@@ -1429,6 +1532,7 @@ const styles = StyleSheet.create({
   },
   pillText: {
     ...typography.label,
-    fontSize: 8,
+    // Piso duro del proyecto: 11pt mínimo en cualquier label visible.
+    fontSize: 11,
   },
 });

@@ -14,46 +14,80 @@
  * del día y la frase del arco, y un solo botón de vuelta al Comando.
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { useEffect } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, ZoomIn } from 'react-native-reanimated';
 
 import { MilestoneToast } from '@/components/narrative';
 import { GoldAccentCard, PremiumCard, PrimaryButton, SecondaryButton } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
-import { JORNADA_LABEL, JORNADA_STEPS, type Jornada } from '@/lib/jornadaLogic';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { JORNADA_LABEL, JORNADA_STEPS, type Jornada, type JornadaStep, type JornadaStepState } from '@/lib/jornadaLogic';
 import type { Milestone } from '@/lib/narrativeLogic';
 import type { Turno } from '@/lib/turnoLogic';
 
 // ── La fila de pasos ──────────────────────────────────────────────────────────
 
+/**
+ * Un paso de la jornada. Antes pendiente→hecho era un corte seco (icono
+ * sustituido en el mismo frame). El check ahora entra con `ZoomIn` — mismo
+ * resorte que `ChatBubble` en polaris.tsx — y el connector cruza a su tono
+ * "hecho" con un fade de opacidad, no un salto de color: `connectorDone` es
+ * un token `cv()` (var() en web), y `interpolateColor` sobre un token así es
+ * el mismo crash que ya se documentó en lesson/[id].tsx (comentario
+ * "goldStatic") — aquí no hay literal seguro que interpolar, así que solo se
+ * anima lo numérico.
+ */
+function StepItem({ step, state, index }: { step: JornadaStep; state: JornadaStepState; index: number }) {
+  const isCurrent = state === 'current';
+  const isDone = state === 'done';
+  const reducedMotion = useReducedMotion();
+
+  const connectorOpacity = useSharedValue(isDone ? 0.5 : 1);
+  useEffect(() => {
+    const target = isDone ? 0.5 : 1;
+    connectorOpacity.value = reducedMotion
+      ? target
+      : withTiming(target, { duration: 250, easing: Easing.bezier(0.23, 1, 0.32, 1) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDone, reducedMotion]);
+  const connectorAnimStyle = useAnimatedStyle(() => ({ opacity: connectorOpacity.value }));
+
+  return (
+    <View style={s.stepCol}>
+      <View style={s.stepTop}>
+        {index > 0 && (
+          <Animated.View style={[s.connector, isDone && s.connectorDoneColor, connectorAnimStyle]} />
+        )}
+        <View
+          style={[s.stepDot, isCurrent && s.stepDotCurrent, isDone && s.stepDotDone]}
+          accessible
+          accessibilityLabel={`${JORNADA_LABEL[step]}: ${
+            isDone ? 'hecho' : isCurrent ? 'paso actual' : 'pendiente'
+          }`}>
+          {isDone ? (
+            <Animated.View entering={reducedMotion ? undefined : ZoomIn.springify().damping(20).stiffness(180)}>
+              <MaterialIcons name="check" size={13} color={palette.ivory} />
+            </Animated.View>
+          ) : (
+            <Text style={[s.stepNum, isCurrent && s.stepNumCurrent]}>{index + 1}</Text>
+          )}
+        </View>
+      </View>
+      <Text style={[s.stepLabel, isCurrent && s.stepLabelCurrent, isDone && s.stepLabelDone]}>
+        {JORNADA_LABEL[step]}
+      </Text>
+    </View>
+  );
+}
+
 function StepsRow({ jornada }: { jornada: Jornada }) {
   return (
     <View style={s.stepsRow} accessibilityRole="none">
-      {jornada.steps.map(({ step, state }, i) => {
-        const isCurrent = state === 'current';
-        const isDone = state === 'done';
-        return (
-          <View key={step} style={s.stepCol}>
-            <View style={s.stepTop}>
-              {i > 0 && <View style={[s.connector, isDone && s.connectorDone]} />}
-              <View
-                style={[s.stepDot, isCurrent && s.stepDotCurrent, isDone && s.stepDotDone]}
-                accessible
-                accessibilityLabel={`${JORNADA_LABEL[step]}: ${
-                  isDone ? 'hecho' : isCurrent ? 'paso actual' : 'pendiente'
-                }`}>
-                {isDone ? (
-                  <MaterialIcons name="check" size={13} color={palette.ivory} />
-                ) : (
-                  <Text style={[s.stepNum, isCurrent && s.stepNumCurrent]}>{i + 1}</Text>
-                )}
-              </View>
-            </View>
-            <Text style={[s.stepLabel, isCurrent && s.stepLabelCurrent, isDone && s.stepLabelDone]}>
-              {JORNADA_LABEL[step]}
-            </Text>
-          </View>
-        );
-      })}
+      {jornada.steps.map(({ step, state }, i) => (
+        <StepItem key={step} step={step} state={state} index={i} />
+      ))}
     </View>
   );
 }
@@ -75,6 +109,15 @@ export function JornadaTracker({ jornada, turno, onPressCta, arcPhrase, flat }: 
   // `flat`: el tracker vive DENTRO del panel del héroe, que ya pone el marco.
   // Sin esto queda una tarjeta dentro de otra, que no agrupa — subdivide.
   const chrome = flat ? { backgroundColor: 'transparent', borderWidth: 0, padding: 0 } : undefined;
+
+  // La acción del día merece confirmación física — mismo patrón que
+  // `Directive` en focus-deck.tsx (componente hermano). Antes JornadaTracker
+  // no la disparaba en ninguna de sus dos superficies pulsables.
+  const handlePress = () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPressCta();
+  };
+
   if (jornada?.complete) {
     // El día está hecho. Sin fanfarria: los cuatro checks, la frase del arco
     // (que ya habla en segunda persona) y una salida serena a progreso.
@@ -86,14 +129,14 @@ export function JornadaTracker({ jornada, turno, onPressCta, arcPhrase, flat }: 
         {arcPhrase ? <Text style={s.mandoCaption}>{arcPhrase}</Text> : (
           <Text style={s.mandoCaption}>{turno.why}</Text>
         )}
-        <SecondaryButton label={turno.verb} icon="insights" onPress={onPressCta} />
+        <SecondaryButton label={turno.verb} icon="insights" onPress={handlePress} />
       </GoldAccentCard>
     );
   }
 
   return (
     <GoldAccentCard style={chrome}
-      onPress={onPressCta}
+      onPress={handlePress}
       accessibilityRole="button"
       accessibilityLabel={`${turno.headline}. ${turno.why}`}>
       <Text style={s.mandoLabel}>TU JORNADA</Text>
@@ -212,9 +255,10 @@ const s = StyleSheet.create({
     right: '50%',
     marginRight: DOT / 2,
   },
-  connectorDone: {
+  // La opacidad final (0.5) ahora la anima `connectorAnimStyle` en StepItem —
+  // aquí solo queda el color, que sí puede ser un swap instantáneo.
+  connectorDoneColor: {
     backgroundColor: palette.goldText,
-    opacity: 0.5,
   },
   stepDot: {
     alignItems: 'center',

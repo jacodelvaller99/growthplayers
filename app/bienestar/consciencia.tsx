@@ -18,12 +18,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FocusHero, HeroPanel } from '@/components/focus-deck';
 import { GoldDivider, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography, EASING_HOUSE, DURATION_HOUSE } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { readLocal, writeLocal } from '@/storage/local';
 
 // ─── Haptic ───────────────────────────────────────────────────────────────────
@@ -184,6 +186,55 @@ function isoWeekId(d = new Date()): string {
   return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
+// ─── Level cell (grid principal) ────────────────────────────────────────────────
+// El selector de nivel era un corte seco (borde/fondo cambian de golpe) y sin
+// feedback de press. Un scale(0.97) en press-in/out da la señal táctil; el
+// haptic ya vivía en `select()` (pasado por el padre) — no se duplica aquí.
+function LevelCell({ level, isSelected, onPress }: { level: Level; isSelected: boolean; onPress: () => void }) {
+  const isPoder = level.zone === 'poder';
+  const reduced = useReducedMotion();
+  const press = useSharedValue(1);
+  const select = useSharedValue(1);
+
+  // Convertirse en el nivel activo tenía cero transición (borde 1px→2px de
+  // golpe). Un "pop" corto lo marca sin animar color — interpolar
+  // `palette.gold`/`palette.line` rompería en web (var(--c-*), ver
+  // themeVarInAnimation.test.ts). Combina por multiplicación con el scale de
+  // press: ambos pueden coincidir sin pisarse.
+  useEffect(() => {
+    if (isSelected && !reduced) {
+      select.value = withSequence(
+        withTiming(1.05, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
+        withTiming(1, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
+      );
+    }
+  }, [isSelected, reduced]);
+
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value * select.value }] }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => { press.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+        onPressOut={() => { press.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
+        style={[
+          styles.cell,
+          isPoder && styles.cellPower,
+          isSelected && styles.cellSelected,
+        ]}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityLabel={`${level.hz} Hz, ${level.name}`}>
+        {/* goldText (no gold): este es TEXTO. palette.gold (#FFC804) sobre la
+            celda de poder (fondo goldLight claro) es ilegible en tema claro. */}
+        <Text style={[styles.cellHz, { color: isPoder ? palette.goldText : palette.ivory }]}>{level.hz}</Text>
+        <Text style={styles.cellName} numberOfLines={1}>{level.name}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ConscienciaScreen() {
   const sc = useScreen();
@@ -278,28 +329,9 @@ export default function ConscienciaScreen() {
 
       {/* Level grid — 4 columns */}
       <View style={styles.grid}>
-        {LEVELS.map((level, i) => {
-          const isSelected = i === selIdx;
-          const isPoder = level.zone === 'poder';
-          return (
-            <Pressable
-              key={level.hz}
-              onPress={() => select(i)}
-              style={[
-                styles.cell,
-                isPoder && styles.cellPower,
-                isSelected && styles.cellSelected,
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`${level.hz} Hz, ${level.name}`}>
-              {/* goldText (no gold): este es TEXTO. palette.gold (#FFC804) sobre la
-                  celda de poder (fondo goldLight claro) es ilegible en tema claro. */}
-              <Text style={[styles.cellHz, { color: isPoder ? palette.goldText : palette.ivory }]}>{level.hz}</Text>
-              <Text style={styles.cellName} numberOfLines={1}>{level.name}</Text>
-            </Pressable>
-          );
-        })}
+        {LEVELS.map((level, i) => (
+          <LevelCell key={level.hz} level={level} isSelected={i === selIdx} onPress={() => select(i)} />
+        ))}
       </View>
 
       {/* Detail panel */}

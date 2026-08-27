@@ -14,6 +14,11 @@ jest.mock('@/hooks/use-lifeflow', () => ({
   useLifeFlow: () => ({ state: { subscriptionTier: 'free' }, userId: 'u-test', refreshTier: jest.fn() }),
 }));
 jest.mock('@/lib/admin/actions', () => ({ redeemAccessCode: jest.fn().mockResolvedValue({ status: 'ok' }) }));
+// Precio real de RevenueCat (premium) — determinístico para el smoke test,
+// igual que ya hace __tests__/unit/paywallScreen.test.tsx.
+jest.mock('@/services/revenuecat', () => ({
+  getOfferings: jest.fn().mockResolvedValue({ current: { availablePackages: [] } }),
+}));
 jest.mock('@/components/polaris', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const RN = require('react-native');
@@ -25,6 +30,9 @@ jest.mock('@/components/polaris', () => {
   return {
     GoldDivider: () => R.createElement(RN.View),
     PremiumCard: V, PrimaryButton: Btn, SecondaryButton: Btn,
+    // Primitivo nuevo de la pasada Apple-grade — pricing lo usa para el CTA
+    // de cada PlanCard y el botón CANJEAR.
+    PressableScale: RN.Pressable,
     screen: {}, useScreen: () => ({ root: {}, content: {} }),
   };
 });

@@ -1,5 +1,6 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import type { ComandoModeProps } from '@/components/comando-modes/types';
+import { PrimaryButton } from '@/components/polaris';
 import { palette, radii, spacing, Fonts } from '@/constants/theme';
 
 export default function GuiadoMode(props: ComandoModeProps) {
@@ -25,9 +26,7 @@ export default function GuiadoMode(props: ComandoModeProps) {
             : `PASO ${props.guidedStepIndex + 1} DE ${props.guidedTotalSteps} · ${props.guidedStepLabel}`}
         </Text>
         <Text style={styles.question}>{props.guidedQuestion}</Text>
-        <Pressable style={styles.button} onPress={props.onGuidedNext}>
-          <Text style={styles.buttonText}>SIGUIENTE →</Text>
-        </Pressable>
+        <PrimaryButton label="SIGUIENTE →" onPress={props.onGuidedNext} />
       </View>
     </View>
   );
@@ -83,20 +82,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: palette.ivory,
     lineHeight: 26,
-  },
-  button: {
-    width: '100%',
-    minHeight: 52,
-    borderRadius: radii.md,
-    backgroundColor: palette.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontFamily: Fonts.display,
-    fontWeight: '800',
-    fontSize: 14,
-    color: palette.ink,
-    textTransform: 'uppercase',
   },
 });

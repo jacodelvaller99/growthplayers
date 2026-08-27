@@ -1223,7 +1223,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   needPill: {
-    backgroundColor: 'rgba(201,160,0,0.08)',
+    backgroundColor: alpha(palette.gold, '14'),
     borderColor: alpha(palette.gold, '44'),
     borderRadius: radii.sm,
     borderWidth: 1,

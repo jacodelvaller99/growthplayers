@@ -713,7 +713,7 @@ export default function DashboardScreen() {
         <View style={styles.normanQPOnline} />
         <Pressable
           onPress={() => router.push('/(tabs)/mentor' as never)}
-          style={({ pressed }) => [styles.normanQPOpen, pressed && { opacity: 0.75 }]}
+          style={({ pressed }) => [styles.normanQPOpen, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}
           accessibilityLabel="Abrir mentor">
           <MaterialIcons name="open-in-new" size={13} color={palette.ink} />
         </Pressable>
@@ -727,7 +727,7 @@ export default function DashboardScreen() {
         {normanChips.map((chip) => (
           <Pressable
             key={chip.label}
-            style={({ pressed }) => [styles.normanChip, pressed && { opacity: 0.75 }]}
+            style={({ pressed }) => [styles.normanChip, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}
             onPress={() =>
               router.push({
                 pathname: '/(tabs)/mentor',
@@ -747,7 +747,7 @@ export default function DashboardScreen() {
           <Text style={styles.normanWeeklyText} numberOfLines={4}>{stripMarkdownLite(weeklySession.ai_message)}</Text>
           <Pressable
             onPress={() => router.push('/(tabs)/mentor' as never)}
-            style={({ pressed }) => [styles.normanWeeklyBtn, pressed && { opacity: 0.75 }]}>
+            style={({ pressed }) => [styles.normanWeeklyBtn, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}>
             <Text style={styles.normanWeeklyBtnText}>RESPONDER A NORMAN</Text>
             <MaterialIcons name="arrow-forward" size={12} color={palette.goldText} />
           </Pressable>
@@ -990,7 +990,7 @@ export default function DashboardScreen() {
       onPress={() => router.push('/(tabs)/mentor')}
       accessibilityRole="button"
       accessibilityLabel="Consultar a Norman"
-      style={({ pressed }) => [mob.normanCard, pressed && { opacity: 0.9 }]}>
+      style={({ pressed }) => [mob.normanCard, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}>
       <View style={mob.normanTop}>
         <View style={mob.normanAvatar}>
           <MaterialIcons name="psychology" size={22} color={palette.goldText} />
@@ -1059,7 +1059,7 @@ export default function DashboardScreen() {
             onPress={() => router.push(q.route as never)}
             accessibilityRole="button"
             accessibilityLabel={q.label}
-            style={({ pressed }) => [mob.quickTile, pressed && { opacity: 0.85 }]}>
+            style={({ pressed }) => [mob.quickTile, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}>
             <MaterialIcons name={q.icon} size={24} color={palette.goldText} />
             <Text style={mob.quickLabel}>{q.label}</Text>
           </Pressable>
@@ -1536,7 +1536,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(200,160,80,0.12)',
+    // Ya existe el token exacto (mismo alfa, oro de marca real en vez del
+    // dorado apagado que traía este literal) — sin necesidad de alpha().
+    backgroundColor: palette.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1607,8 +1609,10 @@ const styles = StyleSheet.create({
   // ── North anchor strip ───────────────────────────────────────────────────
   northAnchor: {
     alignItems: 'center',
-    backgroundColor: 'rgba(179,141,60,0.07)',
-    borderColor: 'rgba(179,141,60,0.25)',
+    // Era un dorado apagado (179,141,60) distinto al oro de marca (255,200,4)
+    // que usa el resto de la pantalla — mismo token, mismo alfa aproximado.
+    backgroundColor: alpha(palette.gold, '12'),
+    borderColor: alpha(palette.gold, '40'),
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
@@ -1637,7 +1641,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    backgroundColor: 'rgba(201,160,0,0.05)',
+    backgroundColor: alpha(palette.gold, '0D'),
     minHeight: 52,
   },
   wearableCtaCopy: {
@@ -1899,7 +1903,7 @@ const styles = StyleSheet.create({
   // ── Anomaly alert card ──────────────────────────────────────────────────────
   anomalyCard: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 200, 4, 0.07)',
+    backgroundColor: alpha(palette.gold, '12'),
     borderColor: palette.gold,
     borderRadius: radii.sm,
     borderWidth: 1,
@@ -1964,7 +1968,12 @@ const styles = StyleSheet.create({
 
   // ── Live Session Card ───────────────────────────────────────────────────────
   liveCard: {
-    backgroundColor:  'rgba(10,10,10,0.85)',
+    // Era un overlay oscuro fijo (rgba(10,10,10,0.85)) — no dorado, y no
+    // theme-aware: el texto de adentro (ivory/smoke/ash) sí sigue el tema,
+    // así que en claro quedaba texto oscuro sobre un fondo casi negro.
+    // `graphite` es el token de superficie elevada que ya usan las demás
+    // tarjetas de esta pantalla.
+    backgroundColor:  palette.graphite,
     borderColor:      alpha(palette.gold, '55'),
     borderRadius:     radii.md,
     borderWidth:      1.5,
@@ -2108,7 +2117,7 @@ const styles = StyleSheet.create({
   },
   communityIconBox: {
     alignItems:      'center',
-    backgroundColor: 'rgba(179,141,60,0.10)',
+    backgroundColor: alpha(palette.gold, '1A'),
     borderRadius:    radii.sm,
     height:          40,
     justifyContent:  'center',
@@ -2631,7 +2640,7 @@ function CommunityPreview() {
         <Pressable
           key={p.id}
           onPress={() => router.push('/bienestar/comunidad' as never)}
-          style={({ pressed }) => [cp.post, pressed && { opacity: 0.85 }]}
+          style={({ pressed }) => [cp.post, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
           accessibilityRole="button"
           accessibilityLabel={`Publicación de ${p.author}`}>
           <View style={cp.avatar}>
@@ -2647,7 +2656,7 @@ function CommunityPreview() {
         onPress={() => router.push('/bienestar/comunidad' as never)}
         accessibilityRole="button"
         accessibilityLabel="Ver toda la comunidad"
-        style={({ pressed }) => [cp.viewAll, pressed && { opacity: 0.8 }]}>
+        style={({ pressed }) => [cp.viewAll, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}>
         <Text style={cp.viewAllText}>VER TODA LA COMUNIDAD</Text>
         <MaterialIcons name="arrow-forward" size={14} color={palette.goldText} />
       </Pressable>

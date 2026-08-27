@@ -23,7 +23,10 @@ export default function ErrorState({
   onRetry,
 }: ErrorStateProps) {
   return (
-    <View style={s.container}>
+    <View
+      style={s.container}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="assertive">
       <View style={s.iconWrap}>
         <MaterialIcons name="error-outline" size={32} color={palette.danger} />
       </View>

@@ -12,12 +12,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
+import { palette, spacing, typography, Fonts, radii, EASING_HOUSE, DURATION_HOUSE } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { Dial, DialValue, HeroPanel } from '@/components/focus-deck';
 import { GoldDivider } from '@/components/polaris';
 
@@ -83,6 +85,48 @@ const BREAKING_FOOD_SUGGESTIONS = [
   'Aguacate',
   'Yogur / kéfir',
 ];
+
+// Selección de protocolo: hoy es un corte seco (el fondo cambia de golpe).
+// Un pequeño "pop" en el chip que se acaba de activar marca la transición sin
+// tocar color — evita interpolar `palette.gold`/`palette.line`, que en web
+// son `var(--c-*)` y romperían un interpolador de color (ver
+// themeVarInAnimation.test.ts).
+function ProtocolChip({ p, active, onPress }: { p: (typeof PROTOCOLS)[number]; active: boolean; onPress: () => void }) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (active && !reduced) {
+      scale.value = withSequence(
+        withTiming(1.04, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
+        withTiming(1, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
+      );
+    }
+  }, [active, reduced]);
+
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Protocolo ${p.label}: ${p.description}`}
+        accessibilityState={{ selected: active }}
+        style={[styles.protocolRow, active && styles.protocolRowActive]}
+      >
+        <View style={styles.protocolLeft}>
+          <Text style={[styles.protocolLabel, active && { color: palette.ink }]}>
+            {p.label}
+          </Text>
+        </View>
+        <Text style={[styles.protocolDesc, active && { color: palette.ink }]}>
+          {p.description}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 function formatDuration(ms: number) {
   const totalSec = Math.floor(ms / 1000);
@@ -162,6 +206,8 @@ export default function AyunoScreen() {
   };
 
   const isActive = !!startedAt;
+  const ctaScale = useSharedValue(1);
+  const ctaAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -211,23 +257,12 @@ export default function AyunoScreen() {
           <View style={styles.section}>
             <GoldDivider label="PROTOCOLO" />
             {PROTOCOLS.map(p => (
-              <Pressable
+              <ProtocolChip
                 key={p.label}
+                p={p}
+                active={selectedProtocol.label === p.label}
                 onPress={() => setSelectedProtocol(p)}
-                accessibilityRole="button"
-                accessibilityLabel={`Protocolo ${p.label}: ${p.description}`}
-                accessibilityState={{ selected: selectedProtocol.label === p.label }}
-                style={[styles.protocolRow, selectedProtocol.label === p.label && styles.protocolRowActive]}
-              >
-                <View style={styles.protocolLeft}>
-                  <Text style={[styles.protocolLabel, selectedProtocol.label === p.label && { color: palette.ink }]}>
-                    {p.label}
-                  </Text>
-                </View>
-                <Text style={[styles.protocolDesc, selectedProtocol.label === p.label && { color: palette.ink }]}>
-                  {p.description}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
         )}
@@ -271,16 +306,20 @@ export default function AyunoScreen() {
         </View>
 
         {/* Botón de acción */}
-        <Pressable
-          onPress={isActive ? () => setShowBreakModal(true) : () => setShowDisclaimer(true)}
-          accessibilityRole="button"
-          accessibilityLabel={isActive ? 'Romper ayuno' : 'Iniciar ayuno'}
-          style={[styles.ctaBtn, isActive && styles.ctaBtnEnd]}
-        >
-          <Text style={styles.ctaBtnText}>
-            {isActive ? 'ROMPER AYUNO' : 'INICIAR AYUNO'}
-          </Text>
-        </Pressable>
+        <Animated.View style={ctaAnimStyle}>
+          <Pressable
+            onPress={isActive ? () => setShowBreakModal(true) : () => setShowDisclaimer(true)}
+            onPressIn={() => { ctaScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+            onPressOut={() => { ctaScale.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
+            accessibilityRole="button"
+            accessibilityLabel={isActive ? 'Romper ayuno' : 'Iniciar ayuno'}
+            style={[styles.ctaBtn, isActive && styles.ctaBtnEnd]}
+          >
+            <Text style={styles.ctaBtnText}>
+              {isActive ? 'ROMPER AYUNO' : 'INICIAR AYUNO'}
+            </Text>
+          </Pressable>
+        </Animated.View>
       </ScrollView>
 
       {/* Disclaimer modal — no omitible */}

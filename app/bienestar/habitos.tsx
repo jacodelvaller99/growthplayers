@@ -1,15 +1,15 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  Alert,
   Platform,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -59,6 +59,41 @@ function routeForCategory(category: string): string | undefined {
   return findTemplate(category)?.route;
 }
 
+// El circulo de marcar es LA accion diaria de esta pantalla — un scale(0.97)
+// en press-in/out le da la senal tactil que le faltaba. Componente propio
+// (no un helper de render) para que el hook de Reanimated tenga su propia
+// instancia por fila, no una compartida entre todas.
+function HabitCheckButton({ completed, onPress, label }: { completed: boolean; onPress: () => void; label: string }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={animStyle}>
+      {/* Marcar un habito es LA accion diaria de esta pantalla, y su
+          circulo mide 28: por debajo del minimo de 44 en las dos guias.
+          Lo cubria `hitSlop`, que react-native-web ignora -- correcto en
+          movil, inerte en la PWA. `hitBox` crece la caja de verdad y el
+          margen negativo devuelve el hueco, asi que el circulo no se
+          mueve ni un pixel. `hitSlop` se queda: en nativo no estorba. */}
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => { scale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
+        hitSlop={8}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: completed }}
+        accessibilityLabel={label}
+        style={hitBox(28)}
+      >
+        <View style={[styles.habitCheck, completed && styles.habitCheckDone]}>
+          {completed && (
+            <MaterialIcons name="check" size={16} color={palette.ink} />
+          )}
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 export default function HabitosScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -68,6 +103,18 @@ export default function HabitosScreen() {
   const [expanded, setExpanded] = useState<string | null>(null);
   // ids de hábitos con recordatorio agendado en esta sesión (solo nativo)
   const [reminders, setReminders] = useState<Record<string, string>>({});
+  // Banner inline en voz de la interfaz — reemplaza los Alert.alert() nativos
+  // que rompían la voz de marca. Se auto-oculta: estas notificaciones son de
+  // una sola acción (crear hábito, activar recordatorio), no un formulario
+  // con reintento que las limpie por su cuenta.
+  const [banner, setBanner] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showBanner = useCallback((tone: 'success' | 'error', text: string) => {
+    if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    setBanner({ tone, text });
+    bannerTimer.current = setTimeout(() => setBanner(null), 4000);
+  }, []);
+  useEffect(() => () => { if (bannerTimer.current) clearTimeout(bannerTimer.current); }, []);
 
   const loadHabits = async () => {
     if (!userId) return;
@@ -128,7 +175,7 @@ export default function HabitosScreen() {
         options:         template.options ?? [],
       });
       loadHabits();
-    } catch { Alert.alert('Error', 'No se pudo crear el hábito.'); }
+    } catch { showBanner('error', 'No se pudo crear el hábito. Intenta de nuevo.'); }
   };
 
   const toggleToday = async (habit: Habit) => {
@@ -179,12 +226,12 @@ export default function HabitosScreen() {
     }
     const tmpl = findTemplate(habit.category);
     if (!tmpl?.reminderHour && tmpl?.reminderHour !== 0) {
-      Alert.alert('Sin horario', 'Este hábito no tiene un horario sugerido.');
+      showBanner('error', 'Este hábito no tiene un horario sugerido.');
       return;
     }
     const granted = await requestNotificationPermissions();
     if (!granted) {
-      Alert.alert('Permiso requerido', 'Activa las notificaciones para recibir recordatorios.');
+      showBanner('error', 'Activa las notificaciones para recibir recordatorios.');
       return;
     }
     const id = await scheduleDailyRoutineReminder({
@@ -199,9 +246,9 @@ export default function HabitosScreen() {
     });
     if (id) {
       setReminders((prev) => ({ ...prev, [habit.id]: id }));
-      Alert.alert(
-        'Recordatorio activado',
-        `Te avisaremos a las ${String(tmpl.reminderHour).padStart(2, '0')}:${String(tmpl.reminderMinute ?? 0).padStart(2, '0')}.`,
+      showBanner(
+        'success',
+        `Recordatorio activado. Te avisaremos a las ${String(tmpl.reminderHour).padStart(2, '0')}:${String(tmpl.reminderMinute ?? 0).padStart(2, '0')}.`,
       );
     }
   };
@@ -237,26 +284,11 @@ export default function HabitosScreen() {
 
         <View style={[styles.habitCard, habit.completedToday && styles.habitCardDone]}>
           <View style={styles.habitRow}>
-            {/* Marcar un habito es LA accion diaria de esta pantalla, y su
-                circulo mide 28: por debajo del minimo de 44 en las dos guias.
-                Lo cubria `hitSlop`, que react-native-web ignora -- correcto en
-                movil, inerte en la PWA. `hitBox` crece la caja de verdad y el
-                margen negativo devuelve el hueco, asi que el circulo no se
-                mueve ni un pixel. `hitSlop` se queda: en nativo no estorba. */}
-            <Pressable
+            <HabitCheckButton
+              completed={habit.completedToday}
               onPress={() => toggleToday(habit)}
-              hitSlop={8}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: habit.completedToday }}
-              accessibilityLabel={`Marcar ${habit.name}`}
-              style={hitBox(28)}
-            >
-              <View style={[styles.habitCheck, habit.completedToday && styles.habitCheckDone]}>
-                {habit.completedToday && (
-                  <MaterialIcons name="check" size={16} color={palette.ink} />
-                )}
-              </View>
-            </Pressable>
+              label={`Marcar ${habit.name}`}
+            />
 
             <Pressable
               style={styles.habitInfo}
@@ -431,6 +463,24 @@ export default function HabitosScreen() {
         <View style={{ width: 38 }} />
       </View>
 
+      {/* Banner inline — reemplaza Alert.alert(); fuera del ScrollView para
+          que sea visible sin importar cuánto haya bajado el usuario. */}
+      {banner && (
+        <View
+          style={[styles.banner, banner.tone === 'success' ? styles.bannerSuccess : styles.bannerError]}
+          accessibilityRole="alert"
+          accessibilityLiveRegion={banner.tone === 'success' ? 'polite' : 'assertive'}>
+          <MaterialIcons
+            name={banner.tone === 'success' ? 'check-circle' : 'error-outline'}
+            size={16}
+            color={banner.tone === 'success' ? palette.success : palette.danger}
+          />
+          <Text style={[styles.bannerText, { color: banner.tone === 'success' ? palette.success : palette.danger }]}>
+            {banner.text}
+          </Text>
+        </View>
+      )}
+
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Progreso del día — hábitos + puntos */}
         <View style={styles.progressCard}>
@@ -502,6 +552,11 @@ const styles = StyleSheet.create({
   header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:        { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title:          { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+
+  banner:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm },
+  bannerSuccess:  { backgroundColor: alpha(palette.success, '1A') },
+  bannerError:    { backgroundColor: alpha(palette.danger, '1A') },
+  bannerText:     { flex: 1, fontFamily: Fonts.sans, fontSize: 12, lineHeight: 17 },
 
   content:        { paddingHorizontal: spacing.md, paddingBottom: 40 },
 

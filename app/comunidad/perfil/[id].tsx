@@ -151,7 +151,11 @@ export default function PerfilPublicoScreen() {
           {!isSelf && (
             <View style={s.actions}>
               <Pressable
-                style={[connState === 'none' || connState === 'pending_received' ? s.primaryBtn : s.secondaryBtn, busy && { opacity: 0.5 }]}
+                style={({ pressed }) => [
+                  connState === 'none' || connState === 'pending_received' ? s.primaryBtn : s.secondaryBtn,
+                  busy && { opacity: 0.5 },
+                  pressed && !busy && { opacity: 0.75 },
+                ]}
                 onPress={handleConnect}
                 disabled={busy}
                 accessibilityRole="button"
@@ -162,14 +166,14 @@ export default function PerfilPublicoScreen() {
                 </Text>
               </Pressable>
               <Pressable
-                style={s.secondaryBtn}
+                style={({ pressed }) => [s.secondaryBtn, pressed && { opacity: 0.75 }]}
                 onPress={() => router.push(`/comunidad/chat/${profile.user_id}?id=${profile.user_id}&name=${encodeURIComponent(profile.name)}` as never)}
                 accessibilityRole="button"
                 accessibilityLabel={`Enviar mensaje a ${profile.name}`}>
                 <Text style={s.secondaryBtnText}>MENSAJE</Text>
               </Pressable>
               <Pressable
-                style={s.dangerBtn}
+                style={({ pressed }) => [s.dangerBtn, pressed && { opacity: 0.75 }]}
                 onPress={handleBlock}
                 accessibilityRole="button"
                 accessibilityLabel={`Bloquear a ${profile.name}`}>

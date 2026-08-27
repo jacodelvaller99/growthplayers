@@ -74,6 +74,17 @@ const ALLOWED: Record<string, string> = {
   'app/bienestar/suplementacion.tsx:#247025': 'escala por categoría de suplemento',
 };
 
+// PENDIENTE A PROPÓSITO — no por descuido: este archivo detecta hex con
+// comillas (`'#...'`) pero NO `rgba(...)` crudo. Se investigó antes de tocar
+// este test: hay 89 apariciones de `rgba(` en 37 ficheros de app/components,
+// y una fracción real es legítima y NO debe fallar — `shadowColor` es negro
+// en los dos temas, `palette.purple*`/`avatarSwatches` son CONSTANTES
+// documentadas a propósito (ver theme.ts), y hay más casos sin auditar caso
+// por caso. Construir el `ALLOWED` equivalente para 89 sitios sin revisar
+// cada uno a mano es el tipo de salto de fe que puede tapar justo el bug que
+// este archivo existe para atrapar — así que se deja sin aserción. Si alguien
+// tiene tiempo para auditar los 89 uno a uno, se añade con el mismo mecanismo
+// de `ALLOWED` de arriba.
 describe('cobertura del tema en toda la app', () => {
   const files = glob('{app,components}/**/*.{ts,tsx}', { cwd: ROOT, posix: true });
 
@@ -103,6 +114,25 @@ describe('cobertura del tema en toda la app', () => {
     const theme = readFileSync(join(ROOT, 'constants/theme.ts'), 'utf8');
     expect(theme).toMatch(/ink:\s*'#0A0A0A'/);
     expect(theme).toMatch(/paper:\s*'#FFFFFF'/);
+  });
+
+  it('nadie concatena opacidad a un token de color (`palette.x + "NN"`)', () => {
+    // El bug real, documentado en theme.ts:41: `palette.gold + '44'` compila
+    // porque JS no distingue tipos, pero en web el token es `var(--c-gold)` y
+    // `var(--c-gold)44` no es CSS válido — el color se pierde en silencio. El
+    // fix es `alpha(token, 'NN')`. A diferencia del hueco de `rgba(...)` de
+    // arriba, aquí no hay falsos positivos posibles: cualquier match de este
+    // patrón exacto (acceso a `palette.*`/`Colors.*` + concatenación de 2
+    // dígitos hex) ES el bug, nunca una excepción legítima.
+    const offenders: string[] = [];
+    const pattern = /(?:palette|Colors\.\w+)\.\w+\s*\+\s*['"][0-9A-Fa-f]{2}['"]/g;
+    for (const rel of files) {
+      const src = readFileSync(join(ROOT, rel), 'utf8');
+      for (const m of src.matchAll(pattern)) {
+        offenders.push(`${rel}: ${m[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it('`palette.black` no se usa como color de TEXTO', () => {

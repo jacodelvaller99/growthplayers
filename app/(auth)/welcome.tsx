@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PolarisMark, PrimaryButton } from '@/components/polaris';
 import { Fonts, fitDisplaySize, palette, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 
 export default function WelcomeScreen() {
@@ -382,10 +383,10 @@ const styles = StyleSheet.create({
     width: 360,
     height: 360,
     borderRadius: 180,
-    backgroundColor: 'rgba(255,200,4,0.05)',
+    backgroundColor: alpha(palette.gold, '0D'),
     // Soft radial halo on web (RN has no radial-gradient) — blurs the disc edge
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 0 180px 120px rgba(255,200,4,0.05)' } as object
+      ? { boxShadow: `0 0 180px 120px ${alpha(palette.gold, '0D')}` } as object
       : {}),
   },
   desktopVisualInner: {

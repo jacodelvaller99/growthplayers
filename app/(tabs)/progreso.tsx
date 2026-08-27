@@ -2,8 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import Svg, { Circle, Path, Polyline } from 'react-native-svg';
+import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,11 +24,13 @@ import {
   screen,
   useScreen,
 } from '@/components/polaris';
+import { AnimatedNumber } from '@/components/AnimatedNumber';
 import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { DURATION_HOUSE, EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { arcForDay, buildHistoria } from '@/lib/narrativeLogic';
 import { ArcHeader } from '@/components/narrative';
@@ -120,12 +123,12 @@ function StreakCalendar({ checkIns }: { checkIns: Array<{ date: string }> }) {
   }
 
   return (
-    <View style={calStyles.wrap}>
+    <PremiumCard style={calStyles.wrap}>
       {/* Header row */}
       <View style={calStyles.header}>
         <Text style={calStyles.title}>RACHA · ÚLTIMOS 42 DÍAS</Text>
         <View style={calStyles.statRow}>
-          <Text style={calStyles.statNum}>{checkinCount}</Text>
+          <AnimatedNumber value={checkinCount} style={calStyles.statNum} />
           <Text style={calStyles.statLabel}>/ 30 días  ·  {checkinPct}%</Text>
         </View>
       </View>
@@ -137,22 +140,31 @@ function StreakCalendar({ checkIns }: { checkIns: Array<{ date: string }> }) {
         ))}
       </View>
 
-      {/* 6-week grid */}
-      {weeks.map((week, wi) => (
-        <View key={wi} style={calStyles.weekRow}>
-          {week.map((day) => (
-            <View
-              key={day.dateStr}
-              style={[
-                calStyles.cell,
-                day.hasCheckin && calStyles.cellActive,
-                day.isToday && !day.hasCheckin && calStyles.cellToday,
-                day.isFuture && calStyles.cellFuture,
-              ]}
-            />
-          ))}
-        </View>
-      ))}
+      {/* 6-week grid. Cada fila es UN nodo de accesibilidad (42 celdas sueltas
+          sin texto serían 42 paradas de lector de pantalla sin información
+          real) — agrupa el patrón visual en un resumen por semana. */}
+      {weeks.map((week, wi) => {
+        const weekCheckins = week.filter((d) => d.hasCheckin).length;
+        return (
+          <View
+            key={wi}
+            style={calStyles.weekRow}
+            accessible
+            accessibilityLabel={`Semana ${wi + 1}: ${weekCheckins} de 7 días con check-in`}>
+            {week.map((day) => (
+              <View
+                key={day.dateStr}
+                style={[
+                  calStyles.cell,
+                  day.hasCheckin && calStyles.cellActive,
+                  day.isToday && !day.hasCheckin && calStyles.cellToday,
+                  day.isFuture && calStyles.cellFuture,
+                ]}
+              />
+            ))}
+          </View>
+        );
+      })}
 
       {/* Legend */}
       <View style={calStyles.legend}>
@@ -161,18 +173,15 @@ function StreakCalendar({ checkIns }: { checkIns: Array<{ date: string }> }) {
         <View style={[calStyles.legendDot, { backgroundColor: palette.gold }]} />
         <Text style={calStyles.legendText}>Check-in</Text>
       </View>
-    </View>
+    </PremiumCard>
   );
 }
 
 const calStyles = StyleSheet.create({
+  // Superficie (fondo/borde/radio/padding) viene de PremiumCard — aquí solo
+  // el espaciado interno propio de este layout.
   wrap: {
-    backgroundColor: 'rgba(10,10,10,0.6)',
-    borderColor:     palette.lineSoft,
-    borderRadius:    radii.md,
-    borderWidth:     1,
-    gap:             spacing.sm,
-    padding:         spacing.lg,
+    gap: spacing.sm,
   },
   header: {
     alignItems:     'center',
@@ -273,6 +282,23 @@ function MiniSparkline({
   color?: string;
   showDots?: boolean;
 }) {
+  // Entrada animada — misma firma de barrido de la casa que WeeklySparkline
+  // (700ms, EASING_HOUSE), así el sparkline "casero" deja de ser el único
+  // estático de la pantalla. Hooks antes del early-return de abajo.
+  const reducedMotion = useReducedMotion();
+  const progress = useSharedValue(reducedMotion ? 1 : 0);
+
+  useEffect(() => {
+    if (reducedMotion) { progress.value = 1; return; }
+    progress.value = withTiming(1, { duration: DURATION_HOUSE.sweep, easing: Easing.bezier(...EASING_HOUSE) });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateY: (1 - progress.value) * 6 }],
+  }));
+
   if (data.length < 2) {
     return <View style={{ height }} />;
   }
@@ -291,24 +317,31 @@ function MiniSparkline({
     ` L${width},${height} L0,${height} Z`;
 
   return (
-    <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-      <Path d={areaPath} fill={color} fillOpacity={0.14} />
-      <Polyline
-        points={linePoints}
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {showDots && pts.map((p, i) => (
-        <Circle key={i} cx={p.x} cy={p.y} r={2.5} fill={color} />
-      ))}
-    </Svg>
+    <Animated.View style={animStyle}>
+      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <Path d={areaPath} fill={color} fillOpacity={0.14} />
+        <Polyline
+          points={linePoints}
+          fill="none"
+          stroke={color}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {showDots && pts.map((p, i) => (
+          <Circle key={i} cx={p.x} cy={p.y} r={2.5} fill={color} />
+        ))}
+      </Svg>
+    </Animated.View>
   );
 }
 
 // ─── Score Ring (circular progress, SVG) ────────────────────────────────────
+// Trazo animado con el mismo patrón que el Dial de comando.tsx: withTiming +
+// AnimatedCircle vía useAnimatedProps. No se consolida en un único Dial
+// compartido aquí — eso es trabajo de Fase C sobre archivo compartido.
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 function ScoreRing({
   value,
   max,
@@ -327,11 +360,25 @@ function ScoreRing({
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(1, max > 0 ? value / max : 0));
+
+  const reducedMotion = useReducedMotion();
+  const progress = useSharedValue(reducedMotion ? pct : 0);
+
+  useEffect(() => {
+    if (reducedMotion) { progress.value = pct; return; }
+    progress.value = withTiming(pct, { duration: DURATION_HOUSE.sweep, easing: Easing.bezier(...EASING_HOUSE) });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pct, reducedMotion]);
+
+  const dashProps = useAnimatedProps(() => ({
+    strokeDashoffset: c * (1 - progress.value),
+  }));
+
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
         <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={palette.charcoal} strokeWidth={stroke} />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -340,7 +387,7 @@ function ScoreRing({
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}
-          strokeDashoffset={c * (1 - pct)}
+          animatedProps={dashProps}
         />
       </Svg>
       <Text style={ringStyles.value}>{display}</Text>
@@ -372,7 +419,7 @@ function WeeklyMetricCard({
   data,
   avg,
   unit = '/10',
-  trend,
+  trendPct,
   trendUp,
   color = palette.gold,
 }: {
@@ -381,7 +428,12 @@ function WeeklyMetricCard({
   data: number[];
   avg: string;
   unit?: string;
-  trend?: string;
+  /** Magnitud del cambio, sin signo — la dirección de la flecha la decide
+   *  `trendUp` (ya trae la polaridad correcta de la métrica), nunca el signo
+   *  crudo: "Carga sistema" es mejor cuando BAJA, así que su flecha sube con
+   *  loadTrend negativo. Derivarla del signo crudo aquí desalinearía esa
+   *  tarjeta de las otras 3, que sí coinciden signo=dirección. */
+  trendPct?: number;
   trendUp?: boolean;
   color?: string;
 }) {
@@ -394,9 +446,9 @@ function WeeklyMetricCard({
       <View style={wmStyles.valueRow}>
         <Text style={wmStyles.value}>{avg}</Text>
         <Text style={wmStyles.unit}>{unit}</Text>
-        {trend ? (
+        {trendPct != null ? (
           <Text style={[wmStyles.trend, { color: trendUp === false ? palette.ash : palette.success }]}>
-            {trend}
+            {trendUp ? '▲' : '▼'} {Math.abs(trendPct)}%
           </Text>
         ) : null}
       </View>
@@ -850,7 +902,11 @@ export default function ProgresoScreen() {
                 <View>
                   <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
                   <View style={styles.scoreNumberRow}>
-                    <Text style={styles.scoreNumber}>{sinLecturas ? '—' : score}</Text>
+                    {sinLecturas ? (
+                      <Text style={styles.scoreNumber}>—</Text>
+                    ) : (
+                      <AnimatedNumber value={score} style={styles.scoreNumber} />
+                    )}
                     {analytics.scoreDelta !== 0 && (
                       <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
                         {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
@@ -1204,7 +1260,11 @@ export default function ProgresoScreen() {
                     salían el día 1 venían del `stress ?? 5` de arriba, con el
                     término invertido. Comando ya lo resolvió así; esta pestaña
                     se quedó con el número inventado. */}
-                <Text style={styles.scoreNumber}>{sinLecturas ? '—' : score}</Text>
+                {sinLecturas ? (
+                  <Text style={styles.scoreNumber}>—</Text>
+                ) : (
+                  <AnimatedNumber value={score} style={styles.scoreNumber} />
+                )}
                 {analytics.scoreDelta !== 0 && (
                   <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
                     {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
@@ -1309,7 +1369,7 @@ export default function ProgresoScreen() {
               icon="bolt"
               data={analytics.energy}
               avg={(averages.energy ?? 0).toFixed(1)}
-              trend={analytics.energyTrend != null ? `${analytics.energyTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.energyTrend)}%` : undefined}
+              trendPct={analytics.energyTrend ?? undefined}
               trendUp={analytics.energyTrend == null ? undefined : analytics.energyTrend >= 0}
             />
             <WeeklyMetricCard
@@ -1317,7 +1377,7 @@ export default function ProgresoScreen() {
               icon="center-focus-strong"
               data={analytics.clarity}
               avg={(averages.clarity ?? 0).toFixed(1)}
-              trend={analytics.clarityTrend != null ? `${analytics.clarityTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.clarityTrend)}%` : undefined}
+              trendPct={analytics.clarityTrend ?? undefined}
               trendUp={analytics.clarityTrend == null ? undefined : analytics.clarityTrend >= 0}
             />
             <WeeklyMetricCard
@@ -1325,7 +1385,7 @@ export default function ProgresoScreen() {
               icon="thermostat"
               data={analytics.load}
               avg={(averages.stress ?? 0).toFixed(1)}
-              trend={analytics.loadTrend != null ? `${analytics.loadTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.loadTrend)}%` : undefined}
+              trendPct={analytics.loadTrend ?? undefined}
               trendUp={analytics.loadTrend == null ? undefined : analytics.loadTrend < 0}
             />
             <WeeklyMetricCard
@@ -1333,7 +1393,7 @@ export default function ProgresoScreen() {
               icon="favorite"
               data={analytics.coherence}
               avg={(((averages.energy ?? 0) + (averages.clarity ?? 0)) / 2).toFixed(1)}
-              trend={analytics.coherenceTrend != null ? `${analytics.coherenceTrend >= 0 ? '▲' : '▼'} ${Math.abs(analytics.coherenceTrend)}%` : undefined}
+              trendPct={analytics.coherenceTrend ?? undefined}
               trendUp={analytics.coherenceTrend == null ? undefined : analytics.coherenceTrend >= 0}
             />
           </View>
@@ -1369,6 +1429,29 @@ export default function ProgresoScreen() {
           </View>
         </>
       )}
+
+      {/* ── Biometría promedio (7D) — antes solo vivía en la rama desktop con
+          WeeklySparkline (entrada animada); el móvil se quedaba con los
+          MiniSparkline de arriba. Misma tarjeta, mismos datos, en las dos
+          plataformas. ── */}
+      <GoldDivider label="BIOMETRÍA PROMEDIO (7D)" />
+      <PremiumCard style={styles.sparklineCard}>
+        {hasCheckIns ? (
+          <>
+            <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.goldText} />
+            <View style={styles.sparklineDivider} />
+            <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
+          </>
+        ) : (
+          <EmptyState
+            icon="show-chart"
+            title="Tu biometría empieza hoy"
+            body="Haz tu primer check-in y aquí verás cómo se mueven tu energía y tu claridad."
+            actionLabel="HACER CHECK-IN"
+            onAction={() => router.push('/checkin')}
+          />
+        )}
+      </PremiumCard>
 
       {/* ── Intelligence DNA Dashboard ── */}
       {intelligence.engagement_score > 0 && (
@@ -1529,7 +1612,11 @@ export default function ProgresoScreen() {
             </View>
           ))}
         </View>
-        <Pressable style={styles.b2bBtn}>
+        <Pressable
+          style={styles.b2bBtn}
+          onPress={() => Linking.openURL('mailto:info@polarisgrowthinstitute.com?subject=Polaris%20para%20mi%20empresa')}
+          accessibilityRole="button"
+          accessibilityLabel="Solicitar información de Polaris para tu empresa">
           <MaterialIcons name="arrow-forward" size={16} color={palette.ink} />
           <Text style={styles.b2bBtnText}>SOLICITAR INFORMACIÓN</Text>
         </Pressable>
@@ -2477,8 +2564,8 @@ const dnaStyles = StyleSheet.create({
   },
   riskRow: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,200,4,0.06)',
-    borderColor: 'rgba(255,200,4,0.3)',
+    backgroundColor: alpha(palette.gold, '0F'),
+    borderColor: alpha(palette.gold, '4D'),
     borderRadius: radii.sm,
     borderWidth: 1,
     flexDirection: 'row',

@@ -32,6 +32,7 @@ import {
   StatusPill,
   useScreen,
 } from '@/components/polaris';
+import EmptyState from '@/components/EmptyState';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -172,7 +173,11 @@ export default function MentoriaScreen() {
         <Pressable
           onPress={m.generatePlan}
           disabled={m.generating || m.notes.length === 0}
-          style={[styles.aiBtn, (m.generating || m.notes.length === 0) && styles.aiBtnDisabled]}
+          style={({ pressed }) => [
+            styles.aiBtn,
+            (m.generating || m.notes.length === 0) && styles.aiBtnDisabled,
+            pressed && !(m.generating || m.notes.length === 0) && { opacity: 0.75 },
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Generar plan con Norman"
         >
@@ -194,10 +199,11 @@ export default function MentoriaScreen() {
       )}
 
       {m.plan.length === 0 ? (
-        <View style={styles.empty}>
-          <MaterialIcons name="checklist" size={22} color={palette.smoke} />
-          <Text style={styles.emptyText}>Aún no hay acciones. Genera tu plan o agrega una.</Text>
-        </View>
+        <EmptyState
+          icon="checklist"
+          title="Aún no hay acciones"
+          body="Genera tu plan con Norman o agrega una manualmente."
+        />
       ) : (
         <View style={styles.itemList}>
           {m.plan.map((it) => (
@@ -301,7 +307,7 @@ export default function MentoriaScreen() {
               <View style={styles.recBtns}>
                 <Pressable
                   onPress={() => m.cancelRecording()}
-                  style={styles.recCancel}
+                  style={({ pressed }) => [styles.recCancel, pressed && { opacity: 0.75 }]}
                   accessibilityRole="button"
                   accessibilityLabel="Cancelar grabación"
                 >
@@ -310,7 +316,7 @@ export default function MentoriaScreen() {
                 </Pressable>
                 <Pressable
                   onPress={() => { void m.stopRecordingAndProcess(noteWeek); }}
-                  style={styles.recStop}
+                  style={({ pressed }) => [styles.recStop, pressed && { opacity: 0.75 }]}
                   accessibilityRole="button"
                   accessibilityLabel="Detener y procesar"
                 >
@@ -322,7 +328,7 @@ export default function MentoriaScreen() {
           ) : (
             <Pressable
               onPress={beginRecording}
-              style={styles.recStart}
+              style={({ pressed }) => [styles.recStart, pressed && { opacity: 0.75 }]}
               accessibilityRole="button"
               accessibilityLabel="Grabar sesión"
             >
@@ -369,7 +375,11 @@ export default function MentoriaScreen() {
         <Pressable
           onPress={() => { m.addNote(noteWeek, noteText); setNoteText(''); }}
           disabled={!noteText.trim()}
-          style={[styles.saveNote, !noteText.trim() && styles.saveNoteDisabled]}
+          style={({ pressed }) => [
+            styles.saveNote,
+            !noteText.trim() && styles.saveNoteDisabled,
+            pressed && !!noteText.trim() && { opacity: 0.75 },
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Guardar nota"
         >
@@ -619,10 +629,16 @@ function DraftEditor({
       </Pressable>
 
       <View style={styles.draftBtns}>
-        <Pressable onPress={onDiscard} style={styles.draftDiscard} accessibilityRole="button">
+        <Pressable
+          onPress={onDiscard}
+          style={({ pressed }) => [styles.draftDiscard, pressed && { opacity: 0.75 }]}
+          accessibilityRole="button">
           <Text style={styles.draftDiscardText}>DESCARTAR</Text>
         </Pressable>
-        <Pressable onPress={onConfirm} style={styles.draftConfirm} accessibilityRole="button">
+        <Pressable
+          onPress={onConfirm}
+          style={({ pressed }) => [styles.draftConfirm, pressed && { opacity: 0.75 }]}
+          accessibilityRole="button">
           <MaterialIcons name="check" size={16} color={palette.ink} />
           <Text style={styles.draftConfirmText}>GUARDAR SESIÓN</Text>
         </Pressable>
@@ -676,8 +692,6 @@ const styles = StyleSheet.create({
   aiBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 10, color: palette.ink, letterSpacing: 1 },
 
   // Items
-  empty: { alignItems: 'center', gap: 8, paddingVertical: spacing.lg },
-  emptyText: { ...typography.body, fontSize: 12.5, color: palette.smoke, textAlign: 'center' },
   itemList: { gap: 2 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, minHeight: 44 },
   check: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },

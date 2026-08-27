@@ -21,10 +21,13 @@ jest.mock('@/components/polaris', () => {
   const R = require('react');
   const Btn = ({ label, onPress }: { label?: string; onPress?: () => void }) =>
     R.createElement(RN.Text, { onPress }, label);
+  const PressableScaleMock = ({ children, haptic: _haptic, ...rest }: { children?: React.ReactNode; haptic?: boolean }) =>
+    R.createElement(RN.Pressable, rest, children);
   return {
     GoldDivider: () => R.createElement(RN.View),
     PolarisMark: () => R.createElement(RN.View),
     PremiumInput: (p: object) => R.createElement(RN.TextInput, p),
+    PressableScale: PressableScaleMock,
     PrimaryButton: Btn,
     SecondaryButton: Btn,
     screen: {},

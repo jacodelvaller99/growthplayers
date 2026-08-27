@@ -1,7 +1,8 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import type { ComandoModeProps } from '@/components/comando-modes/types';
 import { HeroPanel } from '@/components/focus-deck';
-import { palette, radii, spacing, typography, Fonts } from '@/constants/theme';
+import { PrimaryButton } from '@/components/polaris';
+import { Fonts, palette, spacing, typography } from '@/constants/theme';
 
 export default function EsencialMode(props: ComandoModeProps) {
   return (
@@ -9,9 +10,9 @@ export default function EsencialMode(props: ComandoModeProps) {
       <View style={s.wrap}>
         <Text style={s.eyebrow}>{props.eyebrow}</Text>
         <Text style={s.statement}>{props.directiveReason || props.statement}</Text>
-        <Pressable style={s.button} onPress={props.onDirective}>
-          <Text style={s.buttonText}>{props.directiveTitle}</Text>
-        </Pressable>
+        <View style={s.buttonWrap}>
+          <PrimaryButton label={props.directiveTitle} onPress={props.onDirective} />
+        </View>
         <Pressable style={s.link} onPress={props.onOpenNorman}>
           <Text style={s.linkText}>o habla con Norman IA</Text>
         </Pressable>
@@ -44,23 +45,10 @@ const s = StyleSheet.create({
     color: palette.ivory,
     textAlign: 'center',
   },
-  button: {
-    minHeight: 52,
-    minWidth: 44,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radii.md,
-    backgroundColor: palette.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // PrimaryButton no acepta `style`: el wrapper es lo que lo estira a todo
+  // el ancho del héroe (antes era `alignSelf: 'stretch'` en el Pressable a mano).
+  buttonWrap: {
     alignSelf: 'stretch',
-  },
-  buttonText: {
-    fontFamily: Fonts.display,
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1,
-    color: palette.ink,
-    textTransform: 'uppercase',
   },
   link: {
     minHeight: 44,

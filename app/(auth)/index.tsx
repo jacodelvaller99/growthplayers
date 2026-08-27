@@ -10,18 +10,21 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   GoldDivider,
   PolarisMark,
   PremiumInput,
+  PressableScale,
   PrimaryButton,
   SecondaryButton,
   screen,
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { logSilentError } from '@/lib/observability';
 import { supabase } from '@/lib/supabase';
 
@@ -31,6 +34,7 @@ export default function AuthScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   // Read optional mode param passed from the welcome screen
   const { mode: initialMode } = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<AuthMode>(
@@ -213,33 +217,46 @@ export default function AuthScreen() {
         {/* ── Mode switcher ── */}
         {mode !== 'forgot' && (
           <View style={styles.modeSwitcher}>
-            <Pressable
-              onPress={() => reset('login')}
-              accessibilityRole="button"
-              accessibilityState={{ selected: mode === 'login' }}
-              accessibilityLabel="Iniciar sesión"
-              style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}>
-              <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>
-                INICIAR SESIÓN
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => reset('register')}
-              accessibilityRole="button"
-              accessibilityState={{ selected: mode === 'register' }}
-              accessibilityLabel="Registrarse"
-              style={[styles.modeTab, mode === 'register' && styles.modeTabActive]}>
-              <Text style={[styles.modeTabText, mode === 'register' && styles.modeTabTextActive]}>
-                REGISTRARSE
-              </Text>
-            </Pressable>
+            {/* flex:1 vive en el wrapper, no en PressableScale: su Animated.View
+                interno no hereda el flex del Pressable que envuelve (ver
+                PrimaryButton/SecondaryButton, mismo patrón) — sin este wrapper
+                los dos tabs colapsan a su ancho de texto en vez de repartir 50/50. */}
+            <View style={styles.modeTabWrap}>
+              <PressableScale
+                onPress={() => reset('login')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mode === 'login' }}
+                accessibilityLabel="Iniciar sesión"
+                style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}>
+                <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>
+                  INICIAR SESIÓN
+                </Text>
+              </PressableScale>
+            </View>
+            <View style={styles.modeTabWrap}>
+              <PressableScale
+                onPress={() => reset('register')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mode === 'register' }}
+                accessibilityLabel="Registrarse"
+                style={[styles.modeTab, mode === 'register' && styles.modeTabActive]}>
+                <Text style={[styles.modeTabText, mode === 'register' && styles.modeTabTextActive]}>
+                  REGISTRARSE
+                </Text>
+              </PressableScale>
+            </View>
           </View>
         )}
 
         <GoldDivider />
 
         {/* ── Form fields ── */}
-        <View style={styles.form}>
+        {/* key={mode}: remonta al cambiar de modo para que entering se dispare
+            de nuevo (login/registro/forgot muestran campos distintos). */}
+        <Animated.View
+          key={mode}
+          style={styles.form}
+          entering={reducedMotion ? undefined : FadeIn.duration(180)}>
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>EMAIL</Text>
             <PremiumInput
@@ -291,21 +308,27 @@ export default function AuthScreen() {
               </Text>
             </View>
           )}
-        </View>
+        </Animated.View>
 
         {/* ── Feedback ── */}
         {!!error && (
-          <View style={styles.feedbackBox} accessibilityRole="alert" accessibilityLiveRegion="assertive">
+          <Animated.View
+            style={styles.feedbackBox}
+            entering={reducedMotion ? undefined : FadeIn.duration(180)}
+            accessibilityRole="alert" accessibilityLiveRegion="assertive">
             {/* dangerText, no danger: el mensaje es texto a 13pt y necesita 4.5:1. */}
             <MaterialIcons name="error-outline" size={16} color={palette.dangerText} />
             <Text style={[styles.feedbackText, { color: palette.dangerText }]}>{error}</Text>
-          </View>
+          </Animated.View>
         )}
         {!!success && (
-          <View style={styles.feedbackBox} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          <Animated.View
+            style={styles.feedbackBox}
+            entering={reducedMotion ? undefined : FadeIn.duration(180)}
+            accessibilityRole="alert" accessibilityLiveRegion="polite">
             <MaterialIcons name="check-circle-outline" size={16} color={palette.success} />
             <Text style={[styles.feedbackText, { color: palette.success }]}>{success}</Text>
-          </View>
+          </Animated.View>
         )}
 
         {/* ── Primary CTA ── */}
@@ -368,6 +391,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: spacing.md,
     overflow: 'hidden',
+  },
+  modeTabWrap: {
+    flex: 1,
   },
   modeTab: {
     alignItems: 'center',

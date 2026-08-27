@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   },
   archetypeChip: {
     alignItems: 'center',
-    backgroundColor: 'rgba(179,141,60,0.08)',
+    backgroundColor: alpha(palette.gold, '14'),
     borderColor: alpha(palette.gold, '44'),
     borderRadius: radii.sm,
     borderWidth: 1,
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   },
   navIcon: {
     alignItems: 'center',
-    backgroundColor: 'rgba(179,141,60,0.08)',
+    backgroundColor: alpha(palette.gold, '14'),
     borderRadius: radii.sm,
     height: 40,
     justifyContent: 'center',

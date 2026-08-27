@@ -7,8 +7,9 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,11 +19,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, SecondaryButton, useScreen } from '@/components/polaris';
+import { GoldDivider, PremiumCard, PressableScale, SecondaryButton, useScreen } from '@/components/polaris';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { redeemAccessCode } from '@/lib/admin/actions';
+import { getOfferings } from '@/services/revenuecat';
+
+// Contacto de asesor — mismo correo ya usado en app/paywall.tsx para soporte.
+const ADVISOR_EMAIL = 'info@polarisgrowthinstitute.com';
 
 // Tiers shown on pricing page
 const PRICING_TIERS: SubscriptionTier[] = ['free', 'premium', 'premium_plus'];
@@ -33,10 +38,16 @@ function PlanCard({
   tier,
   isActive,
   highlight,
+  price,
+  ctaLabel,
+  onPressCta,
 }: {
   tier: SubscriptionTier;
   isActive: boolean;
   highlight?: boolean;
+  price: string;
+  ctaLabel?: string;
+  onPressCta?: () => void;
 }) {
   const info = SUBSCRIPTION_TIERS[tier];
   const accentColor = info.color;                                   // fills (dot/badge/borde)
@@ -65,6 +76,7 @@ function PlanCard({
           </View>
         )}
       </View>
+      <Text style={[s.planPrice, { color: accentText }]}>{price}</Text>
       <Text style={s.planDesc}>{info.description}</Text>
       <View style={s.featureList}>
         {info.features.map((feat, i) => (
@@ -74,6 +86,21 @@ function PlanCard({
           </View>
         ))}
       </View>
+      {/* Sin esto la única vía de conversión de la pantalla era un código que el
+          usuario ya debía poseer. free no lleva CTA: se activa solo al crear la
+          cuenta, no hay acción real que ofrecer ahí. */}
+      {!isActive && ctaLabel && onPressCta && (
+        <PressableScale
+          haptic
+          style={[s.planCta, { backgroundColor: accentColor }]}
+          onPress={onPressCta}
+          accessibilityRole="button"
+          accessibilityLabel={ctaLabel}>
+          <Text style={[s.planCtaText, { color: accentColor === palette.gold ? palette.ink : palette.ivory }]}>
+            {ctaLabel}
+          </Text>
+        </PressableScale>
+      )}
     </PremiumCard>
   );
 }
@@ -92,6 +119,20 @@ export default function PricingScreen() {
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState<string | null>(null);
   const [resultOk, setResultOk] = useState(false);
+
+  // Precio real de RevenueCat cuando está disponible (nativo). Sin esto premium
+  // no mostraba ningún precio — la única vía de conversión era un código que el
+  // usuario ya debía poseer. En vez de inventar un número, se pide el mismo dato
+  // que usa app/paywall.tsx; si no hay oferta (web u offerings vacíos) se cae al
+  // "consulta el precio en la app" y el CTA lleva ahí a verlo/suscribirse.
+  const [premiumPrice, setPremiumPrice] = useState<string | null>(null);
+  useEffect(() => {
+    getOfferings().then((offerings) => {
+      const pkgs = offerings?.current?.availablePackages ?? [];
+      const pick = pkgs.find((p) => p.packageType === 'ANNUAL') ?? pkgs[0];
+      if (pick) setPremiumPrice(pick.product.priceString);
+    });
+  }, []);
 
   const handleRedeem = async () => {
     if (!code.trim() || loading) return;
@@ -149,14 +190,37 @@ export default function PricingScreen() {
       {/* Plans */}
       <GoldDivider label="PLANES DISPONIBLES" />
       <View style={s.planList}>
-        {PRICING_TIERS.map((tier) => (
-          <PlanCard
-            key={tier}
-            tier={tier}
-            isActive={currentTier === tier}
-            highlight={tier === 'premium'}
-          />
-        ))}
+        {PRICING_TIERS.map((tier) => {
+          // free no tiene precio de tienda que consultar — es un hecho fijo.
+          // premium sí lo tiene, pero solo se conoce en vivo (App Store/Google
+          // Play, nativo); el CTA lleva a paywall.tsx a verlo y suscribirse.
+          // premium_plus es a medida — sin tarifa fija, se coordina con un asesor
+          // (mismo mensaje que ya usa la sección "Contacto" de esta pantalla).
+          const pricing =
+            tier === 'premium'
+              ? {
+                  price: premiumPrice ? `Desde ${premiumPrice}` : 'Consulta el precio en la app',
+                  ctaLabel: 'VER PRECIO Y SUSCRIBIRME',
+                  onPressCta: () => router.push('/paywall' as never),
+                }
+              : tier === 'premium_plus'
+              ? {
+                  price: 'A medida',
+                  ctaLabel: 'HABLAR CON UN ASESOR',
+                  onPressCta: () =>
+                    Linking.openURL(`mailto:${ADVISOR_EMAIL}?subject=${encodeURIComponent('Quiero saber más de Premium Plus')}`),
+                }
+              : { price: 'Gratis' };
+          return (
+            <PlanCard
+              key={tier}
+              tier={tier}
+              isActive={currentTier === tier}
+              highlight={tier === 'premium'}
+              {...pricing}
+            />
+          );
+        })}
       </View>
 
       {/* Access code */}
@@ -181,7 +245,7 @@ export default function PricingScreen() {
             maxLength={20}
             accessibilityLabel="Código de acceso"
           />
-          <Pressable
+          <PressableScale
             style={[s.codeBtn, (loading || !code.trim()) && { opacity: 0.4 }]}
             onPress={handleRedeem}
             disabled={loading || !code.trim()}
@@ -189,7 +253,7 @@ export default function PricingScreen() {
             accessibilityState={{ disabled: loading || !code.trim() }}
             accessibilityLabel="Canjear código">
             <Text style={s.codeBtnText}>{loading ? '...' : 'CANJEAR'}</Text>
-          </Pressable>
+          </PressableScale>
         </View>
         {result ? (
           <View
@@ -240,6 +304,7 @@ const s = StyleSheet.create({
   title: {
     fontFamily: Fonts.display,
     fontSize: 20,
+    fontWeight: '700',
     color: palette.ivory,
     letterSpacing: 2,
   },
@@ -289,6 +354,7 @@ const s = StyleSheet.create({
   planName: {
     fontFamily: Fonts.display,
     fontSize: 14,
+    fontWeight: '700',
     letterSpacing: 2,
     flex: 1,
   },
@@ -306,6 +372,11 @@ const s = StyleSheet.create({
     color: palette.success,
     fontWeight: '700',
   },
+  planPrice: {
+    fontFamily: Fonts.display,
+    fontSize: 22,
+    fontWeight: '700',
+  },
   planDesc: { ...typography.body, color: palette.ash },
   featureList: { gap: spacing.sm },
   featureRow: {
@@ -318,6 +389,17 @@ const s = StyleSheet.create({
     color: palette.ivory,
     fontSize: 13,
     flex: 1,
+  },
+  planCta: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.sm,
+    height: 44,
+    marginTop: spacing.xs,
+  },
+  planCtaText: {
+    ...typography.label,
+    fontSize: 11,
   },
 
   codeCard: { gap: spacing.md },
@@ -355,6 +437,7 @@ const s = StyleSheet.create({
   codeBtnText: {
     fontFamily: Fonts.display,
     fontSize: 11,
+    fontWeight: '700',
     color: palette.ink,
     letterSpacing: 2,
   },

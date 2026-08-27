@@ -27,6 +27,10 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedStyle: () => ({}),
     useSharedValue: (v: unknown) => ({ value: v }),
     withTiming: (v: unknown) => v,
+    // theme.ts computa EASING_HOUSE = Easing.bezier(...) al importarse, y
+    // lesson/[id].tsx ahora también usa Easing.linear directo (barra de
+    // celebración) — sin esto el require de la pantalla revienta al cargar.
+    Easing: { bezier: () => (() => 0), linear: () => 0 },
   };
 });
 jest.mock('react-native-safe-area-context', () => ({

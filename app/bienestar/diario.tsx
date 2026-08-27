@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,13 +12,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { JornadaCierre } from '@/components/jornada';
 import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
-import { palette, radii, spacing, typography } from '@/constants/theme';
+import { palette, radii, spacing, typography, EASING_HOUSE, DURATION_HOUSE } from '@/constants/theme';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { withStepDone, type Jornada } from '@/lib/jornadaLogic';
 import { checkMilestone } from '@/lib/milestoneCheck';
 import { arcForDay, deltaSince, type Milestone } from '@/lib/narrativeLogic';
@@ -32,6 +34,46 @@ const ENTRY_TYPES: { id: EntryType; label: string; icon: React.ComponentProps<ty
   { id: 'gratitude',  label: 'GRATITUD',   icon: 'favorite',     placeholder: 'Tres cosas por las que estoy agradecido hoy...' },
   { id: 'intention',  label: 'INTENCIÓN',  icon: 'flag',         placeholder: 'Mi intención para las próximas horas es...' },
 ];
+
+// Selector de tipo: hoy es un corte seco (el fondo cambia de golpe al tocar).
+// Un pequeño "pop" en el chip recién activado marca la transición sin animar
+// color — interpolar `palette.gold`/`palette.ash` rompería en web, donde son
+// `var(--c-*)` (ver themeVarInAnimation.test.ts).
+function EntryTypeChip({ t, active, onPress }: { t: (typeof ENTRY_TYPES)[number]; active: boolean; onPress: () => void }) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (active && !reduced) {
+      scale.value = withSequence(
+        withTiming(1.05, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
+        withTiming(1, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
+      );
+    }
+  }, [active, reduced]);
+
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={t.label}
+        accessibilityState={{ selected: active }}
+        style={[styles.typeBtn, active && styles.typeBtnActive]}>
+        <MaterialIcons
+          name={t.icon}
+          size={16}
+          color={active ? palette.ink : palette.ash}
+        />
+        <Text style={[styles.typeBtnText, active && styles.typeBtnTextActive]}>
+          {t.label}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function DiarioScreen() {
   const sc = useScreen();
@@ -49,6 +91,8 @@ export default function DiarioScreen() {
   // no devolvía nada. Ahora devuelve el cierre: pasos hechos, delta del día,
   // frase del arco, y una sola salida al Comando.
   const [cierre, setCierre] = useState<{ jornada: Jornada; milestone: Milestone | null } | null>(null);
+  const saveBtnScale = useSharedValue(1);
+  const saveBtnAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: saveBtnScale.value }] }));
 
   const current = ENTRY_TYPES.find((t) => t.id === type)!;
 
@@ -144,22 +188,7 @@ export default function DiarioScreen() {
         <GoldDivider label="TIPO" />
         <View style={styles.typeRow}>
           {ENTRY_TYPES.map((t) => (
-            <Pressable
-              key={t.id}
-              onPress={() => setType(t.id)}
-              accessibilityRole="button"
-              accessibilityLabel={t.label}
-              accessibilityState={{ selected: type === t.id }}
-              style={[styles.typeBtn, type === t.id && styles.typeBtnActive]}>
-              <MaterialIcons
-                name={t.icon}
-                size={16}
-                color={type === t.id ? palette.ink : palette.ash}
-              />
-              <Text style={[styles.typeBtnText, type === t.id && styles.typeBtnTextActive]}>
-                {t.label}
-              </Text>
-            </Pressable>
+            <EntryTypeChip key={t.id} t={t} active={type === t.id} onPress={() => setType(t.id)} />
           ))}
         </View>
 
@@ -176,24 +205,28 @@ export default function DiarioScreen() {
             textAlignVertical="top"
             accessibilityLabel={`Entrada de ${current.label.toLowerCase()}`}
           />
-          <Pressable
-            style={[styles.saveBtn, (!text.trim() || saving) && { opacity: 0.4 }]}
-            onPress={save}
-            disabled={!text.trim() || saving}
-            accessibilityRole="button"
-            accessibilityLabel="Guardar entrada"
-            accessibilityState={{ disabled: !text.trim() || saving }}>
-            {saving ? (
-              <ActivityIndicator size="small" color={palette.ink} />
-            ) : saved ? (
-              <>
-                <MaterialIcons name="check" size={16} color={palette.ink} />
-                <Text style={styles.saveBtnText}>GUARDADO</Text>
-              </>
-            ) : (
-              <Text style={styles.saveBtnText}>GUARDAR ENTRADA</Text>
-            )}
-          </Pressable>
+          <Animated.View style={saveBtnAnimStyle}>
+            <Pressable
+              style={[styles.saveBtn, (!text.trim() || saving) && { opacity: 0.4 }]}
+              onPress={save}
+              onPressIn={() => { saveBtnScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+              onPressOut={() => { saveBtnScale.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
+              disabled={!text.trim() || saving}
+              accessibilityRole="button"
+              accessibilityLabel="Guardar entrada"
+              accessibilityState={{ disabled: !text.trim() || saving }}>
+              {saving ? (
+                <ActivityIndicator size="small" color={palette.ink} />
+              ) : saved ? (
+                <>
+                  <MaterialIcons name="check" size={16} color={palette.ink} />
+                  <Text style={styles.saveBtnText}>GUARDADO</Text>
+                </>
+              ) : (
+                <Text style={styles.saveBtnText}>GUARDAR ENTRADA</Text>
+              )}
+            </Pressable>
+          </Animated.View>
         </PremiumCard>
 
         {saved && (

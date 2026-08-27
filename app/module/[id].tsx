@@ -13,6 +13,7 @@ import {
   StatusPill,
   useScreen,
 } from '@/components/polaris';
+import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
@@ -72,15 +73,12 @@ export default function ModuleDetailScreen() {
   if (!module) {
     return (
       <View style={[sc.root, styles.notFound]}>
-        <MaterialIcons name="explore-off" size={28} color={palette.smoke} />
-        <Text style={styles.notFoundTitle}>MÓDULO NO ENCONTRADO</Text>
-        <Text style={styles.notFoundBody}>
-          Ese enlace ya no apunta a ningún módulo del protocolo.
-        </Text>
-        <SecondaryButton
-          label="VER TODOS LOS MÓDULOS"
-          icon="arrow-back"
-          onPress={() => router.replace('/(tabs)/programas' as never)}
+        <EmptyState
+          icon="explore-off"
+          title="MÓDULO NO ENCONTRADO"
+          body="Ese enlace ya no apunta a ningún módulo del protocolo."
+          actionLabel="VER TODOS LOS MÓDULOS"
+          onAction={() => router.replace('/(tabs)/programas' as never)}
         />
       </View>
     );
@@ -206,7 +204,8 @@ export default function ModuleDetailScreen() {
               accessibilityRole="button"
               accessibilityState={{ disabled: !isNavigable }}
               accessibilityLabel={`Lección ${index + 1}: ${lesson.title}. ${isCompleted ? 'Completada' : isActive ? 'Disponible' : 'Bloqueada'}`}
-              onPress={() => router.push(`/lesson/${lesson.id}` as never)}>
+              onPress={() => router.push(`/lesson/${lesson.id}` as never)}
+              style={({ pressed }) => pressed && styles.lessonRowPressed}>
               <PremiumCard
                 style={[styles.lessonRow, isActive && styles.lessonRowActive]}>
                 <View style={styles.lessonIconWrap}>
@@ -317,19 +316,7 @@ export default function ModuleDetailScreen() {
 
 const styles = StyleSheet.create({
   notFound: {
-    alignItems: 'center',
-    gap: spacing.md,
     justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  notFoundTitle: {
-    ...typography.label,
-    color: palette.ivoryDim,
-  },
-  notFoundBody: {
-    ...typography.body,
-    color: palette.smoke,
-    textAlign: 'center',
   },
   // Hero
   hero: {
@@ -431,6 +418,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.gold,
     borderColor: palette.gold,
   },
+  lessonRowPressed: {
+    opacity: 0.75,
+  },
   lessonIconWrap: {
     alignItems: 'center',
     width: 28,
@@ -506,7 +496,7 @@ const styles = StyleSheet.create({
   // Module completion banner
   completionBanner: {
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(201,160,0,0.06)',
+    backgroundColor: alpha(palette.gold, '0F'),
     borderColor: alpha(palette.gold, '55'),
     borderRadius: radii.md,
     borderWidth: 1,

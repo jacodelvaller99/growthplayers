@@ -11,9 +11,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -30,11 +39,12 @@ import {
 } from '@/components/polaris';
 import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE } from '@/data/modules';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useToast } from '@/context/ToastContext';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useMentorMemory } from '@/hooks/useMentorMemory';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { analytics } from '@/lib/analytics';
 import { streamMentorResponse, type MentorContext, type MentorMode } from '@/lib/mentor';
@@ -174,16 +184,40 @@ const MODULE_PROMPTS: Record<number, Array<{ label: string; icon: React.Componen
 };
 
 // ─── Typing indicator ─────────────────────────────────────────────────────────
+// Punto animado: pulso opacity+scale desde un único shared value, con stagger
+// por índice. Mismo patrón withRepeat+withTiming que SkeletonBar (sin easing
+// custom — sigue esa firma), gateado por useReducedMotion.
+function TypingDot({ delay, reducedMotion }: { delay: number; reducedMotion: boolean }) {
+  const pulse = useSharedValue(reducedMotion ? 1 : 0);
+
+  useEffect(() => {
+    if (reducedMotion) { pulse.value = 1; return; }
+    pulse.value = withDelay(delay, withRepeat(withTiming(1, { duration: 450 }), -1, true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: 0.3 + pulse.value * 0.7,
+    transform: [{ scale: 1 + pulse.value * 0.35 }],
+  }));
+
+  return <Animated.View style={[styles.dot, animStyle]} />;
+}
+
 function TypingBubble({ text }: { text: string }) {
+  const reducedMotion = useReducedMotion();
   return (
-    <View style={styles.typingBubble}>
+    <View
+      style={styles.typingBubble}
+      accessibilityLabel="Norman está escribiendo"
+      accessibilityLiveRegion="polite">
       {text ? (
         <MarkdownText text={text} style={styles.typingText} />
       ) : (
         <View style={styles.dotsRow}>
-          <View style={styles.dot} />
-          <View style={styles.dot} />
-          <View style={styles.dot} />
+          <TypingDot delay={0} reducedMotion={reducedMotion} />
+          <TypingDot delay={150} reducedMotion={reducedMotion} />
+          <TypingDot delay={300} reducedMotion={reducedMotion} />
         </View>
       )}
     </View>
@@ -197,6 +231,26 @@ const MENTOR_MODES: { key: MentorMode; label: string }[] = [
   { key: 'accountability', label: 'Cuentas' },
   { key: 'reflection',     label: 'Reflexión' },
 ];
+
+// "Analizo en base a" — qué recibe Norman
+const BASIS_ITEMS: Array<{ icon: React.ComponentProps<typeof MaterialIcons>['name']; label: string }> = [
+  { icon: 'event-available', label: 'Tus últimos check-ins' },
+  { icon: 'explore', label: 'Tu Norte' },
+  { icon: 'favorite', label: 'Tu biometría del día (si hay wearable)' },
+  { icon: 'history', label: 'Lo que has compartido antes' },
+];
+function BasisRows() {
+  return (
+    <>
+      {BASIS_ITEMS.map((item) => (
+        <View key={item.label} style={styles.basisRow}>
+          <MaterialIcons name={item.icon} size={13} color={palette.goldText} />
+          <Text style={styles.basisRowText}>{item.label}</Text>
+        </View>
+      ))}
+    </>
+  );
+}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function MentorScreen() {
@@ -261,6 +315,7 @@ export default function MentorScreen() {
   const wearableProvider = connections.find((c) => c.is_active)?.provider ?? null;
 
   const { showToast } = useToast();
+  const reducedMotion = useReducedMotion();
   const [input, setInput]               = useState('');
   const [mentorMode, setMentorMode]     = useState<MentorMode | null>(null);
   const [isStreaming, setIsStreaming]   = useState(false);
@@ -367,9 +422,20 @@ export default function MentorScreen() {
     return state.mentorMessages;
   }, [state.mentorMessages, pendingUserMsg]);
 
+  // Ref-guarded: cada delta del stream SSE llamaba a esto sin cancelar el
+  // timer anterior — decenas de timers apilados por respuesta causaban jitter
+  // visible. Uno solo vivo a la vez.
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollToBottom = (animated = true) => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated }), 80);
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      scrollTimerRef.current = null;
+      scrollRef.current?.scrollToEnd({ animated });
+    }, 80);
   };
+  useEffect(() => () => {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+  }, []);
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMoreMessages) return;
@@ -639,19 +705,27 @@ export default function MentorScreen() {
           title="MENTOR POLARIS"
           right={
             <View style={styles.onlineBlock}>
-              <TouchableOpacity
-                onPress={() => { loadThreads(); setShowThreads(true); }}
-                style={styles.chatsBtn}
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  loadThreads();
+                  setShowThreads(true);
+                }}
                 accessibilityRole="button"
-                accessibilityLabel="Ver historial de chats">
+                accessibilityLabel="Ver historial de chats"
+                style={({ pressed }) => [styles.chatsBtn, pressed && styles.chatsBtnPressed]}>
                 <Text style={styles.chatsBtnText}>CHATS</Text>
-              </TouchableOpacity>
+              </Pressable>
               <PolarisMark size={36} />
-              <StatusPill
-                label={isStreaming ? 'RESPONDIENDO' : 'EN LINEA'}
-                tone={isStreaming ? 'muted' : 'success'}
-                dot
-              />
+              <View
+                accessibilityLiveRegion="polite"
+                accessibilityLabel={isStreaming ? 'Estado: respondiendo' : 'Estado: en línea'}>
+                <StatusPill
+                  label={isStreaming ? 'RESPONDIENDO' : 'EN LINEA'}
+                  tone={isStreaming ? 'muted' : 'success'}
+                  dot
+                />
+              </View>
             </View>
           }
         />
@@ -709,19 +783,18 @@ export default function MentorScreen() {
             />
           </Pressable>
           {showBasis ? (
-            <View style={styles.basisList}>
-              {[
-                { icon: 'event-available' as const, label: 'Tus últimos check-ins' },
-                { icon: 'explore' as const, label: 'Tu Norte' },
-                { icon: 'favorite' as const, label: 'Tu biometría del día (si hay wearable)' },
-                { icon: 'history' as const, label: 'Lo que has compartido antes' },
-              ].map((item) => (
-                <View key={item.label} style={styles.basisRow}>
-                  <MaterialIcons name={item.icon} size={13} color={palette.goldText} />
-                  <Text style={styles.basisRowText}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
+            reducedMotion ? (
+              <View style={styles.basisList}>
+                <BasisRows />
+              </View>
+            ) : (
+              <Animated.View
+                entering={FadeIn.duration(160).easing(Easing.bezier(...EASING_HOUSE))}
+                exiting={FadeOut.duration(120).easing(Easing.bezier(...EASING_HOUSE))}
+                style={styles.basisList}>
+                <BasisRows />
+              </Animated.View>
+            )
           ) : null}
         </PremiumCard>
 
@@ -809,7 +882,11 @@ export default function MentorScreen() {
           <View style={styles.threadsSheet}>
             <View style={styles.threadsHeader}>
               <Text style={styles.threadsTitle}>HISTORIAL DE CHATS</Text>
-              <Pressable onPress={() => setShowThreads(false)} style={styles.threadsClose} accessibilityRole="button" accessibilityLabel="Cerrar">
+              <Pressable
+                onPress={() => setShowThreads(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar"
+                style={({ pressed }) => [styles.threadsClose, pressed && styles.threadsClosePressed]}>
                 <MaterialIcons name="close" size={20} color={palette.ash} />
               </Pressable>
             </View>
@@ -827,7 +904,7 @@ export default function MentorScreen() {
                     onPress={() => setShowThreads(false)}
                     accessibilityRole="button"
                     accessibilityLabel={t.title || 'Conversación sin título'}
-                    style={styles.threadRow}>
+                    style={({ pressed }) => [styles.threadRow, pressed && styles.threadRowPressed]}>
                     <MaterialIcons name="chat-bubble-outline" size={16} color={palette.goldText} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.threadTitle} numberOfLines={1}>
@@ -856,8 +933,15 @@ export default function MentorScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Modo ${m.label}${active ? ' activo' : ''}`}
               hitSlop={6}
-              onPress={() => setMentorMode(active ? null : m.key)}
-              style={[styles.modeChip, active && styles.modeChipActive]}>
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setMentorMode(active ? null : m.key);
+              }}
+              style={({ pressed }) => [
+                styles.modeChip,
+                active && styles.modeChipActive,
+                pressed && styles.modeChipPressed,
+              ]}>
               <Text style={[styles.modeChipText, active && styles.modeChipTextActive]}>{m.label}</Text>
             </Pressable>
           );
@@ -921,6 +1005,10 @@ const styles = StyleSheet.create({
     color: palette.goldText,
     letterSpacing: 1.5,
   },
+  chatsBtnPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.97 }],
+  },
   threadsOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -949,7 +1037,16 @@ const styles = StyleSheet.create({
     color: palette.ivory,
     letterSpacing: 2,
   },
-  threadsClose: { padding: 4 },
+  threadsClose: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 44,
+  },
+  threadsClosePressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.9 }],
+  },
   threadRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -958,6 +1055,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: palette.lineSoft,
+  },
+  threadRowPressed: {
+    opacity: 0.7,
   },
   threadTitle: {
     fontFamily: Fonts.sans,
@@ -1189,15 +1289,21 @@ const styles = StyleSheet.create({
   modeChip: { borderColor: palette.line,
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12, minHeight: 44, justifyContent: 'center' },
+    // paddingHorizontal bajó de 12 a 10 para darle sitio a modeChipText a 11pt
+    // (piso duro del proyecto) sin achicar la fuente en 4 columnas.
+    paddingHorizontal: 10, minHeight: 44, justifyContent: 'center' },
   modeChipActive: {
     backgroundColor: palette.gold,
     borderColor: palette.gold,
   },
+  modeChipPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.97 }],
+  },
   modeChipText: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.5,
   },
   modeChipTextActive: {
