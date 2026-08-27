@@ -27,6 +27,7 @@ import {
 } from '@/data/wellness';
 import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
@@ -149,10 +150,15 @@ function WaveVisualizer({ active, color }: { active: boolean; color: string }) {
   const bars = useRef(
     Array.from({ length: 7 }, () => new Animated.Value(0.3))
   ).current;
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!active) {
-      bars.forEach((b) => Animated.timing(b, { toValue: 0.3, duration: 300, useNativeDriver: false }).start());
+    // Reduced motion: barra fija a media altura, sin el flicker aleatorio en
+    // loop (vestibular-hostile a propósito lo evita) — ni al activar ni al
+    // desactivar.
+    if (!active || reducedMotion) {
+      const target = !active ? 0.3 : 0.6;
+      bars.forEach((b) => Animated.timing(b, { toValue: target, duration: 300, useNativeDriver: false }).start());
       return;
     }
     const anims = bars.map((bar, i) => {
@@ -167,7 +173,7 @@ function WaveVisualizer({ active, color }: { active: boolean; color: string }) {
     });
     Animated.stagger(60, anims).start();
     return () => anims.forEach((a) => a.stop());
-  }, [active]);
+  }, [active, reducedMotion]);
 
   return (
     <View style={wave.row}>

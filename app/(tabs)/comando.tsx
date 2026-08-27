@@ -59,6 +59,7 @@ import { checkMilestone } from '@/lib/milestoneCheck';
 import { useJornada } from '@/hooks/use-jornada';
 import { JORNADA_LABEL } from '@/lib/jornadaLogic';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { stripMarkdownLite } from '@/lib/markdownLite';
@@ -107,13 +108,17 @@ function ScoreRing({
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
   const pct = empty ? 0 : Math.max(0, Math.min(1, value / max));
+  const reducedMotion = useReducedMotion();
 
   const progress = useSharedValue(0);
   useEffect(() => {
     // Firma de barrido de la casa (igual que el Dial): 700ms, ease-out fuerte.
-    progress.value = withTiming(pct, { duration: 700, easing: Easing.bezier(0.23, 1, 0.32, 1) });
+    // Reduced motion: salta directo al valor final, sin el sweep.
+    progress.value = reducedMotion
+      ? pct
+      : withTiming(pct, { duration: 700, easing: Easing.bezier(0.23, 1, 0.32, 1) });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pct]);
+  }, [pct, reducedMotion]);
 
   const dashProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - progress.value),
@@ -334,13 +339,16 @@ export default function DashboardScreen() {
     : Math.round((state.wellnessSessions ?? []).reduce((acc, s) => acc + (s.durationSeconds ?? 0), 0) / 60);
   const wellnessStreak = wellnessUser.weeklyActivity.filter(Boolean).length;
 
-  // Engagement bar animated width
+  // Engagement bar animated width. Reduced motion: salta al valor final.
+  const reducedMotionEngagement = useReducedMotion();
   const engagementWidth = useSharedValue(0);
   useEffect(() => {
     if (intelligence.engagement_score > 0) {
-      engagementWidth.value = withTiming(intelligence.engagement_score, { duration: 1000 });
+      engagementWidth.value = reducedMotionEngagement
+        ? intelligence.engagement_score
+        : withTiming(intelligence.engagement_score, { duration: 1000 });
     }
-  }, [intelligence.engagement_score]);
+  }, [intelligence.engagement_score, reducedMotionEngagement]);
   const engagementBarStyle = useAnimatedStyle(() => ({
     width: `${engagementWidth.value}%` as unknown as number,
   }));

@@ -28,6 +28,7 @@ import { GoldDivider, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 // ─── Haptic (web-safe) ────────────────────────────────────────────────────────
 function haptic(type: 'light' | 'success') {
@@ -178,10 +179,12 @@ export default function GritoScreen() {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const reducedMotion = useReducedMotion();
 
-  // Pulse when phase 1 running
+  // Pulse when phase 1 running — decorativo (acompaña la sacudida corporal),
+  // no la instrucción en sí. El countdown y el audio siguen funcionando igual.
   useEffect(() => {
-    if (phase === 1 && running) {
+    if (phase === 1 && running && !reducedMotion) {
       const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.06, duration: 1200, useNativeDriver: true }),
@@ -193,7 +196,7 @@ export default function GritoScreen() {
     }
     pulseAnim.setValue(1);
     return undefined;
-  }, [phase, running, pulseAnim]);
+  }, [phase, running, reducedMotion, pulseAnim]);
 
   // Activation countdown
   useEffect(() => {

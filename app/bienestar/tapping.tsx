@@ -29,6 +29,7 @@ import { useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 // ─── Haptic ───────────────────────────────────────────────────────────────────
 function haptic(type: 'light' | 'success') {
@@ -152,7 +153,9 @@ function IntensitySelector({ value, onChange }: { value: number; onChange: (v: n
 // ─── Glowing point icon (idle pulse like design polaris-glow) ─────────────────
 function PointGlyph({ icon }: { icon: React.ComponentProps<typeof MaterialIcons>['name'] }) {
   const glow = useRef(new Animated.Value(1)).current;
+  const reducedMotion = useReducedMotion();
   useEffect(() => {
+    if (reducedMotion) { glow.setValue(1); return; }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(glow, { toValue: 1.06, duration: 1000, useNativeDriver: true }),
@@ -161,7 +164,7 @@ function PointGlyph({ icon }: { icon: React.ComponentProps<typeof MaterialIcons>
     );
     loop.start();
     return () => loop.stop();
-  }, [glow]);
+  }, [glow, reducedMotion]);
   return (
     <Animated.View style={[styles.glyphCircle, { transform: [{ scale: glow }] }]}>
       <MaterialIcons name={icon} size={44} color={palette.goldText} />

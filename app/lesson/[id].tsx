@@ -31,6 +31,7 @@ import { EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/cons
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { withStepDone } from '@/lib/jornadaLogic';
 import type { TaskField } from '@/types/lifeflow';
@@ -464,6 +465,7 @@ function LessonCelebrationModal({
   const opacity   = useSharedValue(0);
   const scale     = useSharedValue(0.9);
   const barWidth  = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   const cardStyle = useAnimatedStyle(() => ({
     opacity:   opacity.value,
@@ -475,16 +477,24 @@ function LessonCelebrationModal({
 
   useEffect(() => {
     if (!visible) return;
-    opacity.value  = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
-    scale.value    = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
-    // Barra de tiempo restante: avance constante, no ease-out — regla de la
-    // casa para "constante (progress bar) → linear" (APPLE_GRADE_BRIEF.md).
+    if (reducedMotion) {
+      // Cross-fade corto, sin escala ni overshoot — la tarjeta no "salta".
+      opacity.value = withTiming(1, { duration: 120, easing: Easing.linear });
+      scale.value   = 1;
+    } else {
+      opacity.value  = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
+      scale.value    = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
+    }
+    // Barra de tiempo restante: informativa (cuánto falta para el auto-avance),
+    // no decorativa — se deja animar incluso con reduced motion, avance
+    // constante, no ease-out (regla de la casa: "constante → linear",
+    // APPLE_GRADE_BRIEF.md).
     barWidth.value = withTiming(100, { duration: 2500, easing: Easing.linear });
 
     const timer = setTimeout(onContinue, 2600);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, reducedMotion]);
 
   if (!visible) return null;
 

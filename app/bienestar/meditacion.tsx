@@ -30,6 +30,7 @@ import { createMeditationAudio } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
 import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
 import { energyFocusById, parseEnergyFocusId } from '@/lib/energyFocusLogic';
@@ -166,10 +167,11 @@ function MeditationPlayer({
   // llegue a cero (el guion es voz+pausas reales, el reloj es un contador
   // fijo) — sin este guard, `finishSession` correría dos veces.
   const finishedRef = useRef(false);
+  const reducedMotion = useReducedMotion();
 
   // Idle pulse
   useEffect(() => {
-    if (!running) {
+    if (!running && !reducedMotion) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.06, duration: 2000, useNativeDriver: true }),
@@ -180,7 +182,7 @@ function MeditationPlayer({
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
     }
-  }, [running, pulseAnim]);
+  }, [running, reducedMotion, pulseAnim]);
 
   /**
    * Cierra la sesión — llamada tanto por el reloj visual (llega a cero) como
