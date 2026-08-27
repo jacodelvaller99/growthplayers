@@ -1,8 +1,10 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { BlurView } from 'expo-blur';
 import { usePathname, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { palette, Fonts } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
@@ -96,6 +98,13 @@ export function DesktopSidebar() {
 
   return (
     <View style={styles.sidebar}>
+      {/* Chrome estructural, no un botón — blur más pesado que el de la tab
+          bar (audit "Fluidez Polaris" §Fase 5). */}
+      <BlurView
+        intensity={100}
+        tint={mode === 'light' ? 'light' : 'dark'}
+        style={StyleSheet.absoluteFill}
+      />
 
       {/* ── Logo oficial — Manual de Marca Polaris (Orgánico Studio 2024) ── */}
       <View style={styles.logoArea}>
@@ -213,13 +222,14 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 240,
     height: '100%',
-    backgroundColor: palette.graphite,
+    backgroundColor: alpha(palette.graphite, 'cc'),
     borderRightWidth: 1,
     borderRightColor: palette.lineSoft,
     paddingTop: 28,
     paddingBottom: 18,
     paddingHorizontal: 16,
     flexDirection: 'column',
+    overflow: 'hidden',
   },
 
   // Logo — usa SVG oficial del Manual de Marca

@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { BlurView } from 'expo-blur';
 import { Redirect, Tabs, useSegments } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -7,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/haptic-tab';
 import { WellnessMiniPlayer } from '@/components/WellnessMiniPlayer';
 import { Colors, Fonts, palette } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { analytics } from '@/lib/analytics';
@@ -57,6 +60,7 @@ const tabStyles = StyleSheet.create({
 export function BottomNavigation() {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
+  const { mode } = useAppTheme();
   // 60 y no 56: el relleno (8 arriba + 6 abajo, sin contar el área segura) se
   // come 14px, así que con 56 cada pestaña quedaba en 41px de zona pulsable —
   // por debajo del mínimo de 44. Medido en el DOM a 390px, en las 25 apariciones
@@ -79,10 +83,15 @@ export function BottomNavigation() {
           textTransform: 'uppercase',
           marginTop: 2,
         },
+        // Chrome estructural con material (audit "Fluidez Polaris" §Fase 5):
+        // antes backgroundColor opaco. El fondo semi-transparente + blur da
+        // jerarquía de peso — el contenido que scrollea debajo se insinúa en
+        // vez de cortar en seco. `borderTopWidth` se conserva pero más suave
+        // (0.5 vs 1): el blur ya es la señal principal de separación.
         tabBarStyle: {
-          backgroundColor: palette.blackDeep,
+          backgroundColor: alpha(palette.blackDeep, '99'),
           borderTopColor: palette.lineSoft,
-          borderTopWidth: 1,
+          borderTopWidth: StyleSheet.hairlineWidth,
           height: isDesktop ? 0 : tabBarHeight,
           paddingBottom: insets.bottom + 6,
           paddingTop: 8,
@@ -90,6 +99,13 @@ export function BottomNavigation() {
           display: isDesktop ? 'none' : 'flex',
           ...(Platform.OS === 'web' ? { boxShadow: '0 -2px 16px rgba(0,0,0,0.4)' } as any : {}),
         },
+        tabBarBackground: () => (
+          <BlurView
+            intensity={80}
+            tint={mode === 'light' ? 'light' : 'dark'}
+            style={StyleSheet.absoluteFill}
+          />
+        ),
       }}>
       <Tabs.Screen
         name="comando"
