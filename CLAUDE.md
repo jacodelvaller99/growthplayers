@@ -295,10 +295,15 @@ como supersedidos porque daban por abiertos problemas ya cerrados.
   a un módulo sin lecciones.
 - **Subida de exámenes médicos (PHI) ya funciona en móvil** — `expo-document-picker`
   con import dinámico, así que no entra al bundle web.
-- **`useReducedMotion`** (`hooks/use-reduced-motion.ts`) — solo `welcome.tsx`
-  respetaba la preferencia. Cableado en `AnimatedNumber`, `SkeletonBar` y
-  `HomeSkeleton` (los dos únicos bucles infinitos). La respiración guiada se deja:
-  ahí el movimiento es el ejercicio.
+- **`useReducedMotion`** (`hooks/use-reduced-motion.ts`) — extendido en la
+  auditoría "Fluidez Polaris" §Fase 2 (`promptfixfluidezpolaris.md`) más allá
+  de `AnimatedNumber`/`SkeletonBar`/`HomeSkeleton`: ahora también gatea el
+  `TypingBubble` de `mentor.tsx`, el wizard de onboarding (transición
+  direccional de `step`), el dial/barra de engagement de `comando.tsx`, los
+  pulsos idle de `respiracion.tsx`/`meditacion.tsx`/`tapping.tsx`/`grito.tsx`,
+  el ecualizador de `binaurales.tsx` y la entrada de
+  `LessonCelebrationModal`. La respiración guiada ACTIVA se deja igual: ahí el
+  movimiento es el ejercicio, no decoración.
 - **Nuevo flag `EXPO_PUBLIC_AGGREGATOR_ENABLED`** (default `false`): la tarjeta
   del agregador era el CTA "RECOMENDADO" y sin infraestructura siempre acababa en
   "Integración en activación".
