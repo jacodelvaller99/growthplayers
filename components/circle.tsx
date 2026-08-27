@@ -8,6 +8,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -18,6 +19,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
 import { containsBannedContent, REPORT_REASONS } from '@/data/moderation';
@@ -33,6 +36,12 @@ import {
   type Space,
 } from '@/lib/circleLogic';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { useGestureSheet } from '@/hooks/use-gesture-sheet';
+
+// Dismiss relativo a la altura de pantalla, no al contenido real del sheet
+// (que varía con el número de comentarios) — mismo criterio que usan los
+// bottom sheets nativos: "fuera de la vista" no necesita ser pixel-exacto.
+const SHEET_DISMISS_DISTANCE = Dimensions.get('window').height;
 
 // ─── SpaceCard ────────────────────────────────────────────────────────────────
 
@@ -213,6 +222,16 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
   const [error, setError] = useState<string | null>(null);
   const [reportFor, setReportFor] = useState<PostComment | null>(null);
 
+  // Sheet gesto-driven (audit "Fluidez Polaris" §Fase 4 "06"+"08"): la
+  // animación de apertura/cierre la maneja el hook (Modal usa
+  // animationType="none"); `onClose` real del padre se llama recién cuando
+  // la animación de cierre termina — así el sheet nunca desaparece de golpe
+  // bajo el gesto o el botón.
+  const { pan, sheetStyle, backdropStyle, open, close } = useGestureSheet(SHEET_DISMISS_DISTANCE, onClose);
+  useEffect(() => {
+    if (visible) open();
+  }, [visible, open]);
+
   const load = useCallback(async () => {
     if (!postId) return;
     const [list, blocked] = await Promise.all([fetchComments(postId), fetchBlockedIds(userId)]);
@@ -259,13 +278,19 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={s.csOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar comentarios" />
-        <View style={s.csSheet}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={close}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Animated.View style={[StyleSheet.absoluteFillObject, s.csOverlay, backdropStyle]} />
+        <Pressable style={{ flex: 1 }} onPress={close} accessibilityRole="button" accessibilityLabel="Cerrar comentarios" />
+        <Animated.View style={[s.csSheet, sheetStyle]}>
+          <GestureDetector gesture={pan}>
+            <View style={s.csHandleRow}>
+              <View style={s.csHandle} />
+            </View>
+          </GestureDetector>
           <View style={s.csHead}>
             <Text style={s.csTitle}>COMENTARIOS ({comments.length})</Text>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar">
+            <Pressable onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar">
               <MaterialIcons name="close" size={20} color={palette.ash} />
             </Pressable>
           </View>
@@ -330,7 +355,7 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
               <MaterialIcons name="arrow-upward" size={18} color={palette.ink} />
             </Pressable>
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -390,6 +415,10 @@ const s = StyleSheet.create({
 
   csOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   csSheet: { backgroundColor: palette.blackDeep, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, padding: spacing.lg, paddingBottom: spacing.xxxl, maxHeight: '75%' },
+  // Zona de agarre del gesto — 44pt de alto aunque el handle visual sea chico,
+  // así el hit target no queda por debajo del mínimo táctil.
+  csHandleRow: { alignItems: 'center', justifyContent: 'center', height: 44, marginTop: -spacing.md },
+  csHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: palette.line },
   csHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   csTitle: { ...typography.section, color: palette.ivory, fontSize: 12 },
   csList: { maxHeight: 340 },
