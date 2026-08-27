@@ -7,6 +7,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { LifeFlowProvider, useLifeFlow } from '@/hooks/use-lifeflow';
@@ -285,24 +286,33 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <AppThemeProvider>
-        <AppModeProvider>
-          <ThemeProvider value={SovereignTheme}>
-            <LifeFlowProvider>
-              <ToastProvider>
-              <AnalyticsInitializer />
-              <SmartNotificationsInitializer />
-              <OfflineBanner />
-              <PWAInstallBanner />
-              <HeroMoments />
-              <TourButton />
-              {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
-              <AppShell />
-              </ToastProvider>
-            </LifeFlowProvider>
-          </ThemeProvider>
-        </AppModeProvider>
-      </AppThemeProvider>
+      {/* Raíz del árbol de gestos — Fase 0 de
+          E:\QUATRO\ECOSISTEMA QUATRO\PROGRAMADOR DEL VALLE\Mi compa Capuozzo\promptfixfluidezpolaris.md.
+          react-native-gesture-handler y expo-blur estaban instalados hace
+          tiempo sin uso — decisión explícita: se usan de verdad (sheets con
+          momentum, mapa corporal con Gesture.Pan, chrome con BlurView), no se
+          desinstalan. Sin este wrapper, cualquier Gesture.* de la app entera
+          falla en silencio en nativo. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AppThemeProvider>
+          <AppModeProvider>
+            <ThemeProvider value={SovereignTheme}>
+              <LifeFlowProvider>
+                <ToastProvider>
+                <AnalyticsInitializer />
+                <SmartNotificationsInitializer />
+                <OfflineBanner />
+                <PWAInstallBanner />
+                <HeroMoments />
+                <TourButton />
+                {/* AppShell handles sidebar visibility based on route (hides on auth/onboarding) */}
+                <AppShell />
+                </ToastProvider>
+              </LifeFlowProvider>
+            </ThemeProvider>
+          </AppModeProvider>
+        </AppThemeProvider>
+      </GestureHandlerRootView>
     </ErrorBoundary>
   );
 }
