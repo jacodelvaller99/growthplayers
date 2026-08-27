@@ -265,7 +265,7 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
         <View style={s.csSheet}>
           <View style={s.csHead}>
             <Text style={s.csTitle}>COMENTARIOS ({comments.length})</Text>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cerrar">
+            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar">
               <MaterialIcons name="close" size={20} color={palette.ash} />
             </Pressable>
           </View>

@@ -136,7 +136,7 @@ function CountdownRing({
 
 const ringStyles = StyleSheet.create({
   value: {
-    fontFamily: Fonts.display,
+    ...typography.numeric,
     color: palette.goldText,
     fontSize: 36,
     fontWeight: '800',

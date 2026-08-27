@@ -1971,8 +1971,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   scoreNumber: {
+    ...typography.numeric,
     color: palette.goldText,
-    fontFamily: Fonts.display,
     fontSize: 46,
     fontWeight: '800',
     letterSpacing: -1,

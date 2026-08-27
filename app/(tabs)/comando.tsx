@@ -165,8 +165,8 @@ const ringStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   big: {
+    ...typography.numeric,
     color: palette.goldText,
-    fontFamily: Fonts.display,
     fontSize: 44,
     fontWeight: '800',
     lineHeight: 48,

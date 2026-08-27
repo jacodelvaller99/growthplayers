@@ -1228,8 +1228,8 @@ const styles = StyleSheet.create({
     color: palette.ash,
   },
   sovereignNumber: {
+    ...typography.numeric,
     color: palette.ivory,
-    fontFamily: Fonts.display,
     fontSize: 80,
     fontWeight: '800',
     letterSpacing: -2,

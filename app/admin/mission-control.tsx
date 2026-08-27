@@ -428,6 +428,7 @@ const s = StyleSheet.create({
   },
   kpiValue: {
     fontFamily: Fonts.display,
+    fontWeight: '800',
     fontSize: 28,
     color: palette.ivory,
     letterSpacing: 1,
@@ -484,6 +485,7 @@ const s = StyleSheet.create({
   },
   tierCountValue: {
     fontFamily: Fonts.display,
+    fontWeight: '800',
     fontSize: 24,
     letterSpacing: 1,
   },

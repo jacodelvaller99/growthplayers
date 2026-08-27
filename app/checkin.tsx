@@ -1132,8 +1132,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   coherenceScore: {
+    ...typography.numeric,
     color: palette.smoke,
-    fontFamily: Fonts.display,
     fontSize: 56,
     fontWeight: '800',
     letterSpacing: -1,
@@ -1181,8 +1181,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   capacityScore: {
+    ...typography.numeric,
     color: palette.smoke,
-    fontFamily: Fonts.display,
     fontSize: 42,
     fontWeight: '800',
     letterSpacing: -1,
