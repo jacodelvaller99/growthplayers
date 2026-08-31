@@ -357,38 +357,38 @@ export default function MembresiasScreen() {
               <View key={m.id} style={s.memberRow}>
                 {/* User info */}
                 <View style={s.memberInfo}>
-                  <Text style={s.memberName}>{m.user_name ?? m.user_id.slice(0, 8)}</Text>
-                  <TierBadge tier={m.product} />
+                  <View style={s.memberNameRow}>
+                    <Text style={s.memberName}>{m.user_name ?? m.user_id.slice(0, 8)}</Text>
+                    <TierBadge tier={m.product} />
+                  </View>
                   <Text style={s.memberMeta}>
-                    Desde {fmtDate(m.activated_at)}
-                    {m.expires_at ? ` · Expira ${fmtDate(m.expires_at)}` : ' · Indefinida'}
+                    {fmtDate(m.activated_at)}
+                    {m.expires_at ? ` → ${fmtDate(m.expires_at)}` : ' · indefinida'}
                     {m.price_paid ? ` · $${m.price_paid} ${m.currency ?? 'USD'}` : ''}
-                    {' · por '}{m.activated_by ?? 'admin'}
                   </Text>
+                  <Text style={s.memberMetaSub}>por {m.activated_by ?? 'admin'}</Text>
                 </View>
 
-                {/* Row actions (only for active) */}
+                {/* Row actions (only for active) — icon-only: el texto en 4 pills
+                    era el ruido que había que quitar; el icono + accessibilityLabel
+                    mantiene la acción clara, y 44×44 sigue siendo el target completo. */}
                 {m.status === 'active' && (
                   <View style={s.rowActions}>
                     {getTiersAbove(m.product).length > 0 && (
                       <Pressable style={s.rowBtn} onPress={() => openAction(m, 'upgrade')} accessibilityRole="button" accessibilityLabel={`Subir de nivel a ${m.user_name ?? 'usuario'}`}>
-                        <MaterialIcons name="arrow-upward" size={12} color={palette.goldText} />
-                        <Text style={s.rowBtnText}>SUBIR</Text>
+                        <MaterialIcons name="arrow-upward" size={16} color={palette.goldText} />
                       </Pressable>
                     )}
                     {getTiersBelow(m.product).length > 0 && (
                       <Pressable style={s.rowBtn} onPress={() => openAction(m, 'downgrade')} accessibilityRole="button" accessibilityLabel={`Bajar de nivel a ${m.user_name ?? 'usuario'}`}>
-                        <MaterialIcons name="arrow-downward" size={12} color={palette.ash} />
-                        <Text style={[s.rowBtnText, { color: palette.ash }]}>BAJAR</Text>
+                        <MaterialIcons name="arrow-downward" size={16} color={palette.ash} />
                       </Pressable>
                     )}
                     <Pressable style={s.rowBtn} onPress={() => openAction(m, 'extend')} accessibilityRole="button" accessibilityLabel={`Extender membresía de ${m.user_name ?? 'usuario'}`}>
-                      <MaterialIcons name="schedule" size={12} color={palette.ash} />
-                      <Text style={[s.rowBtnText, { color: palette.ash }]}>EXTENDER</Text>
+                      <MaterialIcons name="schedule" size={16} color={palette.ash} />
                     </Pressable>
                     <Pressable style={s.rowBtn} onPress={() => openAction(m, 'cancel')} accessibilityRole="button" accessibilityLabel={`Cancelar membresía de ${m.user_name ?? 'usuario'}`}>
-                      <MaterialIcons name="cancel" size={12} color={palette.danger} />
-                      <Text style={[s.rowBtnText, { color: palette.danger }]}>CANCELAR</Text>
+                      <MaterialIcons name="cancel" size={16} color={palette.danger} />
                     </Pressable>
                   </View>
                 )}
@@ -712,26 +712,26 @@ const s = StyleSheet.create({
     gap: spacing.sm,
   },
   memberInfo: { gap: 4 },
+  memberNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   memberName:    { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 14, color: palette.ivory },
   memberMeta:    { ...typography.caption, color: palette.smoke, fontSize: 10, marginTop: 2 },
+  memberMetaSub: { ...typography.caption, color: palette.smoke, fontSize: 9, opacity: 0.7 },
   rowActions:  { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   rowBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    justifyContent: 'center',
     borderColor: palette.line,
     borderWidth: 1,
     borderRadius: radii.sm,
-    paddingHorizontal: spacing.md,
-    // 23px de alto medidos: por debajo incluso del minimo de 24 de WCAG 2.5.8.
-    // Y no es un boton cualquiera -- SUBIR, BAJAR y CANCELAR cambian el nivel
-    // de suscripcion de una persona. El coste de un toque errado aqui no es
-    // volver atras, es tocarle la facturacion a alguien. Por eso va al 44
-    // completo y no a un termino medio.
-    minHeight: 44,
-    justifyContent: 'center',
+    // Icono solo, sin label de texto -- 4 pills con "SUBIR"/"BAJAR"/"EXTENDER"/
+    // "CANCELAR" era el ruido a resolver. El accessibilityLabel de cada botón
+    // sigue siendo la etiqueta real. 44x44 completo: no es un botón cualquiera
+    // -- SUBIR, BAJAR y CANCELAR cambian el nivel de suscripción de una
+    // persona; el coste de un toque errado aquí no es volver atrás, es
+    // tocarle la facturación a alguien.
+    width: 44,
+    height: 44,
   },
-  rowBtnText:    { ...typography.label, color: palette.goldText, fontSize: 9 },
   toastContainer: {
     position: 'absolute',
     bottom: 100,
