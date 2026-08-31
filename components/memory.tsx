@@ -239,7 +239,7 @@ export function AdminBriefingCard({
         )}
       </View>
       {!briefing ? (
-        <Empty label="Genera un briefing para preparar la próxima sesión." />
+        <Empty label={generating ? 'Norman está preparando el briefing…' : 'Genera un briefing para preparar la próxima sesión.'} />
       ) : (
         <View style={{ gap: spacing.sm }}>
           {!!briefing.risk_level && (

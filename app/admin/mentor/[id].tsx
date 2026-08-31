@@ -43,6 +43,15 @@ const MOMENTUM_LABEL: Record<string, string> = {
   rising: 'ASCENSO', stable: 'ESTABLE', fragile: 'FRÁGIL', declining: 'CAÍDA', critical: 'CRÍTICO',
 };
 const CHAT_QUICK = ['¿Qué confronto hoy?', 'Dame 3 preguntas para la sesión', 'Resume su semana'];
+// Última vez que se INTENTÓ auto-regenerar el briefing de cada cliente, en este
+// módulo (sobrevive a remounts de la pantalla, se resetea al recargar la app).
+// Sin este guard, cada vez que el mentor abre/cierra el Espacio dispara una
+// llamada a IA — el auto-briefing (Fase 2 del ecosistema) no debe quemar
+// tokens en cada remount, solo cuando de verdad hay novedades y hace rato que
+// no se regenera.
+const BRIEFING_REGEN_COOLDOWN_MS = 60 * 60 * 1000; // 1h
+const briefingRegenAttempts = new Map<string, number>();
+
 // Mensaje honesto cuando falta EXPO_PUBLIC_AI_PROXY_URL — sin esto, el briefing
 // y el plan con Norman caían a la simulación local (voz de Norman al cliente,
 // sin estructura) y el usuario veía "reintenta" como si fuera un fallo
@@ -129,6 +138,36 @@ export default function MentorDeskScreen() {
   const inFlightRef = useRef(false);
   const pendingRef = useRef<{ week: number; text: string } | null>(null);
 
+  // Ecosistema que se alimenta solo (Fase 2 del plan): el briefing YA NO
+  // depende exclusivamente del clic manual en GENERAR. Si no existe, o si hay
+  // un resumen del Memory OS más nuevo que el briefing guardado, se regenera
+  // en segundo plano al abrir el Espacio — sin bloquear el paint, con cooldown
+  // de 1h por cliente para no quemar tokens en cada remount. Declarado ANTES
+  // de `load` (que lo llama) para poder listarlo en su dependency array.
+  const maybeAutoRegenBriefing = useCallback(async (uid: string, mem: UserMemoryBundle, clientName?: string) => {
+    if (!ENV.aiProxyUrl) return; // sin proxy, ni lo intenta — ver Fase 1 (fallback honesto)
+    const latestSummaryAt = mem.summaries[0]?.created_at;
+    const stale = !mem.briefing
+      || (!mem.briefing.generated_at && !!latestSummaryAt)
+      || (!!latestSummaryAt && !!mem.briefing.generated_at && new Date(latestSummaryAt) > new Date(mem.briefing.generated_at));
+    if (!stale) return;
+    const lastAttempt = briefingRegenAttempts.get(uid) ?? 0;
+    if (Date.now() - lastAttempt < BRIEFING_REGEN_COOLDOWN_MS) return;
+    briefingRegenAttempts.set(uid, Date.now());
+    setGenBrief(true);
+    try {
+      const { generateAdminBriefing } = await import('@/lib/memorySummarizer');
+      const result = await generateAdminBriefing(uid, { userName: clientName });
+      if (result && latestRef.current.userId === uid) {
+        setMemory(await fetchUserMemory(uid));
+      }
+    } catch (e) {
+      logSilentError('mentorDesk.autoBriefing', e);
+    } finally {
+      if (latestRef.current.userId === uid) setGenBrief(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     if (!userId) return;
     const [detail, mentorship, exec, mem] = await Promise.all([
@@ -150,7 +189,8 @@ export default function MentorDeskScreen() {
     savedRef.current.set(w, loaded);
     setText(loaded);
     setLoading(false);
-  }, [userId]);
+    void maybeAutoRegenBriefing(userId, mem, detail?.name);
+  }, [userId, maybeAutoRegenBriefing]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -561,6 +601,17 @@ export default function MentorDeskScreen() {
 
   const renderIA = () => (
     <View style={{ gap: spacing.md }}>
+      {/* Un mentor restringido (no-admin) no tiene RLS sobre user_intelligence
+          ni las tablas de Confrontation OS — a propósito, esa es la frontera
+          de privacidad que fija la migración 20260822 (el dossier completo NO
+          se toca desde el rango mentor). Antes esto degradaba en silencio
+          (churn=0, fricciones=[]) y parecía que el cliente estaba perfecto.
+          Ahora se dice explícito, en vez de fingir que no falta nada. */}
+      {role === 'mentor' && (
+        <Text style={s.mentorScopeNote}>
+          Como mentor ves agenda y briefing calculados sin riesgo de abandono ni fricciones DIJO-vs-HIZO — esas dos señales requieren acceso de admin.
+        </Text>
+      )}
       <NextMentorshipAgendaCard prep={execution.prep} />
       <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} />
       {briefError && <Text style={s.planError}>{briefError}</Text>}
@@ -679,6 +730,7 @@ const s = StyleSheet.create({
   loadingText: { ...typography.caption, color: palette.ash },
   errorBack: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg },
   errorBackText: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1 },
+  mentorScopeNote: { ...typography.caption, color: palette.smoke, fontSize: 11, fontStyle: 'italic', lineHeight: 16 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
