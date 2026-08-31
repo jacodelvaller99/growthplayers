@@ -36,8 +36,9 @@ import {
   type AdminMentorshipSession, type UserMemoryBundle,
 } from '@/lib/admin/queries';
 import type { AdminUserDetail } from '@/lib/admin/types';
-import { fetchUserExecution, updateTask, type ExecutionBundle, type MentorTask } from '@/lib/mentorExecution';
+import { fetchUserExecution, insertTask, stableId, updateTask, type ExecutionBundle, type MentorTask } from '@/lib/mentorExecution';
 import { deriveStatus } from '@/lib/mentorExecutionLogic';
+import { extractSection, splitList } from '@/lib/memoryLogic';
 
 const MOMENTUM_LABEL: Record<string, string> = {
   rising: 'ASCENSO', stable: 'ESTABLE', fragile: 'FRÁGIL', declining: 'CAÍDA', critical: 'CRÍTICO',
@@ -77,6 +78,18 @@ function normalizePlan(arr: unknown[], week: number | null): NormalizedPlanItem[
 }
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+// Copiloto de sesión (Fase 3 del plan — "reparte en los apartados"): si la
+// respuesta trae un bloque ===ACCIONES=== (instrucción en buildClientDeskPrompt,
+// lib/adminCopilot.ts), se parsea con los MISMOS extractSection/splitList que ya
+// usa memorySummarizer — no se reinventa el parser. El texto mostrado en la
+// burbuja se recorta antes del bloque: el mentor lee prosa, no la sintaxis del
+// marcador.
+function chatActions(fullText: string): string[] {
+  return splitList(extractSection(fullText, 'ACCIONES'));
+}
+function chatDisplayText(fullText: string): string {
+  return fullText.split(/===\s*ACCIONES\s*===/i)[0].trim();
 }
 /** Refleja localmente el resultado de un upsert exitoso — sin refetch. */
 function mergeDeskSession(prev: AdminMentorshipSession[], week: number, text: string, id: string): AdminMentorshipSession[] {
@@ -122,6 +135,10 @@ export default function MentorDeskScreen() {
   const [chatInput, setChatInput] = useState('');
   const [chatStreaming, setChatStreaming] = useState(false);
   const [chatStreamText, setChatStreamText] = useState('');
+  // Índice de la burbuja cuyas ===ACCIONES=== se están aplicando — deshabilita
+  // AMBOS botones de esa burbuja mientras dura, ninguna otra.
+  const [applyingChat, setApplyingChat] = useState<number | null>(null);
+  const [chatApplyError, setChatApplyError] = useState<string | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatScrollRef = useRef<ScrollView | null>(null);
 
@@ -457,6 +474,55 @@ export default function MentorDeskScreen() {
     chatScrollDown();
   };
 
+  // Distribución con un toque (Fase 3 del plan): la IA propone en el chat,
+  // el mentor decide con el botón — nada se aplica solo. Mismo camino que ya
+  // usa el plan manual (ensureSessionId + savePlanItems) y las tareas
+  // (insertTask, mismo patrón que normalizeSources en mentorExecution.ts).
+  const applyActionsToPlan = async (turnIndex: number, actions: string[]) => {
+    if (applyingChat !== null) return;
+    setApplyingChat(turnIndex);
+    setChatApplyError(null);
+    try {
+      const sessionId = await ensureSessionId();
+      if (!sessionId) { setChatApplyError('No se pudo preparar la sesión.'); return; }
+      await savePlanItems(sessionId, [
+        ...currentPlan,
+        ...actions.map((a) => ({ text: a, week, source: 'copilot', done: false })),
+      ]);
+    } finally {
+      setApplyingChat(null);
+    }
+  };
+  const applyActionsToTasks = async (turnIndex: number, actions: string[]) => {
+    if (applyingChat !== null) return;
+    const { userId: uId } = latestRef.current;
+    if (!uId) return;
+    setApplyingChat(turnIndex);
+    setChatApplyError(null);
+    try {
+      for (const a of actions) {
+        await insertTask({
+          user_id: uId,
+          title: a,
+          category: 'accountability',
+          source_type: 'copilot',
+          source_id: stableId('cop', a),
+          priority: 'medium',
+          status: 'not_started',
+          // El mentor clicó CREAR TAREAS — ya es aprobación, a diferencia de
+          // los ai_suggested silenciosos de normalizeSources.
+          mentor_review_status: 'approved',
+        });
+      }
+      setExecution(await fetchUserExecution(uId));
+    } catch (e) {
+      logSilentError('mentorDesk.applyActionsToTasks', e);
+      setChatApplyError('No se pudieron crear las tareas.');
+    } finally {
+      setApplyingChat(null);
+    }
+  };
+
   const { previous } = splitWeekSessions(sessions, week);
   const weekChips = [week - 1, week, week + 1].filter((w) => w >= 1 && w <= TOTAL_WEEKS);
   const momentum = execution.scores?.weekly_momentum_state;
@@ -624,19 +690,50 @@ export default function MentorDeskScreen() {
           {chatTurns.length === 0 && !chatStreaming && (
             <Text style={s.emptyText}>Pregunta qué confrontar, qué preguntar, o pide un resumen de la semana.</Text>
           )}
-          {chatTurns.map((t, i) => (
-            <View key={i} style={[s.bubble, t.role === 'user' ? s.bubbleUser : s.bubbleAI]}>
-              <Text style={t.role === 'user' ? s.bubbleUserText : s.bubbleAIText}>{t.text}</Text>
-              {t.role === 'assistant' && (
-                <Pressable
-                  onPress={() => applyText(text ? `${text}\n\n${t.text}` : t.text)}
-                  hitSlop={6} style={s.useInNotes} accessibilityRole="button" accessibilityLabel="Usar en notas">
-                  <MaterialIcons name="content-paste" size={12} color={palette.goldText} />
-                  <Text style={s.useInNotesText}>USAR EN NOTAS</Text>
-                </Pressable>
-              )}
-            </View>
-          ))}
+          {chatTurns.map((t, i) => {
+            const displayText = t.role === 'assistant' ? chatDisplayText(t.text) : t.text;
+            const actions = t.role === 'assistant' ? chatActions(t.text) : [];
+            const busy = applyingChat === i;
+            return (
+              <View key={i} style={[s.bubble, t.role === 'user' ? s.bubbleUser : s.bubbleAI]}>
+                <Text style={t.role === 'user' ? s.bubbleUserText : s.bubbleAIText}>{displayText}</Text>
+                {t.role === 'assistant' && (
+                  <View style={s.bubbleActionsRow}>
+                    <Pressable
+                      onPress={() => applyText(text ? `${text}\n\n${displayText}` : displayText)}
+                      hitSlop={6} style={s.useInNotes} accessibilityRole="button" accessibilityLabel="Usar en notas">
+                      <MaterialIcons name="content-paste" size={12} color={palette.goldText} />
+                      <Text style={s.useInNotesText}>USAR EN NOTAS</Text>
+                    </Pressable>
+                    {/* Distribución con un toque — solo aparece si el copiloto
+                        propuso ===ACCIONES===. La IA propone, el mentor
+                        decide: nada se aplica sin este clic. */}
+                    {actions.length > 0 && (
+                      <>
+                        <Pressable
+                          onPress={() => applyActionsToPlan(i, actions)}
+                          disabled={busy}
+                          hitSlop={6} style={[s.useInNotes, busy && { opacity: 0.5 }]}
+                          accessibilityRole="button" accessibilityLabel={`Añadir ${actions.length} acciones al plan`}>
+                          <MaterialIcons name="playlist-add" size={12} color={palette.goldText} />
+                          <Text style={s.useInNotesText}>AÑADIR AL PLAN ({actions.length})</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => applyActionsToTasks(i, actions)}
+                          disabled={busy}
+                          hitSlop={6} style={[s.useInNotes, busy && { opacity: 0.5 }]}
+                          accessibilityRole="button" accessibilityLabel={`Crear ${actions.length} tareas`}>
+                          <MaterialIcons name="add-task" size={12} color={palette.goldText} />
+                          <Text style={s.useInNotesText}>CREAR TAREAS ({actions.length})</Text>
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+          {chatApplyError && <Text style={s.planError}>{chatApplyError}</Text>}
           {chatStreaming && (
             <View style={[s.bubble, s.bubbleAI]} accessibilityLiveRegion="polite">
               <Text style={s.bubbleAIText}>{chatStreamText || '…'}</Text>
@@ -786,7 +883,8 @@ const s = StyleSheet.create({
   bubbleAI: { alignSelf: 'flex-start', backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line },
   bubbleUserText: { ...typography.body, color: palette.ivory, fontSize: 13 },
   bubbleAIText: { ...typography.body, color: palette.ivory, fontSize: 13, lineHeight: 19 },
-  useInNotes: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
+  bubbleActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  useInNotes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   useInNotesText: { ...typography.label, color: palette.goldText, fontSize: 9 },
 
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },

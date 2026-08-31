@@ -54,7 +54,7 @@ const TASK_COLS =
   'priority,status,evidence_required,evidence_type,evidence_payload,self_report_score,mentor_score,' +
   'execution_quality,friction_reason,mentor_review_status,completed_at,reviewed_at,created_at,updated_at';
 
-function stableId(prefix: string, text: string): string {
+export function stableId(prefix: string, text: string): string {
   // id determinista (sin crypto): para dedup de compromisos/acciones por texto.
   let h = 0;
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
