@@ -91,6 +91,28 @@ function chatActions(fullText: string): string[] {
 function chatDisplayText(fullText: string): string {
   return fullText.split(/===\s*ACCIONES\s*===/i)[0].trim();
 }
+
+// Guía visual, no texto (ítem 22, Fase 4): número grande + ícono + una sola
+// línea de instrucción, en vez de párrafos que el mentor no lee. Las 3 zonas
+// (renderEditor/renderPlan/renderIA) lo usan igual — así se ve de un vistazo
+// dónde está uno, sin tener que leer nada.
+function ZoneHeader({ number, title, hint }: { number: string; title: string; hint: string }) {
+  return (
+    <View style={zh.row}>
+      <Text style={zh.number}>{number}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={zh.title}>{title}</Text>
+        <Text style={zh.hint}>{hint}</Text>
+      </View>
+    </View>
+  );
+}
+const zh = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
+  number: { fontFamily: Fonts.display, fontWeight: '800', fontSize: 22, color: palette.goldText, lineHeight: 24 },
+  title: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 1 },
+  hint: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 2, lineHeight: 15 },
+});
 /** Refleja localmente el resultado de un upsert exitoso — sin refetch. */
 function mergeDeskSession(prev: AdminMentorshipSession[], week: number, text: string, id: string): AdminMentorshipSession[] {
   const cid = deskClientId(week);
@@ -123,6 +145,12 @@ export default function MentorDeskScreen() {
   const [text, setText] = useState('');
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [expandedPrev, setExpandedPrev] = useState<Set<string>>(new Set());
+  // Simplificación en 3 zonas (Fase 4 del plan): notas anteriores y línea de
+  // tiempo eran listas siempre visibles compitiendo con lo que el mentor
+  // necesita ESTA sesión — ahora quedan detrás de "Ver historia", cerradas
+  // por defecto.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
 
   const [planBusy, setPlanBusy] = useState(false);
   const [planGenBusy, setPlanGenBusy] = useState(false);
@@ -529,6 +557,7 @@ export default function MentorDeskScreen() {
 
   const renderEditor = () => (
     <View>
+      <ZoneHeader number="①" title="ESCRIBE AQUÍ" hint="Lo que pasó en la sesión de hoy. Se guarda solo." />
       <View style={s.editorTopRow}>
         <View style={s.weekChips}>
           {weekChips.map((w) => (
@@ -562,29 +591,39 @@ export default function MentorDeskScreen() {
         />
       </PremiumCard>
       {previous.length > 0 && (
-        <View style={{ marginTop: spacing.md, gap: 4 }}>
-          <Text style={s.subLabel}>NOTAS ANTERIORES</Text>
-          {previous.map((sess) => {
-            const open = expandedPrev.has(sess.id);
-            const firstLine = sess.notes?.split('\n')[0] || '(sin notas)';
-            return (
-              <Pressable
-                key={sess.id}
-                onPress={() => setExpandedPrev((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(sess.id)) next.delete(sess.id); else next.add(sess.id);
-                  return next;
-                })}
-                style={s.prevRow}
-                accessibilityRole="button"
-                accessibilityLabel={`Sesión semana ${sess.week ?? '—'}. ${open ? 'Contraer' : 'Expandir'}`}>
-                <Text style={s.prevMeta}>
-                  SEMANA {sess.week ?? '—'} · {sess.session_date ? formatDate(sess.session_date) : formatDate(sess.created_at)}
-                </Text>
-                <Text style={s.prevText} numberOfLines={open ? undefined : 1}>{open ? (sess.notes || '(sin notas)') : firstLine}</Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ marginTop: spacing.md }}>
+          <Pressable
+            onPress={() => setHistoryOpen((v) => !v)}
+            style={s.historyToggle} hitSlop={6}
+            accessibilityRole="button" accessibilityLabel={`Ver historia, ${previous.length} sesiones anteriores`}>
+            <MaterialIcons name={historyOpen ? 'expand-less' : 'expand-more'} size={16} color={palette.smoke} />
+            <Text style={s.historyToggleText}>VER HISTORIA ({previous.length})</Text>
+          </Pressable>
+          {historyOpen && (
+            <View style={{ gap: 4, marginTop: spacing.xs }}>
+              {previous.map((sess) => {
+                const open = expandedPrev.has(sess.id);
+                const firstLine = sess.notes?.split('\n')[0] || '(sin notas)';
+                return (
+                  <Pressable
+                    key={sess.id}
+                    onPress={() => setExpandedPrev((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(sess.id)) next.delete(sess.id); else next.add(sess.id);
+                      return next;
+                    })}
+                    style={s.prevRow}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Sesión semana ${sess.week ?? '—'}. ${open ? 'Contraer' : 'Expandir'}`}>
+                    <Text style={s.prevMeta}>
+                      SEMANA {sess.week ?? '—'} · {sess.session_date ? formatDate(sess.session_date) : formatDate(sess.created_at)}
+                    </Text>
+                    <Text style={s.prevText} numberOfLines={open ? undefined : 1}>{open ? (sess.notes || '(sin notas)') : firstLine}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -592,23 +631,45 @@ export default function MentorDeskScreen() {
 
   const renderPlan = () => (
     <PremiumCard style={s.sideCard}>
-      <Text style={s.cardLabel}>PLAN DE ACCIÓN · SEMANA {week}</Text>
+      <ZoneHeader number="②" title={`EL PLAN · SEMANA ${week}`} hint="Marca lo hecho. Lo que agregues Norman también lo ve." />
       {planError && <Text style={s.planError}>{planError}</Text>}
-      {currentPlan.length === 0 ? (
+      {chatApplyError && <Text style={s.planError}>{chatApplyError}</Text>}
+      {/* Lista unificada (ítem 12, Fase 4): antes eran 2 secciones con 2
+          títulos — "PLAN DE ACCIÓN" y "TAREAS ABIERTAS" — que el mentor no
+          distinguía. Misma fila, mismo checkbox; solo un tag chico marca el
+          origen cuando no es una acción manual (plan de la semana vs. tarea
+          de seguimiento del Execution OS). */}
+      {currentPlan.length === 0 && openTasks.length === 0 ? (
         <Text style={s.emptyText}>Sin acciones todavía.</Text>
       ) : (
         <View style={{ gap: 6 }}>
           {currentPlan.map((item, i) => (
-            <View key={i} style={s.planRow}>
+            <View key={`plan-${i}`} style={s.planRow}>
               <Pressable
                 onPress={() => togglePlanItem(i)} disabled={planBusy} hitSlop={6}
                 accessibilityRole="checkbox" accessibilityState={{ checked: item.done }} accessibilityLabel={`Marcar acción ${item.text}`}>
                 <MaterialIcons name={item.done ? 'check-circle' : 'radio-button-unchecked'} size={16} color={item.done ? palette.success : palette.goldText} />
               </Pressable>
-              <Text style={[s.planText, item.done && s.planTextDone]}>{item.text}</Text>
+              <Text style={[s.planText, item.done && s.planTextDone]} numberOfLines={2}>{item.text}</Text>
+              {item.source && item.source !== 'manual' && (
+                <Text style={s.planOriginTag}>{item.source === 'ia' ? 'NORMAN' : item.source === 'copilot' ? 'COPILOTO' : item.source.toUpperCase()}</Text>
+              )}
               <Pressable onPress={() => removePlanItem(i)} disabled={planBusy} hitSlop={6} accessibilityRole="button" accessibilityLabel="Quitar acción">
                 <MaterialIcons name="close" size={14} color={palette.smoke} />
               </Pressable>
+            </View>
+          ))}
+          {openTasks.map((t) => (
+            <View key={`task-${t.id}`} style={s.planRow}>
+              <Pressable
+                onPress={() => toggleTask(t)} disabled={taskBusy === t.id} hitSlop={6}
+                accessibilityRole="checkbox" accessibilityState={{ checked: false }} accessibilityLabel={`Marcar tarea completada: ${t.title}`}>
+                {taskBusy === t.id
+                  ? <ActivityIndicator size={16} color={palette.goldText} />
+                  : <MaterialIcons name="radio-button-unchecked" size={16} color={palette.smoke} />}
+              </Pressable>
+              <Text style={s.planText} numberOfLines={2}>{t.title}</Text>
+              <Text style={s.planOriginTag}>TAREA</Text>
             </View>
           ))}
         </View>
@@ -646,22 +707,6 @@ export default function MentorDeskScreen() {
           </Pressable>
         </View>
       )}
-
-      <Text style={[s.cardLabel, { marginTop: spacing.lg }]}>TAREAS ABIERTAS</Text>
-      {openTasks.length === 0 ? (
-        <Text style={s.emptyText}>Sin tareas operativas abiertas.</Text>
-      ) : (
-        openTasks.map((t) => (
-          <Pressable
-            key={t.id} style={s.taskRow} disabled={taskBusy === t.id} onPress={() => toggleTask(t)}
-            accessibilityRole="checkbox" accessibilityState={{ checked: false }} accessibilityLabel={`Marcar tarea completada: ${t.title}`}>
-            {taskBusy === t.id
-              ? <ActivityIndicator size={16} color={palette.goldText} />
-              : <MaterialIcons name="radio-button-unchecked" size={16} color={palette.smoke} />}
-            <Text style={s.taskTitle} numberOfLines={2}>{t.title}</Text>
-          </Pressable>
-        ))
-      )}
     </PremiumCard>
   );
 
@@ -678,11 +723,34 @@ export default function MentorDeskScreen() {
           Como mentor ves agenda y briefing calculados sin riesgo de abandono ni fricciones DIJO-vs-HIZO — esas dos señales requieren acceso de admin.
         </Text>
       )}
-      <NextMentorshipAgendaCard prep={execution.prep} />
-      <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} />
-      {briefError && <Text style={s.planError}>{briefError}</Text>}
-      <ProfileSynopsisCard profile={memory.profile} variant="admin" />
-      <ConversationTimeline summaries={memory.summaries} variant="admin" />
+      {/* Una sola tarjeta (ítem 12, Fase 4): antes eran 3 tarjetas con su
+          propio borde diciendo cosas parecidas (agenda, briefing, síntesis)
+          — el mentor no sabía por cuál empezar. `style` embebido (agregado a
+          los 3 componentes compartidos, opcional — el dossier no lo pasa y
+          se ve exactamente igual que siempre) les quita el chrome propio;
+          el chrome único lo pone esta tarjeta. */}
+      <PremiumCard style={s.sideCard}>
+        <ZoneHeader number="③" title="NORMAN TE PREPARÓ" hint={`Lo que ya sabe de ${client.name}, listo antes de que empieces.`} />
+        <NextMentorshipAgendaCard prep={execution.prep} style={s.embeddedIA} />
+        <View style={s.iaDivider} />
+        <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} style={s.embeddedIA} />
+        {briefError && <Text style={s.planError}>{briefError}</Text>}
+        <View style={s.iaDivider} />
+        <ProfileSynopsisCard profile={memory.profile} variant="admin" style={s.embeddedIA} />
+      </PremiumCard>
+
+      {memory.summaries.length > 0 && (
+        <View>
+          <Pressable
+            onPress={() => setTimelineOpen((v) => !v)}
+            style={s.historyToggle} hitSlop={6}
+            accessibilityRole="button" accessibilityLabel={`Ver línea de tiempo, ${memory.summaries.length} conversaciones`}>
+            <MaterialIcons name={timelineOpen ? 'expand-less' : 'expand-more'} size={16} color={palette.smoke} />
+            <Text style={s.historyToggleText}>VER HISTORIA DE CONVERSACIONES ({memory.summaries.length})</Text>
+          </Pressable>
+          {timelineOpen && <ConversationTimeline summaries={memory.summaries} variant="admin" />}
+        </View>
+      )}
 
       <PremiumCard style={s.sideCard}>
         <Text style={s.cardLabel}>COPILOTO DE SESIÓN</Text>
@@ -828,6 +896,10 @@ const s = StyleSheet.create({
   errorBack: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg },
   errorBackText: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1 },
   mentorScopeNote: { ...typography.caption, color: palette.smoke, fontSize: 11, fontStyle: 'italic', lineHeight: 16 },
+  // Zona ③: sin fondo/borde propio (lo da la tarjeta contenedora) y sin
+  // margen inferior (el iaDivider entre subsecciones lo reemplaza).
+  embeddedIA: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, padding: 0, elevation: 0, shadowOpacity: 0, marginBottom: 0 },
+  iaDivider: { height: 1, backgroundColor: palette.lineSoft, marginVertical: spacing.md },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -856,6 +928,8 @@ const s = StyleSheet.create({
   },
 
   subLabel: { ...typography.label, color: palette.smoke, fontSize: 9 },
+  historyToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 },
+  historyToggleText: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1 },
   prevRow: { paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   prevMeta: { ...typography.label, color: palette.smoke, fontSize: 9, marginBottom: 2 },
   prevText: { ...typography.body, color: palette.ash, fontSize: 12.5, lineHeight: 18 },
@@ -865,17 +939,17 @@ const s = StyleSheet.create({
   emptyText: { ...typography.caption, color: palette.smoke, fontStyle: 'italic', fontSize: 12 },
   planError: { ...typography.caption, color: palette.danger, fontSize: 11 },
 
-  planRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  planRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: 4 },
   planText: { flex: 1, ...typography.body, color: palette.ivory, fontSize: 13 },
   planTextDone: { color: palette.smoke, textDecorationLine: 'line-through' },
+  // Marca el origen cuando NO es una acción escrita a mano por el mentor —
+  // fusiona visualmente plan de la semana + tareas del Execution OS (ítem 12).
+  planOriginTag: { ...typography.label, color: palette.smoke, fontSize: 7.5, letterSpacing: 0.5 },
   planAddRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
   planAddInput: { flex: 1, ...typography.body, color: palette.ivory, fontSize: 13, minHeight: 36, borderBottomWidth: 1, borderBottomColor: palette.lineGold },
   planActionsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   planActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32, paddingHorizontal: spacing.sm, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold },
   planActionText: { ...typography.label, color: palette.goldText, fontSize: 9 },
-
-  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
-  taskTitle: { flex: 1, ...typography.body, color: palette.ivory, fontSize: 12.5 },
 
   chatScroll: { maxHeight: 260 },
   bubble: { maxWidth: '92%', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, marginBottom: spacing.sm },

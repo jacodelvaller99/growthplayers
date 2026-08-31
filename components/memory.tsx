@@ -7,7 +7,7 @@
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { PremiumCard } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -43,15 +43,18 @@ function Empty({ label }: { label: string }) {
 export function ProfileSynopsisCard({
   profile,
   variant = 'admin',
+  style,
 }: {
   profile: MemoryProfile | null;
   variant?: Variant;
+  /** Para embeber sin chrome propio (ej. dentro de otra tarjeta que ya lo da) — el dossier no lo pasa, comportamiento sin cambios ahí. */
+  style?: StyleProp<ViewStyle>;
 }) {
   const p = profile ?? {};
   const hasAny =
     p.identity_summary || p.current_goal || p.transformation_goal || p.mentorship_focus;
   return (
-    <PremiumCard style={s.card}>
+    <PremiumCard style={[s.card, style]}>
       <SectionLabel>{variant === 'client' ? 'MI RESUMEN' : 'SÍNTESIS DEL CLIENTE'}</SectionLabel>
       {!hasAny ? (
         <Empty label="Aún sin síntesis. Se genera tras las primeras sesiones." />
@@ -219,13 +222,16 @@ export function AdminBriefingCard({
   briefing,
   generating,
   onGenerate,
+  style,
 }: {
   briefing: AdminBriefing | null;
   generating?: boolean;
   onGenerate?: () => void;
+  /** Para embeber sin chrome propio (ej. dentro de otra tarjeta que ya lo da) — el dossier no lo pasa, comportamiento sin cambios ahí. */
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <PremiumCard style={[s.card, { borderColor: palette.lineGold }]}>
+    <PremiumCard style={[s.card, { borderColor: palette.lineGold }, style]}>
       <View style={s.briefHead}>
         <SectionLabel>BRIEFING DE MENTORÍA</SectionLabel>
         {!!onGenerate && (
