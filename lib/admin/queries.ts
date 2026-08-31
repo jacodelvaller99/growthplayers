@@ -1106,6 +1106,25 @@ export interface MentorInfo {
   name: string;
 }
 
+/**
+ * Nombres de clientes por id — el roster de un mentor restringido.
+ *
+ * Un mentor no-admin no puede usar fetchUsers() (roster org-wide, RLS se lo
+ * deja casi vacío); esta consulta chica lee user_progress, donde la policy
+ * `mentor_read_own_clients_user_profiles` (migración 20260822) le muestra
+ * exactamente sus clientes asignados. Sin esto, buildDesk no tenía cómo
+ * resolver el nombre de un cliente asignado que aún no tiene mentor_tasks.
+ */
+export async function fetchClientNames(ids: string[]): Promise<{ user_id: string; name: string }[]> {
+  if (ids.length === 0) return [];
+  try {
+    const { data } = await supa.from('user_progress').select('user_id, name').in('user_id', ids);
+    return ((data ?? []) as { user_id: string; name: string }[]);
+  } catch {
+    return [];
+  }
+}
+
 /** Mentores = admins actuales. Nombres vía user_progress (mismo patrón que fetchExecutionDashboard). */
 export async function fetchMentorsList(): Promise<MentorInfo[]> {
   try {

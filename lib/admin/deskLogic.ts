@@ -75,9 +75,16 @@ export function buildDesk(input: {
   // user_id no sea un mentor (cubre el caso de una tarea huérfana de un usuario
   // que ya no está en el roster). Un mentor no-admin (is_admin=false) tenía que
   // excluirse igual que un admin — sin el segundo chequeo se colaba como "cliente".
+  // ∪ clientes ASIGNADOS a un mentor vigente aunque no tengan filas de ejecución
+  // todavía: para un mentor restringido (roster vacío por RLS) el universo salía
+  // solo de fetchExecutionDashboard, que exige mentor_tasks — un cliente nuevo,
+  // el caso que MÁS necesita atención, era invisible en su Escritorio.
   const universeIds = new Set<string>();
   for (const p of roster) if (!p.is_admin && !mentorIds.has(p.user_id)) universeIds.add(p.user_id);
   for (const r of rows) if (!mentorIds.has(r.user_id)) universeIds.add(r.user_id);
+  for (const a of assignments) {
+    if (mentorIds.has(a.mentor_id) && !mentorIds.has(a.user_id)) universeIds.add(a.user_id);
+  }
 
   const clients: DeskClient[] = [...universeIds].map((user_id) => {
     const row = rowByUser.get(user_id);

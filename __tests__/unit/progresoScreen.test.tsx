@@ -38,7 +38,10 @@ jest.mock('@/services/notifications', () => ({
   scheduleCheckinReminder: jest.fn(),
   cancelReminders: jest.fn(),
 }));
-jest.mock('@/hooks/useIsAdmin', () => ({ useIsAdmin: () => false }));
+jest.mock('@/hooks/useIsAdmin', () => ({
+  useIsAdmin: () => false,
+  useStaffRole: () => ({ isAdmin: false, isMentor: false }),
+}));
 jest.mock('@/hooks/useSubscription', () => ({
   useSubscription: () => ({
     tier: 'free',

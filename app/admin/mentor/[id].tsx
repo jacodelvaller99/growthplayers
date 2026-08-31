@@ -16,8 +16,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ENV } from '@/app/config/env';
 import { LensTabs, type Lens } from '@/components/focus-deck';
 import { PremiumCard, StatusPill, useScreen } from '@/components/polaris';
+import ErrorState from '@/components/ErrorState';
 import { NextMentorshipAgendaCard } from '@/components/mentor-execution';
 import { AdminBriefingCard, ConversationTimeline, ProfileSynopsisCard } from '@/components/memory';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -41,6 +43,11 @@ const MOMENTUM_LABEL: Record<string, string> = {
   rising: 'ASCENSO', stable: 'ESTABLE', fragile: 'FRÁGIL', declining: 'CAÍDA', critical: 'CRÍTICO',
 };
 const CHAT_QUICK = ['¿Qué confronto hoy?', 'Dame 3 preguntas para la sesión', 'Resume su semana'];
+// Mensaje honesto cuando falta EXPO_PUBLIC_AI_PROXY_URL — sin esto, el briefing
+// y el plan con Norman caían a la simulación local (voz de Norman al cliente,
+// sin estructura) y el usuario veía "reintenta" como si fuera un fallo
+// transitorio, cuando en realidad es config faltante.
+const AI_NOT_CONFIGURED = 'La IA no está configurada en este entorno (falta EXPO_PUBLIC_AI_PROXY_URL) — no es un fallo transitorio, no sirve reintentar.';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 type NormalizedPlanItem = { text: string; week?: number | null; source?: string; done?: boolean };
@@ -213,11 +220,25 @@ export default function MentorDeskScreen() {
     [execution.tasks],
   );
 
-  if (loading || !client) {
+  if (loading) {
     return (
       <View style={[sc.root, s.center]}>
         <ActivityIndicator color={palette.goldText} size="large" />
         <Text style={s.loadingText}>Cargando espacio del mentor...</Text>
+      </View>
+    );
+  }
+
+  // `client === null` tras terminar la carga (no durante) — pasa cuando
+  // fetchUserDetail no encuentra fila en user_progress para este user_id.
+  // Antes esto dejaba el spinner girando para siempre, sin mensaje.
+  if (!client) {
+    return (
+      <View style={[sc.root, s.center]}>
+        <ErrorState message="No pudimos cargar este cliente. Puede que ya no exista o que no tengas acceso." onRetry={load} />
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" style={s.errorBack}>
+          <Text style={s.errorBackText}>← VOLVER</Text>
+        </Pressable>
       </View>
     );
   }
@@ -307,6 +328,14 @@ export default function MentorDeskScreen() {
     if (!notes || planGenBusy) return;
     setPlanGenBusy(true);
     setPlanError(null);
+    if (!ENV.aiProxyUrl) {
+      // Cortar ANTES de streamMentorResponse — sin esto caía a la simulación
+      // local, parseAIList devolvía 0 ítems, y el mensaje decía "reintenta"
+      // para un problema de config, no transitorio.
+      setPlanError(AI_NOT_CONFIGURED);
+      setPlanGenBusy(false);
+      return;
+    }
     try {
       const sessionId = await ensureSessionId();
       if (!sessionId) { setPlanError('No se pudo preparar la sesión.'); return; }
@@ -349,6 +378,11 @@ export default function MentorDeskScreen() {
     if (!userId) return;
     setGenBrief(true);
     setBriefError(null);
+    if (!ENV.aiProxyUrl) {
+      setBriefError(AI_NOT_CONFIGURED);
+      setGenBrief(false);
+      return;
+    }
     try {
       const { generateAdminBriefing } = await import('@/lib/memorySummarizer');
       const result = await generateAdminBriefing(userId, { userName: client.name });
@@ -643,6 +677,8 @@ export default function MentorDeskScreen() {
 const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   loadingText: { ...typography.caption, color: palette.ash },
+  errorBack: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg },
+  errorBackText: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

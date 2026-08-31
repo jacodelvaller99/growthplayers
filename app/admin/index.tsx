@@ -28,7 +28,7 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAdminRole } from '@/hooks/use-admin-role';
 import { assignMentor } from '@/lib/admin/actions';
 import {
-  fetchMentorAssignments, fetchMentorsList, fetchUsers,
+  fetchClientNames, fetchMentorAssignments, fetchMentorsList, fetchUsers,
   type MentorAssignment, type MentorInfo,
 } from '@/lib/admin/queries';
 import type { AdminUser } from '@/lib/admin/types';
@@ -53,6 +53,9 @@ export default function FocusDeskScreen() {
   const [assignments, setAssignments] = useState<MentorAssignment[]>([]);
   const [mentors, setMentors] = useState<MentorInfo[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  // Roster mínimo de un mentor restringido: solo {user_id, name} de SUS
+  // clientes (fetchUsers org-wide no le sirve — RLS se lo deja casi vacío).
+  const [mentorRoster, setMentorRoster] = useState<{ user_id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -76,9 +79,16 @@ export default function FocusDeskScreen() {
     if (assignRes.status === 'fulfilled') setAssignments(assignRes.value);
     if (mentorsRes.status === 'fulfilled') setMentors(mentorsRes.value);
     if (usersRes.status === 'fulfilled') setUsers(usersRes.value);
+    // Mentor restringido: nombres de sus clientes asignados. Sin esto, un
+    // cliente sin mentor_tasks salía como "Usuario" (o directamente no salía —
+    // ver el fix del universo en buildDesk).
+    if (isMentor && userId && assignRes.status === 'fulfilled') {
+      const myClientIds = assignRes.value.filter((a) => a.mentor_id === userId).map((a) => a.user_id);
+      setMentorRoster(await fetchClientNames(myClientIds));
+    }
     setLoading(false);
     setRefreshing(false);
-  }, [isMentor]);
+  }, [isMentor, userId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -86,11 +96,19 @@ export default function FocusDeskScreen() {
 
   const desk = useMemo(() => buildDesk({
     rows,
-    roster: users.map((u) => ({ user_id: u.id, name: u.name, is_admin: !!u.is_admin })),
+    roster: isMentor
+      ? mentorRoster.map((r) => ({ user_id: r.user_id, name: r.name, is_admin: false }))
+      : users.map((u) => ({ user_id: u.id, name: u.name, is_admin: !!u.is_admin })),
     assignments: assignments.map((a) => ({ user_id: a.user_id, mentor_id: a.mentor_id })),
-    mentors: mentors.map((m) => ({ id: m.id, name: m.name })),
+    // Para un mentor, ÉL es la única entrada que buildDesk necesita en
+    // `mentors`: antes se pasaba [] y deskLogic anulaba TODA asignación cuyo
+    // mentor no estuviera en la lista → `mine` siempre vacío → "Aún no tienes
+    // clientes asignados" aunque los tuviera. Ese era el bug entero.
+    mentors: isMentor && userId
+      ? [{ id: userId, name: 'Yo' }]
+      : mentors.map((m) => ({ id: m.id, name: m.name })),
     myId: userId ?? '',
-  }), [rows, users, assignments, mentors, userId]);
+  }), [rows, users, mentorRoster, assignments, mentors, userId, isMentor]);
 
   const openAssign = (client: DeskClient) => {
     setAssignError(null);
