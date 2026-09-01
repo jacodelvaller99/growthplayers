@@ -748,7 +748,7 @@ async function connectOura(userId: string, code: string): Promise<void> {
   // Antes era el shorthand `user_id,` — pero el parámetro se llama `userId` y
   // no existe ningún `user_id` en este ámbito, así que esto lanzaba
   // ReferenceError SIEMPRE: el connect de Oura nunca llegó a guardar nada.
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'oura',
     access_token:     data.access_token,
@@ -758,6 +758,10 @@ async function connectOura(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            data.scope ? data.scope.split(' ') : null,
   }, { onConflict: 'user_id,provider' });
+  // Sin este check, un upsert rechazado (constraint, RLS, columna faltante)
+  // dejaba responder {ok:true} con CERO fila guardada — la UI mentía "conectado".
+  // El mismo bug de fondo que el ReferenceError de arriba, forma nueva.
+  if (upsertErr) throw new Error(`Oura connection save failed: ${upsertErr.message}`);
 }
 
 async function connectWhoop(userId: string, code: string): Promise<void> {
@@ -783,7 +787,7 @@ async function connectWhoop(userId: string, code: string): Promise<void> {
     : null;
 
   // Mismo bug que en connectOura: `user_id` no existía en este ámbito.
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'whoop',
     access_token:     data.access_token,
@@ -793,6 +797,7 @@ async function connectWhoop(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            data.scope ? data.scope.split(' ') : null,
   }, { onConflict: 'user_id,provider' });
+  if (upsertErr) throw new Error(`WHOOP connection save failed: ${upsertErr.message}`);
 }
 
 async function connectPolar(userId: string, code: string): Promise<void> {
@@ -819,7 +824,7 @@ async function connectPolar(userId: string, code: string): Promise<void> {
     ? new Date(Date.now() + data.expires_in * 1000).toISOString()
     : null;
 
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'polar',
     access_token:     data.access_token,
@@ -829,6 +834,7 @@ async function connectPolar(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            data.scope ? data.scope.split(' ') : null,
   }, { onConflict: 'user_id,provider' });
+  if (upsertErr) throw new Error(`Polar connection save failed: ${upsertErr.message}`);
 
   // El id numérico de Polar (x_user_id) es lo único que acepta el DELETE de
   // deregistro de AccessLink — se guarda para poder desconectar de verdad.
@@ -880,7 +886,7 @@ async function connectStrava(userId: string, code: string): Promise<void> {
     ? new Date(data.expires_at * 1000).toISOString()
     : null;
 
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'strava',
     access_token:     data.access_token,
@@ -890,6 +896,7 @@ async function connectStrava(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            null, // Strava no devuelve el scope concedido en el token exchange.
   }, { onConflict: 'user_id,provider' });
+  if (upsertErr) throw new Error(`Strava connection save failed: ${upsertErr.message}`);
 }
 
 // ─── Desconexión real (revocación + purga) ────────────────────────────────────
@@ -910,8 +917,10 @@ async function revokeUpstream(conn: WearableConnection & { provider_user_id?: st
         break;
       }
       case 'whoop': {
-        // WHOOP: DELETE /developer/v1/user/access revoca el acceso OAuth del usuario.
-        const res = await fetch('https://api.prod.whoop.com/developer/v1/user/access', {
+        // v2 — igual que fetchWhoop más abajo: v1 fue dada de baja el 1-oct-2025,
+        // así que un DELETE a /developer/v1/ aquí habría fallado siempre en
+        // silencio (best-effort) sin revocar nada upstream de verdad.
+        const res = await fetch('https://api.prod.whoop.com/developer/v2/user/access', {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${conn.access_token}` },
         });
