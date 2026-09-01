@@ -46,8 +46,9 @@ jest.mock('@/lib/wearables', () => ({
   isAggregatorProvider: (p: string) => p === 'aggregator',
   triggerWearableSync: jest.fn(),
   useWearableConnections: () => ({
-    connections: [], loading: false, isConnected: () => false, getConnection: () => null, reload: jest.fn(),
+    connections: [], staleConnections: [], loading: false, isConnected: () => false, getConnection: () => null, reload: jest.fn(),
   }),
+  disconnectWearable: jest.fn(),
   useWearableDaily: () => ({ today: null }),
   recoveryLabel: () => 'Óptimo',
 }));

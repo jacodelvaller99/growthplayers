@@ -220,6 +220,7 @@ export async function disconnectWearable(
 // ─── Hook: wearable connections ───────────────────────────────────────────────
 export function useWearableConnections() {
   const [connections, setConnections] = useState<WearableConnection[]>([]);
+  const [staleConnections, setStaleConnections] = useState<{ provider: WearableProvider; last_error: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -236,6 +237,17 @@ export function useWearableConnections() {
     } else {
       setConnections((data ?? []) as WearableConnection[]);
     }
+
+    // Conexiones matadas por el circuit breaker (token revocado / 5 fallos):
+    // query aparte y tolerante — si la migración que añade last_error no está
+    // aplicada, la columna no existe y esto degrada a [] sin romper el hook.
+    const { data: stale, error: staleErr } = await supa
+      .from('wearable_connections')
+      .select('provider, last_error')
+      .eq('is_active', false)
+      .not('last_error', 'is', null);
+    setStaleConnections(staleErr ? [] : ((stale ?? []) as { provider: WearableProvider; last_error: string }[]));
+
     setLoading(false);
   }, []);
 
@@ -247,7 +259,7 @@ export function useWearableConnections() {
   const getConnection = (provider: WearableProvider) =>
     connections.find(c => c.provider === provider);
 
-  return { connections, loading, error, isConnected, getConnection, reload: load };
+  return { connections, staleConnections, loading, error, isConnected, getConnection, reload: load };
 }
 
 // ─── Hook: wearable daily data ────────────────────────────────────────────────

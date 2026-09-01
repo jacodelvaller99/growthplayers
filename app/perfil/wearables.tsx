@@ -627,7 +627,7 @@ export default function WearablesScreen() {
   const insets  = useSafeAreaInsets();
   const params  = useLocalSearchParams<{ connected?: string; error?: string }>();
 
-  const { loading, isConnected, getConnection, reload } = useWearableConnections();
+  const { loading, isConnected, getConnection, staleConnections, reload } = useWearableConnections();
   const [connecting, setConnecting] = useState<WearableProvider | null>(null);
   const [syncing,    setSyncing]    = useState<WearableProvider | null>(null);
   const [banner, setBanner] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
@@ -988,13 +988,25 @@ export default function WearablesScreen() {
               />
             );
           }
+          // Conexión matada por el circuit breaker (token revocado / fallos
+          // seguidos): antes simplemente desaparecía sin explicación.
+          const stale = staleConnections.some(sc => sc.provider === p.id);
           return (
-            <DisconnectedCard
-              key={p.id}
-              provider={p}
-              onConnect={() => handleConnect(p.id)}
-              isConnecting={connecting === p.id}
-            />
+            <View key={p.id}>
+              {stale && (
+                <View style={styles.staleNotice}>
+                  <MaterialIcons name="link-off" size={14} color={palette.danger} />
+                  <Text style={styles.staleNoticeText}>
+                    CONEXIÓN CADUCADA — {PROVIDER_NAME[p.id]} dejó de autorizar el acceso. Vuelve a conectar.
+                  </Text>
+                </View>
+              )}
+              <DisconnectedCard
+                provider={p}
+                onConnect={() => handleConnect(p.id)}
+                isConnecting={connecting === p.id}
+              />
+            </View>
           );
         })
       )}
@@ -1156,6 +1168,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md,
   },
   privacyText: { ...typography.caption, color: palette.smoke, flex: 1, lineHeight: 18 },
+
+  // Aviso de conexión matada por el circuit breaker (token revocado upstream).
+  staleNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: alpha(palette.danger, '55'),
+    backgroundColor: alpha(palette.danger, '14'),
+  },
+  staleNoticeText: { ...typography.label, color: palette.danger, fontSize: 9, flex: 1 },
 
   // Selector de marca (Open Wearables self-host)
   owBackdrop: {

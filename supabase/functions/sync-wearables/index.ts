@@ -13,6 +13,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { adminSupabase, json, corsHeaders } from '../_shared/supabase.ts';
+import { classifySyncFailure, nextBreakerState } from '../_shared/connectionHealth.ts';
 
 // ─── Environment ──────────────────────────────────────────────────────────────
 const OURA_CLIENT_ID     = Deno.env.get('OURA_CLIENT_ID')!;
@@ -662,6 +663,17 @@ async function triggerIntelligence(userId: string): Promise<void> {
   }
 }
 
+// ─── Salud de la conexión (circuit breaker) ───────────────────────────────────
+/**
+ * Update tolerante: si la migración del circuit breaker aún no está aplicada
+ * (columnas last_error/consecutive_failures ausentes), el update falla y solo
+ * se loguea — el sync nunca debe romperse por telemetría de salud.
+ */
+async function tryUpdateConnHealth(connId: string, payload: Record<string, unknown>): Promise<void> {
+  const { error } = await adminSupabase.from('wearable_connections').update(payload).eq('id', connId);
+  if (error) console.warn('[sync-wearables] conn health no actualizado (¿migración pendiente?):', error.message);
+}
+
 // ─── Sync single user ─────────────────────────────────────────────────────────
 async function syncUser(userId: string, providerFilter?: string): Promise<void> {
   const query = adminSupabase
@@ -678,7 +690,7 @@ async function syncUser(userId: string, providerFilter?: string): Promise<void> 
     return;
   }
 
-  for (const conn of connections as WearableConnection[]) {
+  for (const conn of connections as (WearableConnection & { consecutive_failures?: number })[]) {
     try {
       if (conn.provider === 'oura') {
         await syncOura(userId, conn);
@@ -688,9 +700,22 @@ async function syncUser(userId: string, providerFilter?: string): Promise<void> 
         await syncPolar(userId, conn);
       } else if (conn.provider === 'strava') {
         await syncStrava(userId, conn);
+      } else {
+        continue;
+      }
+      // Éxito → resetear el circuit breaker (tolerante: pre-migración la
+      // columna no existe y el update falla — se ignora).
+      if ((conn.consecutive_failures ?? 0) > 0) {
+        await tryUpdateConnHealth(conn.id, { consecutive_failures: 0, last_error: null });
       }
     } catch (e) {
-      console.error(`[sync-wearables] Error syncing ${conn.provider} for ${userId}:`, e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[sync-wearables] Error syncing ${conn.provider} for ${userId}:`, msg);
+      // Circuit breaker: token revocado (invalid_grant/400/401 en refresh) →
+      // conexión muerta YA; fallo transitorio → contador, muere a las 5.
+      // Sin esto el cron de 2h reintentaba tokens revocados para siempre.
+      const next = nextBreakerState(conn.consecutive_failures ?? 0, classifySyncFailure(msg));
+      await tryUpdateConnHealth(conn.id, { ...next, last_error: msg.slice(0, 300) });
     }
   }
 
