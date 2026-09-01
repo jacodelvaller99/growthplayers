@@ -309,7 +309,10 @@ function aggregateHCSleep(records: HCSleepRecord[]): SleepAgg {
 }
 
 // ─── Sync N days → wearable_daily + wearable_connections ─────────────────────
-export async function syncRange(days = 7): Promise<NativeResult<{ provider: NativeProvider; daysWritten: number }>> {
+export async function syncRange(
+  days = 7,
+  opts: { activate?: boolean } = {},
+): Promise<NativeResult<{ provider: NativeProvider; daysWritten: number }>> {
   if (Platform.OS === 'web') return { ok: false, reason: 'web_unsupported' };
   const provider = nativeProviderForPlatform();
   if (!provider) return { ok: false, reason: 'web_unsupported' };
@@ -329,13 +332,69 @@ export async function syncRange(days = 7): Promise<NativeResult<{ provider: Nati
     await supa.from('wearable_daily').upsert(rows, { onConflict: 'user_id,provider,date' });
   }
 
-  // Marca conexión activa + last_synced_at (upsert por user+provider).
-  await supa.from('wearable_connections').upsert(
-    { user_id: userId, provider, is_active: true, connected_at: new Date().toISOString(), last_synced_at: new Date().toISOString() },
-    { onConflict: 'user_id,provider' },
-  );
+  // Antes CADA sync hacía upsert con is_active:true — sincronizar después de
+  // desconectar revertía la desconexión en silencio. Ahora solo el flujo de
+  // connect explícito pasa {activate:true}; el botón "SINCRONIZAR AHORA" solo
+  // refresca last_synced_at (y crea la fila si no existe, primera vez).
+  const now = new Date().toISOString();
+  if (opts.activate) {
+    await supa.from('wearable_connections').upsert(
+      { user_id: userId, provider, is_active: true, connected_at: now, last_synced_at: now },
+      { onConflict: 'user_id,provider' },
+    );
+  } else {
+    const { data: existing } = await supa
+      .from('wearable_connections')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider', provider)
+      .maybeSingle();
+    if (existing) {
+      await supa.from('wearable_connections').update({ last_synced_at: now }).eq('id', existing.id);
+    } else {
+      await supa.from('wearable_connections').upsert(
+        { user_id: userId, provider, is_active: true, connected_at: now, last_synced_at: now },
+        { onConflict: 'user_id,provider' },
+      );
+    }
+  }
 
   return { ok: true, value: { provider, daysWritten: rows.length } };
+}
+
+// ─── Desconexión nativa ───────────────────────────────────────────────────────
+/**
+ * Desconecta el camino nativo de verdad: borra la conexión y purga los datos
+ * sincronizados de ese proveedor (RLS owner cubre — no hay tokens server-side).
+ * En Android además revoca los permisos de Health Connect programáticamente;
+ * en iOS eso es imposible por diseño de Apple (HealthKit no expone revocación)
+ * — el caller debe seguir mostrando la redirección a Ajustes.
+ */
+export async function disconnectNative(): Promise<NativeResult<{ provider: NativeProvider }>> {
+  if (Platform.OS === 'web') return { ok: false, reason: 'web_unsupported' };
+  const provider = nativeProviderForPlatform();
+  if (!provider) return { ok: false, reason: 'web_unsupported' };
+
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+  if (!userId) return { ok: false, reason: 'no_user' };
+
+  if (provider === 'health_connect') {
+    try {
+      const hc = await import('react-native-health-connect');
+      await hc.revokeAllPermissions();
+    } catch (e) {
+      // Revocación best-effort: sin el módulo (Expo Go) o si HC falla, el
+      // purgado local sigue — el usuario puede revocar en Ajustes del sistema.
+      console.warn('[wearablesNative] revokeAllPermissions falló:', e);
+    }
+  }
+
+  await supa.from('wearable_timeseries').delete().eq('user_id', userId).eq('provider', provider);
+  await supa.from('wearable_daily').delete().eq('user_id', userId).eq('provider', provider);
+  await supa.from('wearable_connections').delete().eq('user_id', userId).eq('provider', provider);
+
+  return { ok: true, value: { provider } };
 }
 
 // ─── Util ────────────────────────────────────────────────────────────────────

@@ -481,6 +481,52 @@ Deno.serve(async (req: Request) => {
         : await generateWidgetSession(user.id);
       return 'error' in result ? json(result, 502) : json({ ok: true, url: result.url });
     }
+
+    // ── Desconexión iniciada por el usuario ──────────────────────────────────
+    // Sin esto, "desconectar" en la app dejaba a Terra/OW registrados y
+    // empujando webhooks para siempre (caían como user_not_resolved).
+    // Deregistro upstream best-effort + purga local garantizada.
+    if (body.action === 'disconnect') {
+      const { data: conn } = await adminSupabase
+        .from('wearable_connections')
+        .select('id, aggregator_user_id')
+        .eq('user_id', user.id)
+        .eq('provider', 'aggregator')
+        .maybeSingle();
+      if (!conn) return json({ ok: false, error: 'Connection not found' }, 400);
+
+      try {
+        if (AGGREGATOR_VENDOR === 'open_wearables') {
+          if (OW_BASE_URL && body.provider) {
+            const res = await fetch(
+              `${OW_BASE_URL}/api/v1/users/${encodeURIComponent(user.id)}/connections/${encodeURIComponent(body.provider)}`,
+              { method: 'DELETE', headers: { Authorization: `Bearer ${OW_API_KEY}` } },
+            );
+            if (!res.ok && res.status !== 404) {
+              console.error(`[wearable-aggregator] OW disconnect failed: ${res.status}`);
+            }
+          }
+        } else if (conn.aggregator_user_id) {
+          const res = await fetch(
+            `https://api.tryterra.co/v2/auth/deauthenticateUser?user_id=${encodeURIComponent(conn.aggregator_user_id)}`,
+            { method: 'DELETE', headers: { 'dev-id': TERRA_DEV_ID, 'x-api-key': TERRA_API_KEY } },
+          );
+          if (!res.ok && res.status !== 404) {
+            console.error(`[wearable-aggregator] Terra deauth failed: ${res.status}`);
+          }
+        }
+      } catch (e) {
+        // Best-effort: el agregador puede estar caído; el purgado local no espera.
+        console.error('[wearable-aggregator] deregistro upstream falló:', e);
+      }
+
+      await adminSupabase.from('wearable_timeseries').delete().eq('user_id', user.id).eq('provider', 'aggregator');
+      await adminSupabase.from('wearable_daily').delete().eq('user_id', user.id).eq('provider', 'aggregator');
+      const { error: delErr } = await adminSupabase.from('wearable_connections').delete().eq('id', conn.id);
+      if (delErr) return json({ ok: false, error: delErr.message }, 400);
+      return json({ ok: true });
+    }
+
     return json({ error: 'Missing action' }, 400);
   }
 
@@ -526,10 +572,18 @@ Deno.serve(async (req: Request) => {
 
   if (type === 'deauth') {
     if (aggregatorUserId) {
+      // Filtrado por provider: aggregator_user_id solo existe en filas del
+      // agregador, pero el filtro explícito evita tocar otra cosa por accidente.
       await adminSupabase.from('wearable_connections')
         .update({ is_active: false })
-        .eq('aggregator_user_id', aggregatorUserId);
+        .eq('aggregator_user_id', aggregatorUserId)
+        .eq('provider', 'aggregator');
     }
+    // Registrar el evento (auditoría + dedup), igual que los eventos auth/datos.
+    await adminSupabase.from('wearable_webhook_events').upsert(
+      { event_id: eventId, event_type: 'deauth', aggregator_user_id: aggregatorUserId, user_id: referenceId, payload, processed: true },
+      { onConflict: 'event_id', ignoreDuplicates: true },
+    );
     return json({ ok: true });
   }
 
