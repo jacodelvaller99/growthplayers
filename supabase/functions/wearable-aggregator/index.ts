@@ -30,8 +30,10 @@ const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const APP_URL              = Deno.env.get('EXPO_PUBLIC_APP_URL') ?? 'https://growthplayers.vercel.app';
 
-// Vendor del agregador. Default 'terra'. Para self-host OSS: 'open_wearables'.
-const AGGREGATOR_VENDOR    = (Deno.env.get('AGGREGATOR_VENDOR') ?? 'terra').toLowerCase();
+// Vendor del agregador. Default 'open_wearables' (self-host OSS, $0/usuario —
+// decisión del dueño 2026-09-01: "nada de Terra"). 'terra' sigue soportado si
+// se fija explícitamente el secret, pero ya no es el default.
+const AGGREGATOR_VENDOR    = (Deno.env.get('AGGREGATOR_VENDOR') ?? 'open_wearables').toLowerCase();
 // Open Wearables (OSS self-host) — instancia propia del dueño.
 const OW_BASE_URL          = (Deno.env.get('OPEN_WEARABLES_BASE_URL') ?? '').replace(/\/+$/, '');
 const OW_API_KEY           = Deno.env.get('OPEN_WEARABLES_API_KEY') ?? '';
