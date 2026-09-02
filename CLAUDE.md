@@ -38,8 +38,8 @@ npx expo export --platform web        # Outputs to dist/
 # vercel.json: buildCommand = "npx expo export --platform web"
 
 # Native builds (EAS)
-# ⚠ BLOQUEADO: app.json extra.eas.projectId es placeholder (00000000-…) —
-#   correr `eas init` con la cuenta del proyecto antes de cualquier build nativo.
+# eas init ya se corrió (2026-08-11, commit f55aa45) — projectId real vinculado
+# a la cuenta polaris-growth-institute. Build nativo desbloqueado.
 eas build --profile preview --platform ios
 eas build --profile production --platform all
 
@@ -326,7 +326,7 @@ como supersedidos porque daban por abiertos problemas ya cerrados.
 Cobertura cross-marca vía **tres** caminos:
 
 - **OAuth web** (`lib/wearables.ts` + `sync-wearables` edge function): WHOOP + Oura. Funciona en PWA y nativo. Callbacks en `app/oauth/{whoop,oura}/callback`. Migración `polaris://oauth/<provider>/callback` registrada en `app.json`.
-- **Nativo on-device** (`lib/wearablesNative.ts`): **Apple HealthKit** (iOS, `react-native-health`) y **Android Health Connect** (`react-native-health-connect`) — agregadores oficiales del SO. Cubren **Apple Watch, Garmin, Polar, Coros, Suunto, Withings, Fitbit, Samsung Galaxy Watch, Wear OS, WHOOP, Oura** y cualquier otro reloj que escriba a ellos. Solo funciona en builds nativos (no Expo Go ni PWA): requiere `eas init` + `eas build --profile preview --platform all`. Lee on-device → upsert directo a `wearable_daily` con `provider='apple_health'|'health_connect'` (sin tokens server-side; RLS owner cubre). Permisos declarados en `app.json` (`NSHealthShareUsageDescription` + `android.permission.health.READ_*`). Migración `20260618000000_wearables_native_providers.sql` extiende el CHECK constraint de `wearable_{daily,timeseries,connections}.provider`.
+- **Nativo on-device** (`lib/wearablesNative.ts`): **Apple HealthKit** (iOS, `react-native-health`) y **Android Health Connect** (`react-native-health-connect`) — agregadores oficiales del SO. Cubren **Apple Watch, Garmin, Polar, Coros, Suunto, Withings, Fitbit, Samsung Galaxy Watch, Wear OS, WHOOP, Oura** y cualquier otro reloj que escriba a ellos. Solo funciona en builds nativos (no Expo Go ni PWA): requiere `eas build --profile preview --platform all` (`eas init` ya corrido, ver "Native builds" arriba). Lee on-device → upsert directo a `wearable_daily` con `provider='apple_health'|'health_connect'` (sin tokens server-side; RLS owner cubre). Permisos declarados en `app.json` (`NSHealthShareUsageDescription` + `android.permission.health.READ_*`). Migración `20260618000000_wearables_native_providers.sql` extiende el CHECK constraint de `wearable_{daily,timeseries,connections}.provider`.
 
 **Ciclo de desconexión + circuit breaker (2026-08-31):** desconectar ya es REAL, no un `is_active=false` cosmético — `action:'disconnect'` en `sync-wearables` revoca el token en el proveedor (Oura/WHOOP/Strava; Polar vía `provider_user_id` guardado en connect), borra la fila (tokens fuera de la BD) y purga `wearable_daily`/`timeseries` del provider; `wearable-aggregator` deregistra en Terra (`deauthenticateUser`)/Open Wearables; nativo (`disconnectNative`) revoca permisos de Health Connect en Android (en iOS es imposible por diseño de Apple — se guía a Ajustes) y purga vía RLS owner. **Circuit breaker** (migración `20260831000000`, lógica pura testeada en `supabase/functions/_shared/connectionHealth.ts`): refresh con `invalid_grant`/400/401 mata la conexión de inmediato; 5 fallos transitorios seguidos también; éxito resetea. La UI muestra "CONEXIÓN CADUCADA" (`staleConnections` en `useWearableConnections`). `delete-account` revoca upstream antes del purge. **Descope deliberado — BLE directo** (Gadgetbridge/Huawei/Xiaomi/ble-plx): ingeniería inversa de protocolos propietarios + claves extraídas de apps oficiales = riesgo legal/ToS + rechazo de stores + mantenimiento por modelo; esas marcas ya las cubren Health Connect y el agregador. Cero código BLE, a propósito.
 
