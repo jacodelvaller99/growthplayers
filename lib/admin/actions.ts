@@ -862,3 +862,18 @@ export async function recalculateAllMLAction(adminId: string): Promise<{ success
   await auditLog(adminId, 'recalculate_all_ml', 'user', 'all', {});
   return { success: true };
 }
+
+/**
+ * Dispara sync-wearables para TODAS las conexiones activas (todos los
+ * usuarios). El edge function ahora acepta batch:'all' de un admin
+ * autenticado además de service_role (antes solo aceptaba service_role,
+ * así que un botón admin invocándolo con el JWT normal siempre daba 401).
+ */
+export async function syncAllWearablesAction(adminId: string): Promise<{ success: boolean; processed?: number; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('sync-wearables', {
+    body: { batch: 'all' },
+  });
+  if (error) return { success: false, error: error.message };
+  await auditLog(adminId, 'sync_all_wearables', 'user', 'all', { processed: data?.processed });
+  return { success: true, processed: data?.processed };
+}

@@ -14,6 +14,9 @@ import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { palette, spacing, typography } from '@/constants/theme';
 import { fetchBiometricDashboard, type BiometricDashboardRow } from '@/lib/biometric';
 import type { InterventionLevel, RecoveryState, TrendState } from '@/lib/biometricLogic';
+import { syncAllWearablesAction } from '@/lib/admin/actions';
+import { showAlert } from '@/lib/confirm';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 const LEVEL_META: Record<InterventionLevel, { label: string; color: string }> = {
   urgent: { label: 'URGENTE', color: palette.danger },
@@ -109,8 +112,10 @@ export default function AdminBiometriaScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { userId: adminId } = useLifeFlow();
   const [rows, setRows] = useState<BiometricDashboardRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(async () => {
     setRows(await fetchBiometricDashboard());
@@ -119,6 +124,19 @@ export default function AdminBiometriaScreen() {
   useEffect(() => { load(); }, [load]);
 
   const go = (id: string) => router.push(`/admin/usuarios/${id}` as never);
+
+  const syncAll = async () => {
+    if (!adminId || syncing) return;
+    setSyncing(true);
+    const result = await syncAllWearablesAction(adminId);
+    setSyncing(false);
+    if (result.success) {
+      showAlert('Sincronización disparada', `${result.processed ?? 0} usuario(s) con conexión activa. Los datos nuevos tardan unos segundos en aparecer.`);
+      load();
+    } else {
+      showAlert('Error', result.error ?? 'No se pudo sincronizar');
+    }
+  };
 
   const rank: Record<InterventionLevel, number> = { urgent: 3, high: 2, medium: 1, low: 0 };
   const needAttention = rows.filter((r) => (rank[r.intervention_level] ?? 0) >= 2);
@@ -139,6 +157,20 @@ export default function AdminBiometriaScreen() {
         <View style={{ width: 36 }} />
       </View>
       <Text style={s.intro}>Estado fisiológico del equipo: a quién darle descanso, quién está en caída, quién está sólido.</Text>
+
+      <Pressable
+        onPress={syncAll}
+        disabled={syncing}
+        style={[s.syncBtn, syncing && s.syncBtnDisabled]}
+        accessibilityRole="button"
+        accessibilityLabel="Sincronizar wearables de todos los usuarios ahora">
+        {syncing ? <ActivityIndicator color={palette.ink} size="small" /> : (
+          <>
+            <MaterialIcons name="sync" size={15} color={palette.ink} />
+            <Text style={s.syncBtnText}>SINCRONIZAR TODOS LOS WEARABLES AHORA</Text>
+          </>
+        )}
+      </Pressable>
 
       {loading ? (
         <ActivityIndicator color={palette.goldText} style={{ marginTop: spacing.xxxl }} />
@@ -180,6 +212,12 @@ const s = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18 },
   intro: { ...typography.body, color: palette.ash, marginBottom: spacing.lg },
+  syncBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    backgroundColor: palette.gold, borderRadius: 10, minHeight: 44, marginBottom: spacing.lg,
+  },
+  syncBtnDisabled: { opacity: 0.6 },
+  syncBtnText: { ...typography.label, color: palette.ink, fontSize: 11, letterSpacing: 0.8 },
   card: { gap: 2, marginBottom: spacing.md },
   empty: { ...typography.caption, color: palette.smoke, fontSize: 12, fontStyle: 'italic' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.line },
