@@ -498,7 +498,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: Fonts.display, fontSize: 14, color: palette.goldText },
+  avatarText: { fontFamily: Fonts.display, fontWeight: '800', fontSize: 14, color: palette.goldText },
   rowMain: { flex: 1 },
   rowName: { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   rowMeta: { ...typography.caption, color: palette.smoke, marginTop: 2 },

@@ -6,7 +6,7 @@
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { PremiumCard } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -184,9 +184,16 @@ export function InterventionQueueCard({ items, title = 'INTERVENCIÓN' }: { item
 }
 
 // ─── NextMentorshipAgendaCard (mentor prep) ───────────────────────────────────────
-export function NextMentorshipAgendaCard({ prep }: { prep: MentorPrep | null }) {
+export function NextMentorshipAgendaCard({
+  prep,
+  style,
+}: {
+  prep: MentorPrep | null;
+  /** Para embeber sin chrome propio (ej. dentro de otra tarjeta que ya lo da) — el dossier no lo pasa, comportamiento sin cambios ahí. */
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
-    <PremiumCard style={[s.card, { borderColor: palette.lineGold }]}>
+    <PremiumCard style={[s.card, { borderColor: palette.lineGold }, style]}>
       <L>AGENDA PRÓXIMA MENTORÍA</L>
       {!prep ? (
         <Empty label="Se genera con tareas y memoria del cliente." />

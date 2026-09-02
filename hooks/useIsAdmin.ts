@@ -1,16 +1,22 @@
 /**
- * useIsAdmin — flag de administrador robusto y cacheado.
+ * useStaffRole / useIsAdmin — flags de staff robustos y cacheados.
  *
- * Lee `profiles.is_admin` (nunca hardcoded). Antes este chequeo vivía inline en
- * varias pantallas con `.single()` y SIN manejo de error: un hiccup de red o una
- * carrera dejaba el flag en `false` esa sesión, y el botón "Cuadro de Mando"
- * (app/(tabs)/progreso.tsx) aparecía/desaparecía de forma intermitente.
+ * Lee `profiles.is_admin` + `profiles.is_mentor` (nunca hardcoded). Antes este
+ * chequeo vivía inline en varias pantallas con `.single()` y SIN manejo de
+ * error: un hiccup de red o una carrera dejaba el flag en `false` esa sesión,
+ * y el botón "Cuadro de Mando" (app/(tabs)/progreso.tsx) aparecía/desaparecía
+ * de forma intermitente.
  *
- * Aquí se cierra esa fragilidad:
+ * `is_mentor` se sumó después (audit Espacio del Mentor): un mentor puro
+ * (is_mentor=true, is_admin=false) no tenía NINGÚN botón hacia su Escritorio —
+ * los dos accesos a /admin en progreso.tsx estaban gateados solo por isAdmin,
+ * así que solo llegaba escribiendo la URL a mano.
+ *
+ * Robustez:
  *  - `.maybeSingle()` no lanza si hay 0 filas (a diferencia de `.single()`).
  *  - Ante error, CONSERVA el último valor conocido (no degrada a `false`) y lo
  *    registra vía logSilentError — un fallo transitorio nunca oculta el botón a
- *    un admin confirmado.
+ *    un staff confirmado.
  *  - Cache por `userId` a nivel de módulo: los remounts no parpadean a `false`
  *    mientras la query vuela.
  *
@@ -23,26 +29,32 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { intel } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
 
-const adminCache = new Map<string, boolean>();
+export interface StaffRole {
+  isAdmin: boolean;
+  isMentor: boolean;
+}
 
-export function useIsAdmin(): boolean {
+const NO_ROLE: StaffRole = { isAdmin: false, isMentor: false };
+const staffCache = new Map<string, StaffRole>();
+
+export function useStaffRole(): StaffRole {
   const { userId } = useLifeFlow();
-  const [isAdmin, setIsAdmin] = useState<boolean>(
-    () => (userId ? adminCache.get(userId) ?? false : false),
+  const [role, setRole] = useState<StaffRole>(
+    () => (userId ? staffCache.get(userId) ?? NO_ROLE : NO_ROLE),
   );
 
   useEffect(() => {
     if (!userId) {
-      setIsAdmin(false);
+      setRole(NO_ROLE);
       return;
     }
     // Siembra inmediata desde cache (evita parpadeo en remount).
-    const cached = adminCache.get(userId);
-    if (cached !== undefined) setIsAdmin(cached);
+    const cached = staffCache.get(userId);
+    if (cached !== undefined) setRole(cached);
 
     let cancelled = false;
     intel.profiles()
-      .select('is_admin')
+      .select('is_admin, is_mentor')
       .eq('id', userId)
       .maybeSingle()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,12 +63,15 @@ export function useIsAdmin(): boolean {
         if (error) {
           // Conserva el valor previo (cache/estado). No degradar a false por un
           // fallo transitorio — esa era justo la causa del botón intermitente.
-          logSilentError('useIsAdmin', error);
+          logSilentError('useStaffRole', error);
           return;
         }
-        const admin = data?.is_admin === true;
-        adminCache.set(userId, admin);
-        setIsAdmin(admin);
+        const next: StaffRole = {
+          isAdmin: data?.is_admin === true,
+          isMentor: data?.is_mentor === true,
+        };
+        staffCache.set(userId, next);
+        setRole(next);
       });
 
     return () => {
@@ -64,5 +79,10 @@ export function useIsAdmin(): boolean {
     };
   }, [userId]);
 
-  return isAdmin;
+  return role;
+}
+
+/** Wrapper de compatibilidad — los llamadores existentes no cambian. */
+export function useIsAdmin(): boolean {
+  return useStaffRole().isAdmin;
 }

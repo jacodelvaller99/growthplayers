@@ -24,10 +24,10 @@ import * as Haptics from 'expo-haptics';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, { useAnimatedProps, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { alpha } from '@/constants/themeColors';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { animation, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 // ─── 1 · Héroe ────────────────────────────────────────────────────────────────
@@ -243,9 +243,12 @@ export function Dial({
 
   const progress = useSharedValue(0);
   useEffect(() => {
+    // Spring en vez de timing: el dial es un valor "vivo" que reacciona a
+    // datos, no un reveal de carga one-shot (audit "Fluidez Polaris" §Fase 3).
+    // Damping alto — sin overshoot, no viene de un gesto con momentum.
     progress.value = reducedMotion
       ? target
-      : withTiming(target, { duration: 700, easing: Easing.bezier(0.23, 1, 0.32, 1) });
+      : withSpring(target, animation.spring.critical);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, reducedMotion]);
 

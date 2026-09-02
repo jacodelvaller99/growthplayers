@@ -10,6 +10,7 @@
  * Todo degrada en silencio: si la IA o la BD fallan, no rompe el flujo del usuario.
  * Throttle: el llamador decide CUÁNDO (al cerrar sesión), no por mensaje.
  */
+import { ENV } from '@/app/config/env';
 import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
 import {
   extractSection,
@@ -194,6 +195,13 @@ export async function generateAdminBriefing(
   opts?: { ctx?: MentorContext; userName?: string },
 ): Promise<AdminBriefing | null> {
   if (!userId) return null;
+  // Sin ai-proxy, streamMentorResponse cae a streamDevSimulation — texto libre
+  // en voz de Norman AL CLIENTE, sin estructura. Antes eso pasaba por
+  // extractSection, no encontraba nada, y `hasStructure` era false → el texto
+  // simulado se guardaba igual como `summary` (líneas 233-244 más abajo): un
+  // briefing real en la BD, lleno de basura. Cortar acá, antes de llamar al
+  // modelo, para no persistir jamás una simulación como si fuera briefing.
+  if (!ENV.aiProxyUrl) return null;
   try {
     const [profile, summaries, confrontations] = await Promise.all([
       fetchMemoryProfile(userId),

@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   scoreNum: {
-    fontFamily: Fonts.display,
+    ...typography.numeric,
     fontSize: 56,
     fontWeight: '900',
     letterSpacing: -1.5,

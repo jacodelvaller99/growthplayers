@@ -61,13 +61,15 @@ export const ENV = {
   socialSpacesEnabled: ((process.env.EXPO_PUBLIC_SOCIAL_SPACES_ENABLED ?? 'true').toLowerCase() === 'true') as boolean,
 
   /**
-   * Vendor del agregador universal de wearables: 'terra' (default, comercial,
-   * widget multi-marca hosteado) o 'open_wearables' (OSS self-host). En modo
-   * open_wearables la conexión es OAuth POR MARCA, así que la UI ofrece un
-   * selector de proveedor. Las claves del vendor (API key / signing secret) son
-   * secrets server-side de la edge function `wearable-aggregator` — NUNCA aquí.
+   * Vendor del agregador universal de wearables: 'open_wearables' (default,
+   * OSS self-host, $0/usuario) o 'terra' (comercial, widget multi-marca
+   * hosteado — requiere cuenta/BAA, deliberadamente NO es el default: decisión
+   * explícita del dueño 2026-09-01, "nada de Terra"). En modo open_wearables la
+   * conexión es OAuth POR MARCA, así que la UI ofrece un selector de proveedor.
+   * Las claves del vendor (API key / signing secret) son secrets server-side de
+   * la edge function `wearable-aggregator` — NUNCA aquí.
    */
-  aggregatorVendor: ((process.env.EXPO_PUBLIC_AGGREGATOR_VENDOR ?? 'terra').toLowerCase()) as
+  aggregatorVendor: ((process.env.EXPO_PUBLIC_AGGREGATOR_VENDOR ?? 'open_wearables').toLowerCase()) as
     | 'terra'
     | 'open_wearables',
 

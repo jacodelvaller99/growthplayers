@@ -24,10 +24,13 @@ import { grantCourseAccess, revokeCourseAccess } from '@/lib/admin/actions';
 import { fetchCourseAccess, searchUsers } from '@/lib/admin/queries';
 import { COURSE_LABELS, type AdminUser, type CourseId, type UserCourseAccess } from '@/lib/admin/types';
 
+// Growth Players y Polaris Bienestar salieron del catálogo — hoy el negocio
+// vende un solo curso. `CourseId`/`COURSE_LABELS` (lib/admin/types.ts) se
+// quedan con los 3 valores igual: un usuario con acceso otorgado a esos dos
+// en el pasado sigue necesitando resolver la etiqueta correcta en cualquier
+// pantalla que muestre su historial (ej. el dossier).
 const COURSES: { id: CourseId; modules: number; desc: string }[] = [
-  { id: 'polaris',           modules: 9,  desc: '9 módulos · 27+ lecciones' },
-  { id: 'growthplayers',     modules: 6,  desc: '6 módulos · 18+ lecciones' },
-  { id: 'lifeflow_bienestar',modules: 3,  desc: '3 módulos · bienestar integral' },
+  { id: 'polaris', modules: 9, desc: '9 módulos · 27+ lecciones' },
 ];
 
 function formatDate(iso: string) {

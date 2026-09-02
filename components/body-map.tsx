@@ -16,7 +16,9 @@
  * el fondo negro nunca se registra como parte del cuerpo.
  */
 import { useRef } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { BODY_FRONT_ASPECT, BodyFrontScan } from '@/components/body-front-scan';
@@ -42,27 +44,52 @@ export function BodyMap({
 }: BodyMapProps) {
   const canvasSize = useRef({ width: 0, height: 0 });
 
-  const handleBodyPress = (event: GestureResponderEvent) => {
+  // Manipulación directa (audit "Fluidez Polaris" §Fase 4, ítems 01/02/05):
+  // antes el toque solo se registraba al SOLTAR (onPress). Ahora el marcador
+  // sigue el dedo en vivo (markerX/Y, en el hilo de UI vía la worklet de
+  // Gesture.Pan — sin esto se sentía con retraso) y la colocación real
+  // (haptic + toggle) dispara en .onBegin, no al soltar: la respuesta es
+  // instantánea al tocar, no al levantar el dedo.
+  const markerX = useSharedValue(0);
+  const markerY = useSharedValue(0);
+  const markerOpacity = useSharedValue(0);
+
+  // JS thread — bodyPointAt/haptics/callback no son worklets, por eso viven
+  // acá y se llaman vía runOnJS desde el gesto (que corre en el hilo de UI).
+  const commitPoint = (x: number, y: number) => {
     const { width, height } = canvasSize.current;
     if (width <= 0 || height <= 0) return;
-    // React Native entrega locationX/Y dentro de nativeEvent. RN Web 0.21 los
-    // expone en el evento respondedor de nivel superior (ver
-    // createResponderEvent.js); soportamos ambos contratos.
-    const webEvent = event as unknown as { locationX?: number; locationY?: number };
-    const domNativeEvent = event.nativeEvent as unknown as { offsetX?: number; offsetY?: number };
-    const locationX = Number.isFinite(event.nativeEvent.locationX)
-      ? event.nativeEvent.locationX
-      : Number.isFinite(webEvent.locationX) ? webEvent.locationX : domNativeEvent.offsetX;
-    const locationY = Number.isFinite(event.nativeEvent.locationY)
-      ? event.nativeEvent.locationY
-      : Number.isFinite(webEvent.locationY) ? webEvent.locationY : domNativeEvent.offsetY;
-    if (!Number.isFinite(locationX) || !Number.isFinite(locationY)) return;
-    const point = bodyPointAt(locationX! / width, locationY! / height);
+    const point = bodyPointAt(x / width, y / height);
     if (!point) return;
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (onPointToggle) onPointToggle(point);
     else onToggle(point.zone);
   };
+
+  const pan = Gesture.Pan()
+    .onBegin((e) => {
+      markerX.value = e.x;
+      markerY.value = e.y;
+      markerOpacity.value = withTiming(1, { duration: 100 });
+      runOnJS(commitPoint)(e.x, e.y);
+    })
+    .onUpdate((e) => {
+      // Solo visual — un solo commit por gesto (arriba, en onBegin). Arrastrar
+      // no re-selecciona zona por zona; solo previsualiza dónde estás.
+      markerX.value = e.x;
+      markerY.value = e.y;
+    })
+    .onFinalize(() => {
+      markerOpacity.value = withTiming(0, { duration: 150 });
+    });
+
+  const markerStyle = useAnimatedStyle(() => ({
+    opacity: markerOpacity.value,
+    transform: [
+      { translateX: markerX.value - 14 },
+      { translateY: markerY.value - 14 },
+    ],
+  }));
 
   return (
     <View style={s.root}>
@@ -73,14 +100,17 @@ export function BodyMap({
           canvasSize.current = event.nativeEvent.layout;
         }}>
         <BodyFrontScan selected={selected} points={points} />
-        <Pressable
-          testID="body-touch-surface"
-          onPress={handleBodyPress}
-          accessibilityRole="button"
-          accessibilityLabel="Señalar un punto exacto del cuerpo"
-          accessibilityHint="Toca la parte de la figura donde lo sientes"
-          style={StyleSheet.absoluteFillObject}
-        />
+        <GestureDetector gesture={pan}>
+          <Animated.View
+            testID="body-touch-surface"
+            accessibilityRole="button"
+            accessibilityLabel="Señalar un punto exacto del cuerpo"
+            accessibilityHint="Toca la parte de la figura donde lo sientes"
+            style={StyleSheet.absoluteFillObject}
+          />
+        </GestureDetector>
+        {/* Marcador que sigue el dedo — puramente visual, no dispara commits. */}
+        <Animated.View pointerEvents="none" style={[s.liveMarker, markerStyle]} />
       </View>
 
       {/* Las etiquetas viven fuera de la silueta: dentro competirían con el
@@ -127,6 +157,19 @@ const s = StyleSheet.create({
     backgroundColor: '#000000',
     overflow: 'hidden',
     position: 'relative',
+  },
+  // 28×28, centrado por translate (-14) en markerStyle. Opacidad arranca en
+  // 0 (useSharedValue(0)) — invisible hasta el primer .onBegin.
+  liveMarker: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: palette.gold,
+    backgroundColor: 'transparent',
   },
   legend: {
     flexDirection: 'row',

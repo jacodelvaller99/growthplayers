@@ -26,6 +26,56 @@ Deno.serve(async (req: Request) => {
   const userId = userData.user.id;
 
   try {
+    // ── Step 0: Revocar tokens wearable ante los PROVEEDORES ─────────────────
+    // Antes los tokens simplemente desaparecían de la BD quedando VÁLIDOS en
+    // Oura/WHOOP/Strava/Polar/Terra. Best-effort (allSettled): un proveedor
+    // caído no puede bloquear el derecho de supresión — el purgado local de
+    // abajo corre igual. Bloque duplicado a conciencia de sync-wearables /
+    // wearable-aggregator: las edge functions no comparten módulos de negocio.
+    try {
+      // select('*') a propósito: provider_user_id llega con la migración del
+      // circuit breaker — una lista explícita rompería el select entero si la
+      // columna aún no existe, y con ella TODA la revocación.
+      const { data: conns } = await adminSupabase
+        .from('wearable_connections')
+        .select('*')
+        .eq('user_id', userId);
+      const TERRA_DEV_ID  = Deno.env.get('TERRA_DEV_ID') ?? '';
+      const TERRA_API_KEY = Deno.env.get('TERRA_API_KEY') ?? '';
+      await Promise.allSettled((conns ?? []).map((c: any) => {
+        switch (c.provider) {
+          case 'oura':
+            return fetch(`https://api.ouraring.com/oauth/revoke?access_token=${encodeURIComponent(c.access_token)}`, { method: 'POST' });
+          case 'whoop':
+            return fetch('https://api.prod.whoop.com/developer/v1/user/access', {
+              method: 'DELETE', headers: { Authorization: `Bearer ${c.access_token}` },
+            });
+          case 'strava':
+            return fetch('https://www.strava.com/oauth/deauthorize', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ access_token: c.access_token }),
+            });
+          case 'polar':
+            return c.provider_user_id
+              ? fetch(`https://www.polaraccesslink.com/v3/users/${c.provider_user_id}`, {
+                  method: 'DELETE', headers: { Authorization: `Bearer ${c.access_token}` },
+                })
+              : Promise.resolve();
+          case 'aggregator':
+            return c.aggregator_user_id && TERRA_DEV_ID
+              ? fetch(`https://api.tryterra.co/v2/auth/deauthenticateUser?user_id=${encodeURIComponent(c.aggregator_user_id)}`, {
+                  method: 'DELETE', headers: { 'dev-id': TERRA_DEV_ID, 'x-api-key': TERRA_API_KEY },
+                })
+              : Promise.resolve();
+          default:
+            return Promise.resolve();
+        }
+      }));
+    } catch (e) {
+      console.error('[delete-account] revocación upstream de wearables:', e);
+    }
+
     // ── Step 1: Delete all user data in parallel ─────────────────────────────
     // Borrado EXPLÍCITO de toda tabla con datos del usuario (derecho de supresión /
     // GDPR Art. 17). Aunque casi todas tienen ON DELETE CASCADE sobre auth.users,

@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     borderColor: palette.lineGold,
   },
   detailHeader: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
-  detailHz: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+  detailHz: { ...typography.numeric, color: palette.goldText, fontSize: 40, fontWeight: '800', letterSpacing: -1 },
   detailHzUnit: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11 },
   detailName: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 18, fontWeight: '800', letterSpacing: 0.5, marginLeft: 'auto' },
   detailDesc: { ...typography.body, color: palette.ivory, lineHeight: 22 },

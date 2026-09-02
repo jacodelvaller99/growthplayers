@@ -7,8 +7,7 @@ import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
-  Easing,
+  withSpring,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,7 +44,7 @@ import {
 } from '@/components/polaris';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
-import { Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
+import { animation, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
 import { selectTurno, type TurnoKind } from '@/lib/turnoLogic';
@@ -59,6 +58,7 @@ import { checkMilestone } from '@/lib/milestoneCheck';
 import { useJornada } from '@/hooks/use-jornada';
 import { JORNADA_LABEL } from '@/lib/jornadaLogic';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { stripMarkdownLite } from '@/lib/markdownLite';
@@ -107,13 +107,18 @@ function ScoreRing({
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
   const pct = empty ? 0 : Math.max(0, Math.min(1, value / max));
+  const reducedMotion = useReducedMotion();
 
   const progress = useSharedValue(0);
   useEffect(() => {
-    // Firma de barrido de la casa (igual que el Dial): 700ms, ease-out fuerte.
-    progress.value = withTiming(pct, { duration: 700, easing: Easing.bezier(0.23, 1, 0.32, 1) });
+    // Spring, no timing: es un score "vivo" que reacciona a datos (audit
+    // "Fluidez Polaris" §Fase 3). Damping alto — sin overshoot.
+    // Reduced motion: salta directo al valor final, sin el sweep.
+    progress.value = reducedMotion
+      ? pct
+      : withSpring(pct, animation.spring.critical);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pct]);
+  }, [pct, reducedMotion]);
 
   const dashProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - progress.value),
@@ -165,8 +170,8 @@ const ringStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   big: {
+    ...typography.numeric,
     color: palette.goldText,
-    fontFamily: Fonts.display,
     fontSize: 44,
     fontWeight: '800',
     lineHeight: 48,
@@ -334,15 +339,22 @@ export default function DashboardScreen() {
     : Math.round((state.wellnessSessions ?? []).reduce((acc, s) => acc + (s.durationSeconds ?? 0), 0) / 60);
   const wellnessStreak = wellnessUser.weeklyActivity.filter(Boolean).length;
 
-  // Engagement bar animated width
-  const engagementWidth = useSharedValue(0);
+  // Engagement bar — score "vivo" que reacciona a datos: spring, no timing
+  // (audit "Fluidez Polaris" §Fase 3). scaleX en vez de width (misma sección,
+  // §Fase 3 "10") — anima una property de transform, no de layout.
+  // Reduced motion: salta al valor final.
+  const reducedMotionEngagement = useReducedMotion();
+  const engagementScale = useSharedValue(0);
   useEffect(() => {
     if (intelligence.engagement_score > 0) {
-      engagementWidth.value = withTiming(intelligence.engagement_score, { duration: 1000 });
+      const target = intelligence.engagement_score / 100;
+      engagementScale.value = reducedMotionEngagement
+        ? target
+        : withSpring(target, animation.spring.critical);
     }
-  }, [intelligence.engagement_score]);
+  }, [intelligence.engagement_score, reducedMotionEngagement]);
   const engagementBarStyle = useAnimatedStyle(() => ({
-    width: `${engagementWidth.value}%` as unknown as number,
+    transform: [{ scaleX: engagementScale.value }],
   }));
 
   // Racha real = días consecutivos con check-in. Antes era
@@ -516,7 +528,9 @@ export default function DashboardScreen() {
   const engagementBlock = intelligence.engagement_score > 0 && (
     <View style={styles.engagementRow}>
       <Text style={styles.engagementLabel} numberOfLines={1}>ENGAGEMENT</Text>
-      <Animated.View style={[styles.engagementBar, engagementBarStyle]} />
+      <View style={styles.engagementBar}>
+        <Animated.View style={[styles.engagementFill, engagementBarStyle]} />
+      </View>
       <Text style={styles.engagementScore}>{intelligence.engagement_score}/100</Text>
     </View>
   );
@@ -1950,13 +1964,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.5,
   },
+  // Track fijo — la Fase 3 del audit (scaleX en vez de width) necesita un
+  // contenedor de tamaño constante para que el fill escale contra algo.
   engagementBar: {
-    backgroundColor: palette.gold,
-    borderRadius: 2,
     flex: 1,
     height: 4,
     maxWidth: '60%',
+    overflow: 'hidden',
+  },
+  engagementFill: {
+    backgroundColor: palette.gold,
+    borderRadius: 2,
+    width: '100%',
+    height: '100%',
     opacity: 0.6,
+    transformOrigin: 'left',
   },
   engagementScore: {
     ...typography.mono,

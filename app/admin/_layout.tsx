@@ -7,6 +7,7 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { BlurView } from 'expo-blur';
 import { Slot, useRouter, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -21,7 +22,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, spacing, typography, radii, Fonts } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
+import { PressableScale } from '@/components/polaris';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { AdminRoleProvider } from '@/hooks/use-admin-role';
 import { intel } from '@/lib/supabase';
@@ -59,6 +63,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { mode } = useAppTheme();
 
   const isActive = (route: string) => {
     if (route === '/admin') return pathname === '/admin';
@@ -76,6 +81,11 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       collapsed ? s.sidebarCollapsed : s.sidebarExpanded,
       { paddingTop: insets.top + spacing.md },
     ]}>
+      {/* Chrome estructural, no un botón — blur pesado igual que el sidebar
+          de la app cliente (audit "Fluidez Polaris" §Fase 5, commit 41e060d).
+          El admin no heredaba nada de eso; ahora reusa el mismo patrón. */}
+      <BlurView intensity={100} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
+
       {/* Logo / toggle */}
       <Pressable style={s.sidebarLogo} onPress={onToggle}>
         <MaterialIcons name="dashboard-customize" size={20} color={palette.goldText} />
@@ -90,7 +100,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
             {group.items.map(item => {
               const active = isActive(item.route);
               return (
-                <Pressable
+                <PressableScale
                   key={item.route}
                   style={[s.navItem, active && s.navItemActive]}
                   onPress={() => router.push(item.route as never)}>
@@ -104,7 +114,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
                       {item.label}
                     </Text>
                   )}
-                </Pressable>
+                </PressableScale>
               );
             })}
             <View style={s.sidebarDivider} />
@@ -112,13 +122,26 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         ))}
       </ScrollView>
 
+      {/* Personalizar — mismo atajo que ya tiene DesktopSidebar del cliente
+          (commit 985c859). El operador ajusta fondo/señal sin salir del
+          panel; aplica en vivo porque el eje de tema es global
+          (<html data-theme/data-signal>), no hace falta recargar. */}
+      <PressableScale
+        style={s.navItem}
+        onPress={() => router.push('/perfil/apariencia' as never)}
+        accessibilityRole="button"
+        accessibilityLabel="Personalizar la app — modo, fondo y color">
+        <MaterialIcons name="tune" size={18} color={palette.goldText} />
+        {!collapsed && <Text style={s.navLabel}>Personalizar</Text>}
+      </PressableScale>
+
       {/* Back to app */}
-      <Pressable
+      <PressableScale
         style={s.navItem}
         onPress={() => router.replace('/(tabs)/comando' as never)}>
         <MaterialIcons name="arrow-back" size={18} color={palette.smoke} />
         {!collapsed && <Text style={s.navLabelMuted}>Volver a la App</Text>}
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }
@@ -138,6 +161,7 @@ function AdminBottomNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { mode } = useAppTheme();
 
   const isActive = (route: string) =>
     route === '/admin' ? pathname === '/admin' : pathname.startsWith(route);
@@ -146,6 +170,7 @@ function AdminBottomNav() {
   return (
     <>
       <View style={[s.bottomNav, { paddingBottom: Math.max(insets.bottom, spacing.xs) }]}>
+        <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
         {BOTTOM_TABS.map((t) => {
           const active = isActive(t.route);
           return (
@@ -234,8 +259,10 @@ function AdminGateState({
  * Espacio de cada cliente), ninguno necesita un menú. */
 function MentorChrome({ topInset }: { topInset: number }) {
   const router = useRouter();
+  const { mode } = useAppTheme();
   return (
     <View style={[s.mentorBar, { paddingTop: topInset + spacing.sm }]}>
+      <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
       <MaterialIcons name="dashboard-customize" size={18} color={palette.goldText} />
       <Text style={s.mentorBarTitle}>ESCRITORIO DEL MENTOR</Text>
       <Pressable
@@ -423,11 +450,12 @@ const s = StyleSheet.create({
     backgroundColor: palette.black,
   },
   sidebar: {
-    backgroundColor: palette.graphite,
+    backgroundColor: alpha(palette.graphite, 'cc'),
     borderRightWidth: 1,
     borderRightColor: palette.line,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.xl,
+    overflow: 'hidden',
   },
   sidebarExpanded: { width: SIDEBAR_W },
   sidebarCollapsed: { width: SIDEBAR_W_COLLAPSED },
@@ -447,19 +475,21 @@ const s = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-    backgroundColor: palette.graphite,
-    borderBottomWidth: 1,
+    backgroundColor: alpha(palette.graphite, '99'),
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: palette.line,
+    overflow: 'hidden',
   },
   mentorBarTitle: { ...typography.label, color: palette.ivory, fontSize: 11, flex: 1 },
   mentorBarExit: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
   mentorBarExitText: { ...typography.label, color: palette.smoke, fontSize: 10 },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: palette.graphite,
-    borderTopWidth: 1,
+    backgroundColor: alpha(palette.graphite, '99'),
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: palette.line,
     paddingTop: spacing.xs,
+    overflow: 'hidden',
   },
   bottomTab: {
     flex: 1,

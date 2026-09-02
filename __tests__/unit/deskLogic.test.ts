@@ -171,6 +171,33 @@ describe('buildDesk', () => {
     expect(desk.momentumRisk).toBe(2);
   });
 
+  it('un cliente asignado a un mentor vigente entra al universo aunque no tenga fila de ejecución ni roster (bug: "aún no tienes clientes asignados")', () => {
+    // Caso real: un mentor restringido no usa fetchUsers (roster org-wide,
+    // RLS se lo deja vacío) — su roster hoy sale de fetchClientNames sobre
+    // SUS asignaciones. Antes del fix, un cliente recién asignado y sin
+    // mentor_tasks todavía (ni en `rows` ni en `roster`) era invisible.
+    const desk = buildDesk({
+      rows: [],
+      roster: [],
+      assignments: [{ user_id: 'nuevo', mentor_id: 'm1' }],
+      mentors: [mentorA],
+      myId: 'm1',
+    });
+    expect(desk.clients.map((c) => c.user_id)).toContain('nuevo');
+    expect(desk.mine.map((c) => c.user_id)).toEqual(['nuevo']);
+  });
+
+  it('una asignación a un mentor que YA NO está en `mentors` no cuela al asignado en el universo', () => {
+    const desk = buildDesk({
+      rows: [],
+      roster: [],
+      assignments: [{ user_id: 'huerfano', mentor_id: 'ex-mentor' }],
+      mentors: [mentorA],
+      myId: 'm1',
+    });
+    expect(desk.clients.map((c) => c.user_id)).not.toContain('huerfano');
+  });
+
   it('needsIntervention cuenta severity high/critical', () => {
     const desk = buildDesk({
       rows: [

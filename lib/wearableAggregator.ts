@@ -72,6 +72,31 @@ export async function requestAggregatorWidgetUrl(provider?: string): Promise<Con
 }
 
 /**
+ * Desconecta el agregador de verdad: la edge function deregistra al usuario en
+ * Terra/Open Wearables (best-effort — sin esto seguirían empujando webhooks
+ * para siempre), borra la conexión y purga los datos provider='aggregator'.
+ */
+export async function disconnectAggregator(provider?: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { ok: false, error: 'Necesitas iniciar sesión.' };
+
+    const { data, error } = await supabase.functions.invoke('wearable-aggregator', {
+      body: { action: 'disconnect', provider },
+    });
+    if (error) {
+      logSilentError('aggregator.disconnect', error);
+      return { ok: false, error: error.message };
+    }
+    if (data && data.ok === false) return { ok: false, error: data.error };
+    return { ok: true };
+  } catch (e) {
+    logSilentError('aggregator.disconnect', e);
+    return { ok: false, error: 'Error de red al desconectar el agregador.' };
+  }
+}
+
+/**
  * Flujo completo de conexión. En web redirige la página; en nativo abre el
  * navegador in-app (mismo patrón que el OAuth de Oura/WHOOP). Devuelve la URL
  * para que el caller decida (la UI ya maneja loading/errores).

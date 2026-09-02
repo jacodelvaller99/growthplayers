@@ -287,7 +287,20 @@ export const typography = {
     lineHeight: 16,
     letterSpacing: 0.5,
   },
-  // Giant KPI display numbers
+  // Giant KPI display numbers.
+  //
+  // El nombre miente un poco: `letterSpacing: +2` es correcto para el resto de
+  // la escala (hero/title/section/label) porque ahí el texto es UPPERCASE —
+  // tracking positivo es lo que hace legible una palabra en versalitas. Pero
+  // ningún sitio de la app que muestra un NÚMERO grande de verdad usa este
+  // token — los ~14 (perfil, comando, progreso, checkin, consciencia...) lo
+  // ignoran y arman su propio estilo local con tracking NEGATIVO, porque en
+  // dígitos el tracking positivo abre huecos entre caracteres y se lee peor,
+  // no mejor. Ese patrón repetido a mano, sin nombre, es el hallazgo real
+  // (auditoría "Fluidez Polaris" §Fase 1-B) — no un olvido de signo. Se deja
+  // `display` como está (headings display en mayúsculas siguen queriendo
+  // tracking positivo) y se agrega `numeric` abajo, con el signo correcto,
+  // para que un display de número deje de reinventar esto cada vez.
   display: {
     fontFamily: Fonts.display,
     fontSize:   52,
@@ -302,6 +315,18 @@ export const typography = {
     lineHeight: 38,
     fontWeight: '400' as const,
     letterSpacing: 1,
+  },
+  // Displays numéricos grandes (score, KPI, contador). Ver comentario en
+  // `display` arriba — mismo tamaño de base, tracking negativo real. `fontSize`/
+  // `fontWeight`/`lineHeight` son punto de partida: cada pantalla los pisa
+  // según su jerarquía (`...typography.numeric, fontSize: 44`), igual que ya
+  // se hace con `typography.label`/`mono` en el resto del repo.
+  numeric: {
+    fontFamily: Fonts.display,
+    fontSize:   44,
+    lineHeight: 50,
+    fontWeight: '800' as const,
+    letterSpacing: -1,
   },
 };
 
@@ -506,6 +531,12 @@ export const animation = {
     press:  { damping: 15, stiffness: 300, mass: 0.8 },
     entry:  { damping: 20, stiffness: 200, mass: 1.0 },
     bounce: { damping: 10, stiffness: 150, mass: 1.0 },
+    // Barrido de dial/ring "vivo" (score, engagement): reacciona a datos que
+    // cambian, no es un one-shot de carga — audit "Fluidez Polaris" §Fase 3
+    // (`04`) pide spring aquí en vez de timing, pero sin rebote (no viene de
+    // un gesto con momentum). damping/stiffness dan ratio ~0.94 — crítico,
+    // sin overshoot visible.
+    critical: { damping: 30, stiffness: 220, mass: 1.0 },
   },
   duration: {
     instant:  80,

@@ -139,4 +139,4 @@ Client → Edge delete-account  (JWT, no body — identity from token ✅ 5.2)
 - **Views:** `security_invoker=true`.
 - **Edge Functions:** explicit `config.toml` with `verify_jwt=true`; in-code authz on every function; CORS pinned to app origins.
 - **Web:** strict CSP + security headers; consider cookie-based session storage.
-- **Wearable tokens:** encrypted at rest (Vault/pgsodium); excluded from admin reads; revoked on disconnect.
+- **Wearable tokens:** NOT encrypted at rest — protected instead by column-level privileges (P1-7, migration `20260729000000`): only `service_role` can read `access_token`/`refresh_token`; admin/authenticated/anon cannot. Encryption (Vault/pgsodium) remains a possible future hardening, not current state. Revocation on disconnect IS implemented (2026-08-31): `action:'disconnect'` in `sync-wearables`/`wearable-aggregator` revokes upstream (Oura/WHOOP/Strava/Polar/Terra, best-effort), deletes the connection row and purges the provider's `wearable_daily`/`wearable_timeseries`; `delete-account` revokes upstream before its purge.

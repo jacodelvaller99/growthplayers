@@ -4,7 +4,9 @@
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
@@ -39,6 +41,24 @@ export function WellnessMiniPlayer() {
   const stopSession   = useWellnessStore((s) => s.stopSession);
   const resumeSession = useWellnessStore((s) => s.resumeSession);
 
+  const progress = player.targetSeconds > 0
+    ? Math.min(player.elapsedSeconds / player.targetSeconds, 1)
+    : 0;
+
+  // Reanimated en vez de estado de React puro (audit "Fluidez Polaris" §Fase
+  // 3 "10") — sin esto, el fill saltaba de golpe en cada tick del reloj (cada
+  // ~1s); withTiming lo suaviza en un avance continuo entre ticks. Los hooks
+  // van ANTES del early return de abajo (regla de hooks: mismo orden siempre,
+  // el guard de "sin sesión activa" no puede saltárselos).
+  const progressScale = useSharedValue(progress);
+  useEffect(() => {
+    progressScale.value = withTiming(progress, { duration: 950 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
+  const progressFillStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: progressScale.value }],
+  }));
+
   // Hide when no active session (show when playing OR paused)
   if ((!player.isPlaying && !player.isPaused) || !player.type) return null;
 
@@ -49,10 +69,6 @@ export function WellnessMiniPlayer() {
   const remaining = player.targetSeconds > 0
     ? Math.max(player.targetSeconds - player.elapsedSeconds, 0)
     : player.elapsedSeconds;
-
-  const progress = player.targetSeconds > 0
-    ? Math.min(player.elapsedSeconds / player.targetSeconds, 1)
-    : 0;
 
   const handleStop = () => {
     stopBinauralGlobal();
@@ -81,7 +97,7 @@ export function WellnessMiniPlayer() {
       {/* Progress bar */}
       {player.targetSeconds > 0 && (
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%` as unknown as number, backgroundColor: color }]} />
+          <Animated.View style={[styles.progressFill, progressFillStyle, { backgroundColor: color }]} />
         </View>
       )}
 
@@ -151,6 +167,8 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
+    width: '100%',
+    transformOrigin: 'left',
   },
   row: {
     flexDirection: 'row',

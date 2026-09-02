@@ -29,7 +29,7 @@ import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { DURATION_HOUSE, EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useStaffRole } from '@/hooks/useIsAdmin';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { arcForDay, buildHistoria } from '@/lib/narrativeLogic';
@@ -503,10 +503,14 @@ export default function ProgresoScreen() {
   const { intelligence, topAffinity, engagementTier } = useUserIntelligence(userId);
   const subscription = useSubscription();
 
-  // ── Admin flag (robusto + cacheado — ver hooks/useIsAdmin) ──────────────────
+  // ── Staff flags (robustos + cacheados — ver hooks/useIsAdmin) ───────────────
   // Antes era un .single() inline sin manejo de error: un hiccup de red dejaba el
-  // botón "Cuadro de Mando" intermitente. useIsAdmin conserva el valor ante error.
-  const isAdmin = useIsAdmin();
+  // botón "Cuadro de Mando" intermitente. useStaffRole conserva el valor ante
+  // error. `isMentor` entra porque un mentor puro no tenía NINGÚN botón hacia su
+  // Escritorio — solo llegaba escribiendo /admin a mano.
+  const { isAdmin, isMentor } = useStaffRole();
+  const isStaff = isAdmin || isMentor;
+  const staffBtnLabel = isAdmin ? 'Cuadro de Mando →' : 'Escritorio del Mentor →';
 
   // ML Consent toggle
   const [mlConsent, setMlConsent] = useState(state.profile.mlConsent !== false);
@@ -1100,13 +1104,13 @@ export default function ProgresoScreen() {
                 )}
               </PremiumCard>
 
-              {isAdmin && (
+              {isStaff && (
                 <Pressable
                   style={styles.adminBtn}
                   onPress={() => router.push('/admin' as never)}
-                  accessibilityLabel="Cuadro de Mando Integral">
+                  accessibilityLabel={staffBtnLabel}>
                   <MaterialIcons name="dashboard-customize" size={16} color={palette.goldText} />
-                  <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
+                  <Text style={styles.adminBtnText}>{staffBtnLabel}</Text>
                 </Pressable>
               )}
             </View>
@@ -1845,15 +1849,15 @@ export default function ProgresoScreen() {
         />
       </PremiumCard>
 
-      {/* ── Admin Access (only visible to admins — read from profiles.is_admin) ── */}
-      {isAdmin && (
+      {/* ── Staff Access (admins Y mentores — read from profiles.is_admin/is_mentor) ── */}
+      {isStaff && (
         <Pressable
           style={styles.adminBtn}
           onPress={() => router.push('/admin' as never)}
           accessibilityRole="button"
-          accessibilityLabel="Cuadro de Mando Integral">
+          accessibilityLabel={staffBtnLabel}>
           <MaterialIcons name="dashboard-customize" size={16} color={palette.goldText} />
-          <Text style={styles.adminBtnText}>Cuadro de Mando →</Text>
+          <Text style={styles.adminBtnText}>{staffBtnLabel}</Text>
         </Pressable>
       )}
 
@@ -1971,8 +1975,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   scoreNumber: {
+    ...typography.numeric,
     color: palette.goldText,
-    fontFamily: Fonts.display,
     fontSize: 46,
     fontWeight: '800',
     letterSpacing: -1,

@@ -4,6 +4,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -23,6 +24,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -44,6 +46,7 @@ import { alpha } from '@/constants/themeColors';
 import { useToast } from '@/context/ToastContext';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useMentorMemory } from '@/hooks/useMentorMemory';
+import { useGestureSheet } from '@/hooks/use-gesture-sheet';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { analytics } from '@/lib/analytics';
@@ -56,6 +59,11 @@ import { db2, intel } from '@/lib/supabase';
 import { computeStreak } from '@/lib/utils';
 import { useWearableConnections, useWearableDaily } from '@/lib/wearables';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
+
+// Dismiss del sheet de hilos relativo a la altura de pantalla, no al
+// contenido real (varía con el número de conversaciones) — audit "Fluidez
+// Polaris" §Fase 4 "06"+"08", mismo criterio que components/circle.tsx.
+const THREADS_SHEET_DISMISS_DISTANCE = Dimensions.get('window').height;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -334,6 +342,13 @@ export default function MentorScreen() {
   // Threads state
   const [showThreads, setShowThreads] = useState(false);
   const [threads, setThreads] = useState<Array<{ id: string; title: string; created_at: string }>>([]);
+  // Sheet gesto-driven (audit "Fluidez Polaris" §Fase 4) — la animación de
+  // apertura/cierre la maneja el hook, el <Modal> solo controla el montaje.
+  const { pan: threadsPan, sheetStyle: threadsSheetStyle, open: openThreadsSheet, close: closeThreadsSheet } =
+    useGestureSheet(THREADS_SHEET_DISMISS_DISTANCE, () => setShowThreads(false));
+  useEffect(() => {
+    if (showThreads) openThreadsSheet();
+  }, [showThreads, openThreadsSheet]);
 
   const loadThreads = async () => {
     if (!userId) return;
@@ -877,13 +892,18 @@ export default function MentorScreen() {
       </ScrollView>
 
       {/* ── Threads Modal ── */}
-      <Modal visible={showThreads} transparent animationType="slide">
+      <Modal visible={showThreads} transparent animationType="none" onRequestClose={closeThreadsSheet}>
         <View style={styles.threadsOverlay}>
-          <View style={styles.threadsSheet}>
+          <Animated.View style={[styles.threadsSheet, threadsSheetStyle]}>
+            <GestureDetector gesture={threadsPan}>
+              <View style={styles.threadsHandleRow}>
+                <View style={styles.threadsHandle} />
+              </View>
+            </GestureDetector>
             <View style={styles.threadsHeader}>
               <Text style={styles.threadsTitle}>HISTORIAL DE CHATS</Text>
               <Pressable
-                onPress={() => setShowThreads(false)}
+                onPress={closeThreadsSheet}
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar"
                 style={({ pressed }) => [styles.threadsClose, pressed && styles.threadsClosePressed]}>
@@ -901,7 +921,7 @@ export default function MentorScreen() {
                 threads.map(t => (
                   <Pressable
                     key={t.id}
-                    onPress={() => setShowThreads(false)}
+                    onPress={closeThreadsSheet}
                     accessibilityRole="button"
                     accessibilityLabel={t.title || 'Conversación sin título'}
                     style={({ pressed }) => [styles.threadRow, pressed && styles.threadRowPressed]}>
@@ -919,7 +939,7 @@ export default function MentorScreen() {
                 ))
               )}
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -1023,6 +1043,9 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
     paddingBottom: 32,
   },
+  // Zona de agarre del gesto — 44pt de alto aunque el handle visual sea chico.
+  threadsHandleRow: { alignItems: 'center', justifyContent: 'center', height: 44 },
+  threadsHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: palette.line },
   threadsHeader: {
     flexDirection: 'row',
     alignItems: 'center',

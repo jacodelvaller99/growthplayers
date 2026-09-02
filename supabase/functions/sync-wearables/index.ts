@@ -13,6 +13,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { adminSupabase, json, corsHeaders } from '../_shared/supabase.ts';
+import { classifySyncFailure, nextBreakerState } from '../_shared/connectionHealth.ts';
 
 // ─── Environment ──────────────────────────────────────────────────────────────
 const OURA_CLIENT_ID     = Deno.env.get('OURA_CLIENT_ID')!;
@@ -662,6 +663,17 @@ async function triggerIntelligence(userId: string): Promise<void> {
   }
 }
 
+// ─── Salud de la conexión (circuit breaker) ───────────────────────────────────
+/**
+ * Update tolerante: si la migración del circuit breaker aún no está aplicada
+ * (columnas last_error/consecutive_failures ausentes), el update falla y solo
+ * se loguea — el sync nunca debe romperse por telemetría de salud.
+ */
+async function tryUpdateConnHealth(connId: string, payload: Record<string, unknown>): Promise<void> {
+  const { error } = await adminSupabase.from('wearable_connections').update(payload).eq('id', connId);
+  if (error) console.warn('[sync-wearables] conn health no actualizado (¿migración pendiente?):', error.message);
+}
+
 // ─── Sync single user ─────────────────────────────────────────────────────────
 async function syncUser(userId: string, providerFilter?: string): Promise<void> {
   const query = adminSupabase
@@ -678,7 +690,7 @@ async function syncUser(userId: string, providerFilter?: string): Promise<void> 
     return;
   }
 
-  for (const conn of connections as WearableConnection[]) {
+  for (const conn of connections as (WearableConnection & { consecutive_failures?: number })[]) {
     try {
       if (conn.provider === 'oura') {
         await syncOura(userId, conn);
@@ -688,9 +700,22 @@ async function syncUser(userId: string, providerFilter?: string): Promise<void> 
         await syncPolar(userId, conn);
       } else if (conn.provider === 'strava') {
         await syncStrava(userId, conn);
+      } else {
+        continue;
+      }
+      // Éxito → resetear el circuit breaker (tolerante: pre-migración la
+      // columna no existe y el update falla — se ignora).
+      if ((conn.consecutive_failures ?? 0) > 0) {
+        await tryUpdateConnHealth(conn.id, { consecutive_failures: 0, last_error: null });
       }
     } catch (e) {
-      console.error(`[sync-wearables] Error syncing ${conn.provider} for ${userId}:`, e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[sync-wearables] Error syncing ${conn.provider} for ${userId}:`, msg);
+      // Circuit breaker: token revocado (invalid_grant/400/401 en refresh) →
+      // conexión muerta YA; fallo transitorio → contador, muere a las 5.
+      // Sin esto el cron de 2h reintentaba tokens revocados para siempre.
+      const next = nextBreakerState(conn.consecutive_failures ?? 0, classifySyncFailure(msg));
+      await tryUpdateConnHealth(conn.id, { ...next, last_error: msg.slice(0, 300) });
     }
   }
 
@@ -723,7 +748,7 @@ async function connectOura(userId: string, code: string): Promise<void> {
   // Antes era el shorthand `user_id,` — pero el parámetro se llama `userId` y
   // no existe ningún `user_id` en este ámbito, así que esto lanzaba
   // ReferenceError SIEMPRE: el connect de Oura nunca llegó a guardar nada.
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'oura',
     access_token:     data.access_token,
@@ -733,6 +758,10 @@ async function connectOura(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            data.scope ? data.scope.split(' ') : null,
   }, { onConflict: 'user_id,provider' });
+  // Sin este check, un upsert rechazado (constraint, RLS, columna faltante)
+  // dejaba responder {ok:true} con CERO fila guardada — la UI mentía "conectado".
+  // El mismo bug de fondo que el ReferenceError de arriba, forma nueva.
+  if (upsertErr) throw new Error(`Oura connection save failed: ${upsertErr.message}`);
 }
 
 async function connectWhoop(userId: string, code: string): Promise<void> {
@@ -758,7 +787,7 @@ async function connectWhoop(userId: string, code: string): Promise<void> {
     : null;
 
   // Mismo bug que en connectOura: `user_id` no existía en este ámbito.
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'whoop',
     access_token:     data.access_token,
@@ -768,6 +797,7 @@ async function connectWhoop(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            data.scope ? data.scope.split(' ') : null,
   }, { onConflict: 'user_id,provider' });
+  if (upsertErr) throw new Error(`WHOOP connection save failed: ${upsertErr.message}`);
 }
 
 async function connectPolar(userId: string, code: string): Promise<void> {
@@ -794,7 +824,7 @@ async function connectPolar(userId: string, code: string): Promise<void> {
     ? new Date(Date.now() + data.expires_in * 1000).toISOString()
     : null;
 
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'polar',
     access_token:     data.access_token,
@@ -804,6 +834,20 @@ async function connectPolar(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            data.scope ? data.scope.split(' ') : null,
   }, { onConflict: 'user_id,provider' });
+  if (upsertErr) throw new Error(`Polar connection save failed: ${upsertErr.message}`);
+
+  // El id numérico de Polar (x_user_id) es lo único que acepta el DELETE de
+  // deregistro de AccessLink — se guarda para poder desconectar de verdad.
+  // Update separado del upsert y con error ignorado: si la migración que añade
+  // provider_user_id aún no está aplicada, el connect no debe romperse.
+  if (data.x_user_id) {
+    const { error: puidErr } = await adminSupabase
+      .from('wearable_connections')
+      .update({ provider_user_id: String(data.x_user_id) })
+      .eq('user_id', userId)
+      .eq('provider', 'polar');
+    if (puidErr) console.warn('[sync-wearables] provider_user_id no guardado (¿migración pendiente?):', puidErr.message);
+  }
 
   // Paso extra de Polar (no existe en Oura/WHOOP/Strava): el token no sirve
   // para leer datos hasta registrar el usuario en AccessLink. 409 = ya
@@ -842,7 +886,7 @@ async function connectStrava(userId: string, code: string): Promise<void> {
     ? new Date(data.expires_at * 1000).toISOString()
     : null;
 
-  await adminSupabase.from('wearable_connections').upsert({
+  const { error: upsertErr } = await adminSupabase.from('wearable_connections').upsert({
     user_id:          userId,
     provider:         'strava',
     access_token:     data.access_token,
@@ -852,6 +896,96 @@ async function connectStrava(userId: string, code: string): Promise<void> {
     connected_at:     new Date().toISOString(),
     scope:            null, // Strava no devuelve el scope concedido en el token exchange.
   }, { onConflict: 'user_id,provider' });
+  if (upsertErr) throw new Error(`Strava connection save failed: ${upsertErr.message}`);
+}
+
+// ─── Desconexión real (revocación + purga) ────────────────────────────────────
+/**
+ * Revoca el token en el proveedor (RFC 7009 / endpoint propio de cada uno).
+ * Best-effort: si el proveedor está caído o rechaza, se loguea y se sigue —
+ * lo que NO puede fallar es el purgado local (tokens + datos fuera de la BD).
+ */
+async function revokeUpstream(conn: WearableConnection & { provider_user_id?: string | null }): Promise<void> {
+  try {
+    switch (conn.provider) {
+      case 'oura': {
+        const res = await fetch(
+          `https://api.ouraring.com/oauth/revoke?access_token=${encodeURIComponent(conn.access_token)}`,
+          { method: 'POST' },
+        );
+        if (!res.ok) console.error(`[sync-wearables] Oura revoke failed: ${res.status}`);
+        break;
+      }
+      case 'whoop': {
+        // v2 — igual que fetchWhoop más abajo: v1 fue dada de baja el 1-oct-2025,
+        // así que un DELETE a /developer/v1/ aquí habría fallado siempre en
+        // silencio (best-effort) sin revocar nada upstream de verdad.
+        const res = await fetch('https://api.prod.whoop.com/developer/v2/user/access', {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${conn.access_token}` },
+        });
+        if (!res.ok) console.error(`[sync-wearables] WHOOP revoke failed: ${res.status}`);
+        break;
+      }
+      case 'strava': {
+        const res = await fetch('https://www.strava.com/oauth/deauthorize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ access_token: conn.access_token }),
+        });
+        if (!res.ok) console.error(`[sync-wearables] Strava deauthorize failed: ${res.status}`);
+        break;
+      }
+      case 'polar': {
+        // AccessLink exige el id NUMÉRICO de Polar (x_user_id del token exchange)
+        // para deregistrar. Conexiones nuevas lo guardan en provider_user_id;
+        // las viejas no lo tienen — ahí el deregistro upstream se salta y solo
+        // aplica el purgado local (el usuario puede revocar en flow.polar.com).
+        if (conn.provider_user_id) {
+          const res = await fetch(
+            `https://www.polaraccesslink.com/v3/users/${conn.provider_user_id}`,
+            { method: 'DELETE', headers: { Authorization: `Bearer ${conn.access_token}` } },
+          );
+          if (!res.ok && res.status !== 404) {
+            console.error(`[sync-wearables] Polar deregister failed: ${res.status}`);
+          }
+        } else {
+          console.warn('[sync-wearables] Polar sin provider_user_id — deregistro upstream saltado');
+        }
+        break;
+      }
+    }
+  } catch (e) {
+    console.error(`[sync-wearables] revokeUpstream(${conn.provider}) error:`, e);
+  }
+}
+
+/**
+ * Desconexión completa de un proveedor: revoca upstream (best-effort), borra la
+ * fila de wearable_connections (tokens fuera de la BD — no un soft is_active),
+ * y purga los datos sincronizados de ese proveedor. Cumple la promesa de la UI
+ * ("sus datos se borran") y la minimización de datos.
+ */
+async function disconnectProvider(userId: string, provider: string): Promise<{ ok: boolean; error?: string }> {
+  const { data: conn } = await adminSupabase
+    .from('wearable_connections')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('provider', provider)
+    .maybeSingle();
+
+  if (!conn) return { ok: false, error: 'Connection not found' };
+
+  await revokeUpstream(conn as WearableConnection);
+
+  // Purga local — el orden importa poco (todo owner-scoped), pero la fila de
+  // conexión va al final: si un delete de datos fallara, el retry del usuario
+  // aún encuentra la conexión y puede reintentar completo.
+  await adminSupabase.from('wearable_timeseries').delete().eq('user_id', userId).eq('provider', provider);
+  await adminSupabase.from('wearable_daily').delete().eq('user_id', userId).eq('provider', provider);
+  const { error } = await adminSupabase.from('wearable_connections').delete().eq('id', conn.id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -899,6 +1033,14 @@ Deno.serve(async (req: Request) => {
       // Kick off initial sync
       await syncUser(authedUserId, provider);
       return json({ ok: true, provider });
+    }
+
+    // ── Disconnect action (revocación + purga; solo el propio usuario) ────────
+    if (action === 'disconnect') {
+      if (!provider) return json({ error: 'Missing provider' }, 400);
+      if (!authedUserId) return json({ error: 'Unauthorized' }, 401);
+      const result = await disconnectProvider(authedUserId, provider);
+      return json(result, result.ok ? 200 : 400);
     }
 
     // Batch mode: sync all active connections — SOLO service_role (cron diario).

@@ -34,24 +34,23 @@ import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/confirm';
 import {
   OAUTH_URLS,
   isNativeProvider,
   isAggregatorProvider,
   triggerWearableSync,
+  disconnectWearable,
   useWearableConnections,
   useWearableDaily,
   recoveryLabel,
   type WearableProvider,
 } from '@/lib/wearables';
-import { connectAggregator } from '@/lib/wearableAggregator';
-import { requestNativePermissions, syncRange, nativeProviderForPlatform } from '@/lib/wearablesNative';
+import { connectAggregator, disconnectAggregator } from '@/lib/wearableAggregator';
+import { requestNativePermissions, syncRange, disconnectNative, nativeProviderForPlatform } from '@/lib/wearablesNative';
 import { WearableCompat } from '@/components/wearable-compat';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ENV } from '@/app/config/env';
-
-// Cliente sin tipar para wearable_connections (update is_active en desconexión).
-const supa: any = supabase;
 
 const PROVIDER_NAME: Record<WearableProvider, string> = {
   whoop:          'WHOOP',
@@ -628,7 +627,7 @@ export default function WearablesScreen() {
   const insets  = useSafeAreaInsets();
   const params  = useLocalSearchParams<{ connected?: string; error?: string }>();
 
-  const { loading, isConnected, getConnection, reload } = useWearableConnections();
+  const { loading, isConnected, getConnection, staleConnections, reload } = useWearableConnections();
   const [connecting, setConnecting] = useState<WearableProvider | null>(null);
   const [syncing,    setSyncing]    = useState<WearableProvider | null>(null);
   const [banner, setBanner] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
@@ -722,7 +721,9 @@ export default function WearablesScreen() {
           }
           return;
         }
-        const sync = await syncRange(30);
+        // {activate:true}: SOLO el connect explícito (re)activa la conexión —
+        // el botón de sync no, para no revertir una desconexión (bug previo).
+        const sync = await syncRange(30, { activate: true });
         if (sync.ok) {
           setBanner({ type: 'success', msg: `${PROVIDER_NAME[provider]} conectado · ${sync.value.daysWritten} días leídos` });
           await reload();
@@ -845,16 +846,46 @@ export default function WearablesScreen() {
     const conn = getConnection(provider);
     if (!conn) return;
 
-    await supa
-      .from('wearable_connections')
-      .update({ is_active: false })
-      .eq('id', conn.id);
+    // Confirmación antes de una acción destructiva: se revoca el acceso y se
+    // borra el histórico sincronizado de ese dispositivo (la promesa de la UI).
+    showAlert(
+      'Desconectar dispositivo',
+      `Se cerrará la conexión con ${PROVIDER_NAME[provider]} y se borrará tu histórico sincronizado de este dispositivo.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desconectar', style: 'destructive',
+          onPress: async () => {
+            let ok = false;
+            let err: string | undefined;
 
-    await reload();
-    const tail = isNativeProvider(provider)
-      ? ' — para revocar permisos del sistema, ve a Ajustes del dispositivo'
-      : '';
-    setBanner({ type: 'success', msg: `${PROVIDER_NAME[provider]} desconectado${tail}` });
+            if (isNativeProvider(provider)) {
+              const res = await disconnectNative();
+              ok = res.ok;
+              if (!res.ok) err = res.message;
+            } else if (isAggregatorProvider(provider)) {
+              const res = await disconnectAggregator();
+              ok = res.ok;
+              err = res.error;
+            } else {
+              const res = await disconnectWearable(provider);
+              ok = res.success;
+              err = res.error;
+            }
+
+            await reload();
+            if (ok) {
+              const tail = provider === 'apple_health'
+                ? ' — para revocar el permiso de lectura, ve a Ajustes › Salud'
+                : '';
+              setBanner({ type: 'success', msg: `${PROVIDER_NAME[provider]} desconectado y datos borrados${tail}` });
+            } else {
+              setBanner({ type: 'error', msg: err ?? 'No se pudo desconectar — inténtalo de nuevo' });
+            }
+          },
+        },
+      ],
+    );
   }
 
   const PROVIDERS = visibleProviders();
@@ -957,13 +988,25 @@ export default function WearablesScreen() {
               />
             );
           }
+          // Conexión matada por el circuit breaker (token revocado / fallos
+          // seguidos): antes simplemente desaparecía sin explicación.
+          const stale = staleConnections.some(sc => sc.provider === p.id);
           return (
-            <DisconnectedCard
-              key={p.id}
-              provider={p}
-              onConnect={() => handleConnect(p.id)}
-              isConnecting={connecting === p.id}
-            />
+            <View key={p.id}>
+              {stale && (
+                <View style={styles.staleNotice}>
+                  <MaterialIcons name="link-off" size={14} color={palette.danger} />
+                  <Text style={styles.staleNoticeText}>
+                    CONEXIÓN CADUCADA — {PROVIDER_NAME[p.id]} dejó de autorizar el acceso. Vuelve a conectar.
+                  </Text>
+                </View>
+              )}
+              <DisconnectedCard
+                provider={p}
+                onConnect={() => handleConnect(p.id)}
+                isConnecting={connecting === p.id}
+              />
+            </View>
           );
         })
       )}
@@ -989,8 +1032,9 @@ export default function WearablesScreen() {
             Si S3 añade cifrado con pgcrypto, este texto puede volver a decirlo. */}
         <Text style={styles.privacyText}>
           Los tokens OAuth quedan ligados a tu cuenta: solo tú puedes leerlos, viajan
-          siempre por conexión cifrada y nunca se comparten con terceros. Puedes
-          desconectar cualquier dispositivo en cualquier momento y sus datos se borran.
+          siempre por conexión cifrada y nunca se comparten con terceros. Al
+          desconectar un dispositivo revocamos el acceso ante el proveedor y
+          borramos los tokens y tu histórico sincronizado de ese dispositivo.
         </Text>
       </PremiumCard>
     </>
@@ -1124,6 +1168,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md,
   },
   privacyText: { ...typography.caption, color: palette.smoke, flex: 1, lineHeight: 18 },
+
+  // Aviso de conexión matada por el circuit breaker (token revocado upstream).
+  staleNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: alpha(palette.danger, '55'),
+    backgroundColor: alpha(palette.danger, '14'),
+  },
+  staleNoticeText: { ...typography.label, color: palette.danger, fontSize: 9, flex: 1 },
 
   // Selector de marca (Open Wearables self-host)
   owBackdrop: {

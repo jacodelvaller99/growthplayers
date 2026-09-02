@@ -195,9 +195,32 @@ export async function triggerWearableSync(
   }
 }
 
+// ─── Desconexión real (OAuth) ─────────────────────────────────────────────────
+/**
+ * Desconecta un proveedor OAuth de verdad: la edge function revoca el token en
+ * el proveedor (best-effort), borra la fila de wearable_connections (tokens
+ * fuera de la BD) y purga wearable_daily/timeseries de ese proveedor — lo que
+ * la UI siempre prometió ("sus datos se borran").
+ */
+export async function disconnectWearable(
+  provider: WearableProvider,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('sync-wearables', {
+      body: { action: 'disconnect', provider },
+    });
+    if (error) return { success: false, error: error.message };
+    if (data && data.ok === false) return { success: false, error: data.error };
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
 // ─── Hook: wearable connections ───────────────────────────────────────────────
 export function useWearableConnections() {
   const [connections, setConnections] = useState<WearableConnection[]>([]);
+  const [staleConnections, setStaleConnections] = useState<{ provider: WearableProvider; last_error: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -214,6 +237,17 @@ export function useWearableConnections() {
     } else {
       setConnections((data ?? []) as WearableConnection[]);
     }
+
+    // Conexiones matadas por el circuit breaker (token revocado / 5 fallos):
+    // query aparte y tolerante — si la migración que añade last_error no está
+    // aplicada, la columna no existe y esto degrada a [] sin romper el hook.
+    const { data: stale, error: staleErr } = await supa
+      .from('wearable_connections')
+      .select('provider, last_error')
+      .eq('is_active', false)
+      .not('last_error', 'is', null);
+    setStaleConnections(staleErr ? [] : ((stale ?? []) as { provider: WearableProvider; last_error: string }[]));
+
     setLoading(false);
   }, []);
 
@@ -225,7 +259,7 @@ export function useWearableConnections() {
   const getConnection = (provider: WearableProvider) =>
     connections.find(c => c.provider === provider);
 
-  return { connections, loading, error, isConnected, getConnection, reload: load };
+  return { connections, staleConnections, loading, error, isConnected, getConnection, reload: load };
 }
 
 // ─── Hook: wearable daily data ────────────────────────────────────────────────

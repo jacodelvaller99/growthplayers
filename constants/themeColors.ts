@@ -635,7 +635,21 @@ export function buildThemeCSS(): string {
     'radial-gradient(ellipse 800px 500px at 88% 12%, rgba(255,255,255,0.035), transparent 60%);' +
     'background-attachment:fixed;background-repeat:no-repeat}';
 
-  return backdrops + signals + lightFixes + auraLayer;
+  // Auditoría "Fluidez Polaris" §Fase 1-C: cambiar de fondo/señal era un corte
+  // instantáneo — toggleá el theme y toda superficie salta de color en un
+  // frame. `html *` porque el cambio real es en el atributo de <html>, no en
+  // un componente puntual: cualquier elemento que lea un `--c-*` vía cv()
+  // necesita la misma transición, y no hay forma de saber cuáles son sin
+  // recorrer cada pantalla. Solo las 3 propiedades que de verdad cambian con
+  // el tema — no `transition: all`, que arrastraría layout/transform y
+  // pelearía con los `withTiming`/`withSpring` de Reanimated (esos mutan
+  // estilo directo por frame, no CSS `transition`, así que no chocan; pero
+  // `all` sí sería peligroso por si acaso).
+  const themeTransition =
+    'html,html *{transition:background-color 180ms ease,color 180ms ease,border-color 180ms ease}' +
+    '@media (prefers-reduced-motion: reduce){html,html *{transition:none!important}}';
+
+  return backdrops + signals + lightFixes + auraLayer + themeTransition;
 }
 
 /** Inyecta las variables en <head> una vez (solo web). Idempotente. */

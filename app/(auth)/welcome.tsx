@@ -322,8 +322,8 @@ const styles = StyleSheet.create({
     gap:        4,
   },
   statNum: {
+    ...typography.numeric,
     color:        palette.gold,
-    fontFamily:   Fonts.display,
     fontSize:     28,
     fontWeight:   '800',
     letterSpacing: -0.5,

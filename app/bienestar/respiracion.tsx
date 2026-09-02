@@ -19,6 +19,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
 import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { BodyContextCard, PracticeClose } from './body-context';
@@ -71,10 +72,13 @@ export default function RespiracionScreen() {
 
   const phases = tech.phases;
   const currentPhase = phases[phaseIdx];
+  const reducedMotion = useReducedMotion();
 
-  // Idle pulse when not running
+  // Idle pulse when not running — el ejercicio guiado activo (animatePhase,
+  // abajo) es el ejercicio en sí y queda igual; esto es solo decoración
+  // mientras el usuario no ha empezado.
   useEffect(() => {
-    if (running) {
+    if (running || reducedMotion) {
       pulseAnim.stopAnimation();
       pulseAnim.setValue(1);
       return;
@@ -87,7 +91,7 @@ export default function RespiracionScreen() {
     );
     loop.start();
     return () => loop.stop();
-  }, [running, pulseAnim]);
+  }, [running, reducedMotion, pulseAnim]);
 
   // Animate orb scale to the current phase target
   const animatePhase = useCallback((idx: number) => {

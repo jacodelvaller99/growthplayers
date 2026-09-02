@@ -7,6 +7,7 @@ import Animated, {
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import {
@@ -27,10 +28,11 @@ import { GoldDivider, PrimaryButton, SecondaryButton, useScreen } from '@/compon
 import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
-import { EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { animation, EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { withStepDone } from '@/lib/jornadaLogic';
 import type { TaskField } from '@/types/lifeflow';
@@ -463,28 +465,42 @@ function LessonCelebrationModal({
 }) {
   const opacity   = useSharedValue(0);
   const scale     = useSharedValue(0.9);
-  const barWidth  = useSharedValue(0);
+  const barScale  = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   const cardStyle = useAnimatedStyle(() => ({
     opacity:   opacity.value,
     transform: [{ scale: scale.value }],
   }));
+  // scaleX en vez de width (audit "Fluidez Polaris" §Fase 3 "10") — anima
+  // transform, no layout.
   const barStyle = useAnimatedStyle(() => ({
-    width: `${barWidth.value}%` as unknown as number,
+    transform: [{ scaleX: barScale.value }],
   }));
 
   useEffect(() => {
     if (!visible) return;
-    opacity.value  = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
-    scale.value    = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
-    // Barra de tiempo restante: avance constante, no ease-out — regla de la
-    // casa para "constante (progress bar) → linear" (APPLE_GRADE_BRIEF.md).
-    barWidth.value = withTiming(100, { duration: 2500, easing: Easing.linear });
+    if (reducedMotion) {
+      // Cross-fade corto, sin escala ni overshoot — la tarjeta no "salta".
+      opacity.value = withTiming(1, { duration: 120, easing: Easing.linear });
+      scale.value   = 1;
+    } else {
+      // Momento de logro — spring con leve bounce, no timing (audit §Fase 3
+      // "04"): la celebración es la excepción explícita al "reveal one-shot
+      // se queda en timing".
+      opacity.value  = withTiming(1, { duration: 280, easing: Easing.bezier(...EASING_HOUSE) });
+      scale.value    = withSpring(1, animation.spring.bounce);
+    }
+    // Barra de tiempo restante: informativa (cuánto falta para el auto-avance),
+    // no decorativa — se deja animar incluso con reduced motion, avance
+    // constante, no ease-out (regla de la casa: "constante → linear",
+    // APPLE_GRADE_BRIEF.md).
+    barScale.value = withTiming(1, { duration: 2500, easing: Easing.linear });
 
     const timer = setTimeout(onContinue, 2600);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, reducedMotion]);
 
   if (!visible) return null;
 
@@ -644,6 +660,8 @@ const celebStyles = StyleSheet.create({
     backgroundColor: palette.gold,
     borderRadius:    2,
     height:          2,
+    width:           '100%',
+    transformOrigin: 'left',
   },
   btn: {
     alignItems:       'center',
