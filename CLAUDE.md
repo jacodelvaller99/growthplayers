@@ -319,6 +319,43 @@ como supersedidos porque daban por abiertos problemas ya cerrados.
 - **Observabilidad** — `lib/observability.ts` `logSilentError(context, error)` reemplaza catches ciegos en las capas IO (memory/biometric/confrontation/mentorExecution); punto único para Sentry. `lib/schemaHealth.ts` `checkCriticalSchema()` corre tras login y deja rastro si falta una migración crítica (en vez de degradar en silencio).
 - **Suscripción reconciliada** — `lib/subscription.ts` `resolveEntitlement({ dbTier, expiresAt, rcActive })` (puro, testeado): DB = nivel, RevenueCat = recibo, **enforce `expiresAt > now`**. `isSubscribed` (use-lifeflow) y `useSubscription` lo usan — fin del split-brain RC↔DB.
 - **Recuperación de contraseña web** — `detectSessionInUrl: true` en web (`lib/supabase.ts`) + ruta `app/(auth)/reset-password.tsx` (maneja `PASSWORD_RECOVERY` → `updateUser`). El email de reset pasa `redirectTo` en web.
+
+### Recuperación de contraseña — ciclo completo (2026-09-07)
+
+Antes: la pantalla decía SIEMPRE "te enviamos un enlace", aunque Supabase
+rechazara el envío por límite de correos; en nativo el `redirectTo` era
+`undefined`, así que el enlace abría el navegador y dejaba al cliente fuera de
+la app; y el admin no tenía nada que hacer cuando un cliente escribía "no puedo
+entrar". Lo que hay ahora:
+
+- **Lógica pura** `lib/authRecovery.ts` (15 tests): `describeRecoveryError`
+  traduce el 429 de Supabase a mensaje + espera real (respeta el "after N
+  seconds" que dicta el servidor; el tope del proyecto da 300s con salida a
+  correo humano), `maskEmail` (conserva largo y dominio, para detectar typos sin
+  revelar si la cuenta existe), `recoverySentMessage` (condicional: "Si … tiene
+  cuenta"), `parseRecoveryTokens` (lee el deep link nativo).
+- **`app/(auth)/index.tsx`**: `redirectTo` nativo = `Linking.createURL('/reset-password')`;
+  cuenta regresiva visible en el botón (`REENVIAR EN NNs`, deshabilitado de
+  verdad); el fallo de envío se dice en vez de fingir éxito.
+- **`app/(auth)/reset-password.tsx`**: en nativo canjea el deep link a mano
+  (`Linking.useURL` → `setSession`) porque `detectSessionInUrl` está apagado
+  ahí; el enlace vencido ahora muestra su motivo en vez del texto genérico.
+- **Admin**: botón "ENVIAR ENLACE DE CONTRASEÑA" en el modal de identidad de
+  `app/admin/usuarios/[id].tsx` → `sendPasswordRecovery` (`lib/admin/actions.ts`).
+  Usa el endpoint público, **no** requiere service-role ni edge function nueva.
+- **`user_profiles.email` estaba vacío** para quien se registraba solo (solo lo
+  escribían `create-user` y `clickup-onboarding`) → la búsqueda por email del
+  admin era código muerto. Ahora se escribe en `completeOnboarding`
+  (`hooks/use-lifeflow.tsx`) y se rellena el histórico con la migración
+  `20260907000000_user_profiles_email_backfill.sql`. Ojo: el email NO está en la
+  vista `user_progress`, hay que leerlo de `user_profiles` (así lo hacen
+  `fetchUsers`/`fetchUserDetail`).
+
+**Handoffs del dueño (sin esto el correo sigue saliendo mal):** SMTP propio de
+Resend en *Project Settings → Authentication → SMTP*, dominio verificado en
+Resend, `polaris://reset-password` en *Auth → URL Configuration → Redirect URLs*,
+plantillas en español y con marca (**`docs/launch/EMAIL_TEMPLATES_SUPABASE.md`**,
+listas para pegar), y correr la migración del backfill en el SQL Editor.
 - **Paywall web** — descope honesto (`app/paywall.tsx`): panel "se gestiona en iOS/Android" en vez del dead-end; la maquinaria RevenueCat se oculta en web.
 
 ### Wearables — `lib/wearables.ts`, `lib/wearablesNative.ts`, `app/perfil/wearables`
