@@ -21,19 +21,16 @@ section.x{position:relative;z-index:1;padding:clamp(72px,10vh,128px) clamp(20px,
 .body h3{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#fff;margin-top:6px}
 .body p{font-size:14px;font-weight:300;line-height:1.6;color:var(--muted)}
 
-/* protocolo */
-.arc{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:40px}
-.act{padding:22px 24px}
-.act b{display:block;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:400}
-.act span{display:block;margin-top:8px;font-size:17px;font-weight:500;color:#fff}
-.act p{margin-top:8px;font-size:13.5px;font-weight:300;color:var(--muted);line-height:1.55}
-.modules{list-style:none;margin-top:44px;border-top:1px solid var(--border-soft)}
-.modules li{display:grid;grid-template-columns:64px 1fr auto;align-items:baseline;gap:20px;padding:20px 8px;border-bottom:1px solid var(--border-soft);transition:background .3s ease}
-.modules li:hover{background:rgba(255,200,4,.04)}
-.modules .n{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.14em;color:var(--muted)}
-.modules .t{font-size:clamp(16px,1.6vw,20px);font-weight:500;line-height:1.25;color:#fff}
-.modules .t small{display:block;margin-top:4px;font-size:13px;font-weight:300;color:var(--muted)}
-.modules .a{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);white-space:nowrap}
+/* protocolo: cuatro arquetipos */
+.arche{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px}
+.arc-card{padding:30px 28px 28px;display:flex;flex-direction:column;gap:12px}
+.arc-n{font-size:12px;letter-spacing:.2em;color:var(--gold);font-weight:500}
+.arc-card h3{font-size:clamp(20px,2vw,26px);font-weight:700;color:#fff;letter-spacing:-.01em}
+.arc-essence{font-size:15.5px;font-weight:300;line-height:1.55;color:var(--muted)}
+.arc-card blockquote{margin:4px 0 0;padding-left:14px;border-left:1.5px solid var(--gold);font-size:14px;font-weight:300;font-style:italic;line-height:1.5;color:#f2f2f2}
+.arc-card ul{list-style:none;margin-top:6px;display:flex;flex-direction:column;gap:7px}
+.arc-card li{position:relative;padding-left:20px;font-size:13.5px;font-weight:400;color:var(--muted)}
+.arc-card li::before{content:'';position:absolute;left:0;top:9px;width:9px;height:1.5px;background:var(--gold)}
 .live{margin-top:28px;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;font-size:14px;font-weight:300;color:var(--stat)}
 .live .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);animation:dotpulse 2.2s ease-in-out infinite}
 .live strong{font-weight:500;color:#fff}
@@ -98,5 +95,5 @@ section.x{position:relative;z-index:1;padding:clamp(72px,10vh,128px) clamp(20px,
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
 @media (max-width:1024px){.bodies{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr;gap:40px}.cmd{order:2}}
-@media (max-width:900px){.arc,.two,.plans{grid-template-columns:1fr}.modules li{grid-template-columns:44px 1fr;row-gap:6px}.modules .a{grid-column:2}.tiles{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:900px){.arche,.two,.plans{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:560px){.bodies{grid-template-columns:1fr}.close .actions .btn,.plan .btn{width:100%}}

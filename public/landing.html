@@ -188,19 +188,16 @@ section.x{position:relative;z-index:1;padding:clamp(72px,10vh,128px) clamp(20px,
 .body h3{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#fff;margin-top:6px}
 .body p{font-size:14px;font-weight:300;line-height:1.6;color:var(--muted)}
 
-/* protocolo */
-.arc{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:40px}
-.act{padding:22px 24px}
-.act b{display:block;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:400}
-.act span{display:block;margin-top:8px;font-size:17px;font-weight:500;color:#fff}
-.act p{margin-top:8px;font-size:13.5px;font-weight:300;color:var(--muted);line-height:1.55}
-.modules{list-style:none;margin-top:44px;border-top:1px solid var(--border-soft)}
-.modules li{display:grid;grid-template-columns:64px 1fr auto;align-items:baseline;gap:20px;padding:20px 8px;border-bottom:1px solid var(--border-soft);transition:background .3s ease}
-.modules li:hover{background:rgba(255,200,4,.04)}
-.modules .n{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.14em;color:var(--muted)}
-.modules .t{font-size:clamp(16px,1.6vw,20px);font-weight:500;line-height:1.25;color:#fff}
-.modules .t small{display:block;margin-top:4px;font-size:13px;font-weight:300;color:var(--muted)}
-.modules .a{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);white-space:nowrap}
+/* protocolo: cuatro arquetipos */
+.arche{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px}
+.arc-card{padding:30px 28px 28px;display:flex;flex-direction:column;gap:12px}
+.arc-n{font-size:12px;letter-spacing:.2em;color:var(--gold);font-weight:500}
+.arc-card h3{font-size:clamp(20px,2vw,26px);font-weight:700;color:#fff;letter-spacing:-.01em}
+.arc-essence{font-size:15.5px;font-weight:300;line-height:1.55;color:var(--muted)}
+.arc-card blockquote{margin:4px 0 0;padding-left:14px;border-left:1.5px solid var(--gold);font-size:14px;font-weight:300;font-style:italic;line-height:1.5;color:#f2f2f2}
+.arc-card ul{list-style:none;margin-top:6px;display:flex;flex-direction:column;gap:7px}
+.arc-card li{position:relative;padding-left:20px;font-size:13.5px;font-weight:400;color:var(--muted)}
+.arc-card li::before{content:'';position:absolute;left:0;top:9px;width:9px;height:1.5px;background:var(--gold)}
 .live{margin-top:28px;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;font-size:14px;font-weight:300;color:var(--stat)}
 .live .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);animation:dotpulse 2.2s ease-in-out infinite}
 .live strong{font-weight:500;color:#fff}
@@ -265,7 +262,7 @@ section.x{position:relative;z-index:1;padding:clamp(72px,10vh,128px) clamp(20px,
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
 @media (max-width:1024px){.bodies{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr;gap:40px}.cmd{order:2}}
-@media (max-width:900px){.arc,.two,.plans{grid-template-columns:1fr}.modules li{grid-template-columns:44px 1fr;row-gap:6px}.modules .a{grid-column:2}.tiles{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:900px){.arche,.two,.plans{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:560px){.bodies{grid-template-columns:1fr}.close .actions .btn,.plan .btn{width:100%}}
 
 /* ══ Estructura de marca Polaris (Manual — Orgánico Studio 2024) ═══════════
@@ -371,24 +368,38 @@ h1 em{-webkit-text-fill-color:var(--gold);font-style:normal}
 <section class="x" id="protocolo">
   <div class="wrap">
     <p class="kicker reveal">El Protocolo Soberano</p>
-    <h2 class="reveal">Nueve módulos. Nueve arquetipos. <em>Un arco de 90 días.</em></h2>
-    <p class="sub reveal">Cada módulo tiene lecciones, una tarea diaria, un foco semanal y un arquetipo que se integra al completarlo. Avanzas a tu ritmo — <strong>el sistema sugiere, no impone</strong>.</p>
-    <div class="arc">
-      <div class="act glass reveal"><b>Acto I</b><span>Base</span><p>Mentalidad, emociones y la maduración del Guerrero. Lo que sostiene todo lo demás.</p></div>
-      <div class="act glass reveal" style="transition-delay:.08s"><b>Acto II</b><span>Profundidad</span><p>Estado de flow, niveles de consciencia y el tiempo como el único recurso no renovable.</p></div>
-      <div class="act glass reveal" style="transition-delay:.16s"><b>Acto III</b><span>Identidad</span><p>Relaciones, prosperidad y servicio. El estado se vuelve forma de operar.</p></div>
+    <h2 class="reveal">Cuatro arquetipos. <em>Un solo sistema.</em></h2>
+    <p class="sub reveal">No te mostramos el temario: el protocolo se recorre, no se lee. Cada arquetipo es una capa de identidad que se integra en 90 días, con lecciones, una tarea diaria y sesiones en vivo. <strong>El sistema sugiere, no impone.</strong></p>
+    <div class="arche">
+      <article class="arc-card glass reveal">
+        <span class="arc-n">I</span>
+        <h3>El Guerrero</h3>
+        <p class="arc-essence">Se conquista a sí mismo. Aprende a ver sus miedos de frente y asume el mando.</p>
+        <blockquote>«Lo que no puedes ver, no puedes aceptar. Lo que no puedes aceptar, no lo puedes transformar.»</blockquote>
+        <ul><li>Mentalidad</li><li>Autoconocimiento y emociones</li><li>Maduración: humildad antes que soberbia</li></ul>
+      </article>
+      <article class="arc-card glass reveal" style="transition-delay:.08s">
+        <span class="arc-n">II</span>
+        <h3>El Pontífice</h3>
+        <p class="arc-essence">El puente. Deja de perseguir el rendimiento y aprende a inducir el estado del que nace.</p>
+        <blockquote>«El estado de flow se puede inducir con protocolo.»</blockquote>
+        <ul><li>Estado de flow</li><li>Cuarto nivel de consciencia</li><li>Cooperación: la energía como moneda</li></ul>
+      </article>
+      <article class="arc-card glass reveal" style="transition-delay:.16s">
+        <span class="arc-n">III</span>
+        <h3>El Mercader</h3>
+        <p class="arc-essence">Opera en el mundo sin perder el centro. Tiempo, relaciones y prosperidad como un solo oficio.</p>
+        <blockquote>«El tiempo es el único recurso no renovable.»</blockquote>
+        <ul><li>Gestión del tiempo</li><li>Relaciones, de adentro hacia afuera</li><li>La no negociación: Las 7 Llaves</li></ul>
+      </article>
+      <article class="arc-card glass reveal" style="transition-delay:.24s">
+        <span class="arc-n">IV</span>
+        <h3>El Mago</h3>
+        <p class="arc-essence">Ya no busca el estado: opera desde él. Y lo convierte en obra para otros.</p>
+        <blockquote>«La ley de ayuda y servicio.»</blockquote>
+        <ul><li>Logrología</li><li>Acción alineada con propósito</li><li>Servicio como forma de operar</li></ul>
+      </article>
     </div>
-    <ol class="modules reveal">
-      <li><span class="n">01</span><span class="t">Mentalidad<small>La base de todo lo que construirás</small></span><span class="a">Guerrero</span></li>
-      <li><span class="n">02</span><span class="t">Emociones: autoconocimiento<small>Domina tu mundo interno</small></span><span class="a">Guerrero</span></li>
-      <li><span class="n">03</span><span class="t">Maduración del Guerrero<small>Profundiza en quién eres</small></span><span class="a">Guerrero</span></li>
-      <li><span class="n">04</span><span class="t">Estado de flow<small>El rendimiento nace del estado</small></span><span class="a">Pontífice</span></li>
-      <li><span class="n">05</span><span class="t">Cuarto nivel de consciencia<small>Cooperación y energía como moneda</small></span><span class="a">Pontífice</span></li>
-      <li><span class="n">06</span><span class="t">Gestión del tiempo<small>El único recurso no renovable</small></span><span class="a">Mercader</span></li>
-      <li><span class="n">07</span><span class="t">Relaciones<small>Construye desde adentro hacia afuera</small></span><span class="a">Mercader</span></li>
-      <li><span class="n">08</span><span class="t">La no negociación<small>Las 7 Llaves de la Prosperidad</small></span><span class="a">Mercader</span></li>
-      <li><span class="n">09</span><span class="t">Logrología<small>Ley de ayuda y servicio</small></span><span class="a">Soberano</span></li>
-    </ol>
     <div class="live reveal"><span class="dot"></span><span>Sesiones semanales en vivo con <strong>El Navegador</strong> — el mentor humano —, comunidad y las grabaciones del programa, dentro del sistema.</span></div>
   </div>
 </section>
