@@ -14,8 +14,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -633,6 +633,14 @@ export default function WearablesScreen() {
   const [banner, setBanner] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
   const [owPickerOpen, setOwPickerOpen] = useState(false);
 
+  // El hook solo recarga al montar. Si el usuario deja esta pantalla abierta
+  // (o vuelve a ella tras un rato) y su conexión se cayó por fuera —circuit
+  // breaker, revocación manual desde el proveedor, un intento anterior que sí
+  // funcionó pero la vista nunca se refrescó—, la tarjeta seguía mostrando
+  // "conectado" indefinidamente y cada Desconectar chocaba contra una fila que
+  // ya no existe ("Connection not found"), sin forma de que el usuario lo notara.
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+
   // Handle OAuth callback params (?connected=whoop or ?error=...)
   useEffect(() => {
     if (params.connected) {
@@ -873,8 +881,17 @@ export default function WearablesScreen() {
               err = res.error;
             }
 
+            // "Connection not found" es el mensaje literal y fijo que devuelve
+            // sync-wearables cuando la fila ya no existe — no un error real: el
+            // estado que el usuario quería (desconectado) ya es el actual. Sin
+            // esto, una conexión caída por fuera (revocada en el proveedor, o un
+            // intento previo que sí funcionó pero la pantalla no se refrescó)
+            // dejaba al usuario atrapado viendo "No se pudo desconectar" para
+            // siempre, sin ninguna acción que se lo resolviera.
+            const alreadyGone = err === 'Connection not found';
+
             await reload();
-            if (ok) {
+            if (ok || alreadyGone) {
               const tail = provider === 'apple_health'
                 ? ' — para revocar el permiso de lectura, ve a Ajustes › Salud'
                 : '';

@@ -974,7 +974,12 @@ async function disconnectProvider(userId: string, provider: string): Promise<{ o
     .eq('provider', provider)
     .maybeSingle();
 
-  if (!conn) return { ok: false, error: 'Connection not found' };
+  // DELETE es idempotente por definición: si ya no hay fila, el estado que el
+  // caller pedía (desconectado) ya es el actual — no es un fallo. Sin esto, un
+  // segundo clic tras un reload que no llegó a tiempo, o una conexión ya
+  // limpiada por el circuit breaker, respondía "error" para algo que ya estaba
+  // resuelto.
+  if (!conn) return { ok: true };
 
   await revokeUpstream(conn as WearableConnection);
 
