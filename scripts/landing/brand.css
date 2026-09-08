@@ -1,0 +1,48 @@
+
+/* ══ Estructura de marca Polaris (Manual — Orgánico Studio 2024) ═══════════
+   Grandis Extended en todo · Philippine Yellow #FFC804 · Smoky Black #0F0F0F
+   · Dark Silver #6D6D6D · títulos en sentence case, alineados a la izquierda */
+:root{--gold:#FFC804;--gold-dim:#EDBA01;--ink:#0A0A0A;--silver:#6D6D6D;--muted:#C9C9C9;--stat:#C9C9C9;--text:#E6E6E6}
+body{font-family:'Grandis','Michroma','Myriad Pro',Arial,sans-serif}
+::selection{background:var(--gold);color:var(--ink)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+
+/* fuera Space Mono: una sola familia, jerarquía por peso */
+.badge,.stat,.x .kicker,.body h3,.act b,.modules .n,.modules .a,.cmd-bar,.tile span,.tile em,.msg b,.chip,.card h3,.plan .name,.note,.foot .wrap{font-family:inherit}
+.x .kicker,.act b,.card h3,.plan .name,.cmd-bar,.msg b,.body h3{text-transform:none;letter-spacing:.02em;font-weight:500}
+.x .kicker{font-size:13.5px}
+.body h3{font-size:16px;font-weight:700;letter-spacing:0}
+.card h3,.plan .name{font-size:14px}
+.modules .n,.modules .a{letter-spacing:.06em}
+.tile span,.tile em,.chip{text-transform:none;letter-spacing:.02em}
+.note{letter-spacing:0;font-weight:300}
+
+/* logo: brújula de 8 puntas + wordmark del manual */
+.logo{text-transform:none;letter-spacing:0}
+.logo .wm{display:flex;flex-direction:column;line-height:1}
+.logo .wm b{font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#fff}
+.logo .wm span{font-weight:400;font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--silver);margin-top:3px}
+
+/* hero: sin degradado en el texto, sentence case, izquierda */
+.hero{justify-content:flex-start;padding-left:var(--stats-x);padding-right:var(--stats-x)}
+.hero-copy{align-items:flex-start;text-align:left}
+.hero-actions{justify-content:flex-start}
+h1{align-items:flex-start;letter-spacing:-.02em;line-height:1.04;text-wrap:balance}
+h1 .headline-line{background:none;-webkit-background-clip:unset;background-clip:unset;color:#fff;-webkit-text-fill-color:#fff}
+h1 em{-webkit-text-fill-color:var(--gold);font-style:normal}
+.badge{text-transform:none;letter-spacing:.04em;font-weight:500;border-radius:999px;border:1px solid rgba(255,200,4,.3);background:rgba(255,200,4,.10);color:var(--gold)}
+.lede{color:var(--muted)}
+
+/* sistema de botones Polaris: oro plano, Bold, mayúsculas, r:8 */
+.btn{font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:calc(var(--btn) - 2px);border-radius:8px}
+.btn-solid,.btn-solid:hover{background:var(--gold);color:var(--ink);border-color:var(--gold-dim);box-shadow:none}
+.btn-solid:hover{background:var(--gold-dim);box-shadow:0 8px 28px rgba(255,200,4,.22)}
+.btn-ghost{background:transparent;border-color:rgba(255,255,255,.16);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+.btn-ghost:hover{border-color:rgba(255,200,4,.4);background:rgba(255,200,4,.08)}
+
+/* pie de pantalla 1 y footer */
+.stat{letter-spacing:.04em}
+.foot .wrap{letter-spacing:.02em}
+@media (max-width:900px){.hero{padding-left:24px;padding-right:24px}}
+.logo .wm b,.logo .wm span{white-space:nowrap}
+@media (max-width:900px){.logo .wm span{display:none}.header-cta{padding:0 12px;font-size:12px}}
