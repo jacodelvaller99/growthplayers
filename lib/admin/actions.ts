@@ -341,6 +341,42 @@ export async function updateUserProfile(params: {
   }
 }
 
+// ─── ENVIAR ENLACE DE RECUPERACIÓN DE CONTRASEÑA ─────────────────────────────
+// Para el caso real: el cliente escribe por WhatsApp diciendo que no puede
+// entrar. Antes no había nada que hacer desde el panel salvo crearle otra
+// cuenta. Usa el mismo endpoint público que la pantalla de login (no requiere
+// service-role): Supabase manda el correo con la plantilla del proyecto.
+export async function sendPasswordRecovery(params: {
+  adminId: string;
+  userId: string;
+  email: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { adminId, userId } = params;
+  const email = params.email.trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    return { success: false, error: 'Este cliente no tiene un email registrado. Escríbelo para enviarle el enlace.' };
+  }
+  try {
+    const redirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo ? { redirectTo } : undefined,
+    );
+    if (error) {
+      const { describeRecoveryError } = await import('@/lib/authRecovery');
+      return { success: false, error: describeRecoveryError(error).message };
+    }
+    // El email NO se registra en la auditoría: es dato personal y el user_id ya
+    // identifica al destinatario sin duplicar PII en una tabla de logs.
+    await auditLog(adminId, 'send_password_recovery', 'user', userId, {});
+    return { success: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    return { success: false, error: msg };
+  }
+}
+
 // ─── SET USER ROLE (panel de 4 niveles: superadmin/admin/premium/inicial) ─────
 // Vía la RPC SECURITY DEFINER admin_set_user_role, que verifica los privilegios
 // del LLAMANTE en el servidor (solo SuperAdmin asigna admin/superadmin). El cambio
@@ -861,4 +897,19 @@ export async function recalculateAllMLAction(adminId: string): Promise<{ success
   if (error) return { success: false, error: error.message };
   await auditLog(adminId, 'recalculate_all_ml', 'user', 'all', {});
   return { success: true };
+}
+
+/**
+ * Dispara sync-wearables para TODAS las conexiones activas (todos los
+ * usuarios). El edge function ahora acepta batch:'all' de un admin
+ * autenticado además de service_role (antes solo aceptaba service_role,
+ * así que un botón admin invocándolo con el JWT normal siempre daba 401).
+ */
+export async function syncAllWearablesAction(adminId: string): Promise<{ success: boolean; processed?: number; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('sync-wearables', {
+    body: { batch: 'all' },
+  });
+  if (error) return { success: false, error: error.message };
+  await auditLog(adminId, 'sync_all_wearables', 'user', 'all', { processed: data?.processed });
+  return { success: true, processed: data?.processed };
 }

@@ -704,10 +704,17 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         // columna es nueva y el tipo generado no la conoce aún, de ahí el
         // cast. Si la columna no existe todavía en prod, el upsert falla y
         // cae al catch: el onboarding no se bloquea por eso.
+        // El email se guarda aquí porque `user_profiles.email` solo lo escribían
+        // create-user y clickup-onboarding: quien se registraba solo dejaba la
+        // columna vacía, y el panel de admin no podía ni buscarlo por correo ni
+        // reenviarle un enlace de contraseña. getSession lee de almacenamiento
+        // local, no hace red.
+        const { data: sess } = await supabase.auth.getSession();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (db.profiles() as any).upsert({
           user_id:             uid,
           name:                payload.profile.name,
+          email:               sess.session?.user?.email ?? null,
           role:                payload.profile.role || null,
           protocol_start_date: now.split('T')[0],
           purpose:             payload.northStar.purpose,

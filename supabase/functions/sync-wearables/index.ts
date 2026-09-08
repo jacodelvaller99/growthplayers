@@ -1043,9 +1043,21 @@ Deno.serve(async (req: Request) => {
       return json(result, result.ok ? 200 : 400);
     }
 
-    // Batch mode: sync all active connections — SOLO service_role (cron diario).
+    // Batch mode: sync all active connections — service_role (cron diario) O un
+    // admin autenticado (botón "Sincronizar todos" en el panel). Antes esto
+    // rechazaba SIEMPRE al admin con 401 — el cliente manda su JWT, nunca el
+    // service-role key — así que el botón nunca podía haber funcionado.
     if (batch === 'all') {
-      if (!isServiceRole) return json({ error: 'Unauthorized' }, 401);
+      let isAdmin = false;
+      if (!isServiceRole && authedUserId) {
+        const { data: callerProfile } = await adminSupabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', authedUserId)
+          .maybeSingle();
+        isAdmin = callerProfile?.is_admin === true;
+      }
+      if (!isServiceRole && !isAdmin) return json({ error: 'Unauthorized' }, 401);
       const { data: connections } = await adminSupabase
         .from('wearable_connections')
         .select('user_id, provider')

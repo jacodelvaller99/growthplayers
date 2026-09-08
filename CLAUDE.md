@@ -38,8 +38,8 @@ npx expo export --platform web        # Outputs to dist/
 # vercel.json: buildCommand = "npx expo export --platform web"
 
 # Native builds (EAS)
-# ⚠ BLOQUEADO: app.json extra.eas.projectId es placeholder (00000000-…) —
-#   correr `eas init` con la cuenta del proyecto antes de cualquier build nativo.
+# eas init ya se corrió (2026-08-11, commit f55aa45) — projectId real vinculado
+# a la cuenta polaris-growth-institute. Build nativo desbloqueado.
 eas build --profile preview --platform ios
 eas build --profile production --platform all
 
@@ -319,14 +319,74 @@ como supersedidos porque daban por abiertos problemas ya cerrados.
 - **Observabilidad** — `lib/observability.ts` `logSilentError(context, error)` reemplaza catches ciegos en las capas IO (memory/biometric/confrontation/mentorExecution); punto único para Sentry. `lib/schemaHealth.ts` `checkCriticalSchema()` corre tras login y deja rastro si falta una migración crítica (en vez de degradar en silencio).
 - **Suscripción reconciliada** — `lib/subscription.ts` `resolveEntitlement({ dbTier, expiresAt, rcActive })` (puro, testeado): DB = nivel, RevenueCat = recibo, **enforce `expiresAt > now`**. `isSubscribed` (use-lifeflow) y `useSubscription` lo usan — fin del split-brain RC↔DB.
 - **Recuperación de contraseña web** — `detectSessionInUrl: true` en web (`lib/supabase.ts`) + ruta `app/(auth)/reset-password.tsx` (maneja `PASSWORD_RECOVERY` → `updateUser`). El email de reset pasa `redirectTo` en web.
+
+### Recuperación de contraseña — ciclo completo (2026-09-07)
+
+Antes: la pantalla decía SIEMPRE "te enviamos un enlace", aunque Supabase
+rechazara el envío por límite de correos; en nativo el `redirectTo` era
+`undefined`, así que el enlace abría el navegador y dejaba al cliente fuera de
+la app; y el admin no tenía nada que hacer cuando un cliente escribía "no puedo
+entrar". Lo que hay ahora:
+
+- **Lógica pura** `lib/authRecovery.ts` (15 tests): `describeRecoveryError`
+  traduce el 429 de Supabase a mensaje + espera real (respeta el "after N
+  seconds" que dicta el servidor; el tope del proyecto da 300s con salida a
+  correo humano), `maskEmail` (conserva largo y dominio, para detectar typos sin
+  revelar si la cuenta existe), `recoverySentMessage` (condicional: "Si … tiene
+  cuenta"), `parseRecoveryTokens` (lee el deep link nativo).
+- **`app/(auth)/index.tsx`**: `redirectTo` nativo = `Linking.createURL('/reset-password')`;
+  cuenta regresiva visible en el botón (`REENVIAR EN NNs`, deshabilitado de
+  verdad); el fallo de envío se dice en vez de fingir éxito.
+- **`app/(auth)/reset-password.tsx`**: en nativo canjea el deep link a mano
+  (`Linking.useURL` → `setSession`) porque `detectSessionInUrl` está apagado
+  ahí; el enlace vencido ahora muestra su motivo en vez del texto genérico.
+- **Admin**: botón "ENVIAR ENLACE DE CONTRASEÑA" en el modal de identidad de
+  `app/admin/usuarios/[id].tsx` → `sendPasswordRecovery` (`lib/admin/actions.ts`).
+  Usa el endpoint público, **no** requiere service-role ni edge function nueva.
+- **`user_profiles.email` estaba vacío** para quien se registraba solo (solo lo
+  escribían `create-user` y `clickup-onboarding`) → la búsqueda por email del
+  admin era código muerto. Ahora se escribe en `completeOnboarding`
+  (`hooks/use-lifeflow.tsx`) y se rellena el histórico con la migración
+  `20260907000000_user_profiles_email_backfill.sql`. Ojo: el email NO está en la
+  vista `user_progress`, hay que leerlo de `user_profiles` (así lo hacen
+  `fetchUsers`/`fetchUserDetail`).
+
+**Handoffs del dueño (sin esto el correo sigue saliendo mal):** SMTP propio de
+Resend en *Project Settings → Authentication → SMTP*, dominio verificado en
+Resend, `polaris://reset-password` en *Auth → URL Configuration → Redirect URLs*,
+plantillas en español y con marca (**`docs/launch/EMAIL_TEMPLATES_SUPABASE.md`**,
+listas para pegar), y correr la migración del backfill en el SQL Editor.
 - **Paywall web** — descope honesto (`app/paywall.tsx`): panel "se gestiona en iOS/Android" en vez del dead-end; la maquinaria RevenueCat se oculta en web.
+
+### Landing de presentación en la raíz del dominio (2026-09-08)
+
+`public/landing.html` (713 KB, HTML autónomo — fuentes Grandis embebidas, sin
+dependencias externas) es lo que ve cualquiera que entre a
+`polarisgrowthinstitute.vercel.app/` sin sesión ni deep link. `vercel.json`
+reescribe `"/"` → `/landing.html` **antes** de la regla catch-all que manda
+todo lo demás a `/index.html` (la SPA de Expo Router) — Expo copia `public/`
+tal cual al build (`dist/`), así que no hace falta build step propio. Ninguna
+otra ruta cambia: `/welcome`, `/legal/*`, `/(tabs)/*`, etc. siguen sirviendo la
+app exactamente igual que antes — verificado sirviendo `dist/` con las mismas
+reglas de reescritura.
+
+Los botones "Crear cuenta"/"Entrar al sistema" del landing apuntan a
+`/welcome` (ruta relativa, misma pestaña — es el mismo sitio, no un dominio
+externo) y de ahí sigue el flujo de registro/login normal de la app.
+
+**Fuente reproducible:** `scripts/landing/build.mjs` (+ `extra.html`,
+`extra.css`, `brand.css` en la misma carpeta) regenera `public/landing.html` a
+partir del Standalone que el dueño exporta desde su herramienta de diseño
+(`E:\...\POLARIS\Polaris - Landing Presentacion (Standalone).html`, fuera del
+repo). Para actualizar el landing: el dueño reexporta ese Standalone, se corre
+`node scripts/landing/build.mjs`, se commitea `public/landing.html`.
 
 ### Wearables — `lib/wearables.ts`, `lib/wearablesNative.ts`, `app/perfil/wearables`
 
 Cobertura cross-marca vía **tres** caminos:
 
 - **OAuth web** (`lib/wearables.ts` + `sync-wearables` edge function): WHOOP + Oura. Funciona en PWA y nativo. Callbacks en `app/oauth/{whoop,oura}/callback`. Migración `polaris://oauth/<provider>/callback` registrada en `app.json`.
-- **Nativo on-device** (`lib/wearablesNative.ts`): **Apple HealthKit** (iOS, `react-native-health`) y **Android Health Connect** (`react-native-health-connect`) — agregadores oficiales del SO. Cubren **Apple Watch, Garmin, Polar, Coros, Suunto, Withings, Fitbit, Samsung Galaxy Watch, Wear OS, WHOOP, Oura** y cualquier otro reloj que escriba a ellos. Solo funciona en builds nativos (no Expo Go ni PWA): requiere `eas init` + `eas build --profile preview --platform all`. Lee on-device → upsert directo a `wearable_daily` con `provider='apple_health'|'health_connect'` (sin tokens server-side; RLS owner cubre). Permisos declarados en `app.json` (`NSHealthShareUsageDescription` + `android.permission.health.READ_*`). Migración `20260618000000_wearables_native_providers.sql` extiende el CHECK constraint de `wearable_{daily,timeseries,connections}.provider`.
+- **Nativo on-device** (`lib/wearablesNative.ts`): **Apple HealthKit** (iOS, `react-native-health`) y **Android Health Connect** (`react-native-health-connect`) — agregadores oficiales del SO. Cubren **Apple Watch, Garmin, Polar, Coros, Suunto, Withings, Fitbit, Samsung Galaxy Watch, Wear OS, WHOOP, Oura** y cualquier otro reloj que escriba a ellos. Solo funciona en builds nativos (no Expo Go ni PWA): requiere `eas build --profile preview --platform all` (`eas init` ya corrido, ver "Native builds" arriba). Lee on-device → upsert directo a `wearable_daily` con `provider='apple_health'|'health_connect'` (sin tokens server-side; RLS owner cubre). Permisos declarados en `app.json` (`NSHealthShareUsageDescription` + `android.permission.health.READ_*`). Migración `20260618000000_wearables_native_providers.sql` extiende el CHECK constraint de `wearable_{daily,timeseries,connections}.provider`.
 
 **Ciclo de desconexión + circuit breaker (2026-08-31):** desconectar ya es REAL, no un `is_active=false` cosmético — `action:'disconnect'` en `sync-wearables` revoca el token en el proveedor (Oura/WHOOP/Strava; Polar vía `provider_user_id` guardado en connect), borra la fila (tokens fuera de la BD) y purga `wearable_daily`/`timeseries` del provider; `wearable-aggregator` deregistra en Terra (`deauthenticateUser`)/Open Wearables; nativo (`disconnectNative`) revoca permisos de Health Connect en Android (en iOS es imposible por diseño de Apple — se guía a Ajustes) y purga vía RLS owner. **Circuit breaker** (migración `20260831000000`, lógica pura testeada en `supabase/functions/_shared/connectionHealth.ts`): refresh con `invalid_grant`/400/401 mata la conexión de inmediato; 5 fallos transitorios seguidos también; éxito resetea. La UI muestra "CONEXIÓN CADUCADA" (`staleConnections` en `useWearableConnections`). `delete-account` revoca upstream antes del purge. **Descope deliberado — BLE directo** (Gadgetbridge/Huawei/Xiaomi/ble-plx): ingeniería inversa de protocolos propietarios + claves extraídas de apps oficiales = riesgo legal/ToS + rechazo de stores + mantenimiento por modelo; esas marcas ya las cubren Health Connect y el agregador. Cero código BLE, a propósito.
 

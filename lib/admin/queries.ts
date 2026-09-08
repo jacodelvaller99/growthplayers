@@ -356,11 +356,21 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
   const adminMap: Record<string, boolean> = {};
   const superMap: Record<string, boolean> = {};
   const mentorMap: Record<string, boolean> = {};
+  // El email NO está en la vista user_progress, solo en la tabla user_profiles.
+  // Sin este mapa la lista lo dejaba en '' y la búsqueda por email jamás
+  // encontraba nada — y el admin no podía dispararle un enlace de recuperación.
+  const emailMap: Record<string, string> = {};
   if (ids.length > 0) {
-    const [membRes, profRes] = await Promise.allSettled([
+    const [membRes, profRes, mailRes] = await Promise.allSettled([
       supa.from('user_memberships').select('user_id, product').eq('status', 'active').in('user_id', ids),
       intel.profiles().select('id, is_admin, is_superadmin, is_mentor').in('id', ids),
+      supa.from('user_profiles').select('user_id, email').in('user_id', ids),
     ]);
+    if (mailRes.status === 'fulfilled') {
+      for (const u of (mailRes.value.data ?? []) as Array<{ user_id: string; email: string | null }>) {
+        if (u.email) emailMap[u.user_id] = u.email;
+      }
+    }
     if (membRes.status === 'fulfilled') {
       for (const m of (membRes.value.data ?? []) as Array<{ user_id: string; product: string }>) {
         const t = String(m.product).replace('lifeflow_', ''); // normaliza legacy
@@ -383,7 +393,10 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let users = rows.map((p: any) => ({
     id: p.user_id as string,
-    email: '',
+    // `user_profiles.email` solo lo escriben create-user y clickup-onboarding;
+    // quien se registra solo lo deja vacío. Antes esto era un '' literal, así
+    // que la búsqueda por email de más abajo nunca podía encontrar nada.
+    email: emailMap[p.user_id] ?? '',
     name: (p.name as string) ?? 'Usuario',
     role: p.tier as string | undefined,                  // etiqueta de rol editable (default 'Aprendiz')
     subscription_tier: tierMap[p.user_id] ?? 'free',     // TIER REAL de la membresía activa
@@ -404,12 +417,14 @@ export async function fetchUsers(search?: string): Promise<AdminUser[]> {
 }
 
 export async function fetchUserDetail(userId: string): Promise<AdminUserDetail | null> {
-  const [progressRes, membRes, courseRes, profRes] = await Promise.all([
+  const [progressRes, membRes, courseRes, profRes, mailRes] = await Promise.all([
     supa.from('user_progress').select('*').eq('user_id', userId).single(),
     supa.from('user_memberships').select('*').eq('user_id', userId).eq('status', 'active'),
     supa.from('user_course_access').select('*').eq('user_id', userId).eq('is_active', true),
     // is_admin/is_superadmin/is_mentor viven en profiles, NO en la vista user_progress.
     intel.profiles().select('is_admin, is_superadmin, is_mentor').eq('id', userId).maybeSingle(),
+    // El email tampoco está en la vista: vive en user_profiles.
+    supa.from('user_profiles').select('email').eq('user_id', userId).maybeSingle(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -429,7 +444,9 @@ export async function fetchUserDetail(userId: string): Promise<AdminUserDetail |
 
   return {
     id: userId,
-    email: '',
+    // Vacío para quien se registró solo: user_profiles.email solo lo escriben
+    // create-user y clickup-onboarding (ver handoff de backfill en CLAUDE.md).
+    email: ((mailRes.data as { email?: string | null } | null)?.email) ?? '',
     name: profile.name ?? 'Usuario',
     role: profile.tier,
     is_admin: flags.is_admin ?? false,

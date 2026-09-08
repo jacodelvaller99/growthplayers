@@ -95,6 +95,7 @@ import {
   recalculateUserMLAction,
   sendMessageAsNorman,
   setUserRole,
+  sendPasswordRecovery,
   updateUserProfile,
   APP_ROLE_LABEL,
   type AppRole,
@@ -306,6 +307,8 @@ export default function UserDetailScreen() {
   const [eName, setEName] = useState('');
   const [eLabel, setELabel] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [eEmail, setEEmail] = useState('');
+  const [sendingRecovery, setSendingRecovery] = useState(false);
 
   // Weekly session state
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
@@ -556,8 +559,28 @@ export default function UserDetailScreen() {
   const openEditIdentity = () => {
     setEName(user?.name ?? '');
     setELabel(user?.role ?? '');
+    // Vacío para quien se registró solo (user_profiles.email sin backfill):
+    // el campo queda editable para que el admin lo escriba y el envío funcione.
+    setEEmail(user?.email ?? '');
     setEditOpen(true);
   };
+
+  // Enlace de recuperación: el caso del cliente que escribe "no puedo entrar".
+  const handleSendRecovery = useCallback(async () => {
+    if (!userId || !adminId) return;
+    setSendingRecovery(true);
+    try {
+      const res = await sendPasswordRecovery({ adminId, userId, email: eEmail });
+      showAlert(
+        res.success ? 'Enlace enviado' : 'No se pudo enviar',
+        res.success
+          ? `Le llega a ${eEmail.trim()} en pocos minutos. Pídele que revise spam; el enlace caduca en 1 hora.`
+          : res.error ?? 'Intenta de nuevo en un momento.',
+      );
+    } finally {
+      setSendingRecovery(false);
+    }
+  }, [userId, adminId, eEmail]);
 
   const handleSaveIdentity = useCallback(async () => {
     if (!userId || !adminId) return;
@@ -1509,6 +1532,39 @@ export default function UserDetailScreen() {
               placeholderTextColor={palette.smoke}
             />
             <Text style={mo.edHint}>El tier de suscripción se cambia en “B. Membresías y acceso”.</Text>
+
+            {/* ── Acceso: reenvío del enlace de contraseña ────────────────────
+                El cliente que no puede entrar antes no tenía salida desde aquí. */}
+            <Text style={[mo.edLabel, { marginTop: spacing.lg }]}>EMAIL DE ACCESO</Text>
+            <TextInput
+              style={mo.edInput}
+              value={eEmail}
+              onChangeText={setEEmail}
+              placeholder="cliente@email.com"
+              placeholderTextColor={palette.smoke}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="Email de acceso del cliente"
+            />
+            <Pressable
+              style={[mo.edCancel, { marginTop: spacing.sm }, sendingRecovery && { opacity: 0.6 }]}
+              onPress={handleSendRecovery}
+              disabled={sendingRecovery}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: sendingRecovery }}
+              accessibilityLabel="Enviar enlace de recuperación de contraseña">
+              {sendingRecovery ? (
+                <ActivityIndicator color={palette.goldText} size="small" />
+              ) : (
+                <Text style={mo.edCancelText}>ENVIAR ENLACE DE CONTRASEÑA</Text>
+              )}
+            </Pressable>
+            <Text style={mo.edHint}>
+              Le llega un correo para crear una contraseña nueva. No cambia su clave actual
+              hasta que él la defina.
+            </Text>
+
             <View style={mo.edFooter}>
               <Pressable style={mo.edCancel} onPress={() => setEditOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
                 <Text style={mo.edCancelText}>CANCELAR</Text>

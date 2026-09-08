@@ -26,6 +26,9 @@ jest.mock('@/lib/biometric', () => ({
     { user_id: 'u3', name: 'Caro', intervention_level: 'low', recovery_state: 'strong', trend_state: 'improving', summary: 'Semana sólida.' },
   ]),
 }));
+jest.mock('@/lib/admin/actions', () => ({ syncAllWearablesAction: jest.fn() }));
+jest.mock('@/lib/confirm', () => ({ showAlert: jest.fn() }));
+jest.mock('@/hooks/use-lifeflow', () => ({ useLifeFlow: () => ({ userId: 'admin1' }) }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const AdminBiometriaScreen = require('@/app/admin/biometria').default;

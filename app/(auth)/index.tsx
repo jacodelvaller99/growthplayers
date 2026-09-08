@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -25,6 +26,11 @@ import {
 } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import {
+  RECOVERY_COOLDOWN_SEC,
+  describeRecoveryError,
+  recoverySentMessage,
+} from '@/lib/authRecovery';
 import { logSilentError } from '@/lib/observability';
 import { supabase } from '@/lib/supabase';
 
@@ -46,6 +52,16 @@ export default function AuthScreen() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [success, setSuccess]   = useState<string | null>(null);
+  // Segundos que falta esperar para volver a pedir un enlace de recuperación.
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cuenta regresiva visible. Sin esto el cliente pulsa cinco veces, Supabase
+  // corta por límite de correos y la pantalla seguía diciendo "enviado".
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   // ── Navigate when Supabase confirms the session — no race condition ──────────
   useEffect(() => {
@@ -171,20 +187,31 @@ export default function AuthScreen() {
       setError('Ingresa tu email.');
       return;
     }
+    if (cooldown > 0) return;
     await runAuthAction('auth.forgotPassword', async () => {
-      // En web, el enlace debe volver a /reset-password para fijar la nueva clave.
+      // El enlace debe volver a /reset-password. En web es la URL del sitio; en
+      // nativo era `undefined`, así que el correo abría el navegador y dejaba al
+      // cliente fuera de la app — ahora vuelve por el esquema `polaris://`.
+      // Requiere que ambas URLs estén registradas en Supabase → Auth → Redirect URLs.
       const redirectTo = Platform.OS === 'web' && typeof window !== 'undefined'
         ? `${window.location.origin}/reset-password`
-        : undefined;
+        : Linking.createURL('/reset-password');
+      const target = email.trim().toLowerCase();
       const { error: err } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
+        target,
         redirectTo ? { redirectTo } : undefined,
       );
       if (err) {
-        setError(err.message);
+        // El envío falló de verdad: se dice, y se respeta la espera que pide
+        // el servidor en vez de invitar a reintentar contra un muro.
+        const failure = describeRecoveryError(err);
+        logSilentError('auth.forgotPassword.rejected', err);
+        setError(failure.message);
+        setCooldown(failure.cooldownSec);
         return;
       }
-      setSuccess('Te enviamos un enlace para restablecer tu contraseña.');
+      setSuccess(recoverySentMessage(target));
+      setCooldown(RECOVERY_COOLDOWN_SEC);
     });
   };
 
@@ -337,12 +364,21 @@ export default function AuthScreen() {
             loading       ? 'PROCESANDO...'
             : mode === 'login'    ? 'ENTRAR AL PROTOCOLO'
             : mode === 'register' ? 'CREAR CUENTA'
+            : cooldown > 0 ? `REENVIAR EN ${cooldown}s`
             : 'ENVIAR ENLACE'
           }
           icon={loading ? 'hourglass-empty' : mode === 'forgot' ? 'mail' : 'arrow-forward'}
           onPress={submit}
-          disabled={loading}
+          disabled={loading || (mode === 'forgot' && cooldown > 0)}
         />
+
+        {mode === 'forgot' && (
+          <Text style={styles.codeHint}>
+            Te llega un correo de Polaris con un enlace para crear una contraseña nueva.
+            Si no aparece en unos minutos, revisa spam. Si sigue sin llegar, escribe a
+            hola@polarisgrowthinstitute.com.
+          </Text>
+        )}
 
         {/* ── Secondary links ── */}
         {mode === 'login' && (

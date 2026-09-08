@@ -5,6 +5,7 @@
 // Antes este flujo no existía → un usuario web bloqueado no podía recuperar su cuenta.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -18,6 +19,8 @@ import {
   useScreen,
 } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { parseRecoveryTokens } from '@/lib/authRecovery';
+import { logSilentError } from '@/lib/observability';
 import { supabase } from '@/lib/supabase';
 
 export default function ResetPasswordScreen() {
@@ -45,6 +48,29 @@ export default function ResetPasswordScreen() {
     });
     return () => { active = false; sub.subscription.unsubscribe(); };
   }, []);
+
+  // ── Nativo: el deep link trae los tokens crudos ─────────────────────────────
+  // En web `detectSessionInUrl` parsea la URL solo; en iOS/Android está apagado
+  // (no hay URL de navegador), así que el enlace `polaris://reset-password#...`
+  // llegaba sin que nadie lo leyera y la pantalla se quedaba en "abre el enlace
+  // del correo" para siempre. Aquí se canjea a mano por una sesión.
+  const deepLink = Linking.useURL();
+  useEffect(() => {
+    if (Platform.OS === 'web' || ready) return;
+    const tokens = parseRecoveryTokens(deepLink);
+    if (!tokens) return;
+    let active = true;
+    supabase.auth.setSession(tokens).then(({ error: err }) => {
+      if (!active) return;
+      if (err) {
+        logSilentError('auth.resetPassword.setSession', err);
+        setError('Este enlace ya venció o fue usado. Solicita uno nuevo desde el login.');
+        return;
+      }
+      setReady(true);
+    });
+    return () => { active = false; };
+  }, [deepLink, ready]);
 
   const submit = async () => {
     if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres.'); return; }
@@ -84,11 +110,20 @@ export default function ResetPasswordScreen() {
             <Text style={styles.doneText}>Contraseña actualizada. Te llevamos al inicio…</Text>
           </View>
         ) : !ready ? (
+          // Sin sesión de recuperación. Si el canje del enlace falló hay un motivo
+          // concreto (vencido, ya usado) y se dice; si no, es que se llegó de frente.
           <View style={styles.doneBox}>
-            <MaterialIcons name="link" size={36} color={palette.goldText} />
-            <Text style={styles.waitText}>
-              Abre esta pantalla desde el enlace que te enviamos por correo. Si llegaste por error,
-              vuelve al inicio y solicita un nuevo enlace.
+            <MaterialIcons
+              name={error ? 'link-off' : 'link'}
+              size={36}
+              color={error ? palette.dangerText : palette.goldText}
+            />
+            <Text
+              style={[styles.waitText, error ? { color: palette.dangerText } : null]}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite">
+              {error ??
+                'Abre esta pantalla desde el enlace que te enviamos por correo. Si llegaste por error, vuelve al inicio y solicita un nuevo enlace.'}
             </Text>
             <SecondaryButton label="VOLVER AL LOGIN" onPress={() => router.replace('/(auth)')} />
           </View>
