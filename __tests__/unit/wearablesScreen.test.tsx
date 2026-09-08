@@ -12,6 +12,9 @@ import { Platform } from 'react-native';
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: jest.fn() }),
   useLocalSearchParams: () => ({}),
+  // No-op: evita disparar reload() en cada render del test — deja la
+  // pantalla en su estado inicial, igual que el mock de mensajesInboxScreen.
+  useFocusEffect: () => {},
 }));
 jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), ImpactFeedbackStyle: { Medium: 'm', Light: 'l', Heavy: 'h' } }));
 jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn() }));
