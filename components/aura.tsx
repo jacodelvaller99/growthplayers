@@ -95,17 +95,19 @@ export function Aura({ state, weight = 0.6, origin }: AuraProps) {
   // En web el radial-gradient nativo del CSS es exacto y gratis — el mismo
   // recurso que ya usa `comando.tsx:1348-1353` para su glow de escritorio.
   if (Platform.OS === 'web') {
+    // `backgroundImage` solo existe en react-native-web, no en el ViewStyle de
+    // RN (que solo trae `experimental_backgroundImage`). Se tipa como `object`,
+    // igual que `deskHeroGlow` en comando.tsx — el tsc de CI lo rechazaba.
+    const webGlow: object = {
+      backgroundImage: `radial-gradient(ellipse 90% 55% at ${x} ${y}, ${color} 0%, transparent 70%)`,
+    };
     return (
       <View style={clip} pointerEvents="none">
       <Animated.View
         pointerEvents="none"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={[
-          StyleSheet.absoluteFill,
-          animated,
-          { backgroundImage: `radial-gradient(ellipse 90% 55% at ${x} ${y}, ${color} 0%, transparent 70%)` },
-        ]}
+        style={[StyleSheet.absoluteFill, animated, webGlow]}
       />
       </View>
     );
