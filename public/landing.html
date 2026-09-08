@@ -312,6 +312,12 @@ h1 em{-webkit-text-fill-color:var(--gold);font-style:normal}
 @media (max-width:900px){.hero{padding-left:24px;padding-right:24px}}
 .logo .wm b,.logo .wm span{white-space:nowrap}
 @media (max-width:900px){.logo .wm span{display:none}.header-cta{padding:0 12px;font-size:12px}}
+
+/* "Ingresar app" en el menú: es una acción, no un ancla de sección — se
+   distingue en oro sólido del resto de las píldoras del nav. */
+nav a.nav-cta{background:var(--gold);border-color:var(--gold-dim);color:var(--ink);font-weight:700}
+nav a.nav-cta:hover{background:var(--gold-dim);box-shadow:0 6px 20px rgba(255,200,4,.28)}
+body.menu-open nav a.nav-cta{max-width:280px}
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20535.02%20535.02'%3E%3Cpath%20fill%3D'%23FFC804'%20d%3D'M401.72%2C396.51c-33.47-40.96-69.36-79.64-106.3-117.42%2C79.99-.63%2C159.86-3.19%2C239.6-11.59-79.74-8.4-159.62-10.95-239.61-11.59%2C36.93-37.81%2C72.84-76.5%2C106.33-117.46l-29.69%2C93.44c12.62-23.71%2C66.92-125.72%2C78.45-147.37-22.22%2C11.83-123.06%2C65.5-147.37%2C78.45l93.43-29.69c-40.96%2C33.5-79.66%2C69.41-117.47%2C106.34-.66-80-3.22-159.88-11.58-239.63-8.36%2C79.74-10.91%2C159.63-11.58%2C239.63-37.81-36.94-76.51-72.85-117.47-106.34l93.43%2C29.69c-23.71-12.62-125.72-66.92-147.37-78.45%2C11.83%2C22.22%2C65.5%2C123.05%2C78.45%2C147.37l-29.69-93.44c33.5%2C40.96%2C69.41%2C79.66%2C106.34%2C117.47-80%2C.66-159.88%2C3.22-239.63%2C11.58%2C79.74%2C8.35%2C159.61%2C10.91%2C239.61%2C11.58-36.94%2C37.78-72.84%2C76.47-106.31%2C117.43l29.67-93.39c-12.62%2C23.71-66.92%2C125.72-78.45%2C147.37%2C22.22-11.83%2C123.05-65.5%2C147.37-78.45l-93.39%2C29.67c40.96-33.47%2C79.64-69.36%2C117.42-106.3%2C.63%2C79.99%2C3.19%2C159.87%2C11.59%2C239.6%2C8.4-79.73%2C10.95-159.61%2C11.59-239.6%2C37.78%2C36.94%2C76.46%2C72.83%2C117.42%2C106.3l-93.39-29.67c23.71%2C12.62%2C125.72%2C66.92%2C147.37%2C78.45-11.83-22.22-65.5-123.05-78.45-147.37l29.67%2C93.39Z'%2F%3E%3C%2Fsvg%3E"></head>
 <body style="background:#000;color:#fff">
@@ -328,6 +334,7 @@ h1 em{-webkit-text-fill-color:var(--gold);font-style:normal}
 <a class="appear appear--soft" href="#protocolo" style="--d:.28s">El protocolo</a>
 <a class="appear appear--scale" href="#norman" style="--d:.4s">Norman IA</a>
 <a class="appear appear--soft" href="#acceso" style="--d:.52s">Acceso</a>
+<a class="appear appear--scale nav-cta" href="/welcome" style="--d:.6s">Ingresar app</a>
 </nav>
 <a class="btn btn-solid header-cta appear appear--scale" href="mailto:ncapuozzo@polarisgrowthinstitute.com?subject=Quiero%20agendar%20mi%20sesi%C3%B3n%20de%20claridad" style="--d:.34s">Agenda tu sesión</a>
 <button class="burger" aria-controls="site-nav" aria-expanded="false" aria-label="Open menu"><span></span><span></span><span></span></button>

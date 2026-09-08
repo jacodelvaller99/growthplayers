@@ -49,6 +49,7 @@ const navNew = `<nav id="site-nav" aria-label="Primary">
 <a class="appear appear--soft" href="#protocolo" style="--d:.28s">El protocolo</a>
 <a class="appear appear--scale" href="#norman" style="--d:.4s">Norman IA</a>
 <a class="appear appear--soft" href="#acceso" style="--d:.52s">Acceso</a>
+<a class="appear appear--scale nav-cta" href="/welcome" style="--d:.6s">Ingresar app</a>
 </nav>`;
 html = html.replace(navOld, navNew);
 
