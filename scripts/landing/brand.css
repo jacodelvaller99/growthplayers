@@ -52,3 +52,9 @@ h1 em{-webkit-text-fill-color:var(--gold);font-style:normal}
 nav a.nav-cta{background:var(--gold);border-color:var(--gold-dim);color:var(--ink);font-weight:700}
 nav a.nav-cta:hover{background:var(--gold-dim);box-shadow:0 6px 20px rgba(255,200,4,.28)}
 body.menu-open nav a.nav-cta{max-width:280px}
+
+/* Selector de idioma ES/EN: una píldora angosta, discreta, al final del nav —
+   no compite en peso visual con "Ingresar app" (la acción real). */
+nav a.lang-switch{padding:0 14px;font-weight:500;letter-spacing:.04em;opacity:.75}
+nav a.lang-switch:hover{opacity:1}
+body.menu-open nav a.lang-switch{max-width:120px}

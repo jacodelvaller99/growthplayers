@@ -93,6 +93,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/en", "destination": "/landing-en.html" },
     { "source": "/(.*)", "destination": "/app.html" }
   ]
 }
