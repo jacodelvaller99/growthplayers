@@ -7,6 +7,7 @@
  * Patrón clonado de app/(tabs)/mentor.tsx + app/admin/copilot.tsx, con el system
  * prompt y las salvaguardas específicas del internista (lib/internist.ts).
  */
+import { AiConsentGate } from '@/components/AiConsentGate';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -44,7 +45,7 @@ const QUICK_PROMPTS = [
 
 const STORAGE_KEY = 'internist:consent:v1';
 
-export default function InternistaScreen() {
+function InternistaScreenInner() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -419,3 +420,12 @@ const s = StyleSheet.create({
     color: palette.smoke, fontSize: 12, paddingTop: spacing.sm,
   },
 });
+
+
+export default function InternistaScreen() {
+  return (
+    <AiConsentGate>
+      <InternistaScreenInner />
+    </AiConsentGate>
+  );
+}

@@ -4,6 +4,7 @@
 // el servidor; el cliente se autentica con su JWT de Supabase.
 
 import { ENV } from '@/app/config/env';
+import { assertAiConsent } from '@/lib/aiConsent';
 import { supabase } from '@/lib/supabase';
 import type { ChatMessage } from './nvidia';
 
@@ -29,6 +30,10 @@ export async function proxyChatFetch(
   messages: ChatMessage[],
   signal?: AbortSignal,
 ): Promise<Response> {
+  // Cerrojo de permiso (Apple 5.1.2(i)): sin autorización explícita del usuario,
+  // ningún dato personal sale hacia una IA de terceros. Es el único punto por el
+  // que pasan todas las llamadas de IA, así que cubre todos los caminos.
+  assertAiConsent();
   const token = await getSessionToken();
   const response = await fetch(`${proxyBase()}/chat`, {
     method: 'POST',
@@ -51,6 +56,7 @@ export async function proxyTranscribeFetch(
   form: FormData,
   signal?: AbortSignal,
 ): Promise<string> {
+  assertAiConsent();
   const token = await getSessionToken();
   const response = await fetch(`${proxyBase()}/transcribe`, {
     method: 'POST',

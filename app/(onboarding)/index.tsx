@@ -28,6 +28,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
+import { AI_PROVIDERS_LABEL, aiConsentEntry, markAiConsentLocal } from '@/lib/aiConsent';
 import { logSilentError } from '@/lib/observability';
 import { intel } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
@@ -55,7 +56,7 @@ const VALUE_BULLETS: { icon: 'military-tech' | 'psychology' | 'insights'; title:
 ];
 
 // Consent gate — Términos, Privacidad y Descargo de Salud (compliance de lanzamiento)
-type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation' | 'softwareLearning';
+type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation' | 'softwareLearning' | 'aiSharing';
 
 const CONSENT_ITEMS: { key: ConsentKey; label: string; route: '/legal/terminos' | '/legal/privacidad' | '/legal/salud' }[] = [
   { key: 'terms',             label: 'Términos y Condiciones',                                   route: '/legal/terminos' },
@@ -63,6 +64,8 @@ const CONSENT_ITEMS: { key: ConsentKey; label: string; route: '/legal/terminos' 
   { key: 'health',            label: 'Descargo de Salud y Bienestar',                            route: '/legal/salud' },
   { key: 'confrontation',     label: 'Norman puede confrontarme con datos registrados del sistema cuando mis acciones no coincidan con lo que declaré', route: '/legal/privacidad' },
   { key: 'softwareLearning',  label: 'Acepto el tratamiento de mis datos para el aprendizaje y mejora del software', route: '/legal/privacidad' },
+  // Apple 5.1.2(i): permiso explícito, con nombre de los terceros, antes de enviar datos a IA externa.
+  { key: 'aiSharing',         label: `Autorizo que mis mensajes y datos de uso se envíen a proveedores de IA de terceros (${AI_PROVIDERS_LABEL}) para que Norman funcione. Puedo retirarlo cuando quiera`, route: '/legal/privacidad' },
 ];
 
 // Segmento del indicador de paso. El "fill" es la opacidad de la capa dorada
@@ -108,9 +111,10 @@ export default function OnboardingScreen() {
     health: false,
     confrontation: false,
     softwareLearning: false,
+    aiSharing: false,
   });
   const allConsented =
-    consents.terms && consents.privacy && consents.health && consents.confrontation && consents.softwareLearning;
+    consents.terms && consents.privacy && consents.health && consents.confrontation && consents.softwareLearning && consents.aiSharing;
   // ml_consent es OPT-IN explícito y OPCIONAL (RGPD): default false, no bloquea el gate.
   const [mlConsent, setMlConsent] = useState(false);
 
@@ -132,6 +136,8 @@ export default function OnboardingScreen() {
     analytics.setConsent(mlConsent);
     // Persiste el consentimiento en profiles (campos nuevos sin tipar → cliente intel/anyClient).
     if (userId) {
+      // El permiso ya está dado: se abre el cerrojo aunque falle la escritura remota.
+      await markAiConsentLocal(userId);
       try {
         await intel.profiles().update({
           consents: {
@@ -140,6 +146,7 @@ export default function OnboardingScreen() {
             health:                  { accepted: true, at: now },
             confrontation_with_data: { accepted: true, at: now },
             software_learning:       { accepted: true, at: now },
+            ai_third_party:          aiConsentEntry(now),
           },
           terms_accepted_at: now,
           ml_consent: mlConsent,

@@ -17,6 +17,10 @@
         "distribution": "internal"
       }
     },
+    "ios-simulator": {
+      "extends": "preview",
+      "ios": { "simulator": true }
+    },
     "production": {
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" },

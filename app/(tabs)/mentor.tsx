@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AiConsentGate } from '@/components/AiConsentGate';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -261,7 +262,7 @@ function BasisRows() {
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
-export default function MentorScreen() {
+function MentorScreenInner() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -1365,3 +1366,12 @@ const styles = StyleSheet.create({
     backgroundColor: palette.charcoal,
   },
 });
+
+
+export default function MentorScreen() {
+  return (
+    <AiConsentGate>
+      <MentorScreenInner />
+    </AiConsentGate>
+  );
+}

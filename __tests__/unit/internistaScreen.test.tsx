@@ -7,6 +7,9 @@
 import { render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import React from 'react';
+import { setAiConsentGranted } from '@/lib/aiConsent';
+
+beforeAll(() => setAiConsentGranted(true));
 
 // El efecto de consent lee storage: en 'web' usa window.localStorage y evita
 // el import() dinámico de expo-secure-store (no soportado en jest).
@@ -19,6 +22,7 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jes
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
+jest.mock('@/lib/supabase', () => ({ supabase: {} }));
 jest.mock('@/hooks/use-lifeflow', () => ({ useLifeFlow: () => ({ userId: 'u-test' }) }));
 jest.mock('@/lib/internist', () => ({
   fetchInternistHistory: jest.fn().mockResolvedValue([]),
