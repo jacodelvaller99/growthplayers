@@ -41,7 +41,7 @@ function ScoreBar({
 }
 const scoreBarStyles = StyleSheet.create({
   container: { gap: 4 },
-  label:     { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1.5 },
+  label:     { ...typography.label, color: palette.smoke, letterSpacing: 1.5 },
   track:     {
     height: 4, backgroundColor: palette.charcoal, borderRadius: 2, overflow: 'hidden',
   },
@@ -100,7 +100,7 @@ const sparklineStyles = StyleSheet.create({
     minWidth: 3,
   },
   stats:     { flexDirection: 'row', justifyContent: 'space-between' },
-  stat:      { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  stat:      { ...typography.mono, color: palette.smoke },
 });
 
 // ─── 7-day mini bar chart ─────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ const weeklyStyles = StyleSheet.create({
   container: { flexDirection: 'row', gap: 4, alignItems: 'flex-end', height: 48 },
   col:       { flex: 1, alignItems: 'center', gap: 4 },
   bar:       { width: '100%', borderRadius: 2, minHeight: 4 },
-  label:     { ...typography.label, color: palette.smoke, fontSize: 8 },
+  label:     { ...typography.label, color: palette.smoke },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -387,13 +387,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.line,
   },
-  providerText: { ...typography.mono, color: palette.ash, fontSize: 10 },
+  providerText: { ...typography.mono, color: palette.ash },
 
   mainScores: { marginBottom: spacing.md, gap: spacing.md },
   scoresRow:  { flexDirection: 'row', gap: spacing.md },
   scoreBlock: { flex: 1, gap: 4 },
   scoreDivider: { width: 1, backgroundColor: palette.line },
-  scoreSubLabel: { ...typography.caption, color: palette.smoke, fontSize: 10 },
+  scoreSubLabel: { ...typography.caption, color: palette.smoke, fontSize: 11 },
 
   vitalsCard: { marginBottom: spacing.md },
   vitalsRow:  {
@@ -403,11 +403,11 @@ const styles = StyleSheet.create({
   },
   vitalItem:    { alignItems: 'center', gap: 4, flex: 1 },
   vitalValue:   { fontFamily: Fonts.display, color: palette.ivory, fontSize: 16, letterSpacing: 0.5 },
-  vitalLabel:   { ...typography.label, color: palette.smoke, fontSize: 9, textAlign: 'center' },
+  vitalLabel:   { ...typography.label, color: palette.smoke, textAlign: 'center' },
   vitalDivider: { width: 1, height: 36, backgroundColor: palette.line },
 
   weeklyCard:  { gap: spacing.sm },
-  weeklyLabel: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1.5 },
+  weeklyLabel: { ...typography.label, color: palette.smoke, letterSpacing: 1.5 },
 
   normanCard: {
     flexDirection: 'row',

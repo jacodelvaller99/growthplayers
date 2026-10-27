@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1.5,
   },
-  meta: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  meta: { ...typography.mono, color: palette.smoke },
   stopBtn: {
     width: 32,
     height: 32,

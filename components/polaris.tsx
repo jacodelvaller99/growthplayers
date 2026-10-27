@@ -33,7 +33,7 @@ import Animated, {
 import { AnimatedNumber } from './AnimatedNumber';
 import { Canvas, LinearGradient, Path, Skia, usePathInterpolation, vec } from '@shopify/react-native-skia';
 
-import { Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
+import { CHROME_MAX_SCALE, Colors, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { parseMarkdownLite } from '@/lib/markdownLite';
 import { calcSovereignTier, type SovereignDelta } from '@/lib/utils';
@@ -100,7 +100,7 @@ export function ScreenHeader({
         style={styles.screenHeaderBack}>
         <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
       </PressableScale>
-      <Text style={styles.screenHeaderTitle} numberOfLines={1}>{title}</Text>
+      <Text style={styles.screenHeaderTitle} numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{title}</Text>
       {right ?? <View style={styles.screenHeaderSpacer} />}
     </View>
   );
@@ -637,6 +637,20 @@ export function StateMeter({ label, value, inverted = false }: { label: string; 
 // ─── Scale Selector ──────────────────────────────────────────────────────────
 // Selection haptic on tap + glow shadow on exact active step
 
+/**
+ * Paso de la escala 1-10 por gesto de VoiceOver/TalkBack (swipe arriba/abajo).
+ * Desde `null` (sin marcar) NO se arranca en 5 — eso sería volver a regalar un
+ * valor por defecto: `increment` arranca en 1 y `decrement` en 10, así el
+ * usuario sube o baja desde un extremo a propósito. Fuera de rango, se queda
+ * en el borde.
+ */
+export function stepScale(value: number | null, action: 'increment' | 'decrement'): number {
+  if (value === null) return action === 'increment' ? 1 : 10;
+  return Math.max(1, Math.min(10, value + (action === 'increment' ? 1 : -1)));
+}
+
+const SCALE_ROWS = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]];
+
 export function ScaleSelector({
   label,
   value,
@@ -654,8 +668,32 @@ export function ScaleSelector({
    *  solo no basta para calibrar la respuesta la necesitan. */
   guide?: string;
 }) {
+  // Nativo: la escala entera es UN control ajustable (swipe arriba/abajo con
+  // VoiceOver) en vez de 10 botones — 4 escalas eran ~40 gestos para un
+  // check-in de 30 s. Los 10 pasos siguen tocándose normal, pero quedan ocultos
+  // al lector. En web se dejan como botones: RN-web no cablea las acciones de
+  // accesibilidad al teclado y ocultarlos dejaría la escala inoperable.
+  const adjustable = Platform.OS !== 'web';
+  const step = (action: string) => {
+    if (action !== 'increment' && action !== 'decrement') return;
+    Haptics.selectionAsync();
+    onChange(stepScale(value, action));
+  };
   return (
-    <View style={styles.scaleBlock}>
+    <View
+      style={styles.scaleBlock}
+      {...(adjustable && {
+        accessible: true,
+        accessibilityRole: 'adjustable' as const,
+        accessibilityLabel: label,
+        accessibilityValue:
+          value === null
+            ? { text: 'Sin marcar' }
+            : { min: 1, max: 10, now: value, text: `${value} de 10` },
+        accessibilityHint: guide,
+        accessibilityActions: [{ name: 'increment' }, { name: 'decrement' }],
+        onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => step(e.nativeEvent.actionName),
+      })}>
       <View style={styles.rowBetween}>
         <View style={styles.scaleLabelRow}>
           {icon ? <MaterialIcons name={icon} size={14} color={palette.goldText} /> : null}
@@ -663,8 +701,13 @@ export function ScaleSelector({
         </View>
         <Text style={styles.scaleValue}>{value}</Text>
       </View>
-      <View style={styles.scaleRow}>
-        {Array.from({ length: 10 }, (_, index) => index + 1).map((item) => (
+      <View
+        style={styles.scaleGrid}
+        accessibilityElementsHidden={adjustable}
+        importantForAccessibility={adjustable ? 'no-hide-descendants' : 'auto'}>
+        {SCALE_ROWS.map((row) => (
+        <View key={row[0]} style={styles.scaleRow}>
+        {row.map((item) => (
           <Pressable
             key={item}
             accessibilityLabel={`${label} ${item}`}
@@ -693,10 +736,12 @@ export function ScaleSelector({
               item === value && styles.scaleStepGlow,
               pressed && { transform: [{ scale: 0.88 }] },
             ]}>
-            <Text style={[styles.scaleStepText, item === value && styles.scaleStepTextActive]}>
+            <Text style={[styles.scaleStepText, item === value && styles.scaleStepTextActive]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
               {item}
             </Text>
           </Pressable>
+        ))}
+        </View>
         ))}
       </View>
       {guide ? <Text style={styles.scaleGuide}>{guide}</Text> : null}
@@ -760,7 +805,7 @@ export function PrimaryButton({ label, icon, onPress, disabled }: { label: strin
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
         style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText}>{label}</Text>
+        <Text style={styles.primaryButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{label}</Text>
         {icon ? <MaterialIcons name={icon} color={palette.ink} size={18} /> : null}
       </Pressable>
     </Animated.View>
@@ -785,7 +830,7 @@ export function SecondaryButton({ label, icon, onPress }: { label: string; icon?
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>{label}</Text>
+        <Text style={styles.secondaryButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{label}</Text>
         {icon ? <MaterialIcons name={icon} color={palette.goldText} size={18} /> : null}
       </Pressable>
     </Animated.View>
@@ -801,7 +846,7 @@ export function DangerButton({ label, icon, onPress }: { label: string; icon?: I
       accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}>
-      <Text style={styles.dangerButtonText}>{label}</Text>
+      <Text style={styles.dangerButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{label}</Text>
       {icon ? <MaterialIcons name={icon} color={palette.dangerText} size={18} /> : null}
     </Pressable>
   );
@@ -937,7 +982,7 @@ export function StatusPill({
   return (
     <View style={[styles.pill, { borderColor: color }]}>
       {dot ? <View style={[styles.pillDot, { backgroundColor: color }]} /> : null}
-      <Text style={[styles.pillText, { color }]}>{label}</Text>
+      <Text style={[styles.pillText, { color }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{label}</Text>
     </View>
   );
 }
@@ -1120,7 +1165,7 @@ const styles = StyleSheet.create({
   // Rótulo de sección — gris, pequeño, a la izquierda. Ver GoldDivider.
   sectionLabel: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2.2,
     textTransform: 'uppercase',
@@ -1291,7 +1336,7 @@ const styles = StyleSheet.create({
   sparklineDay: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 8,
+    fontSize: 11,
   },
 
   // Achievement badge
@@ -1351,33 +1396,31 @@ const styles = StyleSheet.create({
   // a 375px de pantalla y 21.2px a 320px — muy por debajo de los 44pt de la regla
   // del proyecto. Son 4 selectores × 10 pasos = 40 objetivos que el usuario toca a
   // diario, y un toque errado ensucia el dato que alimenta a Norman.
-  // minWidth pone el suelo y flexWrap deja que baje de fila en vez de encogerse;
-  // en escritorio (≥476px de contenido) los 10 siguen cabiendo en una sola fila.
   scaleGuide: {
     color: palette.ash,
     fontFamily: Fonts.mono,
     fontSize: 11,
     letterSpacing: 0.2,
   },
+  // Rejilla 5+5 EXPLÍCITA (dos filas de 5, `flex: 1` cada celda) con 8pt de
+  // separación en ambos ejes. Antes era flexWrap + `flexBasis: 18%` + gap 4: el
+  // 18% solo cuadraba 5+5 con gap 4, y 4pt entre celdas es poco para el pulgar.
+  // A 375pt (301pt útiles) cada celda sale de ~53×44pt.
+  // ponytail: a 320pt (246 útiles) las celdas quedan en ~42.8pt de ancho; ningún
+  // iPhone vigente baja de 375. Si hiciera falta, quitar el padding de la card.
+  scaleGrid: {
+    gap: spacing.sm,
+  },
   scaleRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: 4,
+    gap: spacing.sm,
   },
   scaleStep: {
     alignItems: 'center',
     backgroundColor: palette.charcoal,
     borderColor: palette.lineSoft,
     borderWidth: 1,
-    // SIN `flex: 1`. Con flexWrap, a 301px de ancho util `flex: 1` estiraba las
-    // 4 celdas de la segunda fila a ~73pt contra los 47pt de arriba: la escala
-    // 1-10 se veia como dos escalas distintas.
-    //
-    // `flexBasis: 18%` fuerza 5+5 en vez de 6+4 — dos filas iguales se leen
-    // como rejilla; 6+4 se lee como desbordamiento. A 320px de pantalla siguen
-    // saliendo 44.6pt, asi que el piso tactil aguanta.
-    flexBasis: '18%',
+    flex: 1,
     height: 44,
     justifyContent: 'center',
     minWidth: 44,
@@ -1424,7 +1467,7 @@ const styles = StyleSheet.create({
     ...typography.section,
     color: palette.ink,
     letterSpacing: 2.5,
-    fontSize: 10,
+    fontSize: 11,
   },
   secondaryButton: {
     alignItems: 'center',
@@ -1442,7 +1485,7 @@ const styles = StyleSheet.create({
     ...typography.section,
     color: palette.ivory,
     letterSpacing: 2.5,
-    fontSize: 10,
+    fontSize: 11,
   },
   dangerButton: {
     alignItems: 'center',

@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   tabRow:        { flexDirection: 'row', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: 4, gap: 4 },
   tab:           { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: radii.sm - 2, gap: 5, minHeight: 44 },
   tabActive:     { backgroundColor: palette.gold },
-  tabText:       { fontFamily: Fonts.display, fontSize: 10, color: palette.ash, letterSpacing: 1 },
+  tabText:       { fontFamily: Fonts.display, fontSize: 11, color: palette.ash, letterSpacing: 1 },
 
   content:       { paddingHorizontal: spacing.md, paddingBottom: 40 },
 
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
 
   editGrid:      { gap: spacing.sm, marginBottom: 10 },
   editField:     { gap: 4 },
-  editLabel:     { ...typography.label, color: palette.ash, fontSize: 9 },
+  editLabel:     { ...typography.label, color: palette.ash },
   editInput:     { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.sm, paddingVertical: 8, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13 },
 
   saveBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, marginTop: spacing.sm, minHeight: 44 },

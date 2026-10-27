@@ -90,7 +90,7 @@ const s = StyleSheet.create({
     ...typography.caption,
     color: palette.goldText,
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   title: { ...typography.title, color: palette.ivory, fontSize: 19 },

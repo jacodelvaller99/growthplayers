@@ -63,10 +63,10 @@ typography:
     letterSpacing: "2px"
   label:
     fontFamily: "GrandisExtended, Poppins, Arial, sans-serif"
-    fontSize: "9px"
+    fontSize: "11px"
     fontWeight: 400
-    lineHeight: "13px"
-    letterSpacing: "1.8px"
+    lineHeight: "15px"
+    letterSpacing: "1.1px"
   body:
     fontFamily: "Inter, sans-serif"
     fontSize: "14px"
@@ -178,7 +178,7 @@ The palette is intentionally narrow: one warm neutral-black canvas, one earned g
 - **Hero** (900, 34px, 40px line-height, 2px tracking, uppercase): splash and fullscreen player moments only — the rarest, loudest voice in the system.
 - **Title** (700, 20px, 26px line-height, 1.5px tracking, uppercase): screen header bars.
 - **Section** (500, 11px, 16px line-height, 2px tracking, uppercase): card headings and section labels — the most common display-font usage.
-- **Label** (400, 9px, 13px line-height, 1.8px tracking, uppercase): micro labels, pills, tags — the smallest legible unit, floor is 11pt per the accessibility rule below applied to *readable body text*, not decorative micro-labels.
+- **Label** (400, 11px, 15px line-height, 1.1px tracking, uppercase): micro labels, pills, tags — the smallest legible unit. 11pt is the floor for *every* visible label, not just body text (it was 9px and broke that rule). It differs from Section by weight (Regular vs Medium), not by size. No screen may override it below 11; if a label doesn't fit, shorten tracking or drop the forced uppercase, never the size. Fixed-height chrome (tab bar, 52/44/36pt buttons, chips) caps Dynamic Type with `maxFontSizeMultiplier` ≈1.3; reading text (paragraphs, chat) is never capped.
 - **Body** (400, 14px, 22px line-height ≈ 1.57 ratio): the only sentence-case text in the system; capped conceptually at comfortable paragraph widths.
 - **Mono** (11px, 16px line-height, 0.5px tracking): data readouts, timestamps.
 

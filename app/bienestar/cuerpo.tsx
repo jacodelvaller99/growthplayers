@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   bmiBar:             { flexDirection: 'row', width: '100%', height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 2 },
   bmiSegment:         { height: '100%' },
   bmiBarLabels:       { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
-  bmiBarTick:         { fontSize: 10, color: palette.smoke },
+  bmiBarTick:         { fontSize: 11, color: palette.smoke },
   bmiPointer:         { position: 'absolute', bottom: 52, width: 3, height: 10, backgroundColor: palette.ivory, borderRadius: 1 },
 
   section:            { marginBottom: spacing.lg },
@@ -345,10 +345,10 @@ const styles = StyleSheet.create({
 
   inputRow:           { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   inputGroup:         { flex: 1 },
-  inputLabel:         { ...typography.label, color: palette.ash, fontSize: 10, marginBottom: 6 },
+  inputLabel:         { ...typography.label, color: palette.ash, marginBottom: 6 },
   input:              { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, minHeight: 44, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 18, borderWidth: 1, borderColor: palette.line },
 
-  subLabel:           { ...typography.label, color: palette.smoke, fontSize: 9, marginBottom: spacing.sm },
+  subLabel:           { ...typography.label, color: palette.smoke, marginBottom: spacing.sm },
   measureGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   measureGroup:       { width: '47%', flexGrow: 1 },
   measureInput:       { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, minHeight: 44, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 15, borderWidth: 1, borderColor: palette.line },
@@ -361,9 +361,9 @@ const styles = StyleSheet.create({
   sparklineContainer: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 6, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm },
   sparkColumn:        { flex: 1, alignItems: 'center', gap: 4 },
   sparkBar:           { width: '100%', backgroundColor: palette.gold, borderRadius: 2, opacity: 0.8 },
-  sparkLabel:         { fontSize: 9, color: palette.smoke },
+  sparkLabel:         { fontSize: 11, color: palette.smoke },
   sparkRange:         { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  sparkRangeText:     { fontSize: 10, color: palette.smoke },
+  sparkRangeText:     { fontSize: 11, color: palette.smoke },
 
   emptyState:         { alignItems: 'center', paddingVertical: spacing.xl, gap: 8 },
   emptyText:          { fontFamily: Fonts.display, fontSize: 16, color: palette.ash },

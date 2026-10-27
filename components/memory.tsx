@@ -349,7 +349,7 @@ export function AdminNotesCard({
 const s = StyleSheet.create({
   card: { gap: spacing.sm, marginBottom: spacing.md },
   label: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 1.8 },
-  subLabel: { ...typography.label, color: palette.smoke, fontSize: 10, letterSpacing: 1.2, marginBottom: 4 },
+  subLabel: { ...typography.label, color: palette.smoke, letterSpacing: 1.2, marginBottom: 4 },
   body: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 19 },
   kv: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 19 },
   k: { color: palette.ivory, fontFamily: Fonts.displayMedium },
@@ -361,12 +361,12 @@ const s = StyleSheet.create({
   chip: { backgroundColor: palette.goldLight, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   chipText: { ...typography.label, color: palette.goldText, fontSize: 11, letterSpacing: 0.5 },
   chipSm: { backgroundColor: palette.charcoal, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
-  chipTextSm: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 0.4 },
+  chipTextSm: { ...typography.label, color: palette.ash, letterSpacing: 0.4 },
   timelineItem: { borderLeftWidth: 2, borderLeftColor: palette.lineGold, paddingLeft: spacing.md, gap: 4 },
   timelineHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  timelineDate: { ...typography.mono, color: palette.smoke, fontSize: 11 },
+  timelineDate: { ...typography.mono, color: palette.smoke },
   sourceBadge: { backgroundColor: palette.charcoal, borderRadius: radii.sm, paddingHorizontal: 7, paddingVertical: 2 },
-  sourceBadgeText: { ...typography.label, color: palette.goldText, fontSize: 9, letterSpacing: 1 },
+  sourceBadgeText: { ...typography.label, color: palette.goldText, letterSpacing: 1 },
   briefHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   genBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: palette.gold,
@@ -374,7 +374,7 @@ const s = StyleSheet.create({
   },
   genBtnText: { ...typography.label, color: palette.ink, fontSize: 11, letterSpacing: 1 },
   riskPill: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  riskText: { ...typography.label, fontSize: 10, letterSpacing: 1 },
+  riskText: { ...typography.label, letterSpacing: 1 },
   noteInputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
   noteInput: {
     flex: 1, ...typography.body, color: palette.ivory, fontSize: 13, backgroundColor: palette.charcoal,
@@ -385,5 +385,5 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   noteItem: { backgroundColor: palette.charcoal, borderRadius: radii.sm, padding: spacing.md, gap: 4 },
-  noteDate: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  noteDate: { ...typography.mono, color: palette.smoke },
 });

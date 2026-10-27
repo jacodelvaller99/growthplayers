@@ -106,10 +106,10 @@ export default function RitualScreen() {
       {phase === 'venta' && (
         <View style={styles.center}>
           <Text style={styles.tag}>ANTES DE ENTRAR</Text>
-          <Text style={styles.title}>Estás a punto de entrar a{'\n'}algo que te va a cambiar{'\n'}la perspectiva.</Text>
+          <Text style={styles.title}>Antes de leer tu día,{'\n'}lee tu estado.</Text>
           <Text style={styles.body}>
-            Es fundamental: respira antes. 64 segundos de respiración en caja para que llegues al
-            resto de tu día con el sistema calibrado, no en piloto automático.
+            64 segundos de respiración en caja para llegar a tu día con el sistema más calmado,
+            no en piloto automático.
           </Text>
           <PrimaryButton label="RESPIRAR AHORA" icon="air" onPress={startBreathing} />
           <Pressable

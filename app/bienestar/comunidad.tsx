@@ -695,12 +695,12 @@ const styles = StyleSheet.create({
   postCardPinned:  { borderColor: palette.lineGold, borderWidth: 1 },
 
   pinnedBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
-  pinnedText:      { fontFamily: Fonts.display, fontSize: 10, color: palette.goldText, letterSpacing: 1 },
+  pinnedText:      { fontFamily: Fonts.display, fontSize: 11, color: palette.goldText, letterSpacing: 1 },
 
   postHeader:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   postMeta:        { flex: 1, gap: 2 },
   postAuthor:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600', letterSpacing: 0.2 },
-  postTime:        { ...typography.mono, fontSize: 10, color: palette.smoke },
+  postTime:        { ...typography.mono, color: palette.smoke },
   moreBtn:         { padding: 6, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 
   postContent:     { fontFamily: Fonts.sans, fontSize: 14.5, color: palette.ivory, lineHeight: 23, marginBottom: spacing.md },

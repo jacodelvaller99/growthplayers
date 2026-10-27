@@ -294,7 +294,7 @@ const s = StyleSheet.create({
 
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.md, padding: spacing.lg, gap: spacing.sm },
   eventTitle: { ...typography.title, color: palette.ivory, fontSize: 18 },
-  cancelledBadge: { ...typography.label, color: palette.danger, fontSize: 10, letterSpacing: 1 },
+  cancelledBadge: { ...typography.label, color: palette.danger, letterSpacing: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   metaText: { ...typography.body, color: palette.ash, fontSize: 13, flexShrink: 1 },
   link: { color: palette.goldText, textDecorationLine: 'underline' },
@@ -303,15 +303,15 @@ const s = StyleSheet.create({
   capacityWrap: { gap: 4, marginTop: spacing.xs },
   capacityTrack: { height: 6, backgroundColor: palette.charcoal, borderRadius: 3, overflow: 'hidden' },
   capacityFill: { height: 6, borderRadius: 3, backgroundColor: palette.gold },
-  capacityText: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  capacityText: { ...typography.mono, color: palette.smoke },
 
   rsvpRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   rsvpBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderWidth: 1, borderColor: palette.line, borderRadius: radii.sm, paddingVertical: spacing.sm, minHeight: 44 },
   rsvpBtnActive: { backgroundColor: palette.gold, borderColor: palette.gold },
-  rsvpText: { ...typography.label, color: palette.ash, fontSize: 9, letterSpacing: 0.6 },
+  rsvpText: { ...typography.label, color: palette.ash, letterSpacing: 0.6 },
 
   cancelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: palette.danger, borderRadius: radii.sm, paddingVertical: spacing.sm, marginTop: spacing.sm, minHeight: 44 },
-  cancelBtnText: { ...typography.label, color: palette.danger, fontSize: 9, letterSpacing: 1 },
+  cancelBtnText: { ...typography.label, color: palette.danger, letterSpacing: 1 },
 
   section: { paddingHorizontal: spacing.lg, gap: spacing.sm, marginBottom: spacing.md },
   attendeeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xs, minHeight: 44 },

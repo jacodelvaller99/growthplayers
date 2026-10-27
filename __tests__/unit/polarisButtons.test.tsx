@@ -27,7 +27,11 @@ jest.mock('expo-haptics', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PrimaryButton, ScaleSelector } = require('@/components/polaris');
+const { PrimaryButton, ScaleSelector, stepScale } = require('@/components/polaris');
+
+// Los 10 pasos quedan ocultos a VoiceOver a propósito (la escala es UN control
+// ajustable); para inspeccionarlos hay que pedir los elementos ocultos.
+const H = { includeHiddenElements: true };
 
 describe('PrimaryButton — la prop disabled tiene que llegar al árbol', () => {
   it('deshabilitado no dispara onPress', () => {
@@ -66,26 +70,26 @@ describe('PrimaryButton — la prop disabled tiene que llegar al árbol', () => 
 });
 
 describe('ScaleSelector — 10 pasos, uno elegido', () => {
-  const renderScale = (value: number, onChange = jest.fn()) =>
+  const renderScale = (value: number | null, onChange = jest.fn()) =>
     render(<ScaleSelector label="Energía" value={value} onChange={onChange} />);
 
   it('marca como seleccionado solo el paso activo', () => {
     const { getByLabelText } = renderScale(7);
-    expect(getByLabelText('Energía 7').props.accessibilityState?.selected).toBe(true);
+    expect(getByLabelText('Energía 7', H).props.accessibilityState?.selected).toBe(true);
     for (const other of [1, 6, 8, 10]) {
-      expect(getByLabelText(`Energía ${other}`).props.accessibilityState?.selected).toBe(false);
+      expect(getByLabelText(`Energía ${other}`, H).props.accessibilityState?.selected).toBe(false);
     }
   });
 
   it('la selección sigue al valor', () => {
     const { getByLabelText } = renderScale(3);
-    expect(getByLabelText('Energía 3').props.accessibilityState?.selected).toBe(true);
-    expect(getByLabelText('Energía 7').props.accessibilityState?.selected).toBe(false);
+    expect(getByLabelText('Energía 3', H).props.accessibilityState?.selected).toBe(true);
+    expect(getByLabelText('Energía 7', H).props.accessibilityState?.selected).toBe(false);
   });
 
   it('cada paso reserva al menos 44px de ancho (regla 44×44pt del proyecto)', () => {
     const { getByLabelText } = renderScale(5);
-    const style = StyleSheetFlatten(getByLabelText('Energía 5').props.style);
+    const style = StyleSheetFlatten(getByLabelText('Energía 5', H).props.style);
     expect(style.minWidth).toBeGreaterThanOrEqual(44);
     expect(style.height).toBeGreaterThanOrEqual(44);
   });
@@ -93,8 +97,51 @@ describe('ScaleSelector — 10 pasos, uno elegido', () => {
   it('tocar un paso reporta ese valor', () => {
     const onChange = jest.fn();
     const { getByLabelText } = renderScale(5, onChange);
-    fireEvent.press(getByLabelText('Energía 9'));
+    fireEvent.press(getByLabelText('Energía 9', H));
     expect(onChange).toHaveBeenCalledWith(9);
+  });
+});
+
+describe('ScaleSelector — un solo control ajustable para VoiceOver', () => {
+  it('se anuncia como adjustable con su valor 1-10', () => {
+    const { getByRole } = render(<ScaleSelector label="Energía" value={7} onChange={jest.fn()} />);
+    const ctrl = getByRole('adjustable');
+    expect(ctrl.props.accessibilityLabel).toBe('Energía');
+    expect(ctrl.props.accessibilityValue).toMatchObject({ min: 1, max: 10, now: 7 });
+  });
+
+  it('sin marcar NO dice 5: dice "Sin marcar"', () => {
+    const { getByRole } = render(<ScaleSelector label="Energía" value={null} onChange={jest.fn()} />);
+    expect(getByRole('adjustable').props.accessibilityValue).toEqual({ text: 'Sin marcar' });
+  });
+
+  it('los 10 pasos no son focos sueltos del lector', () => {
+    const { queryByLabelText } = render(<ScaleSelector label="Energía" value={5} onChange={jest.fn()} />);
+    expect(queryByLabelText('Energía 5')).toBeNull();
+  });
+
+  it('increment/decrement cambian el valor', () => {
+    const onChange = jest.fn();
+    const { getByRole } = render(<ScaleSelector label="Energía" value={4} onChange={onChange} />);
+    fireEvent(getByRole('adjustable'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
+    expect(onChange).toHaveBeenLastCalledWith(5);
+    fireEvent(getByRole('adjustable'), 'accessibilityAction', { nativeEvent: { actionName: 'decrement' } });
+    expect(onChange).toHaveBeenLastCalledWith(3);
+  });
+});
+
+describe('stepScale — lógica pura del gesto ajustable', () => {
+  it('desde null: increment arranca en 1, decrement en 10 (nunca un 5 regalado)', () => {
+    expect(stepScale(null, 'increment')).toBe(1);
+    expect(stepScale(null, 'decrement')).toBe(10);
+  });
+  it('sube y baja de a uno', () => {
+    expect(stepScale(4, 'increment')).toBe(5);
+    expect(stepScale(4, 'decrement')).toBe(3);
+  });
+  it('se queda en los bordes', () => {
+    expect(stepScale(10, 'increment')).toBe(10);
+    expect(stepScale(1, 'decrement')).toBe(1);
   });
 });
 

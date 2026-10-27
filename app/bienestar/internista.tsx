@@ -326,7 +326,7 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18, textAlign: 'center' },
-  subtitle: { ...typography.caption, color: palette.smoke, fontSize: 10, textAlign: 'center' },
+  subtitle: { ...typography.caption, color: palette.smoke, fontSize: 11, textAlign: 'center' },
 
   disclaimerBar: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -336,7 +336,7 @@ const s = StyleSheet.create({
   },
   disclaimerText: {
     flex: 1, ...typography.caption, color: palette.goldText,
-    fontSize: 10, letterSpacing: 0.4,
+    fontSize: 11, letterSpacing: 0.4,
   },
 
   intro: { marginBottom: spacing.md },

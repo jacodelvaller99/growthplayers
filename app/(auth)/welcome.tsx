@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 28,
     color: palette.muted,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 4,
   },
   desktopForm: {

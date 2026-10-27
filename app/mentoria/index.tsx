@@ -418,7 +418,7 @@ export default function MentoriaScreen() {
     <KeyboardAvoidingView
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
       <ScrollView
         contentContainerStyle={[
           isDesktop ? styles.contentDesktop : { ...sc.content, paddingBottom: insets.bottom + 24 },
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   // Hero
   hero: { gap: spacing.sm },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroStart: { ...typography.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1 },
+  heroStart: { ...typography.mono, color: palette.smoke, letterSpacing: 1 },
   heroPhase: {
     fontFamily: Fonts.display, fontWeight: '700', fontSize: 26, color: palette.ivory,
     letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 4,
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.gold, borderRadius: 8, paddingHorizontal: 12, minHeight: 44,
   },
   aiBtnDisabled: { opacity: 0.4 },
-  aiBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 10, color: palette.ink, letterSpacing: 1 },
+  aiBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, color: palette.ink, letterSpacing: 1 },
 
   // Items
   itemList: { gap: 2 },
@@ -727,9 +727,9 @@ const styles = StyleSheet.create({
   weekLine: { flex: 1, width: 1.5, backgroundColor: palette.line, marginVertical: 2 },
   weekBody: { flex: 1, paddingBottom: spacing.lg },
   weekHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  weekNum: { ...typography.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1.5 },
+  weekNum: { ...typography.mono, color: palette.smoke, letterSpacing: 1.5 },
   weekNumActive: { color: palette.goldText },
-  weekRange: { ...typography.mono, fontSize: 9.5, color: palette.smoke, letterSpacing: 0.3, flex: 1 },
+  weekRange: { ...typography.mono, color: palette.smoke, letterSpacing: 0.3, flex: 1 },
   weekRangeActive: { color: palette.goldMuted },
   weekPhase: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14.5, color: palette.ivory, marginTop: 3, letterSpacing: 0.3 },
   weekPhaseDim: { color: palette.ash },
@@ -738,16 +738,16 @@ const styles = StyleSheet.create({
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   taskText: { ...typography.body, fontSize: 12.5, color: palette.smoke, flex: 1 },
   noteLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, minHeight: 44 },
-  noteLinkText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.goldText, letterSpacing: 1 },
+  noteLinkText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText, letterSpacing: 1 },
 
   // Note composer
   noteComposer: { gap: 10 },
   noteWeekRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  noteWeekLabel: { ...typography.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1 },
+  noteWeekLabel: { ...typography.mono, color: palette.smoke, letterSpacing: 1 },
   weekChips: { flexDirection: 'row', gap: 6 },
   weekChip: { paddingHorizontal: 12, minHeight: 44, borderRadius: 999, borderWidth: 1, borderColor: palette.lineGoldSubtle, backgroundColor: palette.goldGlow, alignItems: 'center', justifyContent: 'center' },
   weekChipOn: { backgroundColor: palette.gold, borderColor: palette.gold },
-  weekChipText: { fontFamily: Fonts.mono, fontSize: 10, color: palette.goldMuted, letterSpacing: 0.5 },
+  weekChipText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldMuted, letterSpacing: 0.5 },
   weekChipTextOn: { color: palette.ink, fontWeight: '700' },
   noteInput: {
     minHeight: 96, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: palette.line,
@@ -762,21 +762,21 @@ const styles = StyleSheet.create({
 
   // Note list
   mirrorIntro: { gap: 4 },
-  mirrorIntroTitle: { fontFamily: Fonts.mono, fontSize: 10, color: palette.goldText, letterSpacing: 2 },
+  mirrorIntroTitle: { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText, letterSpacing: 2 },
   mirrorIntroText: { ...typography.body, fontSize: 12.5, color: palette.smoke, lineHeight: 18 },
   noteList: { gap: 10 },
   noteCard: { borderRadius: 10, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.graphiteLight, padding: 12, gap: 6 },
   noteCardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   noteCardTag: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  noteCardTagText: { ...typography.mono, fontSize: 9, color: palette.goldText, letterSpacing: 1 },
+  noteCardTagText: { ...typography.mono, color: palette.goldText, letterSpacing: 1 },
   noteCardText: { ...typography.body, fontSize: 13, color: palette.ivory, lineHeight: 19 },
   themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
   themeTag: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: palette.lineGoldSubtle, backgroundColor: palette.goldGlow },
-  themeTagText: { fontFamily: Fonts.mono, fontSize: 9, color: palette.goldText, letterSpacing: 1 },
+  themeTagText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText, letterSpacing: 1 },
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  audioText: { ...typography.mono, fontSize: 10, color: palette.goldText, letterSpacing: 0.5 },
+  audioText: { ...typography.mono, color: palette.goldText, letterSpacing: 0.5 },
   noteCardFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: palette.line },
-  noteCardFooterText: { ...typography.mono, fontSize: 9.5, color: palette.smoke, letterSpacing: 0.3 },
+  noteCardFooterText: { ...typography.mono, color: palette.smoke, letterSpacing: 0.3 },
 
   // Grabar sesión → IA
   recordBox: { gap: 8 },
@@ -799,13 +799,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     minHeight: 44, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: palette.line,
   },
-  recCancelText: { fontFamily: Fonts.mono, fontSize: 10, color: palette.smoke, letterSpacing: 1 },
+  recCancelText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.smoke, letterSpacing: 1 },
   recStop: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     minHeight: 44, borderRadius: 8, backgroundColor: palette.gold,
   },
   recStopText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, color: palette.ink, letterSpacing: 1 },
-  recError: { ...typography.mono, fontSize: 10.5, color: palette.danger, letterSpacing: 0.3 },
+  recError: { ...typography.mono, color: palette.danger, letterSpacing: 0.3 },
 
   // Borrador de Norman (editable antes de confirmar)
   draftBox: {
@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
   draftHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   draftTitle: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, color: palette.ivory, letterSpacing: 1.5 },
   draftSub: { ...typography.body, fontSize: 12, color: palette.ash, lineHeight: 17 },
-  draftLabel: { ...typography.mono, fontSize: 10, color: palette.goldText, letterSpacing: 1.5, marginTop: 2 },
+  draftLabel: { ...typography.mono, color: palette.goldText, letterSpacing: 1.5, marginTop: 2 },
   draftNotes: {
     minHeight: 110, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: palette.line,
     backgroundColor: palette.graphiteLight, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13.5, lineHeight: 20,
@@ -825,13 +825,13 @@ const styles = StyleSheet.create({
     backgroundColor: palette.graphiteLight, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13,
   },
   draftAddAction: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
-  draftAddActionText: { fontFamily: Fonts.mono, fontSize: 9.5, color: palette.goldText, letterSpacing: 1 },
+  draftAddActionText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText, letterSpacing: 1 },
   draftBtns: { flexDirection: 'row', gap: 8, marginTop: 4 },
   draftDiscard: {
     minHeight: 44, paddingHorizontal: 16, borderRadius: 10, borderWidth: 1, borderColor: palette.line,
     alignItems: 'center', justifyContent: 'center',
   },
-  draftDiscardText: { fontFamily: Fonts.mono, fontSize: 10.5, color: palette.smoke, letterSpacing: 1 },
+  draftDiscardText: { fontFamily: Fonts.mono, fontSize: 11, color: palette.smoke, letterSpacing: 1 },
   draftConfirm: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     minHeight: 44, borderRadius: 10, backgroundColor: palette.gold,

@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   body: {
     ...typography.caption,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
   },
   dismissBtn: {
     backgroundColor: palette.gold,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   dismissText: {
     ...typography.label,
     color: palette.ink,
-    fontSize: 9,
+    fontSize: 11,
   },
   arrow: {
     alignSelf: 'center',

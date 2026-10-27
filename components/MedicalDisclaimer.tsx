@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: palette.smoke,
     flex: 1,
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 15,
   },
   closeBtn: {

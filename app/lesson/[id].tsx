@@ -585,7 +585,7 @@ const celebStyles = StyleSheet.create({
     // goldText (no gold): texto sobre card con fondo palette.black (theme-aware).
     color:       palette.goldText,
     fontFamily:  Fonts.mono,
-    fontSize:    9,
+    fontSize:    11,
     letterSpacing: 3,
   },
   iconWrap: {
@@ -594,7 +594,7 @@ const celebStyles = StyleSheet.create({
   lessonNum: {
     color:        palette.smoke,
     fontFamily:   Fonts.mono,
-    fontSize:     10,
+    fontSize:     11,
     letterSpacing: 2,
     marginBottom: -spacing.xs,
   },
@@ -883,7 +883,7 @@ export default function LessonScreen() {
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
       <ScrollView
         ref={scrollRef}
         style={sc.root}
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
   videoLabel: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 9.5,
+    fontSize: 11,
     letterSpacing: 1.4,
     maxWidth: '52%',
     position: 'absolute',
@@ -1239,7 +1239,7 @@ const styles = StyleSheet.create({
   lessonBadgeText: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
   },
   lessonDoneChip: {
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
   lessonDoneText: {
     color: palette.success,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
   },
   lessonTitle: {
@@ -1324,7 +1324,7 @@ const styles = StyleSheet.create({
   completedBadgeText: {
     ...typography.label,
     color: palette.success,
-    fontSize: 10,
+    fontSize: 11,
   },
   taskTitle: {
     color: palette.ivory,
@@ -1360,7 +1360,7 @@ const styles = StyleSheet.create({
   wordCount: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
   },
   wordCountGood: {
     color: palette.goldText,
@@ -1419,7 +1419,7 @@ const styles = StyleSheet.create({
   savedFieldLabel: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
   },
   savedFieldValue: {
@@ -1440,7 +1440,7 @@ const styles = StyleSheet.create({
   normanInsightLabel: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     marginBottom: 4,
   },
@@ -1492,7 +1492,7 @@ const styles = StyleSheet.create({
   nextLessonLabel: {
     ...typography.label,
     color: palette.goldText,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2,
   },
   nextLessonTitle: {
@@ -1505,7 +1505,7 @@ const styles = StyleSheet.create({
   nextLessonMeta: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // Personal notes
@@ -1535,7 +1535,7 @@ const styles = StyleSheet.create({
   notesSavedText: {
     color:       palette.success,
     fontFamily:  Fonts.mono,
-    fontSize:    9,
+    fontSize:    11,
     letterSpacing: 1,
   },
   notesInput: {
@@ -1562,7 +1562,7 @@ const styles = StyleSheet.create({
     // goldText (no gold): texto del botón sobre la página (fondo theme-aware).
     color:       palette.goldText,
     fontFamily:  Fonts.mono,
-    fontSize:    10,
+    fontSize:    11,
     letterSpacing: 1.5,
   },
 });
@@ -1591,7 +1591,7 @@ const archStyles = StyleSheet.create({
     ...typography.label,
     color: palette.smoke,
     letterSpacing: 2.5,
-    fontSize: 9,
+    fontSize: 11,
   },
   headline: {
     fontFamily: Fonts.display,

@@ -29,34 +29,31 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GoldDivider,
   ProgressCard,
-  SovereignDeltaTag,
   useScreen,
 } from '@/components/polaris';
 import { HeroPanel, HeroRule, StatStack } from '@/components/focus-deck';
+import { BaselineNote } from '@/components/narrative';
 import { buildHistoria } from '@/lib/narrativeLogic';
 import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
+import { calcSovereignDelta, calcSovereignTier } from '@/lib/utils';
+import { protocolSnapshot } from '@/lib/protocolSnapshot';
 
 // ─── Score tier helpers ───────────────────────────────────────────────────────
 
-function scoreTierLabel(score: number): string {
-  if (score >= 900) return 'ÉLITE';
-  if (score >= 700) return 'AVANZADO';
-  if (score >= 500) return 'EN PROGRESO';
-  return 'INICIANDO';
-}
+// Tier = calcSovereignTier (el mismo que Comando), no una escala propia.
+const scoreTierLabel = calcSovereignTier;
 
 // goldText (no gold): este color es principalmente TEXTO (número de 80px + tier label).
 // palette.gold (#FFC804) como texto es ilegible sobre superficie clara; goldText es
 // theme-aware. También se usa como fill (dot/barra), donde goldText funciona igual.
 function scoreTierColor(score: number): string {
-  if (score >= 900) return palette.goldText;
-  if (score >= 700) return palette.success;
-  if (score >= 500) return palette.goldText;
-  return palette.smoke;
+  const tier = calcSovereignTier(score);
+  if (tier === 'AVANZADO') return palette.success;
+  if (tier === 'INICIANDO') return palette.smoke;
+  return palette.goldText;
 }
 
 // ─── Share text builder ───────────────────────────────────────────────────────
@@ -96,7 +93,7 @@ export default function PerfilSoberanoScreen() {
   const sc = useScreen();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state, protocolDay, averages } = useLifeFlow();
+  const { state, averages } = useLifeFlow();
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -106,33 +103,23 @@ export default function PerfilSoberanoScreen() {
   const wellnessBreathing  = wellnessSessions.filter((s) => s.type === 'breathing').length;
   const wellnessBinaural   = wellnessSessions.filter((s) => s.type === 'binaural').length;
 
-  // Racha real: el bonus de racha del score premia días CONSECUTIVOS, no el
-  // total histórico de check-ins (que nunca decrece). Se reusa en StatStack.
-  const streak = computeStreak(state.checkIns);
-
-  const score = calcSovereignScore({
-    energy:           averages.energy ?? 0,
-    clarity:          averages.clarity ?? 0,
-    stress:           averages.stress ?? 5,
-    sleep:            averages.sleep ?? 0,
-    streak,
+  // Día, racha, score y línea base: la MISMA fuente que Comando y Progreso
+  // (lib/protocolSnapshot) — antes esta pantalla calculaba los suyos.
+  const snap = useMemo(() => protocolSnapshot({
+    protocolStartDate: state.protocolStartDate,
+    checkIns: state.checkIns,
     completedLessons: (state.completedLessons ?? []).length,
-    completedTasks:   Object.keys(state.completedTasks ?? {}).length,
-    wellnessMeditation,
-    wellnessBreathing,
-    wellnessBinaural,
-  });
+    completedTasks: Object.keys(state.completedTasks ?? {}).length,
+    wellness: { meditation: wellnessMeditation, breathing: wellnessBreathing, binaural: wellnessBinaural },
+    now: new Date(),
+  }), [state.protocolStartDate, state.checkIns, state.completedLessons, state.completedTasks, wellnessMeditation, wellnessBreathing, wellnessBinaural]);
+  const { protocolDay, streak } = snap;
+  const score = snap.score ?? 0;
 
   const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
 
   // Sovereign delta — progreso vs línea base, como subtítulo del score absoluto.
   const sovereignDelta = useMemo(() => calcSovereignDelta(state.checkIns), [state.checkIns]);
-  const baselineDay = useMemo(() => {
-    if (calcSovereignBaseline(state.checkIns).ready) return 7;
-    if (!state.checkIns.length) return 1;
-    const oldest = Math.min(...state.checkIns.map((c) => new Date(c.date).getTime()));
-    return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
-  }, [state.checkIns]);
 
   const earnedArchetypes = useMemo(() => {
     const completed = state.completedLessons ?? [];
@@ -161,7 +148,8 @@ export default function PerfilSoberanoScreen() {
     checkInsCount: state.checkIns.length,
     avgEnergy: averages.energy ?? 0,
     archetypesEarned: earnedArchetypes,
-  }), [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, earnedArchetypes]);
+    daysSinceLastCheckIn: snap.daysSinceLastReading,
+  }), [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, earnedArchetypes, snap.daysSinceLastReading]);
 
   // ── Share handler ───────────────────────────────────────────────────────────
   const handleShare = async () => {
@@ -253,7 +241,7 @@ export default function PerfilSoberanoScreen() {
 
         <View style={styles.heroScoreBlock}>
           <View style={styles.scoreNumRow}>
-            <Text style={[styles.scoreNum, { color: tierColor }]}>{score}</Text>
+            <Text style={[styles.scoreNum, { color: tierColor }]}>{snap.hasReadings ? score : '—'}</Text>
             <Text style={styles.scoreMax}>/1000 SCORE SOBERANO</Text>
           </View>
           {/* Score bar — no concatenar alpha sobre tierColor: puede ser un token
@@ -279,7 +267,7 @@ export default function PerfilSoberanoScreen() {
                   : `Cada check-in mueve el número, ${firstName}. El sistema responde.`}
           </Text>
           <View style={styles.scoreDeltaRow}>
-            <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+            <BaselineNote delta={sovereignDelta} baselineDay={snap.baselineDay} hasReadings={snap.hasReadings} />
           </View>
         </View>
       </HeroPanel>
@@ -532,7 +520,7 @@ const styles = StyleSheet.create({
   declarationLabel: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2,
   },
   declarationText: {
@@ -595,7 +583,7 @@ const styles = StyleSheet.create({
   historiaChapter: { gap: 4 },
   historiaLabel: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2,
     color: palette.goldText,
@@ -622,7 +610,7 @@ const styles = StyleSheet.create({
   archetypeChipText: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
 
@@ -659,7 +647,7 @@ const styles = StyleSheet.create({
   navSub: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // Share CTA — full-width gold button
@@ -686,7 +674,7 @@ const styles = StyleSheet.create({
   tagline: {
     color: palette.smoke,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     opacity: 0.5,
     paddingBottom: spacing.sm,

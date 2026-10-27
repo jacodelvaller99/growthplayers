@@ -134,11 +134,11 @@ const s = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   createBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center' },
-  createBtnText: { ...typography.label, color: palette.ink, fontSize: 9, letterSpacing: 1 },
+  createBtnText: { ...typography.label, color: palette.ink, letterSpacing: 1 },
   tabRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   tabBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, minHeight: 44, justifyContent: 'center' },
   tabBtnActive: { backgroundColor: palette.goldLight, borderColor: palette.gold },
-  tabText: { ...typography.section, color: palette.ash, fontSize: 10 },
+  tabText: { ...typography.section, color: palette.ash, fontSize: 11 },
   tabTextActive: { color: palette.goldText },
   list: { paddingHorizontal: spacing.lg, gap: spacing.sm },
 });

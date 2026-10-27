@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeInRight,
@@ -33,9 +33,12 @@ import { logSilentError } from '@/lib/observability';
 import { intel } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
-const TOTAL_STEPS = 6;
+// 0 bienvenida · 1 acuerdos legales · 2 datos y Norman IA · 3 identidad ·
+// 4 Mi Norte · 5 obstáculo · 6 código. El consentimiento se partió en dos
+// pasos (legal / datos) para que nadie firme seis casillas en una pantalla.
+const TOTAL_STEPS = 7;
 
-// Intro de valor (≈20s, skippable) — entre el consent gate y la identidad.
+// Intro de valor — vive ahora en la bienvenida, junto al manifiesto.
 // COPY AFINABLE POR EL DUEÑO: 3 viñetas sobrias, voz Polaris, sin claims/métricas.
 const VALUE_BULLETS: { icon: 'military-tech' | 'psychology' | 'insights'; title: string; body: string }[] = [
   {
@@ -58,15 +61,38 @@ const VALUE_BULLETS: { icon: 'military-tech' | 'psychology' | 'insights'; title:
 // Consent gate — Términos, Privacidad y Descargo de Salud (compliance de lanzamiento)
 type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation' | 'softwareLearning' | 'aiSharing';
 
-const CONSENT_ITEMS: { key: ConsentKey; label: string; route: '/legal/terminos' | '/legal/privacidad' | '/legal/salud' }[] = [
-  { key: 'terms',             label: 'Términos y Condiciones',                                   route: '/legal/terminos' },
-  { key: 'privacy',           label: 'Política de Privacidad (RGPD)',                            route: '/legal/privacidad' },
-  { key: 'health',            label: 'Descargo de Salud y Bienestar',                            route: '/legal/salud' },
-  { key: 'confrontation',     label: 'Norman puede confrontarme con datos registrados del sistema cuando mis acciones no coincidan con lo que declaré', route: '/legal/privacidad' },
-  { key: 'softwareLearning',  label: 'Acepto el tratamiento de mis datos para el aprendizaje y mejora del software', route: '/legal/privacidad' },
-  // Apple 5.1.2(i): permiso explícito, con nombre de los terceros, antes de enviar datos a IA externa.
-  { key: 'aiSharing',         label: `Autorizo que mis mensajes y datos de uso se envíen a proveedores de IA de terceros (${AI_PROVIDERS_LABEL}) para que Norman funcione. Puedo retirarlo cuando quiera`, route: '/legal/privacidad' },
+// Paso 1 — documentos legales: casilla + resumen en lenguaje simple + enlace
+// propio (≥44pt, role=link). Antes el enlace era un <Text onPress> anidado en
+// el checkbox: VoiceOver no lo enfocaba y el área táctil era una palabra.
+const LEGAL_ITEMS: { key: ConsentKey; label: string; summary: string; link: string; route: '/legal/terminos' | '/legal/privacidad' | '/legal/salud' }[] = [
+  { key: 'terms',   label: 'Acepto los Términos y Condiciones',      summary: 'Cómo funciona el servicio, tu membresía y qué puedes esperar de nosotros.', link: 'Leer términos',   route: '/legal/terminos' },
+  { key: 'privacy', label: 'Acepto la Política de Privacidad (RGPD)', summary: 'Qué datos guardamos, para qué los usamos y cómo pedir que los borremos.',   link: 'Leer privacidad', route: '/legal/privacidad' },
+  { key: 'health',  label: 'Acepto el Descargo de Salud y Bienestar', summary: 'Polaris acompaña tu bienestar; no es atención médica. Consulta cualquier práctica con tu médico.', link: 'Leer descargo', route: '/legal/salud' },
 ];
+
+// Paso 2 — permisos de datos (obligatorios: sin ellos Norman IA no funciona).
+const DATA_ITEMS: { key: ConsentKey; label: string }[] = [
+  { key: 'confrontation',    label: 'Norman IA puede confrontarme con datos registrados del sistema cuando mis acciones no coincidan con lo que declaré' },
+  { key: 'softwareLearning', label: 'Acepto el tratamiento de mis datos para el aprendizaje y mejora del software' },
+  // Apple 5.1.2(i): permiso explícito, con nombre de los terceros, antes de enviar datos a IA externa.
+  { key: 'aiSharing',        label: `Autorizo que mis mensajes y datos de uso se envíen a proveedores de IA de terceros (${AI_PROVIDERS_LABEL}) para que Norman IA funcione. Puedo retirarlo cuando quiera` },
+];
+
+function ConsentCheck({ checked, label, onPress, children }: { checked: boolean; label: string; onPress: () => void; children: ReactNode }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.consentRow, pressed && { opacity: 0.7 }]}>
+      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+        {checked && <MaterialIcons name="check" size={16} color={palette.ink} />}
+      </View>
+      <Text style={styles.consentText}>{children}</Text>
+    </Pressable>
+  );
+}
 
 // Segmento del indicador de paso. El "fill" es la opacidad de la capa dorada
 // superpuesta (no un interpolateColor: palette.gold/charcoal son tokens
@@ -113,8 +139,9 @@ export default function OnboardingScreen() {
     softwareLearning: false,
     aiSharing: false,
   });
+  const legalConsented = consents.terms && consents.privacy && consents.health;
   const allConsented =
-    consents.terms && consents.privacy && consents.health && consents.confrontation && consents.softwareLearning && consents.aiSharing;
+    legalConsented && consents.confrontation && consents.softwareLearning && consents.aiSharing;
   // ml_consent es OPT-IN explícito y OPCIONAL (RGPD): default false, no bloquea el gate.
   const [mlConsent, setMlConsent] = useState(false);
 
@@ -157,7 +184,7 @@ export default function OnboardingScreen() {
         logSilentError('onboarding.persistConsents', e);
       }
     }
-    setStep(1); // → intro de valor (skippable)
+    setStep(3); // → identidad
   };
 
   // El obstáculo ya NO se disfraza de propósito. Antes se copiaba a
@@ -166,7 +193,7 @@ export default function OnboardingScreen() {
   // Ahora painPoint viaja por derecho propio en finish() y siembra la
   // historia de origen (transformation_goal + primera entrada de la línea
   // de tiempo). Un dolor no es un propósito; no se mezclan.
-  const goFromObstacleToCode = () => setStep(5);
+  const goFromObstacleToCode = () => setStep(6);
 
   // Chips de ejemplo para arrancar el obstáculo sin enfrentar un textarea en blanco.
   const obstacleChip = (text: string) => () => setPainPoint(text);
@@ -228,7 +255,7 @@ export default function OnboardingScreen() {
     <KeyboardAvoidingView
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={0}>
     <ScrollView
       ref={scrollRef}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
@@ -243,7 +270,7 @@ export default function OnboardingScreen() {
         accessibilityRole="progressbar"
         accessibilityLabel={`Paso ${step + 1} de ${TOTAL_STEPS}`}
         accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: step + 1 }}>
-        {[0, 1, 2, 3, 4, 5].map((i) => (
+        {Array.from({ length: TOTAL_STEPS }, (_, i) => (
           <StepSeg key={i} active={i <= step} reduced={reducedMotion} />
         ))}
         {/* La barra es la ÚNICA que numera. Las píldoras de cada pantalla
@@ -261,15 +288,15 @@ export default function OnboardingScreen() {
         entering={reducedMotion ? undefined : FadeInRight.duration(220)}
         exiting={reducedMotion ? undefined : FadeOutLeft.duration(160)}>
       {/* ─────────────────────────────────────────── STEP 0 — BIENVENIDA ── */}
+      {/* Manifiesto + qué es Polaris. Sin nada legal: el "no es para todos"
+          es una invitación, no puede ir pegado a una firma. */}
       {step === 0 && (
         <View style={styles.welcomeWrap}>
-          {/* Brand mark + eyebrow */}
           <View style={styles.markWrap}>
             <PolarisMark size={72} />
           </View>
           <Text style={styles.eyebrow}>POLARIS GROWTH INSTITUTE</Text>
 
-          {/* Gold accent bar */}
           <View style={styles.goldAccent} />
 
           <Text style={styles.welcomeTitle}>TU SALA{'\n'}DE MANDO{'\n'}PERSONAL.</Text>
@@ -277,87 +304,6 @@ export default function OnboardingScreen() {
             Esta app no es para todos. Es para quien ya sabe que la distancia entre donde está y
             donde quiere estar no es de estrategia — es de sistema interno.
           </Text>
-
-          {/* Feature list — larger, clearer */}
-          <View style={styles.featureList}>
-            {[
-              { icon: 'monitor-heart' as const, label: 'Biometría diaria calibrada' },
-              { icon: 'psychology' as const, label: 'Mentor IA contextualizado' },
-              { icon: 'military-tech' as const, label: 'Protocolo Soberano 90D' },
-              { icon: 'insights' as const, label: 'Score Soberano en tiempo real' },
-            ].map(({ icon, label }) => (
-              <View key={label} style={styles.featureRow}>
-                <MaterialIcons name={icon} size={16} color={palette.goldText} />
-                <Text style={styles.featureText}>{label}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.dividerLine} />
-
-          {/* ── Consentimiento legal (gate de compliance) ── */}
-          <View style={styles.consentBlock}>
-            <Text style={styles.consentIntro}>
-              Esto es alto rendimiento y bienestar, no atención médica. Consulta cualquier práctica
-              con tu médico antes de aplicarla. Para entrar al sistema, lee y acepta:
-            </Text>
-            {CONSENT_ITEMS.map(({ key, label, route }) => (
-              <Pressable
-                key={key}
-                onPress={() => toggleConsent(key)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: consents[key] }}
-                accessibilityLabel={`Aceptar ${label}`}
-                style={({ pressed }) => [styles.consentRow, pressed && { opacity: 0.7 }]}>
-                <View style={[styles.checkbox, consents[key] && styles.checkboxChecked]}>
-                  {consents[key] && <MaterialIcons name="check" size={16} color={palette.ink} />}
-                </View>
-                <Text style={styles.consentText}>
-                  He leído y acepto los{' '}
-                  <Text
-                    style={styles.consentLink}
-                    onPress={() => router.push(route as never)}
-                    accessibilityRole="link">
-                    {label}
-                  </Text>
-                </Text>
-              </Pressable>
-            ))}
-
-            {/* Opt-in OPCIONAL de análisis (RGPD): no bloquea el gate. */}
-            <Pressable
-              onPress={() => setMlConsent((v) => !v)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: mlConsent }}
-              accessibilityLabel="Permitir análisis de mis datos para personalizar (opcional)"
-              style={({ pressed }) => [styles.consentRow, pressed && { opacity: 0.7 }]}>
-              <View style={[styles.checkbox, mlConsent && styles.checkboxChecked]}>
-                {mlConsent && <MaterialIcons name="check" size={16} color={palette.ink} />}
-              </View>
-              <Text style={styles.consentText}>
-                <Text style={{ color: palette.smoke }}>(Opcional) </Text>
-                Permito el análisis de mis datos de uso para personalizar mi experiencia y mejorar
-                las recomendaciones. Puedo desactivarlo cuando quiera.
-              </Text>
-            </Pressable>
-          </View>
-
-          <PrimaryButton
-            label="COMENZAR ACTIVACIÓN"
-            icon="arrow-forward"
-            onPress={acceptConsentAndContinue}
-            disabled={!allConsented}
-          />
-        </View>
-      )}
-
-      {/* ───────────────────────────────────── STEP 1 — INTRO DE VALOR ── */}
-      {/* ≈20s, skippable. Activa antes de pedir datos. NO bloqueante. */}
-      {step === 1 && (
-        <View style={styles.introWrap}>
-          <Text style={styles.eyebrow}>ANTES DE EMPEZAR</Text>
-          <View style={styles.goldAccent} />
-          <Text style={styles.introTitle}>QUÉ ES{'\n'}POLARIS.</Text>
 
           <View style={styles.introList}>
             {VALUE_BULLETS.map(({ icon, title, body }) => (
@@ -373,19 +319,99 @@ export default function OnboardingScreen() {
             ))}
           </View>
 
-          <PrimaryButton label="EMPEZAR" icon="arrow-forward" onPress={() => setStep(2)} />
-          <Pressable
-            onPress={() => setStep(2)}
-            accessibilityRole="button"
-            accessibilityLabel="Saltar intro"
-            style={{ alignItems: 'center', marginTop: -spacing.sm }}>
-            <Text style={styles.skipText}>Saltar →</Text>
-          </Pressable>
+          <PrimaryButton label="EMPEZAR" icon="arrow-forward" onPress={() => setStep(1)} />
         </View>
       )}
 
-      {/* ─────────────────────────────────────────── STEP 2 — IDENTIDAD ── */}
+      {/* ──────────────────────────────────── STEP 1 — ACUERDOS LEGALES ── */}
+      {step === 1 && (
+        <PremiumCard style={styles.formCard}>
+          <StatusPill label="ACUERDOS" />
+          <Text style={styles.stepTitle}>ANTES DE{'\n'}ENTRAR.</Text>
+          <Text style={styles.stepBody}>
+            Tres documentos, cada uno resumido en una línea. El texto completo está a un toque y
+            puedes volver a leerlo cuando quieras.
+          </Text>
+          <GoldDivider />
+          {LEGAL_ITEMS.map(({ key, label, summary, link, route }) => (
+            <View key={key} style={styles.legalItem}>
+              <ConsentCheck checked={consents[key]} label={label} onPress={() => toggleConsent(key)}>
+                {label}
+              </ConsentCheck>
+              <Text style={styles.consentSummary}>{summary}</Text>
+              <Pressable
+                onPress={() => router.push(route as never)}
+                accessibilityRole="link"
+                accessibilityLabel={`${link} completo`}
+                hitSlop={{ left: 8, right: 8 }}
+                style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}>
+                <Text style={styles.consentLink}>{link}</Text>
+                <MaterialIcons name="chevron-right" size={18} color={palette.goldText} />
+              </Pressable>
+            </View>
+          ))}
+          <View style={styles.actions}>
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(0)} />
+            <PrimaryButton
+              label="CONTINUAR"
+              icon="arrow-forward"
+              onPress={() => setStep(2)}
+              disabled={!legalConsented}
+            />
+          </View>
+        </PremiumCard>
+      )}
+
+      {/* ─────────────────────────────────── STEP 2 — DATOS Y NORMAN IA ── */}
       {step === 2 && (
+        <PremiumCard style={styles.formCard}>
+          <StatusPill label="TUS DATOS" />
+          <Text style={styles.stepTitle}>CÓMO TE{'\n'}ACOMPAÑA{'\n'}NORMAN IA.</Text>
+          <Text style={styles.stepBody}>
+            Norman IA lee lo que registras para acompañarte. Estos tres permisos son los que lo
+            hacen funcionar; el último es opcional.
+          </Text>
+          <GoldDivider />
+          {DATA_ITEMS.map(({ key, label }) => (
+            <ConsentCheck key={key} checked={consents[key]} label={label} onPress={() => toggleConsent(key)}>
+              {label}
+            </ConsentCheck>
+          ))}
+          <Pressable
+            onPress={() => router.push('/legal/privacidad' as never)}
+            accessibilityRole="link"
+            accessibilityLabel="Leer la Política de Privacidad completa"
+            style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}>
+            <Text style={styles.consentLink}>Cómo tratamos tus datos</Text>
+            <MaterialIcons name="chevron-right" size={18} color={palette.goldText} />
+          </Pressable>
+
+          {/* Opt-in OPCIONAL de análisis (RGPD): separado y no bloquea el gate. */}
+          <View style={styles.optionalBlock}>
+            <Text style={styles.fieldLabel}>OPCIONAL</Text>
+            <ConsentCheck
+              checked={mlConsent}
+              label="Permitir análisis de mis datos para personalizar (opcional)"
+              onPress={() => setMlConsent((v) => !v)}>
+              Permito el análisis de mis datos de uso para personalizar mi experiencia y mejorar
+              las recomendaciones. Puedo desactivarlo cuando quiera.
+            </ConsentCheck>
+          </View>
+
+          <View style={styles.actions}>
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(1)} />
+            <PrimaryButton
+              label="CONTINUAR"
+              icon="arrow-forward"
+              onPress={acceptConsentAndContinue}
+              disabled={!allConsented}
+            />
+          </View>
+        </PremiumCard>
+      )}
+
+      {/* ─────────────────────────────────────────── STEP 3 — IDENTIDAD ── */}
+      {step === 3 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="IDENTIDAD" />
           <Text style={styles.stepSubtitle}>Cuéntame quién eres</Text>
@@ -417,70 +443,83 @@ export default function OnboardingScreen() {
             />
           </View>
           <View style={styles.actions}>
-            <SecondaryButton label="ATRAS" onPress={() => setStep(1)} />
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(2)} />
             <PrimaryButton
               label="CONTINUAR"
               icon="arrow-forward"
               disabled={!name.trim()}
-              onPress={() => setStep(3)}
+              onPress={() => setStep(4)}
             />
           </View>
         </PremiumCard>
       )}
 
-      {/* ──────────────────────────────────────────── STEP 3 — MI NORTE ── */}
-      {step === 3 && (
+      {/* ──────────────────────────────────────────── STEP 4 — MI NORTE ── */}
+      {step === 4 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="MI NORTE" tone="gold" dot />
           <Text style={styles.stepSubtitle}>Tu propósito para los próximos 90 días</Text>
           <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
           <Text style={styles.stepBody}>
-            Antes de la táctica, la dirección. Estas declaraciones orientan cada decisión del
-            protocolo y el mentor las usa en cada sesión. Persigue el estado, no el resultado. Puedes editarlas después.
+            Hoy basta con el propósito, en una frase. Las otras dos son opcionales y todo se edita
+            después en Mi Norte; Norman IA las usa en cada sesión.
           </Text>
           <GoldDivider />
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
+            <Text style={styles.fieldHint}>
+              ¿Qué tiene que haber pasado en estos 90 días para que Polaris haya valido la pena?
+            </Text>
             <PremiumInput
               value={north.purpose}
               onChangeText={(purpose) => setNorth({ ...north, purpose })}
-              placeholder='Ej.: "Construir una vida soberana, rentable y físicamente impecable."'
+              placeholder='Ej.: "Dormir 7 h, delegar la operación diaria y volver a entrenar 3 veces por semana."'
               multiline
               style={styles.textArea}
-              accessibilityLabel="Proposito principal"
+              accessibilityLabel="Propósito principal"
+              accessibilityHint="Qué tiene que haber pasado en estos 90 días"
             />
           </View>
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD</Text>
+            <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD · OPCIONAL</Text>
+            <Text style={styles.fieldHint}>Cómo quieres operar mientras llegas ahí.</Text>
             <PremiumInput
               value={north.identity}
               onChangeText={(identity) => setNorth({ ...north, identity })}
-              placeholder='Ej.: "Decido con calma, ejecuto con precisión y protejo mi energía."'
+              placeholder='Ej.: "Decido con calma y protejo mi energía."'
               multiline
               style={styles.textArea}
-              accessibilityLabel="Declaracion de identidad"
+              accessibilityLabel="Declaración de identidad, opcional"
             />
           </View>
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>RECORDATORIO DIARIO</Text>
+            <Text style={styles.fieldLabel}>RECORDATORIO DIARIO · OPCIONAL</Text>
+            <Text style={styles.fieldHint}>Una línea corta para volver a tu Norte.</Text>
             <PremiumInput
               value={north.dailyReminder}
               onChangeText={(dailyReminder) => setNorth({ ...north, dailyReminder })}
-              placeholder='Ej.: "No negocio con el ruido. Hoy mando desde criterio."'
+              placeholder='Ej.: "Primero el estado, después la agenda."'
               multiline
               style={styles.textArea}
-              accessibilityLabel="Recordatorio diario"
+              accessibilityLabel="Recordatorio diario, opcional"
             />
           </View>
           <View style={styles.actions}>
-            <SecondaryButton label="ATRAS" onPress={() => setStep(2)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(4)} />
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(3)} />
+            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(5)} />
           </View>
+          <Pressable
+            onPress={() => setStep(5)}
+            accessibilityRole="button"
+            accessibilityLabel="Completar Mi Norte después"
+            style={styles.skipBtn}>
+            <Text style={styles.skipText}>Lo completo después en Mi Norte →</Text>
+          </Pressable>
         </PremiumCard>
       )}
 
-      {/* ──────────────────────────────────────────── STEP 4 — OBSTÁCULO ── */}
-      {step === 4 && (
+      {/* ──────────────────────────────────────────── STEP 5 — OBSTÁCULO ── */}
+      {step === 5 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="TU SITUACIÓN" />
           <Text style={styles.stepSubtitle}>Qué cambia todo — opcional</Text>
@@ -525,21 +564,21 @@ export default function OnboardingScreen() {
             />
           </View>
           <View style={styles.actions}>
-            <SecondaryButton label="ATRAS" onPress={() => setStep(3)} />
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(4)} />
             <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={goFromObstacleToCode} />
           </View>
           <Pressable
             onPress={goFromObstacleToCode}
             accessibilityRole="button"
             accessibilityLabel="Continuar sin definir el obstáculo"
-            style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+            style={styles.skipBtn}>
             <Text style={styles.skipText}>Continuar sin definirlo →</Text>
           </Pressable>
         </PremiumCard>
       )}
 
-      {/* ──────────────────────────────── STEP 5 — CÓDIGO DE ACCESO ── */}
-      {step === 5 && (
+      {/* ──────────────────────────────── STEP 6 — CÓDIGO DE ACCESO ── */}
+      {step === 6 && (
         <PremiumCard style={styles.formCard}>
           <StatusPill label="MEMBRESÍA" />
           <Text style={styles.stepSubtitle}>Tu código de acceso, si tienes</Text>
@@ -585,7 +624,7 @@ export default function OnboardingScreen() {
             ) : null}
           </View>
           <View style={styles.actions}>
-            <SecondaryButton label="ATRAS" onPress={() => setStep(4)} />
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(5)} />
             <PrimaryButton
               label={finishing ? 'INICIANDO...' : 'INICIAR EL PROTOCOLO'}
               icon={finishing ? 'hourglass-empty' : 'military-tech'}
@@ -597,9 +636,15 @@ export default function OnboardingScreen() {
             onPress={finish}
             disabled={finishing}
             accessibilityRole="button"
-            style={{ alignItems: 'center', marginTop: -spacing.sm }}>
+            accessibilityLabel="Iniciar sin código"
+            accessibilityHint="Entras con el plan Operador; puedes canjear el código después en Planes"
+            style={styles.skipBtn}>
             <Text style={styles.skipText}>Iniciar sin código →</Text>
           </Pressable>
+          <Text style={styles.skipNote}>
+            Sin código entras con el plan Operador: Norman IA con mensajes limitados y parte de los
+            módulos cerrados. Puedes canjear tu código después en Planes.
+          </Text>
           {finishError ? (
             <Text
               style={[styles.codeMsg, { color: palette.danger }]}
@@ -670,37 +715,7 @@ const styles = StyleSheet.create({
     color: palette.ash,
     lineHeight: 24,
   },
-  featureList: {
-    gap: spacing.sm,
-  },
-  featureRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  featureText: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 14,
-  },
-  dividerLine: {
-    backgroundColor: palette.line,
-    height: 1,
-  },
 
-  // ── Intro de valor (≈20s, skippable)
-  introWrap: {
-    gap: spacing.xl,
-  },
-  introTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 40,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 44,
-    textTransform: 'uppercase',
-  },
   introList: {
     gap: spacing.lg,
   },
@@ -737,14 +752,29 @@ const styles = StyleSheet.create({
   },
 
   // ── Consent gate
-  consentBlock: {
-    gap: spacing.md,
+  legalItem: {
+    gap: spacing.xs,
   },
-  consentIntro: {
+  consentSummary: {
     ...typography.caption,
-    color: palette.smoke,
-    fontSize: 11,
-    lineHeight: 16,
+    color: palette.ash,
+    fontSize: 13,
+    lineHeight: 19,
+    paddingLeft: 24 + spacing.md, // alinea con el texto, no con la casilla
+  },
+  linkRow: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingLeft: 24 + spacing.md,
+  },
+  optionalBlock: {
+    borderTopColor: palette.line,
+    borderTopWidth: 1,
+    gap: spacing.sm,
+    paddingTop: spacing.lg,
   },
   consentRow: {
     alignItems: 'flex-start',
@@ -811,6 +841,12 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: palette.ash,
   },
+  fieldHint: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 12,
+    lineHeight: 18,
+  },
   codeRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -827,12 +863,25 @@ const styles = StyleSheet.create({
   applyBtnText: {
     ...typography.section,
     color: palette.ink,
-    fontSize: 10,
+    fontSize: 11,
   },
   codeMsg: {
     ...typography.caption,
     fontSize: 12,
     marginTop: spacing.xs,
+  },
+  skipBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -spacing.sm,
+    minHeight: 44,
+  },
+  skipNote: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   skipText: {
     ...typography.caption,

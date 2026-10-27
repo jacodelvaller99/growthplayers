@@ -134,7 +134,7 @@ export interface SovereignDimensions {
 }
 
 export interface SovereignBaseline extends SovereignDimensions {
-  /** true si hay ≥3 check-ins en los primeros 7 días calendario. */
+  /** true si alguna ventana de 7 días calendario juntó ≥3 check-ins. */
   ready: boolean;
 }
 
@@ -171,21 +171,24 @@ function compositeOf(d: SovereignDimensions): number {
 }
 
 /**
- * Línea base soberana: promedia los check-ins de los PRIMEROS 7 días calendario
- * (contados desde el check-in más antiguo). `ready` es true solo con ≥3 check-ins
- * en esa ventana — antes, el cliente aún está construyendo su línea base.
+ * Línea base soberana. Regla: la PRIMERA ventana de 7 días calendario, que
+ * empiece en el día de algún check-in, con ≥3 check-ins — y se promedian esos.
+ * Antes la ventana era fija desde el check-in más antiguo: una primera semana
+ * floja (<3 lecturas) dejaba al cliente sin línea base para siempre.
  */
 export function calcSovereignBaseline(checkIns: SovereignCheckIn[]): SovereignBaseline {
   const empty: SovereignBaseline = { ready: false, energy: 0, clarity: 0, coherence: 0, sleep: 0 };
   if (!checkIns || checkIns.length < 3) return empty;
 
-  const oldest = Math.min(...checkIns.map((c) => dayStartMs(c.date)));
-  // Ventana = [día0, día0 + 7 días) — los primeros 7 días calendario.
-  const windowEnd = oldest + 7 * DAY_MS_SOVEREIGN;
-  const inWindow = checkIns.filter((c) => {
-    const d = dayStartMs(c.date);
-    return d >= oldest && d < windowEnd;
-  });
+  const sorted = checkIns
+    .map((c) => ({ c, d: dayStartMs(c.date) }))
+    .sort((a, b) => a.d - b.d);
+  // ponytail: O(n²) en el peor caso; n = check-ins de 90 días, irrelevante.
+  let inWindow: SovereignCheckIn[] = [];
+  for (let i = 0; i < sorted.length && inWindow.length < 3; i++) {
+    const windowEnd = sorted[i].d + 7 * DAY_MS_SOVEREIGN; // [día_i, día_i + 7)
+    inWindow = sorted.slice(i).filter((x) => x.d < windowEnd).map((x) => x.c);
+  }
 
   if (inWindow.length < 3) return empty;
 

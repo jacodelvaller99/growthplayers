@@ -307,7 +307,7 @@ const s = StyleSheet.create({
 
   section: { paddingHorizontal: spacing.lg, gap: spacing.sm, marginBottom: spacing.md },
   seeAll: { alignSelf: 'flex-end', paddingHorizontal: spacing.xs, minHeight: 44, justifyContent: 'center' },
-  seeAllText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
+  seeAllText: { ...typography.label, color: palette.goldText, letterSpacing: 1 },
 
   rowLink: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -317,5 +317,5 @@ const s = StyleSheet.create({
   rowLinkTitle: { ...typography.body, color: palette.ivory, fontSize: 14, fontWeight: '600' },
   rowLinkSub: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
   badge: { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  badgeText: { ...typography.label, color: palette.ink, fontSize: 10 },
+  badgeText: { ...typography.label, color: palette.ink },
 });

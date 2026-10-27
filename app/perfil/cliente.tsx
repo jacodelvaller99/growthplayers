@@ -17,6 +17,7 @@ import { GoldAccentCard, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { POLARIS_MODULES } from '@/data/modules';
 import { buildHistoria } from '@/lib/narrativeLogic';
+import { protocolSnapshot } from '@/lib/protocolSnapshot';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { fetchLatestSummaries, fetchMemoryProfile, type MemoryProfile, type MemorySummaryRow } from '@/lib/memory';
 import { clientSafeProfile } from '@/lib/memoryLogic';
@@ -40,7 +41,17 @@ export default function ClienteMemoriaScreen() {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userId, isSubscribed, state, protocolDay, averages } = useLifeFlow();
+  const { userId, isSubscribed, state, averages } = useLifeFlow();
+  // Día y días desde la última lectura: misma fuente que Comando/Progreso/Perfil.
+  // Solo se usan esos dos campos — el score no se pinta aquí.
+  const snap = useMemo(() => protocolSnapshot({
+    protocolStartDate: state.protocolStartDate,
+    checkIns: state.checkIns,
+    completedLessons: (state.completedLessons ?? []).length,
+    completedTasks: Object.keys(state.completedTasks ?? {}).length,
+    now: new Date(),
+  }), [state.protocolStartDate, state.checkIns, state.completedLessons, state.completedTasks]);
+  const protocolDay = snap.protocolDay;
   // La historia completa — la MISMA voz de lib/narrativeLogic que Progreso y
   // el perfil propio. Sale del estado local del cliente, no de la memoria IA:
   // es lo que HIZO, no lo que Norman resumió.
@@ -61,7 +72,8 @@ export default function ClienteMemoriaScreen() {
     checkInsCount: state.checkIns.length,
     avgEnergy: averages.energy ?? 0,
     archetypesEarned: earnedArchetypes,
-  }), [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, earnedArchetypes]);
+    daysSinceLastCheckIn: snap.daysSinceLastReading,
+  }), [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, earnedArchetypes, snap.daysSinceLastReading]);
 
   const [profile, setProfile] = useState<MemoryProfile | null>(null);
   const [summaries, setSummaries] = useState<MemorySummaryRow[]>([]);
@@ -311,7 +323,7 @@ const s = StyleSheet.create({
   historiaChapter: { gap: 3 },
   historiaLabel: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2,
     color: palette.goldText,
@@ -335,8 +347,8 @@ const s = StyleSheet.create({
   muted: { ...typography.caption, color: palette.smoke, fontSize: 12, fontStyle: 'italic' },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   taskText: { ...typography.body, color: palette.ash, fontSize: 13 },
-  taskPending: { ...typography.caption, color: palette.goldText, fontSize: 10, marginTop: 1, fontStyle: 'italic' },
-  taskState: { ...typography.label, fontSize: 10, letterSpacing: 0.5 },
+  taskPending: { ...typography.caption, color: palette.goldText, fontSize: 11, marginTop: 1, fontStyle: 'italic' },
+  taskState: { ...typography.label, fontSize: 11, letterSpacing: 0.5 },
   progress: { ...typography.mono, color: palette.smoke, fontSize: 11, marginTop: 4 },
 
   // Prompt de accountability (24h)

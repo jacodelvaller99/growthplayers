@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     ...typography.label,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   duration: {

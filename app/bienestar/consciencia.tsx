@@ -442,15 +442,17 @@ const styles = StyleSheet.create({
   zoneFuerza: { flex: 1, backgroundColor: palette.danger, opacity: 0.6 },
   zonePoder: { flex: 1, backgroundColor: palette.gold },
   zoneLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-  zoneLabelFuerza: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10 },
-  zoneLabelPoder: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 10 },
+  zoneLabelFuerza: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11 },
+  zoneLabelPoder: { fontFamily: Fonts.mono, color: palette.goldText, fontSize: 11 },
 
   // Grid — 4 columns
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   cell: {
-    width: '22.5%',
+    // 3 columnas, no 4: con el nombre a 11pt (piso de legibilidad) una palabra
+    // de 11 letras en mono ("NEUTRALIDAD") ocupa ~73px y a 4 columnas se truncaba.
+    width: '30%',
     flexGrow: 1,
-    minWidth: 72,
+    minWidth: 96,
     minHeight: 44,
     backgroundColor: palette.graphite,
     borderWidth: 1,
@@ -468,7 +470,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   cellHz: { fontFamily: Fonts.display, fontSize: 14, fontWeight: '700' },
-  cellName: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 8, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.2 },
+  cellName: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.2 },
 
   // Detail
   detailCard: {
@@ -495,7 +497,7 @@ const styles = StyleSheet.create({
     borderTopColor: palette.line,
     gap: spacing.sm,
   },
-  howToRiseLabel: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
+  howToRiseLabel: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
   howToRiseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   howToRiseText: { ...typography.caption, color: palette.ash, fontSize: 13, flex: 1, lineHeight: 20 },
   howToRiseStrong: { color: palette.goldText, fontFamily: Fonts.sansBold },

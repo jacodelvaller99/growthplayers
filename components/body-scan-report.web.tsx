@@ -174,7 +174,7 @@ function ScanBadge({ complete }: { complete: boolean }) {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         border: `1px solid ${color}`, borderRadius: 999, padding: '3px 10px',
-        fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 1, color,
+        fontFamily: Fonts.mono, fontSize: 11, letterSpacing: 1, color,
       }}>
       <span style={{ width: 6, height: 6, borderRadius: 3, background: color, display: 'inline-block' }} />
       {complete ? 'ESCANEO COMPLETO' : 'ESCANEANDO…'}
@@ -372,7 +372,7 @@ function ScanColumn({
           </>
         ) : null}
       </div>
-      <div style={{ fontFamily: Fonts.display, fontSize: 10, letterSpacing: 1, color: palette.smoke, whiteSpace: 'nowrap' }}>
+      <div style={{ fontFamily: Fonts.display, fontSize: 11, letterSpacing: 1, color: palette.smoke, whiteSpace: 'nowrap' }}>
         {preset.id}. {preset.label}
       </div>
     </div>
@@ -419,7 +419,7 @@ function HudGauge({ label, value }: { label: string; value: number }) {
   const percent = Math.round(Math.max(0, Math.min(1, value)) * 100);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 90 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: Fonts.mono, fontSize: 8, letterSpacing: 0.5, color: palette.smoke }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: Fonts.mono, fontSize: 11, letterSpacing: 0.5, color: palette.smoke }}>
         <span>{label}</span>
         <span>{percent}%</span>
       </div>
@@ -509,7 +509,7 @@ export function BodyScanReport({
             </span>
             <ScanBadge complete={loaded} />
           </div>
-          <div style={{ fontFamily: Fonts.mono, fontSize: 10, letterSpacing: 1.2, color: palette.goldText, marginTop: 8 }}>
+          <div style={{ fontFamily: Fonts.mono, fontSize: 11, letterSpacing: 1.2, color: palette.goldText, marginTop: 8 }}>
             TOCA UN FOCO · {energyFocusById(activeFocus).label.toUpperCase()}
           </div>
         </div>
@@ -564,7 +564,7 @@ export function BodyScanReport({
 
       {/* ── Pie: HUD con datos reales del pipeline + waveforms decorativos ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, gap: 16, flexWrap: 'wrap', position: 'relative' }}>
-        <span style={{ fontFamily: Fonts.mono, fontSize: 9, letterSpacing: 1, color: palette.smoke }}>
+        <span style={{ fontFamily: Fonts.mono, fontSize: 11, letterSpacing: 1, color: palette.smoke }}>
           MODELO 3D · ESCANEO BIOMÉTRICO · CUERPO DE PARTÍCULAS · {PARTICLE_TOTAL.toLocaleString('es')} PARTÍCULAS
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>

@@ -224,7 +224,7 @@ export default function AuthScreen() {
     <KeyboardAvoidingView
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={0}>
       <ScrollView
         contentContainerStyle={[sc.content, { paddingTop: insets.top + 32 }]}
         showsVerticalScrollIndicator={false}

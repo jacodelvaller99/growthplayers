@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   logoSub: {
-    fontSize: 7,
+    fontSize: 11,
     color: palette.muted,
     fontFamily: Fonts.displayLight,  // GrandisExtended-Light
     letterSpacing: 2.5,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   navScrollContent: { flexGrow: 1, justifyContent: 'space-between' },
   navGroupLabel: {
     fontFamily: Fonts.mono,
-    fontSize: 9.5,
+    fontSize: 11,
     letterSpacing: 2,
     color: palette.muted,
     textTransform: 'uppercase',
@@ -336,14 +336,14 @@ const styles = StyleSheet.create({
   },
   streakUnit: {
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: palette.ash,
     letterSpacing: 1.5,
     marginLeft: 'auto',
   },
   streakMeta: {
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: palette.ash,
     letterSpacing: 1,
     marginTop: 8,
@@ -390,14 +390,14 @@ const styles = StyleSheet.create({
   personalizeText: {
     flex: 1,
     fontFamily: Fonts.mono,
-    fontSize: 10.5,
+    fontSize: 11,
     letterSpacing: 1.2,
     color: palette.goldText,
     fontWeight: '700',
   },
   themeBtnText: {
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     color: palette.smoke,
   },
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   userName: { color: palette.ivoryWarm, fontSize: 12.5, fontWeight: '600', marginBottom: 2 },
   userTier: {
     color: palette.goldText,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     fontFamily: Fonts.mono,
   },

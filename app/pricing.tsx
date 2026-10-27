@@ -64,7 +64,8 @@ function PlanCard({
       ]}>
       {highlight && (
         <View style={[s.planBadge, { backgroundColor: accentColor }]}>
-          <Text style={s.planBadgeText}>MÁS POPULAR</Text>
+          {/* «MÁS POPULAR» era un dato que no tenemos: prueba social inventada. */}
+          <Text style={s.planBadgeText}>RECOMENDADO</Text>
         </View>
       )}
       <View style={s.planHeader}>
@@ -179,11 +180,11 @@ export default function PricingScreen() {
 
       {/* Hero */}
       <PremiumCard style={s.heroCard}>
-        <Text style={s.heroEyebrow}>SCORE SOBERANO</Text>
-        <Text style={s.heroTitle}>Elige tu nivel{'\n'}de transformación.</Text>
+        <Text style={s.heroEyebrow}>PLANES</Text>
+        <Text style={s.heroTitle}>Elige la profundidad{'\n'}que te sirve hoy.</Text>
         <Text style={s.heroBody}>
-          Cada plan desbloquea un nivel de profundidad en el Método Polaris.
-          Los accesos se activan de forma inmediata.
+          Cada plan abre una capa del Método Polaris. El acceso se activa al momento
+          y puedes cambiar de plan cuando lo necesites.
         </Text>
       </PremiumCard>
 
@@ -275,7 +276,8 @@ export default function PricingScreen() {
       </View>
 
       <SecondaryButton label="VOLVER" onPress={() => router.back()} />
-      <View style={{ height: insets.bottom + spacing.xxxl }} />
+      {/* Holgura sobre el FAB del tour (48 + 16 de margen): sin ella tapaba VOLVER. */}
+      <View style={{ height: insets.bottom + spacing.xxxl + spacing.xl }} />
     </ScrollView>
   );
 }
@@ -336,7 +338,7 @@ const s = StyleSheet.create({
   },
   planBadgeText: {
     fontFamily: Fonts.sansBold,
-    fontSize: 9,
+    fontSize: 11,
     color: palette.ink,
     fontWeight: '700',
     letterSpacing: 1,
@@ -368,7 +370,7 @@ const s = StyleSheet.create({
   },
   activePillText: {
     fontFamily: Fonts.sansBold,
-    fontSize: 8,
+    fontSize: 11,
     color: palette.success,
     fontWeight: '700',
   },

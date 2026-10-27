@@ -289,8 +289,9 @@ const s = StyleSheet.create({
   stepLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 9,
-    letterSpacing: 1.2,
+    // Cuatro columnas a 375pt (~75px cada una): a 11pt «EJECUTA» necesita
+    // tracking corto para no partirse.
+    letterSpacing: 0.4,
   },
   stepLabelCurrent: {
     color: palette.goldText,

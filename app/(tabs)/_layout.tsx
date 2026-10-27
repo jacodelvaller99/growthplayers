@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { WellnessMiniPlayer } from '@/components/WellnessMiniPlayer';
-import { Colors, Fonts, palette } from '@/constants/theme';
+import { CHROME_MAX_SCALE, Colors, Fonts, palette } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -76,13 +76,19 @@ export function BottomNavigation() {
         tabBarActiveTintColor: palette.ivory,
         tabBarInactiveTintColor: palette.smoke,
         tabBarButton: HapticTab,
-        tabBarLabelStyle: {
-          fontFamily: Fonts.displayMedium, // GrandisExtended-Medium (Manual de Marca)
-          fontSize: 10,
-          letterSpacing: 1.5,
-          textTransform: 'uppercase',
-          marginTop: 2,
-        },
+        // Sin mayúsculas forzadas ni tracking ancho: en versalitas con 1.5 de
+        // tracking, GrandisExtended (una cara ancha) truncaba a 390pt
+        // («PROGRA», «PERFI»). En caja normal caben las 5 a 375pt.
+        // maxFontSizeMultiplier: la barra tiene alto fijo (60 + safe area);
+        // Dynamic Type escala hasta 1.3× sin romperla.
+        tabBarLabel: ({ color, children }) => (
+          <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={CHROME_MAX_SCALE}
+            style={{ fontFamily: Fonts.displayMedium, fontSize: 11, letterSpacing: 0.2, marginTop: 2, color }}>
+            {children}
+          </Text>
+        ),
         // Chrome estructural con material (audit "Fluidez Polaris" §Fase 5):
         // antes backgroundColor opaco. El fondo semi-transparente + blur da
         // jerarquía de peso — el contenido que scrollea debajo se insinúa en

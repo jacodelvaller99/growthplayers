@@ -124,15 +124,28 @@ describe('calcSovereignBaseline', () => {
     expect(calcSovereignBaseline([]).ready).toBe(false);
   });
 
-  it('<3 check-ins DENTRO de los primeros 7 días → ready:false aunque haya más después', () => {
-    // 2 en la ventana [0,7) + 2 fuera (día 8,9). La ventana solo cuenta los primeros 7 días.
+  it('primera semana con <3 lecturas → la línea base se forma con la primera ventana válida', () => {
+    // [0,7) solo tiene 2; [2,9) tiene días 2, 8 → 2; [8,15) tiene 8, 9, 10 → 3. Esa es la base.
     const base = calcSovereignBaseline([
-      ci(0, 5, 5, 5, 5),
-      ci(2, 5, 5, 5, 5),
-      ci(8, 9, 9, 1, 9),
-      ci(9, 9, 9, 1, 9),
+      ci(0, 1, 1, 9, 1),
+      ci(2, 1, 1, 9, 1),
+      ci(8, 6, 6, 4, 6),
+      ci(9, 7, 7, 3, 7),
+      ci(10, 8, 8, 2, 8),
     ]);
+    expect(base.ready).toBe(true);
+    expect(base.energy).toBeCloseTo(7);
+    expect(base.coherence).toBeCloseTo(7);
+  });
+
+  it('lecturas espaciadas (nunca 3 en 7 días) → ready:false', () => {
+    const base = calcSovereignBaseline([ci(0, 5, 5, 5, 5), ci(5, 5, 5, 5, 5), ci(12, 5, 5, 5, 5), ci(19, 5, 5, 5, 5)]);
     expect(base.ready).toBe(false);
+  });
+
+  it('el orden de entrada no importa (state.checkIns llega newest-first)', () => {
+    const asc = [ci(0, 4, 5, 4, 5), ci(3, 6, 6, 4, 6), ci(6, 8, 7, 4, 7), ci(10, 1, 1, 9, 1)];
+    expect(calcSovereignBaseline([...asc].reverse())).toEqual(calcSovereignBaseline(asc));
   });
 
   it('baseline correcto promediando los primeros 7 días calendario', () => {

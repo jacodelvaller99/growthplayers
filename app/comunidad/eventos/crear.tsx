@@ -309,7 +309,7 @@ const s = StyleSheet.create({
   title: { ...typography.title, color: palette.ivory },
   intro: { ...typography.caption, color: palette.smoke, paddingHorizontal: spacing.lg, marginBottom: spacing.md, fontSize: 12 },
   form: { paddingHorizontal: spacing.lg },
-  fieldLabel: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs, fontSize: 9 },
+  fieldLabel: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs },
   input: { backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, minHeight: 44 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { paddingHorizontal: spacing.md, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line, minHeight: 44, justifyContent: 'center', minWidth: 44, alignItems: 'center' },

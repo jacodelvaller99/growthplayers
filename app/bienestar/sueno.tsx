@@ -292,6 +292,6 @@ const styles = StyleSheet.create({
   },
   itemBody: { flex: 1, gap: 2 },
   itemTitle: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 1.5 },
-  itemDuration: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  itemDuration: { ...typography.mono, color: palette.smoke },
   itemDesc: { ...typography.caption, color: palette.smoke, fontSize: 11 },
 });

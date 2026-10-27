@@ -27,7 +27,7 @@ import Svg, { Circle } from 'react-native-svg';
 import Animated, { useAnimatedProps, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { alpha } from '@/constants/themeColors';
-import { animation, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { animation, CHROME_MAX_SCALE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 // ─── 1 · Héroe ────────────────────────────────────────────────────────────────
@@ -344,7 +344,7 @@ export function LensTabs({ lenses, initial }: { lenses: Lens[]; initial?: string
               accessibilityState={{ selected: on }}
               accessibilityLabel={l.label}
               style={({ pressed }) => [s.tab, on && s.tabOn, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}>
-              <Text style={[s.tabText, on && s.tabTextOn]}>{l.label}</Text>
+              <Text style={[s.tabText, on && s.tabTextOn]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{l.label}</Text>
             </Pressable>
           );
         })}
@@ -416,11 +416,11 @@ const s = StyleSheet.create({
     color: palette.goldText,
     fontVariant: ['tabular-nums'],
   },
-  metricCaption: { ...typography.caption, color: palette.smoke, fontSize: 10, letterSpacing: 1 },
+  metricCaption: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 1 },
   heroCopy: { flex: 1, gap: 8, minWidth: 0 },
   eyebrow: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2.4,
     color: palette.goldText,
@@ -458,7 +458,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: palette.line, borderRadius: radii.md,
     padding: spacing.md, gap: 4,
   },
-  statName: { ...typography.caption, color: palette.smoke, fontSize: 10, letterSpacing: 1 },
+  statName: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 1 },
   statValue: {
     fontFamily: Fonts.mono, fontSize: 17, fontWeight: '700',
     color: palette.ivory, fontVariant: ['tabular-nums'],
@@ -472,8 +472,8 @@ const s = StyleSheet.create({
     padding: spacing.md, gap: spacing.sm,
   },
   tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  tileLabel: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1.6 },
-  tileState: { ...typography.label, fontSize: 9, letterSpacing: 1.2 },
+  tileLabel: { ...typography.label, color: palette.smoke, letterSpacing: 1.6 },
+  tileState: { ...typography.label, letterSpacing: 1.2 },
   tileValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
   tileValue: {
     fontFamily: Fonts.display, fontSize: 26, fontWeight: '800',
@@ -492,7 +492,7 @@ const s = StyleSheet.create({
     color: palette.ivory,
     fontVariant: ['tabular-nums'],
   },
-  dialCaption: { ...typography.caption, color: palette.smoke, fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase' },
+  dialCaption: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase' },
 
   // Lista de filas
   rowList: {
@@ -528,11 +528,12 @@ const s = StyleSheet.create({
   module: { gap: spacing.sm },
   tabs: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.xs },
   tab: {
-    paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center',
+    paddingHorizontal: spacing.sm + 4, minHeight: 44, justifyContent: 'center',
     borderRadius: 999, borderWidth: 1, borderColor: 'transparent',
   },
   tabOn: { backgroundColor: palette.goldLight, borderColor: palette.lineGold },
-  tabText: { ...typography.label, color: palette.smoke, fontSize: 10, letterSpacing: 1.4 },
+  // Tracking corto: el label subió a 11pt; así las lentes no ensanchan la fila.
+  tabText: { ...typography.label, color: palette.smoke, letterSpacing: 0.6 },
   tabTextOn: { color: palette.goldText },
   panel: { gap: spacing.xs },
 

@@ -14,7 +14,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import EmptyState from '@/components/EmptyState';
-import { POLARIS_MODULES } from '@/data/modules';
+import { POLARIS_MODULES, arquetipoConArticulo } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -139,7 +139,7 @@ export default function ModuleDetailScreen() {
             <MaterialIcons name="person" size={12} color={palette.goldText} />
             <Text style={styles.arquetipoText}>
               {module.status === 'completed'
-                ? `Ya eres el ${module.arquetipo.toUpperCase()}`
+                ? `Arquetipo integrado: ${module.arquetipo}`
                 : `Arquetipo: ${module.arquetipo}`}
             </Text>
           </View>
@@ -255,7 +255,7 @@ export default function ModuleDetailScreen() {
               <Text style={styles.completionTitle}>MÓDULO COMPLETADO</Text>
               <Text style={styles.completionBody}>
                 {module.arquetipo
-                  ? `Ya eres el ${module.arquetipo.toUpperCase()}. Eso no se puede desaprender.`
+                  ? `Integraste ${arquetipoConArticulo(module.arquetipo)}. Eso no se puede desaprender.`
                   : 'Has absorbido este módulo. Lleva lo aprendido al siguiente nivel.'}
               </Text>
             </View>
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   arquetipoText: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   heroBody: {
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   heroStats: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginTop: spacing.sm,
   },
   heroStat: {
@@ -374,10 +374,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 26,
   },
+  // Tres columnas en la tarjeta: a 11pt «COMPLETADAS» necesita tracking corto.
   heroStatLabel: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 7,
+    letterSpacing: 0.4,
     textAlign: 'center',
   },
   heroStatDivider: {
@@ -432,7 +433,7 @@ const styles = StyleSheet.create({
   lessonIndex: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 7,
+    fontSize: 11,
   },
   lessonIndexActive: {
     color: palette.graphite,
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
   nextModuleLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 7,
+    fontSize: 11,
     letterSpacing: 2,
   },
   nextModuleTitle: {
@@ -512,7 +513,7 @@ const styles = StyleSheet.create({
   completionTitle: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },

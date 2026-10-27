@@ -102,9 +102,9 @@ const slider = StyleSheet.create({
   label: {
     ...typography.label,
     color: palette.ash,
-    width: 70,
-    fontSize: 10,
-    letterSpacing: 1,
+    // 96 y no 70: a 11pt «BINAURAL» (8 letras GrandisExtended) mide ~85px.
+    width: 96,
+    letterSpacing: 0.6,
   },
   track: {
     flex: 1,
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
   cardFooterText: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // Mode toggle
@@ -1005,13 +1005,13 @@ const styles = StyleSheet.create({
   mixerDesc: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 14,
   },
   mixerHz: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 9,
+    fontSize: 11,
     marginTop: 2,
   },
   mixerPlayerCard: {
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
   mixerHzLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     marginTop: 2,
   },
   hzDividerV: {
@@ -1127,7 +1127,7 @@ const play = StyleSheet.create({
   hzLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     marginTop: 2,
     textAlign: 'center',
   },
@@ -1187,7 +1187,7 @@ const play = StyleSheet.create({
   ambienceBtnText: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
   },
   ambienceBtnTextActive: {
     color: palette.ink,

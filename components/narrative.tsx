@@ -18,13 +18,14 @@
  * superficies doradas.
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 
-import { PremiumCard } from '@/components/polaris';
+import { PremiumCard, SovereignDeltaTag } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import type { Arc, Milestone } from '@/lib/narrativeLogic';
+import { GLOSS, type Arc, type Milestone } from '@/lib/narrativeLogic';
+import type { SovereignDelta } from '@/lib/utils';
 
 // ─── ArcHeader — dónde estoy en la historia ─────────────────────────────────
 
@@ -40,13 +41,28 @@ import type { Arc, Milestone } from '@/lib/narrativeLogic';
  * `compact` quita la línea narrativa y deja solo el eyebrow, para cuando ya
  * hay otro texto largo cerca y repetir la frase sería ruido.
  */
-export function ArcHeader({ arc, compact = false }: { arc: Arc; compact?: boolean }) {
+export function ArcHeader({
+  arc,
+  compact = false,
+  explain = false,
+}: {
+  arc: Arc;
+  compact?: boolean;
+  /** Un toque despliega qué es el «Acto» (GLOSS.arc). Sin glosario aparte. */
+  explain?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = `${arc.actLabel}. ${arc.dayLabel}. ${arc.line}`;
   return (
-    <View
+    <Pressable
       style={styles.arcWrap}
+      disabled={!explain}
+      onPress={() => setOpen((v) => !v)}
       accessible
-      accessibilityRole="header"
-      accessibilityLabel={`${arc.actLabel}. ${arc.dayLabel}. ${arc.line}`}>
+      accessibilityRole={explain ? 'button' : 'header'}
+      accessibilityState={explain ? { expanded: open } : undefined}
+      accessibilityHint={explain ? 'Muestra qué significa el acto' : undefined}
+      accessibilityLabel={open ? `${label} ${GLOSS.arc}` : label}>
       <View style={styles.arcEyebrowRow}>
         <View style={styles.arcRule} />
         {/* `numberOfLines` + `flexShrink`: el eyebrow pasó de 21 a 35
@@ -65,7 +81,62 @@ export function ArcHeader({ arc, compact = false }: { arc: Arc; compact?: boolea
       {compact ? null : (
         <Text style={[styles.arcLine, arc.quoted && styles.arcLineQuoted]}>{arc.line}</Text>
       )}
+      {open ? <Text style={styles.gloss}>{GLOSS.arc}</Text> : null}
+    </Pressable>
+  );
+}
+
+// ─── GlossToggle — la jerga explicada donde aparece ─────────────────────────
+
+/**
+ * Rótulo con «ⓘ» que despliega UNA línea de explicación (Score Soberano,
+ * Arquetipos…). La explicación vive en `GLOSS` (narrativeLogic) para que todas
+ * las pantallas digan lo mismo. Área táctil ≥44pt.
+ */
+export function GlossToggle({ label, gloss, labelStyle }: {
+  label: string;
+  gloss: string;
+  labelStyle?: StyleProp<TextStyle>;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}. Qué significa`}
+        accessibilityState={{ expanded: open }}
+        style={styles.glossRow}>
+        <Text style={labelStyle}>{label}</Text>
+        <MaterialIcons name={open ? 'expand-less' : 'info-outline'} size={14} color={palette.smoke} />
+      </Pressable>
+      {open ? <Text style={styles.glossLeft}>{gloss}</Text> : null}
     </View>
+  );
+}
+
+// ─── BaselineNote — la línea base, sin «día 7 de 7» eterno ──────────────────
+
+/**
+ * Envuelve `SovereignDeltaTag`. Cuando `baselineDay` es null (sin lecturas, o
+ * la ventana de 7 días pasó sin completarse — ver `protocolSnapshot`), el tag
+ * diría «construyendo · día X de 7» junto a un «Día 31»: aquí se dice la verdad.
+ */
+export function BaselineNote({ delta, baselineDay, hasReadings }: {
+  delta: SovereignDelta;
+  baselineDay: number | null;
+  hasReadings: boolean;
+}) {
+  if (delta.hasBaseline || baselineDay !== null) {
+    return <SovereignDeltaTag delta={delta} baselineDay={baselineDay ?? undefined} />;
+  }
+  return (
+    <Text style={styles.glossLeft}>
+      {hasReadings
+        ? 'Línea base pendiente: se forma con 3 lecturas en una misma semana.'
+        : 'Tu línea base empieza con tu primera lectura.'}
+    </Text>
   );
 }
 
@@ -218,6 +289,21 @@ const styles = StyleSheet.create({
   // matar. El color dice "esto es tuyo"; el tamaño sigue diciendo "esto manda".
   arcLineQuoted: {
     color: palette.goldText,
+  },
+  gloss: {
+    ...typography.caption,
+    color: palette.ash,
+    textAlign: 'center',
+  },
+  glossRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 28,
+  },
+  glossLeft: {
+    ...typography.caption,
+    color: palette.ash,
   },
 
   // ConsequenceCard

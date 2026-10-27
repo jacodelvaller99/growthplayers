@@ -98,8 +98,8 @@ export default function PaywallScreen() {
       if (info && Object.keys(info.entitlements.active).length > 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(
-          '¡Bienvenido a Premium!',
-          'Tu acceso completo al Protocolo Soberano está activado.',
+          'Acceso activado',
+          'El Protocolo Soberano completo ya está abierto para ti.',
           [{ text: 'Continuar', onPress: () => router.back() }],
         );
       }
@@ -145,7 +145,9 @@ export default function PaywallScreen() {
   return (
     <ScrollView
       style={sc.root}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
+      // paddingBottom: holgura para que ningún flotante (FAB del tour en web,
+      // home indicator) tape el texto legal del final.
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + spacing.xxxl + spacing.xl }]}
       showsVerticalScrollIndicator={false}
       bounces
       overScrollMode={Platform.OS === 'android' ? 'never' : undefined}>
@@ -153,18 +155,20 @@ export default function PaywallScreen() {
 
       <PremiumCard style={styles.hero}>
         <Text style={styles.eyebrow}>PROTOCOLO SOBERANO</Text>
-        <Text style={styles.title}>¿ESTÁS LISTO{'\n'}PARA COMPROMETERTE?</Text>
+        <Text style={styles.title}>EL PROTOCOLO{'\n'}COMPLETO</Text>
         <Text style={styles.body}>
-          No es solo una suscripción. Es la decisión de operar tu vida con la misma seriedad con que operarías una empresa de alto rendimiento.
+          Los 90 días, Norman IA y la lectura de tu estado, sin capas cerradas. Entra cuando lo decidas: aquí no corre ninguna cuenta regresiva.
         </Text>
       </PremiumCard>
 
+      {/* Solo lo que hoy funciona de verdad. WHOOP/Oura no se prometen: sus
+          credenciales OAuth siguen pendientes (CLAUDE.md §Wearables). */}
       <View style={styles.featuresCard}>
         {[
-          { feat: 'Norman sin límites — tu mentor IA personalizado', icon: 'psychology' },
-          { feat: '9 semanas del Protocolo Soberano completo', icon: 'military-tech' },
-          { feat: 'Biometría avanzada con WHOOP y Oura', icon: 'favorite' },
-          { feat: 'Intelligence Engine — detecta tus patrones', icon: 'insights' },
+          { feat: 'Norman IA sin límite de mensajes', icon: 'psychology' },
+          { feat: 'Los 90 días del Protocolo Soberano, completos', icon: 'military-tech' },
+          { feat: 'Sueño, pulso y HRV desde Apple Health o Health Connect', icon: 'favorite' },
+          { feat: 'Lectura de tus patrones a partir de tus check-ins', icon: 'insights' },
         ].map(({ feat, icon }) => (
           <View key={feat} style={styles.featureRow}>
             <MaterialIcons name={icon as any} size={14} color={palette.goldText} />
@@ -352,7 +356,7 @@ export default function PaywallScreen() {
       )}
 
       <PrimaryButton
-        label={purchasing ? 'PROCESANDO...' : `ME COMPROMETO — ${selected?.product.priceString ?? ''}`}
+        label={purchasing ? 'PROCESANDO…' : `SUSCRIBIRME — ${selected?.product.priceString ?? ''}`}
         icon={purchasing ? undefined : 'military-tech'}
         onPress={handlePurchase}
         disabled={isLoading}
@@ -473,7 +477,7 @@ const styles = StyleSheet.create({
   socialProofAttr: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
   },
   metricRow: {
@@ -488,7 +492,7 @@ const styles = StyleSheet.create({
   metricLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   metricBefore: {
@@ -543,7 +547,7 @@ const styles = StyleSheet.create({
   packageType: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   packageTypeSelected: {
@@ -567,7 +571,7 @@ const styles = StyleSheet.create({
   bestValueText: {
     ...typography.label,
     color: palette.ink,
-    fontSize: 7,
+    fontSize: 11,
     letterSpacing: 1,
   },
 
@@ -637,7 +641,7 @@ const styles = StyleSheet.create({
   leadConsent: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 14,
     textAlign: 'center',
   },
@@ -701,7 +705,7 @@ const styles = StyleSheet.create({
   autoRenew: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 15,
     textAlign: 'center',
     paddingHorizontal: spacing.md,
@@ -710,7 +714,7 @@ const styles = StyleSheet.create({
   legal: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     lineHeight: 15,
     textAlign: 'center',
     paddingHorizontal: spacing.md,

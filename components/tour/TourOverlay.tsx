@@ -129,7 +129,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  eyebrow: { ...typography.label, color: palette.goldText, fontSize: 10 },
+  eyebrow: { ...typography.label, color: palette.goldText },
   voiceBtn: {
     alignItems: 'center',
     height: 32,

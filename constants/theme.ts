@@ -260,13 +260,16 @@ export const typography = {
     letterSpacing: 2.0,
     textTransform: 'uppercase' as const,
   },
-  // Micro labels, pills, tags
+  // Micro labels, pills, tags. 11pt = piso de legibilidad (CLAUDE.md: «Minimum
+  // 11pt for any visible label»). Antes 9pt/1.8 (0.2em): al subir el tamaño el
+  // tracking baja a 0.1em para que las versalitas no ensanchen y trunquen.
+  // Se distingue de `section` (también 11) por peso: Regular vs Medium.
   label: {
     fontFamily: Fonts.displayRegular,
-    fontSize:   9,
-    lineHeight: 13,
+    fontSize:   11,
+    lineHeight: 15,
     fontWeight: '400' as const,
-    letterSpacing: 1.8,
+    letterSpacing: 1.1,
     textTransform: 'uppercase' as const,
   },
   // Body copy — comfortable reading
@@ -329,6 +332,12 @@ export const typography = {
     letterSpacing: -1,
   },
 };
+
+// Tope de Dynamic Type para chrome de ALTURA FIJA (tab bar, botones 52/44/36,
+// chips, píldoras, headers compactos): el texto grande de iOS escala hasta
+// 1.3× sin desbordar la caja. NUNCA aplicarlo a texto de lectura (párrafos,
+// mensajes del chat) — ese escala libre.
+export const CHROME_MAX_SCALE = 1.3;
 
 // ─── Spacing system (8pt grid — consistent with Material + Apple HIG) ─────────
 /**

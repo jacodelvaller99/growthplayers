@@ -41,6 +41,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import EmptyState from '@/components/EmptyState';
+import { ENV } from '@/app/config/env';
 import { ACTIVE_MODULE } from '@/data/modules';
 import { EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
@@ -124,13 +125,13 @@ function getOpeningMessage(params: {
 
   // Milestone identity crystallization moments
   if (protocolDay === 7) {
-    return `${firstName}. Una semana completa. Eso no es trivial — la mayoría abandona antes del día 3. Esta semana ya te puso en el 20% superior. Ahora la pregunta real: ¿qué has notado diferente en ti que todavía no le has dicho a nadie?`;
+    return `${firstName}. Una semana completa de lecturas. Ya no partes de suposiciones: tienes siete días de tu propio estado para mirar. Ahora la pregunta real: ¿qué has notado diferente en ti que todavía no le has dicho a nadie?`;
   }
   if (protocolDay === 14) {
     return `Dos semanas, ${firstName}. Ya tienes datos reales de tu sistema — no suposiciones, datos. Mira tu check-in promedio de esta quincena. ¿Qué patrón te sorprendió más? No lo que esperabas ver — lo que no esperabas.`;
   }
   if (protocolDay === 30) {
-    return `Un mes completo, ${firstName}. Treinta días de datos, treinta días de decisiones, treinta días de construir quien eres en lugar de quien deberías ser. La mayoría nunca llega aquí. ¿Qué parte de ti de hace 30 días ya no existe?`;
+    return `Un mes completo, ${firstName}. Treinta días de datos, treinta días de decisiones, treinta días de construir quien eres en lugar de quien deberías ser. ¿Qué parte de ti de hace 30 días ya no existe?`;
   }
   if (protocolDay === 60) {
     return `${firstName}. Sesenta días. Eso ya no es motivación — eso es identidad. Ya no decides cada día si aparecer: apareces. ¿Qué quieres que sea automático en ti?`;
@@ -339,6 +340,9 @@ function MentorScreenInner() {
 
   // "Analizo en base a" — qué recibe Norman (plegable)
   const [showBasis, setShowBasis] = useState(false);
+  // Tras el primer turno del operador: consultas rápidas plegadas, modos en un selector.
+  const [showPrompts, setShowPrompts] = useState(false);
+  const [modesOpen, setModesOpen] = useState(false);
 
   // Threads state
   const [showThreads, setShowThreads] = useState(false);
@@ -437,6 +441,9 @@ function MentorScreenInner() {
     if (pendingUserMsg) return [...state.mentorMessages, pendingUserMsg];
     return state.mentorMessages;
   }, [state.mentorMessages, pendingUserMsg]);
+  const hasUserTurn = useMemo(() => displayMessages.some((m) => m.role === 'user'), [displayMessages]);
+  // Sin ai-proxy la cadena de IA no existe y Norman responde en simulación local.
+  const aiLive = !!ENV.aiProxyUrl;
 
   // Ref-guarded: cada delta del stream SSE llamaba a esto sin cancelar el
   // timer anterior — decenas de timers apilados por respuesta causaban jitter
@@ -708,7 +715,9 @@ function MentorScreenInner() {
     <KeyboardAvoidingView
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      // Pestaña sin header de stack: la vista arranca en y=0, así que el KAV no
+      // necesita offset (insets.top dejaba un hueco del alto del notch sobre el teclado).
+      keyboardVerticalOffset={0}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }, styles.content]}
@@ -735,10 +744,12 @@ function MentorScreenInner() {
               <PolarisMark size={36} />
               <View
                 accessibilityLiveRegion="polite"
-                accessibilityLabel={isStreaming ? 'Estado: respondiendo' : 'Estado: en línea'}>
+                accessibilityLabel={
+                  isStreaming ? 'Estado: respondiendo' : aiLive ? 'Estado: en línea' : 'Estado: modo demostración, respuestas simuladas'
+                }>
                 <StatusPill
-                  label={isStreaming ? 'RESPONDIENDO' : 'EN LINEA'}
-                  tone={isStreaming ? 'muted' : 'success'}
+                  label={isStreaming ? 'RESPONDIENDO' : aiLive ? 'EN LÍNEA' : 'MODO DEMOSTRACIÓN'}
+                  tone={isStreaming || !aiLive ? 'muted' : 'success'}
                   dot
                 />
               </View>
@@ -787,6 +798,7 @@ function MentorScreenInner() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Analizo en base a"
+            accessibilityHint="Muestra qué datos tuyos recibe Norman"
             accessibilityState={{ expanded: showBasis }}
             onPress={() => setShowBasis((v) => !v)}
             style={styles.basisToggle}>
@@ -815,7 +827,21 @@ function MentorScreenInner() {
         </PremiumCard>
 
         {/* ── Quick Prompts ── */}
-        <GoldDivider label="CONSULTAS RÁPIDAS" />
+        {hasUserTurn ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Consultas rápidas"
+            accessibilityState={{ expanded: showPrompts }}
+            onPress={() => setShowPrompts((v) => !v)}
+            style={styles.basisToggle}>
+            <MaterialIcons name="bolt" size={13} color={palette.goldText} />
+            <Text style={styles.basisToggleText}>CONSULTAS RÁPIDAS</Text>
+            <MaterialIcons name={showPrompts ? 'expand-less' : 'expand-more'} size={16} color={palette.smoke} />
+          </Pressable>
+        ) : (
+          <GoldDivider label="CONSULTAS RÁPIDAS" />
+        )}
+        {(!hasUserTurn || showPrompts) && (
         <View style={styles.promptGrid}>
           {quickPrompts.map((p) => (
             <Pressable
@@ -829,6 +855,7 @@ function MentorScreenInner() {
             </Pressable>
           ))}
         </View>
+        )}
 
         {/* ── Last session memory anchor ── */}
         {state.mentorMessages.length >= 6 && (
@@ -946,7 +973,20 @@ function MentorScreenInner() {
 
       {/* ── Selector de modo ── */}
       <View style={[styles.modeRow, { maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}>
-        {MENTOR_MODES.map((m) => {
+        {hasUserTurn && !modesOpen ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Modo ${MENTOR_MODES.find((m) => m.key === mentorMode)?.label ?? 'adaptativo'}. Cambiar modo`}
+            accessibilityState={{ expanded: false }}
+            hitSlop={6}
+            onPress={() => setModesOpen(true)}
+            style={({ pressed }) => [styles.modeChip, styles.modeChipCompact, pressed && styles.modeChipPressed]}>
+            <Text style={styles.modeChipText}>
+              Modo · {MENTOR_MODES.find((m) => m.key === mentorMode)?.label ?? 'Adaptativo'}
+            </Text>
+            <MaterialIcons name="expand-less" size={16} color={palette.smoke} />
+          </Pressable>
+        ) : MENTOR_MODES.map((m) => {
           const active = mentorMode === m.key;
           return (
             <Pressable
@@ -957,6 +997,7 @@ function MentorScreenInner() {
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setMentorMode(active ? null : m.key);
+                setModesOpen(false);
               }}
               style={({ pressed }) => [
                 styles.modeChip,
@@ -1153,6 +1194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.xs,
+    minHeight: 44, // la fila de texto medía ~16px: área táctil mínima
   },
   basisToggleText: {
     ...typography.label,
@@ -1316,6 +1358,7 @@ const styles = StyleSheet.create({
     // paddingHorizontal bajó de 12 a 10 para darle sitio a modeChipText a 11pt
     // (piso duro del proyecto) sin achicar la fuente en 4 columnas.
     paddingHorizontal: 10, minHeight: 44, justifyContent: 'center' },
+  modeChipCompact: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   modeChipActive: {
     backgroundColor: palette.gold,
     borderColor: palette.gold,

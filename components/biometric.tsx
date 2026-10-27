@@ -320,10 +320,10 @@ const s = StyleSheet.create({
   // states
   stateGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   statePill: { borderWidth: 1, borderColor: palette.line, borderRadius: radii.sm, paddingHorizontal: 9, paddingVertical: 5, minWidth: 96 },
-  stateLabel: { ...typography.caption, color: palette.smoke, fontSize: 9, letterSpacing: 0.8 },
+  stateLabel: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 0.8 },
   stateValue: { ...typography.label, fontSize: 12, marginTop: 1 },
   levelPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  levelText: { ...typography.label, fontSize: 10, letterSpacing: 1 },
+  levelText: { ...typography.label, letterSpacing: 1 },
   driverWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   driverChip: { backgroundColor: palette.goldLight, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
   driverText: { ...typography.caption, color: palette.goldText, fontSize: 11 },
@@ -338,7 +338,7 @@ const s = StyleSheet.create({
   sparkRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 48 },
   sparkBar: { flex: 1, borderRadius: 2, minWidth: 4 },
   sparkScale: { flexDirection: 'row', justifyContent: 'space-between' },
-  sparkScaleText: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  sparkScaleText: { ...typography.mono, color: palette.smoke },
   // connections
   connRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   connProvider: { ...typography.body, color: palette.ivory, fontSize: 13 },
@@ -346,12 +346,12 @@ const s = StyleSheet.create({
   connDot: { width: 7, height: 7, borderRadius: 4 },
   connStatus: { ...typography.caption, color: palette.smoke, fontSize: 11 },
   synthTag: { borderWidth: 1, borderColor: palette.goldText, borderRadius: radii.sm, paddingHorizontal: 5, paddingVertical: 1 },
-  synthTagText: { ...typography.label, color: palette.goldText, fontSize: 8, letterSpacing: 0.8 },
+  synthTagText: { ...typography.label, color: palette.goldText, letterSpacing: 0.8 },
   // chips
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   selChip: { borderWidth: 1, borderColor: palette.line, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   selChipActive: { backgroundColor: palette.gold, borderColor: palette.gold },
-  selChipText: { ...typography.label, color: palette.ash, fontSize: 11 },
+  selChipText: { ...typography.label, color: palette.ash },
   selChipTextActive: { color: palette.ink },
   // seed buttons
   seedBtnRow: { flexDirection: 'row', gap: spacing.sm },
@@ -363,5 +363,5 @@ const s = StyleSheet.create({
   // reflection
   reflectInput: { ...typography.body, color: palette.ivory, fontSize: 14, backgroundColor: palette.charcoal, borderRadius: radii.sm, padding: spacing.md, minHeight: 80, textAlignVertical: 'top' },
   energyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  energyLabel: { ...typography.caption, color: palette.smoke, fontSize: 10, letterSpacing: 1, marginRight: 4 },
+  energyLabel: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 1, marginRight: 4 },
 });
