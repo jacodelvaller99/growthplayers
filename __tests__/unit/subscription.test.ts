@@ -1,4 +1,18 @@
-import { resolveEntitlement } from '@/lib/subscription';
+import { purchasesAvailable, resolveEntitlement } from '@/lib/subscription';
+
+describe('purchasesAvailable', () => {
+  it('web → nunca, con o sin flag', () => {
+    expect(purchasesAvailable('web', { iosPurchasesEnabled: false })).toBe(false);
+    expect(purchasesAvailable('web', { iosPurchasesEnabled: true })).toBe(false);
+  });
+  it('ios → solo con el flag activo (regla 3.1.1)', () => {
+    expect(purchasesAvailable('ios', { iosPurchasesEnabled: false })).toBe(false);
+    expect(purchasesAvailable('ios', { iosPurchasesEnabled: true })).toBe(true);
+  });
+  it('android → como siempre, el flag de iOS no lo toca', () => {
+    expect(purchasesAvailable('android', { iosPurchasesEnabled: false })).toBe(true);
+  });
+});
 
 const NOW = Date.parse('2026-06-17T12:00:00.000Z');
 const future = '2026-12-31T00:00:00.000Z';

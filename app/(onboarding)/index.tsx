@@ -30,6 +30,8 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { AI_PROVIDERS_LABEL, aiConsentEntry, markAiConsentLocal } from '@/lib/aiConsent';
 import { logSilentError } from '@/lib/observability';
+import { purchasesAvailable } from '@/lib/subscription';
+import { ENV } from '@/app/config/env';
 import { intel } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
@@ -37,6 +39,11 @@ import type { NorthStar } from '@/types/lifeflow';
 // 4 Mi Norte · 5 obstáculo · 6 código. El consentimiento se partió en dos
 // pasos (legal / datos) para que nadie firme seis casillas en una pantalla.
 const TOTAL_STEPS = 7;
+
+// iOS v1 sin compras (regla 3.1.1): la pantalla de canje se llama "Tu acceso"
+// y se abre desde Progreso, no desde "Planes".
+const CODE_LATER_WHERE =
+  Platform.OS === 'ios' && !purchasesAvailable(Platform.OS, ENV) ? 'desde Progreso' : 'en Planes';
 
 // Intro de valor — vive ahora en la bienvenida, junto al manifiesto.
 // COPY AFINABLE POR EL DUEÑO: 3 viñetas sobrias, voz Polaris, sin claims/métricas.
@@ -637,13 +644,13 @@ export default function OnboardingScreen() {
             disabled={finishing}
             accessibilityRole="button"
             accessibilityLabel="Iniciar sin código"
-            accessibilityHint="Entras con el plan Operador; puedes canjear el código después en Planes"
+            accessibilityHint={`Entras con el plan Operador; puedes canjear el código después ${CODE_LATER_WHERE}`}
             style={styles.skipBtn}>
             <Text style={styles.skipText}>Iniciar sin código →</Text>
           </Pressable>
           <Text style={styles.skipNote}>
             Sin código entras con el plan Operador: Norman IA con mensajes limitados y parte de los
-            módulos cerrados. Puedes canjear tu código después en Planes.
+            módulos cerrados. Puedes canjear tu código después {CODE_LATER_WHERE}.
           </Text>
           {finishError ? (
             <Text

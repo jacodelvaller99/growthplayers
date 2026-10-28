@@ -17,6 +17,15 @@ export const ENV = {
   revenueCatApiKey: (process.env.EXPO_PUBLIC_REVENUECAT_KEY ?? '') as string,
 
   /**
+   * Feature flag — compras dentro de la app en iOS. Default FALSE.
+   * En iOS v1 no hay productos en App Store Connect ni clave de RevenueCat: el
+   * acceso se activa con el código del Navegador. Con false, iOS no muestra
+   * precios, botones de compra ni "restaurar compras" (regla 3.1.1) y
+   * RevenueCat no se inicializa. Ver `purchasesAvailable` en lib/subscription.ts.
+   */
+  iosPurchasesEnabled: ((process.env.EXPO_PUBLIC_IOS_PURCHASES_ENABLED ?? '').toLowerCase() === 'true') as boolean,
+
+  /**
    * URL del ai-proxy (Edge Function). Es el ÚNICO camino a la IA: el chat del
    * mentor, el internista, el copiloto admin y la transcripción Whisper pasan
    * por el servidor, donde viven las claves. Sin esta variable no hay ningún

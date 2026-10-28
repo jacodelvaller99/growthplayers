@@ -44,6 +44,11 @@ import {
   cancelReminders,
 } from '@/services/notifications';
 import type { NorthStar } from '@/types/lifeflow';
+import { ENV } from '@/app/config/env';
+import { purchasesAvailable } from '@/lib/subscription';
+
+// iOS v1 sin compras (regla 3.1.1): el CTA del plan lleva al canje del código.
+const IOS_CODE_ONLY = Platform.OS === 'ios' && !purchasesAvailable(Platform.OS, ENV);
 
 // ─── Legal links (in-app policy screens) ───────────────────────────────────
 const LEGAL_LINKS: {
@@ -1115,14 +1120,14 @@ export default function ProgresoScreen() {
                       ⚠ Expira {new Date(subscription.expiresAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
                     </Text>
                   ) : subTier === 'free' ? (
-                    <Text style={styles.tierSub}>Actualiza a Premium para desbloquear todo el contenido</Text>
+                    <Text style={styles.tierSub}>{IOS_CODE_ONLY ? 'Tu Navegador te entrega el código que abre el Protocolo completo' : 'Actualiza a Premium para desbloquear todo el contenido'}</Text>
                   ) : (
                     <Text style={styles.tierSub}>{subscription.tierInfo.description}</Text>
                   )}
                 </View>
                 {subTier === 'free' && (
-                  <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)} accessibilityRole="button" accessibilityLabel="Actualizar plan">
-                    <Text style={styles.tierUpgradeText}>UPGRADE</Text>
+                  <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)} accessibilityRole="button" accessibilityLabel={IOS_CODE_ONLY ? 'Ingresar código de acceso' : 'Actualizar plan'}>
+                    <Text style={styles.tierUpgradeText}>{IOS_CODE_ONLY ? 'CÓDIGO' : 'UPGRADE'}</Text>
                   </Pressable>
                 )}
               </PremiumCard>
@@ -1580,14 +1585,14 @@ export default function ProgresoScreen() {
               ⚠ Expira {new Date(subscription.expiresAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
             </Text>
           ) : subTier === 'free' ? (
-            <Text style={styles.tierSub}>Actualiza a Premium para desbloquear todo el contenido</Text>
+            <Text style={styles.tierSub}>{IOS_CODE_ONLY ? 'Tu Navegador te entrega el código que abre el Protocolo completo' : 'Actualiza a Premium para desbloquear todo el contenido'}</Text>
           ) : (
             <Text style={styles.tierSub}>{subscription.tierInfo.description}</Text>
           )}
         </View>
         {subTier === 'free' && (
           <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)}>
-            <Text style={styles.tierUpgradeText}>UPGRADE</Text>
+            <Text style={styles.tierUpgradeText}>{IOS_CODE_ONLY ? 'CÓDIGO' : 'UPGRADE'}</Text>
           </Pressable>
         )}
       </PremiumCard>

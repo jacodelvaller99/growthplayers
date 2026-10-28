@@ -4,6 +4,7 @@
 
 import { Platform } from 'react-native';
 import { ENV } from '@/app/config/env';
+import { purchasesAvailable } from '@/lib/subscription';
 
 // ─── Tipos mínimos para evitar importar todo el SDK ──────────────────────────
 
@@ -25,7 +26,9 @@ type PurchasesOfferings = {
 // ─── Lazy import para evitar crash en web ────────────────────────────────────
 
 async function getPurchases() {
-  if (Platform.OS === 'web') return null;
+  // Web, o iOS sin compras habilitadas (v1, regla 3.1.1): todo es no-op y el
+  // SDK ni se carga ni se configura (sin clave daría errores).
+  if (!purchasesAvailable(Platform.OS, ENV)) return null;
   try {
     const mod = await import('react-native-purchases');
     return mod.default;
@@ -37,7 +40,7 @@ async function getPurchases() {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 export async function initRevenueCat(): Promise<void> {
-  if (!ENV.revenueCatApiKey || Platform.OS === 'web') return;
+  if (!ENV.revenueCatApiKey) return;
   try {
     const Purchases = await getPurchases();
     if (!Purchases) return;

@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,8 +24,14 @@ import { GoldDivider, PremiumCard, PressableScale, SecondaryButton, useScreen } 
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { ENV } from '@/app/config/env';
 import { redeemAccessCode } from '@/lib/admin/actions';
+import { purchasesAvailable } from '@/lib/subscription';
 import { getOfferings } from '@/services/revenuecat';
+
+// iOS v1 (regla 3.1.1): sin planes con precio ni CTA de compra/asesor comercial.
+// La pantalla queda en "tu acceso" = canje del código del Navegador.
+const IOS_CODE_ONLY = Platform.OS === 'ios' && !purchasesAvailable(Platform.OS, ENV);
 
 // Contacto de asesor — mismo correo ya usado en app/paywall.tsx para soporte.
 const ADVISOR_EMAIL = 'info@polarisgrowthinstitute.com';
@@ -128,6 +135,7 @@ export default function PricingScreen() {
   // "consulta el precio en la app" y el CTA lleva ahí a verlo/suscribirse.
   const [premiumPrice, setPremiumPrice] = useState<string | null>(null);
   useEffect(() => {
+    if (IOS_CODE_ONLY) return;
     getOfferings().then((offerings) => {
       const pkgs = offerings?.current?.availablePackages ?? [];
       const pick = pkgs.find((p) => p.packageType === 'ANNUAL') ?? pkgs[0];
@@ -174,10 +182,21 @@ export default function PricingScreen() {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={s.eyebrow}>POLARIS GROWTH INSTITUTE</Text>
-          <Text style={s.title}>PLANES Y ACCESO</Text>
+          <Text style={s.title}>{IOS_CODE_ONLY ? 'TU ACCESO' : 'PLANES Y ACCESO'}</Text>
         </View>
       </View>
 
+      {IOS_CODE_ONLY ? (
+        <PremiumCard style={s.heroCard}>
+          <Text style={s.heroEyebrow}>ACCESO</Text>
+          <Text style={s.heroTitle}>Tu acceso llega{'\n'}con tu código.</Text>
+          <Text style={s.heroBody}>
+            El Protocolo completo se abre con el código que te entrega tu Navegador al
+            inscribirte. Ingrésalo abajo y se activa al momento.
+          </Text>
+        </PremiumCard>
+      ) : (
+        <>
       {/* Hero */}
       <PremiumCard style={s.heroCard}>
         <Text style={s.heroEyebrow}>PLANES</Text>
@@ -223,6 +242,8 @@ export default function PricingScreen() {
           );
         })}
       </View>
+        </>
+      )}
 
       {/* Access code */}
       <GoldDivider label="TENGO UN CÓDIGO DE ACCESO" />

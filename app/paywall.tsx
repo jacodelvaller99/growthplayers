@@ -19,12 +19,19 @@ import ErrorState from '@/components/ErrorState';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { VERIFIED_TESTIMONIALS } from '@/data/testimonials';
+import { ENV } from '@/app/config/env';
+import { purchasesAvailable } from '@/lib/subscription';
 import { captureWebLead, isValidEmail } from '@/lib/webLeads';
 import {
   getOfferings,
   purchasePackage,
   restorePurchases,
 } from '@/services/revenuecat';
+
+// iOS v1 no vende nada dentro de la app (regla 3.1.1): sin precios, sin compra,
+// sin "restaurar". El acceso lo abre el código del Navegador.
+const CAN_BUY = purchasesAvailable(Platform.OS, ENV);
+const IOS_CODE_ONLY = Platform.OS === 'ios' && !CAN_BUY;
 
 type PurchasesPackage = {
   packageType: string;
@@ -76,7 +83,7 @@ export default function PaywallScreen() {
 
   // Load RevenueCat offerings on mount
   useEffect(() => {
-    loadOfferings();
+    if (CAN_BUY) loadOfferings();
   }, []);
 
   async function handlePurchase() {
@@ -217,13 +224,33 @@ export default function PaywallScreen() {
         No prometemos el resultado por ti. Prometemos no dejarte solo en el proceso.
       </Text>
 
+      {/* iOS sin compras: el acceso se abre con el código del Navegador. Sin
+          precios ni vías de pago — ni dentro ni fuera de la app. */}
+      {IOS_CODE_ONLY && (
+        <PremiumCard style={styles.webGateCard}>
+          <MaterialIcons name="vpn-key" size={26} color={palette.goldText} />
+          <Text style={styles.webGateTitle}>TU ACCESO LLEGA CON TU CÓDIGO</Text>
+          <Text style={styles.webGateText}>
+            El Protocolo completo se abre con el código que te entrega tu Navegador al
+            inscribirte. Si ya lo tienes, ingrésalo y se activa al momento.
+          </Text>
+          <PrimaryButton
+            label="INGRESAR MI CÓDIGO"
+            icon="vpn-key"
+            onPress={() => router.push('/pricing' as never)}
+          />
+        </PremiumCard>
+      )}
+
       {/* Cancel anytime — store-compliant (no false refund promise) */}
+      {!IOS_CODE_ONLY && (
       <View style={styles.guaranteeRow}>
         <MaterialIcons name="verified-user" size={18} color={palette.success} />
         <Text style={styles.guaranteeText}>
           Cancela cuando quieras desde tu cuenta de App Store / Google Play. Los reembolsos se gestionan según las políticas de la tienda.
         </Text>
       </View>
+      )}
 
       {/* Web: la suscripción se gestiona en las tiendas (sin dead-end falso). */}
       {Platform.OS === 'web' && (
@@ -293,8 +320,8 @@ export default function PaywallScreen() {
         </PremiumCard>
       )}
 
-      {/* Maquinaria de compra: solo en nativo (RevenueCat no opera en web). */}
-      {Platform.OS !== 'web' && (
+      {/* Maquinaria de compra: solo donde hay compras (no web; no iOS v1). */}
+      {CAN_BUY && (
         <>
       {/* Estado 1/3: cargando ofertas de RevenueCat */}
       {offeringsState === 'loading' && (
@@ -405,7 +432,7 @@ export default function PaywallScreen() {
         </Text>{' '}
         de Polaris Growth Institute.
         {Platform.OS === 'ios'
-          ? ' El pago se realizará a través de tu cuenta de Apple ID.'
+          ? (CAN_BUY ? ' El pago se realizará a través de tu cuenta de Apple ID.' : '')
           : ' El pago se realizará a través de Google Play.'}
       </Text>
     </ScrollView>
