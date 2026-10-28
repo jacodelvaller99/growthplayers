@@ -257,10 +257,10 @@ export function BodyMap3D({ selected, onToggleZone }: BodyMap3DProps) {
 
       {/* ── HUD — "ESCANEO BIOMÉTRICO", esquinas, leyenda, vistas ── */}
       <div style={{ position: 'absolute', top: 8, left: 10, pointerEvents: 'none' }}>
-        <div style={{ fontFamily: Fonts.display, fontSize: 10, fontWeight: 700, letterSpacing: 2, color: palette.goldText }}>
+        <div style={{ fontFamily: Fonts.display, fontSize: 11, fontWeight: 700, letterSpacing: 2, color: palette.goldText }}>
           ESCANEO BIOMÉTRICO
         </div>
-        <div style={{ fontFamily: Fonts.display, fontSize: 9, letterSpacing: 1, color: palette.smoke, marginTop: 2 }}>
+        <div style={{ fontFamily: Fonts.display, fontSize: 11, letterSpacing: 1, color: palette.smoke, marginTop: 2 }}>
           {activeLabel}
         </div>
       </div>
@@ -291,11 +291,11 @@ export function BodyMap3D({ selected, onToggleZone }: BodyMap3DProps) {
       ))}
 
       <div style={{ position: 'absolute', bottom: 8, left: 10, display: 'flex', gap: 12, pointerEvents: 'none' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: Fonts.display, fontSize: 8, letterSpacing: 1, color: palette.smoke }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: Fonts.display, fontSize: 11, letterSpacing: 1, color: palette.smoke }}>
           <span style={{ width: 6, height: 6, borderRadius: 3, background: palette.gold, display: 'inline-block' }} />
           ORO · ZONA ACTIVA
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: Fonts.display, fontSize: 8, letterSpacing: 1, color: palette.smoke }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: Fonts.display, fontSize: 11, letterSpacing: 1, color: palette.smoke }}>
           <span style={{ width: 6, height: 6, borderRadius: 3, background: cssColor(palette.silhouette, '#5F5F5F'), display: 'inline-block' }} />
           PLATA · EN REPOSO
         </span>
@@ -316,7 +316,7 @@ export function BodyMap3D({ selected, onToggleZone }: BodyMap3DProps) {
                 height: 22,
                 padding: '0 4px',
                 fontFamily: Fonts.display,
-                fontSize: 9,
+                fontSize: 11,
                 letterSpacing: 0.5,
                 color: on ? palette.ink : palette.smoke,
                 background: on ? palette.gold : 'rgba(255,255,255,0.04)',

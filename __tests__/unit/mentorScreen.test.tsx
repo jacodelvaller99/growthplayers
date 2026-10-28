@@ -7,6 +7,9 @@
  */
 import { render } from '@testing-library/react-native';
 import React from 'react';
+import { setAiConsentGranted } from '@/lib/aiConsent';
+
+beforeAll(() => setAiConsentGranted(true));
 
 let mockMessages: { id: string; role: string; text: string; createdAt: string }[] = [];
 

@@ -251,7 +251,7 @@ const s = StyleSheet.create({
   swatch: { width: 22, height: 22, borderRadius: radii.xs, borderWidth: 1, borderColor: palette.line },
 
   demoCard: { gap: spacing.md },
-  demoLabel: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1.6 },
+  demoLabel: { ...typography.label, color: palette.smoke, letterSpacing: 1.6 },
   demoInner: {
     backgroundColor: palette.charcoal, borderRadius: radii.sm,
     borderWidth: 1, borderColor: palette.line, padding: spacing.md, gap: 6,
@@ -262,7 +262,7 @@ const s = StyleSheet.create({
   demoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   demoPill: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radii.sm, minHeight: 44, justifyContent: 'center' },
   demoPillOutline: { borderWidth: 1 },
-  demoPillText: { fontFamily: Fonts.display, fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+  demoPillText: { fontFamily: Fonts.display, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   demoRecovery: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     borderWidth: 1, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md,

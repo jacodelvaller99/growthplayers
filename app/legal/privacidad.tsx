@@ -54,8 +54,8 @@ const SECTIONS: Section[] = [
   {
     heading: '5. Con quién compartimos sus datos',
     body: [
-      'No vendemos sus datos personales. Los compartimos con proveedores que actúan como encargados del tratamiento estrictamente para operar la App: Supabase (base de datos y backend), Vercel (hosting web), NVIDIA, Groq y OpenAI (modelos de IA del mentor y embeddings), Oura / WHOOP (origen de datos de wearable), RevenueCat (gestión de suscripciones), Apple App Store / Google Play (pagos y distribución) y Expo (notificaciones push).',
-      'Para personalizar las respuestas, el sistema envía a los proveedores de IA un "prompt" que incluye su Norte, sus check-ins recientes, sus tareas reflexivas, inferencias de ML y una versión humanizada de sus señales biométricas, con el fin de generar la respuesta del mentor.',
+      'No vendemos sus datos personales. Los compartimos con proveedores que actúan como encargados del tratamiento estrictamente para operar la App: Supabase (base de datos y backend), Vercel (hosting web), Anthropic, NVIDIA, Groq y OpenAI (modelos de IA del mentor, transcripción y embeddings), Oura / WHOOP (origen de datos de wearable), RevenueCat (gestión de suscripciones), Apple App Store / Google Play (pagos y distribución) y Expo (notificaciones push).',
+      'Para personalizar las respuestas, el sistema envía a los proveedores de IA un "prompt" que incluye su Norte, sus check-ins recientes, sus tareas reflexivas, inferencias de ML y una versión humanizada de sus señales biométricas, con el fin de generar la respuesta del mentor. Este envío a terceros solo ocurre con su permiso expreso, que se le pide al registrarse (o la primera vez que usa una función de IA). Puede retirarlo en cualquier momento escribiendo a ncapuozzo@polarisgrowthinstitute.com; sin ese permiso, las funciones de IA no se activan.',
       'También podremos divulgar datos cuando lo exija la ley, una autoridad competente, o para proteger derechos, seguridad o integridad de las personas o del servicio.',
     ],
   },

@@ -1,5 +1,14 @@
 import type { PolarisModule } from '@/types/lifeflow';
 
+/**
+ * Arquetipo con su artículo: «el Guerrero», «la Comprensión».
+ * Antes cada pantalla pegaba «EL » delante y salía «EL COMPRENSIÓN».
+ */
+export function arquetipoConArticulo(arquetipo: string): string {
+  // ponytail: -ión → femenino cubre el catálogo (Comprensión, Cooperación); otro femenino necesitaría mapa explícito.
+  return `${/ión$/i.test(arquetipo) ? 'la' : 'el'} ${arquetipo}`;
+}
+
 export const POLARIS_MODULES: PolarisModule[] = [
 
   // ── ONBOARDING ──────────────────────────────────────────────────────────────

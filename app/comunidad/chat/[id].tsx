@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
 
   divider:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
   dividerLine: { flex: 1, height: 1, backgroundColor: palette.lineSoft },
-  dividerText: { ...typography.mono, color: palette.smoke, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
+  dividerText: { ...typography.mono, color: palette.smoke, letterSpacing: 1, textTransform: 'uppercase' },
 
   bubbleRow:     { flexDirection: 'row' },
   bubbleRowMine: { justifyContent: 'flex-end' },
@@ -409,8 +409,8 @@ const styles = StyleSheet.create({
   bubbleText:    { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ivory },
   bubbleTextMine:{ color: palette.ink },
   metaRow:       { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3, paddingHorizontal: 2 },
-  metaTime:      { ...typography.mono, color: palette.smoke, fontSize: 9.5 },
-  metaReceipt:   { ...typography.mono, color: palette.goldText, fontSize: 9.5 },
+  metaTime:      { ...typography.mono, color: palette.smoke },
+  metaReceipt:   { ...typography.mono, color: palette.goldText },
 
   reactionBar:   { flexDirection: 'row', gap: spacing.xs, backgroundColor: palette.graphiteLight, borderWidth: 1, borderColor: palette.line, borderRadius: 999, paddingHorizontal: spacing.sm, paddingVertical: 5, marginBottom: 5 },
   reactionPick:  { paddingHorizontal: 3, minWidth: 28, alignItems: 'center' },

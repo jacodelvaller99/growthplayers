@@ -86,7 +86,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   eyebrow: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2,
     color: palette.goldText,

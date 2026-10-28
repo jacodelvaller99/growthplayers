@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, type LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -305,6 +305,7 @@ export default function CheckInScreen() {
   // La lectura no existe hasta que las cuatro existen. Media verdad leída como
   // verdad entera es peor que esperar.
   const listo = energy !== null && clarity !== null && stress !== null && sleep !== null;
+  const faltan = [energy, clarity, stress, sleep].filter((v) => v === null).length;
   const [systemNeed, setSystemNeed] = useState(todayCheckIn?.systemNeed ?? '');
   const [saved, setSaved] = useState(false);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
@@ -534,6 +535,23 @@ export default function CheckInScreen() {
   };
 
   const goToCommando = () => router.replace('/(tabs)/comando');
+  // Salir SIN guardar: `back()` cierra el modal como el swipe nativo de iOS y
+  // devuelve a quien lo abrió. `replace` solo si no hay pila (deep link o
+  // notificación en frío), para no dejar al usuario sin salida. Los destinos
+  // POST-guardado siguen con `replace`: ahí el check-in ya no debe quedar atrás.
+  const salir = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/comando'));
+
+  // Distancia real entre el borde superior de la ventana y esta pantalla. Es un
+  // modal SIN header (`headerShown: false` en app/_layout.tsx): en iOS se
+  // presenta como hoja, cuyo tope NO es `insets.top` — usar insets dejaba un
+  // hueco (o un solape) sobre el teclado. KeyboardAvoidingView mide su frame
+  // relativo a la hoja, así que el offset tiene que ser el tope de la hoja.
+  // Android: el modal ocupa la ventana entera → 0; además medir allí durante el
+  // slide_from_bottom daría la posición a mitad de animación.
+  const [kbOffset, setKbOffset] = useState(0);
+  const medirTope = (e: LayoutChangeEvent) => {
+    if (Platform.OS === 'ios') e.currentTarget.measureInWindow((_x, y) => setKbOffset(y));
+  };
   const followRecommendation = () => router.replace(recommendation.route as never);
 
   // ── El siguiente paso de la JORNADA ─────────────────────────────────────────
@@ -808,8 +826,10 @@ export default function CheckInScreen() {
         submitting ? 'GUARDANDO...'
         : listo ? 'GUARDAR CHECK-IN'
         // Deshabilitado y mudo era un callejón: el botón decía "guardar" y no
-        // guardaba, sin decir por qué.
-        : 'MARCA LOS CUATRO'
+        // guardaba, sin decir por qué. Y "marca los cuatro" no decía CUÁNTOS
+        // faltaban: con tres puestos el usuario buscaba cuál se le escapó.
+        : faltan === 1 ? 'FALTA 1 POR MARCAR'
+        : `FALTAN ${faltan} POR MARCAR`
       }
       icon={submitting ? 'hourglass-empty' : 'check'}
       onPress={submit}
@@ -876,7 +896,7 @@ export default function CheckInScreen() {
       <KeyboardAvoidingView
         style={sc.root}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={insets.top}>
+        keyboardVerticalOffset={kbOffset}>
       {/* El aura va FUERA del ScrollView, anclada al viewport.
           Dentro del `contentContainerStyle` quedaba atrapada en `sc.content`
           (maxWidth 430, centrado): en tablet o PWA ancha se veía como una BANDA
@@ -889,6 +909,7 @@ export default function CheckInScreen() {
         origin={auraOrigin}
       />
         <ScrollView
+          onLayout={medirTope}
           contentContainerStyle={[styles.contentDesktop, { paddingTop: insets.top + 32 }]}
           showsVerticalScrollIndicator={false}
           bounces
@@ -944,7 +965,7 @@ export default function CheckInScreen() {
                   {submitButton}
                   {needToggle}
                   {showNeed && systemNeedCard}
-                  <SecondaryButton label="VOLVER" icon="close" onPress={() => router.back()} />
+                  <SecondaryButton label="VOLVER" icon="close" onPress={salir} />
                 </>
               ) : (
                 savedOffer
@@ -961,7 +982,7 @@ export default function CheckInScreen() {
     <KeyboardAvoidingView
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={kbOffset}>
     {/* El aura va FUERA del ScrollView, anclada al viewport.
         Dentro del `contentContainerStyle` quedaba atrapada en `sc.content`
         (maxWidth 430, centrado): en tablet o PWA ancha se veía como una BANDA
@@ -974,6 +995,7 @@ export default function CheckInScreen() {
       origin={auraOrigin}
     />
     <ScrollView
+      onLayout={medirTope}
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
       showsVerticalScrollIndicator={false}
       bounces
@@ -982,9 +1004,9 @@ export default function CheckInScreen() {
       {/* ── Header: back → comando · fecha · título ── */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.replace('/(tabs)/comando')}
+          onPress={salir}
           accessibilityRole="button"
-          accessibilityLabel="Volver al centro de comando"
+          accessibilityLabel="Volver"
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.65 }]}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
@@ -1212,7 +1234,7 @@ const styles = StyleSheet.create({
   capacityEyebrow: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
   },
   capacityMeterCol: {
     flex: 1,
@@ -1220,7 +1242,7 @@ const styles = StyleSheet.create({
   },
   capacityStatus: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.2,
     textTransform: 'uppercase' as const,
     color: palette.smoke,
@@ -1356,7 +1378,7 @@ const styles = StyleSheet.create({
   ritualTag: {
     ...typography.label,
     color: palette.goldText,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.2,
     textAlign: 'center',
   },
@@ -1459,7 +1481,7 @@ const styles = StyleSheet.create({
   postChipLabel: {
     color: palette.ash,
     fontFamily: Fonts.display,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
   },
   postChipLabelActive: {

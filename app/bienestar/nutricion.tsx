@@ -248,7 +248,7 @@ export default function NutricionScreen() {
       <KeyboardAvoidingView
         style={[styles.root, { paddingTop: insets.top }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={insets.top}>
+        keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
             <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
@@ -281,7 +281,7 @@ export default function NutricionScreen() {
     <KeyboardAvoidingView
       style={[styles.root, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   doneBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
 
   planSection:      { marginTop: spacing.lg, gap: spacing.sm },
-  planInputLabel:   { ...typography.label, color: palette.ash, fontSize: 9, marginTop: 4 },
+  planInputLabel:   { ...typography.label, color: palette.ash, marginTop: 4 },
   planInput:        { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.md, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13, minHeight: 44, justifyContent: 'center' },
   planSaveBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, marginTop: 4, minHeight: 44 },
   planSaveBtnDisabled:{ backgroundColor: palette.charcoal },

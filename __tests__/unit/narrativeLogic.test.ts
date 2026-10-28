@@ -3,6 +3,8 @@ import {
   coherenceOf,
   deltaSince,
   milestoneCrossed,
+  RECENT_DAYS,
+  RETURN_LINE,
   type CheckInReading,
 } from '@/lib/narrativeLogic';
 
@@ -47,8 +49,8 @@ describe('arcForDay', () => {
 
   it('concuerda singular/plural en el primer día', () => {
     // El invariante es la CONCORDANCIA, no el espacio que venía detrás: la
-    // rama se acortó a una frase y ahora cierra en punto ("Llevas 1 día.").
-    expect(arcForDay(1).line).toContain('1 día.');
+    // rama ahora dice "Llevas 1 día aquí." (acompañamiento, sin amenaza).
+    expect(arcForDay(1).line).toContain('1 día aquí');
     expect(arcForDay(1).line).not.toContain('1 días');
     expect(arcForDay(2).line).toContain('2 días');
   });
@@ -163,7 +165,53 @@ describe('milestoneCrossed', () => {
     // aparece ninguna comilla vacía.
     const sinNada = milestoneCrossed({ streak: 6, protocolDay: 10 }, { streak: 7, protocolDay: 10 }, {});
     expect(sinNada?.line).not.toContain('«');
-    expect(sinNada?.line).toContain('la mayoría abandona');
+    expect(sinNada?.line).toContain('Siete días seguidos');
+  });
+
+  it('el hito de calendario no elogia sin lectura hoy (racha 0)', () => {
+    const d30 = milestoneCrossed({ streak: 0, protocolDay: 29 }, { streak: 0, protocolDay: 30 }, { purpose: 'X' });
+    expect(d30?.id).toBe('day-30');
+    expect(d30?.line).not.toMatch(/Completaste|camino hecho/);
+    const d90 = milestoneCrossed({ streak: 0, protocolDay: 89 }, { streak: 0, protocolDay: 90 });
+    expect(d90?.line).not.toContain('Terminaste');
+  });
+
+  it('ningún hito amenaza con «la mayoría abandona»', () => {
+    const casos = [
+      milestoneCrossed({ streak: 6, protocolDay: 10 }, { streak: 7, protocolDay: 10 }),
+      milestoneCrossed({ streak: 1, protocolDay: 29 }, { streak: 1, protocolDay: 30 }),
+    ];
+    for (const m of casos) expect(m?.line).not.toMatch(/mayoría abandona/);
+  });
+});
+
+describe('arcForDay — el elogio exige actividad reciente', () => {
+  it('días 1-3 acompañan sin amenazar', () => {
+    for (const d of [1, 2, 3]) expect(arcForDay(d).line).not.toMatch(/abandona|mayoría/);
+  });
+
+  it('sin lectura reciente no dice «Superaste…» ni «Apareces»: dice el regreso', () => {
+    for (const dias of [null, 4, 57]) {
+      for (const dia of [12, 20, 45, 75]) {
+        const a = arcForDay(dia, {}, dias);
+        expect(a.line).toBe(RETURN_LINE);
+        expect(a.line).not.toMatch(/Superaste|Apareces|disciplina/);
+        expect(a.dayLabel).toBe(`DÍA ${dia} · 90`);
+      }
+    }
+  });
+
+  it('con lectura reciente conserva la voz de siempre', () => {
+    expect(arcForDay(12, {}, 0).line).toContain('Superaste');
+    expect(arcForDay(12, {}, RECENT_DAYS).line).toContain('Superaste');
+  });
+
+  it('omitir el dato (undefined) no cambia nada — compatibilidad', () => {
+    expect(arcForDay(12, {}).line).toContain('Superaste');
+  });
+
+  it('la semana 1 no depende de la actividad', () => {
+    expect(arcForDay(5, {}, 57).line).toBe(arcForDay(5, {}).line);
   });
 });
 
@@ -287,6 +335,16 @@ describe('buildHistoria', () => {
   it('HOY solo aparece con energía >= 7 y >= 5 lecturas — no celebra sin datos', () => {
     expect(buildHistoria({ ...historiaBase, avgEnergy: 8, checkInsCount: 3 }).some((c) => c.label === 'HOY')).toBe(false);
     expect(buildHistoria({ ...historiaBase, avgEnergy: 8, checkInsCount: 6 }).some((c) => c.label === 'HOY')).toBe(true);
+    // «El sistema está funcionando» tras 57 días sin lectura sería mentira.
+    expect(buildHistoria({ ...historiaBase, avgEnergy: 8, checkInsCount: 6, daysSinceLastCheckIn: 57 }).some((c) => c.label === 'HOY')).toBe(false);
+  });
+
+  it('el arquetipo lleva su artículo: «del GUERRERO», «de la COMPRENSIÓN»', () => {
+    const ev = buildHistoria({ ...historiaBase, archetypesEarned: ['GUERRERO', 'COMPRENSIÓN'] })
+      .find((c) => c.label === 'LA EVIDENCIA')!.text;
+    expect(ev).toContain('del GUERRERO');
+    expect(ev).toContain('de la COMPRENSIÓN');
+    expect(ev).not.toContain('del COMPRENSIÓN');
   });
 
   it('vocabulario: sin lenguaje clínico ni bélico en ningún capítulo', () => {

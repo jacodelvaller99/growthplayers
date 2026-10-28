@@ -17,7 +17,27 @@
  * que cierra `consequenceOf`.
  */
 
-export type ArcAct = 'inicio' | 'filtro' | 'grabado' | 'automatico' | 'profundidad' | 'identidad';
+import { arquetipoConArticulo } from '@/data/modules';
+
+/** Actividad reciente = una lectura en los últimos N días. */
+export const RECENT_DAYS = 3;
+const isRecent = (d: number | null) => d !== null && d <= RECENT_DAYS;
+
+/** El registro del regreso (Biblia §3): sin culpa, sin ponerse al día. */
+export const RETURN_LINE =
+  'Llevas un tiempo fuera del sistema. El protocolo sigue aquí — se retoma donde estás, no donde deberías estar.';
+
+/**
+ * Glosario en el punto de uso — UNA línea cada uno, la misma en todas las
+ * pantallas (Biblia §2). Sin glosarios largos: quien toca, entiende.
+ */
+export const GLOSS = {
+  score: 'Score Soberano: el acumulado de tus lecturas, lecciones y tareas (0–1000). No baja; lo reciente lo marca el delta.',
+  arc: 'El Arco: tus 90 días en tres actos — I Base, II Profundidad, III Identidad.',
+  archetypes: 'Arquetipos: las capas de identidad que integra el protocolo. Cada una se abre al completar su módulo.',
+} as const;
+
+export type ArcAct ='inicio' | 'filtro' | 'grabado' | 'automatico' | 'profundidad' | 'identidad';
 
 export interface Arc {
   /** Identificador estable del acto — para estilos/tests, no para mostrar. */
@@ -66,8 +86,26 @@ export function arcForDay(
    * no es una funcion nueva — es este argumento.
    */
   suyas?: { painPoint?: string; purpose?: string; identity?: string },
+  /**
+   * Días desde la última lectura (`protocolSnapshot.daysSinceLastReading`).
+   * `undefined` = el llamante no lo sabe → se conserva la voz de siempre.
+   * `null` (nunca leyó) o más de `RECENT_DAYS` → desde el día 8 el arco NO
+   * elogia constancia («Superaste…», «Apareces»): dice el regreso, sin culpa.
+   * Un elogio que contradice el dato es lo que más rápido le quita voz a la app.
+   */
+  daysSinceLastCheckIn?: number | null,
 ): Arc {
   const day = Math.max(1, Math.floor(protocolDay || 1));
+  if (day > 7 && daysSinceLastCheckIn !== undefined && !isRecent(daysSinceLastCheckIn)) {
+    return {
+      act: day <= 14 ? 'grabado' : day <= 30 ? 'automatico' : day <= 60 ? 'profundidad' : 'identidad',
+      actNumber: day <= 60 ? 2 : 3,
+      actLabel: day <= 60 ? 'ACTO II · PROFUNDIDAD' : 'ACTO III · IDENTIDAD',
+      dayLabel: `DÍA ${day} · 90`,
+      quoted: false,
+      line: RETURN_LINE,
+    };
+  }
   const plural = day === 1 ? '' : 's';
   const cita = (t?: string) => {
     const limpio = (t ?? '').trim().replace(/[.!?…\s]+$/, '');
@@ -86,7 +124,7 @@ export function arcForDay(
       quoted: !!obstaculo,
       line: obstaculo
         ? `Dijiste que lo que se interpone es «${obstaculo}». Sigue ahí, y tú también.`
-        : `Llevas ${day} día${plural}. La mayoría abandona en los primeros siete.`,
+        : `Llevas ${day} día${plural} aquí. Lo único que pide hoy es una lectura honesta de cómo entras.`,
     };
   }
   if (day <= 7) {
@@ -248,7 +286,7 @@ export function milestoneCrossed(
       title: '7 DÍAS SEGUIDOS',
       line: obstaculo
         ? `Hace una semana dijiste que lo que se interponía era «${obstaculo}». Llevas siete días apareciendo de todos modos.`
-        : 'Cruzaste la zona donde la mayoría abandona. A partir de aquí el sistema empieza a sostenerte a ti.',
+        : 'Siete días seguidos leyendo tu estado. A partir de aquí el sistema empieza a sostenerte a ti.',
     };
   }
   if (prev.streak < 30 && next.streak >= 30) {
@@ -257,6 +295,17 @@ export function milestoneCrossed(
       title: '30 DÍAS SEGUIDOS',
       line: 'Un mes sin fallar. Esto ya no es motivación — es estructura.',
     };
+  }
+  // Los hitos de CALENDARIO cruzan a medianoche, haya actividad o no. Sin
+  // lectura hoy (racha 0) no se felicita lo que el dato no respalda: se nombra
+  // el día sin elogio ni culpa (racha 0 también es quien leyó ayer).
+  const sinLecturaHoy = next.streak === 0;
+  const SIN_ELOGIO = 'El calendario avanza solo; lo que cuenta es cómo entras hoy.';
+  if (prev.protocolDay < 30 && next.protocolDay >= 30 && sinLecturaHoy) {
+    return { id: 'day-30', title: 'DÍA 30 DE 90', line: `Día 30 de 90. ${SIN_ELOGIO}` };
+  }
+  if (prev.protocolDay < 90 && next.protocolDay >= 90 && sinLecturaHoy) {
+    return { id: 'day-90', title: 'DÍA 90 DE 90', line: `Día 90 de 90. ${SIN_ELOGIO}` };
   }
   if (prev.protocolDay < 30 && next.protocolDay >= 30) {
     const norte = cita(suyas?.purpose);
@@ -295,6 +344,8 @@ export interface HistoriaInput {
   avgEnergy: number;
   /** Nombres de arquetipos ya conquistados (módulo completo). */
   archetypesEarned: string[];
+  /** Pasa al arco: ver `arcForDay`. Omitido = voz de siempre. */
+  daysSinceLastCheckIn?: number | null;
 }
 
 export interface HistoriaChapter {
@@ -336,7 +387,7 @@ export function buildHistoria(input: HistoriaInput): HistoriaChapter[] {
     painPoint: input.painPoint,
     purpose: input.purpose,
     identity: input.identity,
-  });
+  }, input.daysSinceLastCheckIn);
   chapters.push({ label: 'EL ARCO', text: arc.line });
 
   const evidencia: string[] = [];
@@ -351,7 +402,12 @@ export function buildHistoria(input: HistoriaInput): HistoriaChapter[] {
     evidencia.push(`${input.checkInsCount} lectura${input.checkInsCount === 1 ? '' : 's'} de estado`);
   }
   if (input.archetypesEarned.length > 0) {
-    evidencia.push(`el arquetipo del ${input.archetypesEarned.join(', el ')} conquistado`);
+    // «del GUERRERO, de la COMPRENSIÓN»: el artículo lo decide data/modules.
+    const conDe = input.archetypesEarned.map((n) => {
+      const a = arquetipoConArticulo(n);
+      return a.startsWith('el ') ? `del ${a.slice(3)}` : `de ${a}`;
+    });
+    evidencia.push(`el arquetipo ${conDe.join(', ')} conquistado`);
   }
   if (evidencia.length > 0) {
     chapters.push({
@@ -360,7 +416,8 @@ export function buildHistoria(input: HistoriaInput): HistoriaChapter[] {
     });
   }
 
-  if (input.avgEnergy >= 7 && input.checkInsCount >= 5) {
+  const inactivo = input.daysSinceLastCheckIn !== undefined && !isRecent(input.daysSinceLastCheckIn);
+  if (input.avgEnergy >= 7 && input.checkInsCount >= 5 && !inactivo) {
     chapters.push({
       label: 'HOY',
       text: `Tu energía promedio es ${Math.round(input.avgEnergy)}/10. El sistema está funcionando.`,

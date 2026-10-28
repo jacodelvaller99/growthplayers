@@ -384,7 +384,7 @@ const s = StyleSheet.create({
   spaceEmoji: { fontSize: 22, width: 32, textAlign: 'center' },
   spaceName: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, color: palette.ivory, letterSpacing: 0.3 },
   spaceDesc: { ...typography.caption, color: palette.ash, fontSize: 11, marginTop: 1 },
-  spaceMeta: { ...typography.label, color: palette.goldText, fontSize: 9, marginTop: 3, letterSpacing: 0.8 },
+  spaceMeta: { ...typography.label, color: palette.goldText, marginTop: 3, letterSpacing: 0.8 },
 
   eventCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -397,19 +397,19 @@ const s = StyleSheet.create({
   },
   eventTitle: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, color: palette.ivory, letterSpacing: 0.3 },
   eventWhen: { ...typography.mono, color: palette.goldText, fontSize: 11, marginTop: 2 },
-  eventMeta: { ...typography.caption, color: palette.smoke, fontSize: 10, marginTop: 2 },
+  eventMeta: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 2 },
   rsvpPill: {
     paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill,
     borderWidth: 1, borderColor: palette.line,
   },
   rsvpPillGoing: { backgroundColor: palette.gold, borderColor: palette.gold },
-  rsvpPillText: { ...typography.label, color: palette.ash, fontSize: 8, letterSpacing: 0.8 },
+  rsvpPillText: { ...typography.label, color: palette.ash, letterSpacing: 0.8 },
 
   rxWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs },
   rxChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 5, minHeight: 44 },
   rxChipMine: { borderColor: palette.gold, backgroundColor: palette.goldLight },
   rxEmoji: { fontSize: 13 },
-  rxCount: { ...typography.mono, color: palette.smoke, fontSize: 11 },
+  rxCount: { ...typography.mono, color: palette.smoke },
   rxPicker: { flexDirection: 'row', gap: spacing.sm, backgroundColor: palette.graphiteLight, borderWidth: 1, borderColor: palette.lineHard, borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   rxPickerItem: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
 
@@ -427,7 +427,7 @@ const s = StyleSheet.create({
   csAuthor: { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 12, color: palette.ivory },
   csContent: { ...typography.body, color: palette.ivory, fontSize: 13, lineHeight: 18, marginTop: 1 },
   csReportBox: { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.sm, gap: 2 },
-  csReportTitle: { ...typography.label, color: palette.smoke, fontSize: 9, marginBottom: spacing.xs },
+  csReportTitle: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs },
   csReportRow: { paddingVertical: spacing.sm, minHeight: 40, justifyContent: 'center' },
   csError: { ...typography.caption, color: palette.danger, fontSize: 12, marginTop: spacing.xs },
   csComposer: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, alignItems: 'center' },
@@ -443,5 +443,5 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: palette.gold, borderRadius: radii.sm,
     paddingHorizontal: spacing.lg, minHeight: 44, justifyContent: 'center',
   },
-  emptyCtaText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
+  emptyCtaText: { ...typography.label, color: palette.goldText, letterSpacing: 1 },
 });

@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   phaseEyebrow: {
     fontFamily: Fonts.mono,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 3,
     textTransform: 'uppercase',
     textAlign: 'center',

@@ -18,6 +18,7 @@ import { calcProtocolDay, computeStreak } from '@/lib/utils';
 import { enqueueWrite, initOfflineFlush } from '@/lib/offlineQueue';
 import { checkCriticalSchema } from '@/lib/schemaHealth';
 import { resolveEntitlement } from '@/lib/subscription';
+import { loadAiConsent, resetAiConsent } from '@/lib/aiConsent';
 import { logSilentError } from '@/lib/observability';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
@@ -479,7 +480,13 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
   // en los consumidores cuando cambia el usuario (login/logout).
   const uidRef = useRef<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const applyUid = (uid: string | null) => { uidRef.current = uid; setUserId(uid); };
+  const applyUid = (uid: string | null) => {
+    uidRef.current = uid;
+    setUserId(uid);
+    // Permiso de IA de terceros: se carga con la sesión y se cierra con ella, así
+    // el siguiente usuario de este dispositivo parte sin permiso.
+    if (uid) void loadAiConsent(uid); else resetAiConsent();
+  };
 
   // ── Outbox offline ───────────────────────────────────────────────────────────
   // Reintenta escrituras idempotentes del core-loop (check-in, lecciones) que

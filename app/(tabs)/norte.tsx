@@ -278,7 +278,7 @@ export default function NorteScreen() {
     <KeyboardAvoidingView
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
     <ScrollView
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       showsVerticalScrollIndicator={false}
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
   toastText: {
     ...typography.label,
     color: palette.ink,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // Desktop layout

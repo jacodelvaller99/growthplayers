@@ -36,7 +36,6 @@ import {
   PremiumCard,
   PrimaryButton,
   ProgressCard,
-  SovereignDeltaTag,
   StateMeter,
   StatusPill,
   screen,
@@ -46,14 +45,15 @@ import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { animation, Fonts, palette, radii, spacing, surfaces, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
-import { calcSovereignScore, calcSovereignTier, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
+import { calcSovereignDelta } from '@/lib/utils';
+import { protocolSnapshot } from '@/lib/protocolSnapshot';
 import { selectTurno, type TurnoKind } from '@/lib/turnoLogic';
 import { fetchCoachIntelligence } from '@/lib/coachIntelligence';
 import { clientSafeNarrative } from '@/lib/coachIntelligenceLogic';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { ArcHeader, MilestoneToast } from '@/components/narrative';
+import { ArcHeader, BaselineNote, GlossToggle, MilestoneToast } from '@/components/narrative';
 import { JornadaTracker } from '@/components/jornada';
-import { arcForDay } from '@/lib/narrativeLogic';
+import { arcForDay, GLOSS } from '@/lib/narrativeLogic';
 import { checkMilestone } from '@/lib/milestoneCheck';
 import { useJornada } from '@/hooks/use-jornada';
 import { JORNADA_LABEL } from '@/lib/jornadaLogic';
@@ -180,7 +180,7 @@ const ringStyles = StyleSheet.create({
   sub: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 2,
   },
 });
@@ -190,7 +190,25 @@ export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
-  const { state, protocolDay, todayCheckIn, latestCheckIn, userId, isLoaded } = useLifeFlow();
+  const { state, todayCheckIn, latestCheckIn, userId, isLoaded } = useLifeFlow();
+  // UNA fuente de verdad para día, racha, score y línea base (ver
+  // lib/protocolSnapshot). Progreso lee la misma función.
+  const snap = useMemo(() => {
+    const ws = state.wellnessSessions ?? [];
+    return protocolSnapshot({
+      protocolStartDate: state.protocolStartDate,
+      checkIns: state.checkIns,
+      completedLessons: (state.completedLessons ?? []).length,
+      completedTasks: Object.keys(state.completedTasks ?? {}).length,
+      wellness: {
+        meditation: ws.filter((s) => s.type === 'meditation').length,
+        breathing: ws.filter((s) => s.type === 'breathing').length,
+        binaural: ws.filter((s) => s.type === 'binaural').length,
+      },
+      now: new Date(),
+    });
+  }, [state.protocolStartDate, state.checkIns, state.completedLessons, state.completedTasks, state.wellnessSessions]);
+  const protocolDay = snap.protocolDay;
   const { user: wellnessUser } = useWellnessStore();
   const { intelligence, engagementTier } = useUserIntelligence(userId);
   const metricasDia = useMetricasDia();
@@ -205,7 +223,7 @@ export default function DashboardScreen() {
     painPoint: state.profile.painPoint,
     purpose: state.northStar.purpose,
     identity: state.northStar.identity,
-  });
+  }, snap.daysSinceLastReading);
   const checkIn = todayCheckIn ?? latestCheckIn;
 
   const { isConnected: isWearableConnected } = useWearableConnections();
@@ -301,7 +319,7 @@ export default function DashboardScreen() {
     let cancelled = false;
     (async () => {
       const m = await checkMilestone(
-        { streak: computeStreak(state.checkIns), protocolDay },
+        { streak: snap.streak, protocolDay },
         { painPoint: state.profile.painPoint, purpose: state.northStar.purpose },
       );
       if (!cancelled && m) setMilestone(m);
@@ -357,51 +375,12 @@ export default function DashboardScreen() {
     transform: [{ scaleX: engagementScale.value }],
   }));
 
-  // Racha real = días consecutivos con check-in. Antes era
-  // `Math.max(checkIns.length, protocolDay)`, que solo mide calendario.
-  const checkinStreak = useMemo(() => computeStreak(state.checkIns), [state.checkIns]);
-
-  // ── Sovereign Score (real) + tier + weekly delta ─────────────────────────────
-  const averages = useMemo(() => {
-    const ci = state.checkIns;
-    const avg = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0);
-    return {
-      energy:  avg(ci.map((c) => c.energy)),
-      clarity: avg(ci.map((c) => c.clarity)),
-      stress:  ci.length ? avg(ci.map((c) => c.stress)) : 5,
-      sleep:   avg(ci.map((c) => c.sleep)),
-    };
-  }, [state.checkIns]);
-
-  const wellnessByType = useMemo(() => {
-    const sessions = state.wellnessSessions ?? [];
-    return {
-      meditation: sessions.filter((s) => s.type === 'meditation').length,
-      breathing:  sessions.filter((s) => s.type === 'breathing').length,
-      binaural:   sessions.filter((s) => s.type === 'binaural').length,
-    };
-  }, [state.wellnessSessions]);
-
-  const sovereignScore = useMemo(
-    () =>
-      calcSovereignScore({
-        energy:           averages.energy,
-        clarity:          averages.clarity,
-        stress:           averages.stress,
-        sleep:            averages.sleep,
-        streak:           checkinStreak,
-        completedLessons: (state.completedLessons ?? []).length,
-        completedTasks:   Object.keys(state.completedTasks ?? {}).length,
-        wellnessMeditation: wellnessByType.meditation,
-        wellnessBreathing:  wellnessByType.breathing,
-        wellnessBinaural:   wellnessByType.binaural,
-      }),
-    [averages, checkinStreak, state.completedLessons, state.completedTasks, wellnessByType],
-  );
-  const sovereignTier = calcSovereignTier(sovereignScore);
-  /** Sin una sola lectura el score no mide nada: los 25 puntos que salían el
-   *  día 1 venían del `stress: 5` por defecto de `averages`. */
-  const sinLecturas = state.checkIns.length === 0;
+  // Racha, score y línea base salen de `snap` (lib/protocolSnapshot): la MISMA
+  // función que lee Perfil. Antes cada pantalla promediaba a su manera y daban
+  // 348 aquí y 353 allí. Sin lecturas, `score` es null — no se fabrica número.
+  const sovereignScore = snap.score ?? 0;
+  const sovereignTier = snap.tier ?? 'INICIANDO';
+  const sinLecturas = !snap.hasReadings;
 
   // Weekly score gain — real contribution from check-ins logged in the last 7 days.
   // Each check-in adds its coherence-derived points to the composite score.
@@ -417,14 +396,9 @@ export default function DashboardScreen() {
 
   // Sovereign delta — cuerpo de hoy vs la línea base propia (no el absoluto).
   const sovereignDelta = useMemo(() => calcSovereignDelta(state.checkIns), [state.checkIns]);
-  // Día (1–7) dentro de la ventana de construcción de línea base, para el copy
-  // "construyendo tu línea base · día X de 7" cuando aún no está lista.
-  const baselineDay = useMemo(() => {
-    if (calcSovereignBaseline(state.checkIns).ready) return 7;
-    if (!state.checkIns.length) return 1;
-    const oldest = Math.min(...state.checkIns.map((c) => new Date(c.date).getTime()));
-    return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
-  }, [state.checkIns]);
+  const baselineNote = (
+    <BaselineNote delta={sovereignDelta} baselineDay={snap.baselineDay} hasReadings={snap.hasReadings} />
+  );
 
   // Today's coherence (0–10) — same formula as the check-in screen.
   const coherenceToday = checkIn
@@ -541,6 +515,15 @@ export default function DashboardScreen() {
   // misma información dos veces. `useDashboardPrefs` se conserva por si se
   // reactiva la personalización más adelante.
 
+  // «SIN LECTURA» junto a barras llenas era el promedio histórico de check-ins
+  // pintado como si fuera hoy. Sin wearable y sin lectura de hoy, las fichas
+  // no tienen dato: no se pintan valores llenos (aquí ni en los modos).
+  const tilesFresh = metricasDia.source !== 'checkin' || !!todayCheckIn;
+  const dayTiles: typeof metricasDia.tiles = tilesFresh
+    ? metricasDia.tiles
+    : metricasDia.tiles.map((t) => ({ label: t.label, value: '—', stateLabel: 'SIN DATO', state: 'none', series: [] }));
+  const dayTilesSource = tilesFresh ? metricasDia.source : 'none';
+
   const estadoBlock = (
     <View style={styles.stack}>
       <View style={styles.sectionTopRow}>
@@ -550,7 +533,7 @@ export default function DashboardScreen() {
           tone={todayCheckIn ? 'gold' : 'muted'}
         />
       </View>
-      {metricasDia.source !== 'none' ? (
+      {tilesFresh && metricasDia.source !== 'none' ? (
         <>
           <View style={styles.tileGrid}>
             {metricasDia.tiles.map((t) => (
@@ -569,11 +552,11 @@ export default function DashboardScreen() {
             <Text style={styles.tileGridNote}>Según tu check-in — conecta un wearable para lecturas exactas</Text>
           )}
         </>
-      ) : checkIn ? (
+      ) : todayCheckIn ? (
         <PremiumCard style={styles.meterCard}>
-          <StateMeter label="Energía" value={checkIn.energy} />
-          <StateMeter label="Enfoque / claridad" value={checkIn.clarity} />
-          <StateMeter label="Estrés" value={checkIn.stress} inverted />
+          <StateMeter label="Energía" value={todayCheckIn.energy} />
+          <StateMeter label="Enfoque / claridad" value={todayCheckIn.clarity} />
+          <StateMeter label="Estrés" value={todayCheckIn.stress} inverted />
         </PremiumCard>
       ) : (
         /* Informativo, no pulsable: era el CUARTO control a /checkin en el
@@ -855,7 +838,7 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.communityCopy}>
           <Text style={styles.communityTitle}>OPERADORES SOBERANOS</Text>
-          <Text style={styles.communitySub}>Comunidad del Protocolo</Text>
+          <Text style={styles.communitySub}>Quienes hacen el Protocolo contigo</Text>
         </View>
         <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
       </View>
@@ -932,20 +915,13 @@ export default function DashboardScreen() {
         empty={sinLecturas}
       />
       <View style={{ flex: 1 }}>
-        <Text style={mob.eyebrow}>SCORE SOBERANO</Text>
-        {/* El copy decía "últimos 14 días" y era falso: `averages` promedia TODO
-            el historial y 800 de los 1000 puntos son contadores vitalicios
-            (lecciones, tareas, bonus) — el score no puede bajar. Se corrige el
-            texto, no la fórmula: cambiarla movería el score de todos los
-            usuarios y rompería el ranking admin. */}
-        <Text style={mob.scoreDesc}>
-          {sinLecturas
-            ? 'Falta 1 check-in para encender el score. Se calcula sobre tus lecturas: sin ninguna, no hay nada que medir.'
-            : 'Acumulado de todo tu historial: promedio de tus check-ins + lecciones y tareas completadas. No baja — el movimiento reciente lo marca el delta.'}
-        </Text>
-        <View style={mob.deltaWrap}>
-          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
-        </View>
+        {/* Compacto: la explicación larga (acumulado vitalicio, no baja) pasa
+            a un toque — vive en GLOSS.score, igual que en Perfil. */}
+        <GlossToggle label="SCORE SOBERANO" gloss={GLOSS.score} labelStyle={mob.eyebrow} />
+        {sinLecturas ? (
+          <Text style={mob.scoreDesc}>Se enciende con tu primera lectura.</Text>
+        ) : null}
+        <View style={mob.deltaWrap}>{baselineNote}</View>
         {weeklyScoreDelta > 0 && (
           <View style={mob.deltaRow}>
             <MaterialIcons name="trending-up" size={16} color={palette.success} />
@@ -975,7 +951,9 @@ export default function DashboardScreen() {
       <View style={mob.coherenceRow}>
         <Text style={mob.coherenceNum}>{coherenceToday}</Text>
         <Text style={mob.coherenceMax}>/ 10</Text>
-        <Text style={mob.coherenceStatus}>SISTEMA EN LÍNEA</Text>
+        {/* Decía «SISTEMA EN LÍNEA» sin comprobar nada. Lo único verificable
+            aquí es que la lectura de hoy existe. */}
+        <Text style={mob.coherenceStatus}>LECTURA REGISTRADA</Text>
       </View>
       <View style={mob.track}>
         <View style={[mob.trackFill, { width: `${coherenceToday * 10}%` }]} />
@@ -1101,7 +1079,7 @@ export default function DashboardScreen() {
           sub={`/ ${sovereignTier}`}
           empty={sinLecturas}
         />
-        <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+        {baselineNote}
         {weeklyScoreDelta > 0 && (
           <View style={styles.deskDeltaRow}>
             <MaterialIcons name="trending-up" size={14} color={palette.success} />
@@ -1141,7 +1119,7 @@ export default function DashboardScreen() {
   // sobre los MISMOS datos ya calculados arriba — nunca recalculan nada, así
   // nunca pueden desincronizarse entre sí. 'especifico' sigue el camino de
   // siempre (móvil/escritorio tal como estaban) para cero regresión.
-  const recoveryTile = metricasDia.tiles.find((t) => t.label === 'HRV') ?? metricasDia.tiles[0];
+  const recoveryTile = dayTiles.find((t) => t.label === 'HRV') ?? dayTiles[0];
   const modeProps = {
     isDesktop,
     eyebrow: `PROTOCOLO SOBERANO · DÍA ${protocolDay} DE 90`,
@@ -1153,10 +1131,10 @@ export default function DashboardScreen() {
     directiveTitle: turno.verb,
     directiveReason: turno.why,
     onDirective: () => router.push(turno.route as never),
-    tiles: metricasDia.tiles,
-    tilesSource: metricasDia.source,
+    tiles: dayTiles,
+    tilesSource: dayTilesSource,
     rows: [
-      { label: 'Racha', value: checkinStreak > 0 ? `${checkinStreak} días seguidos` : 'retomar hoy' },
+      { label: 'Racha', value: snap.streakLabel },
       { label: 'Módulo activo', value: `0${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title.split(/[\s:]/)[0]}` },
       { label: 'Próxima lección', value: `${nextLesson.pct}% avanzado` },
       { label: 'Día de protocolo', value: `${protocolDay} / 90` },
@@ -1169,7 +1147,7 @@ export default function DashboardScreen() {
     // Proporción honesta para el anillo de Calma: con check-in, energía/10 es
     // una fracción real; con wearable el HRV no tiene máximo teórico → null
     // (el Dial pinta solo la pista — la ausencia es información).
-    recoveryPct: metricasDia.source === 'checkin' && checkIn ? checkIn.energy / 10 : null,
+    recoveryPct: metricasDia.source === 'checkin' && todayCheckIn ? todayCheckIn.energy / 10 : null,
     recoverySuggestion: recoveryTile?.state === 'bad'
       ? 'Tu cuerpo pide ritmo suave hoy. Ocho minutos de respiración antes de decidir cualquier otra cosa.'
       : 'Tu sistema está en rango — igual vale un momento de respiración consciente antes de arrancar.',
@@ -1352,7 +1330,7 @@ export default function DashboardScreen() {
               problema real era el PÁRRAFO de tres oraciones, no la línea — así
               que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
               al eyebrow. El Mando sigue siendo lo único grande. */}
-          <ArcHeader arc={arc} />
+          <ArcHeader arc={arc} explain />
           {/* El hito de calendario (día 30/90) se evalúa al montar: antes solo
               lo evaluaba el guardado del check-in y se perdía si ese día no
               había lectura. `milestone:v1` lo hace idempotente. */}
@@ -1364,19 +1342,17 @@ export default function DashboardScreen() {
               En escritorio, score + jornada + coherencia comparten UNA tarjeta.
               En móvil eran tres apiladas, cada una con su borde y su título: la
               misma información enmarcada tres veces. Mismo contenido, un marco. */}
+          {/* Uso de 30 s: UNA decisión (la Jornada, un CTA) + el score
+              compacto. La coherencia de hoy, el ancla del norte y las
+              novedades bajan a sus lentes — siguen a un toque. */}
           <HeroPanel>
             {mandoStripBlock}
             <HeroRule />
             {mScoreCard}
-            {mCheckinCard ? <><HeroRule />{mCheckinCard}</> : null}
           </HeroPanel>
 
-          {/* Señales en tiempo real (solo cuando aplican — no es apilado fijo,
-              es una alerta puntual que desaparece cuando no hay nada que decir) */}
-          {northAnchorStrip}
+          {/* Alerta puntual: solo existe cuando hay algo que decir. */}
           {anomalyBlock}
-          {/* Novedades — una vez por versión, en voz de Norman IA */}
-          <NovedadesNorman />
 
           {/* ── LENTES ──────────────────────────────────────────────────
               Antes de esto, Norman, próxima lección y acceso rápido vivían
@@ -1394,12 +1370,13 @@ export default function DashboardScreen() {
                     "continuar lección" que `mNextLessonBlock`, dibujada dos
                     veces con dos estilos distintos (detectado en captura de
                     página completa). */}
-                {estadoBlock}
+                {mCheckinCard}
+                <NovedadesNorman />
                 <View style={{ gap: spacing.sm }}>
                   <Text style={screen.sectionTitle}>Estado del día</Text>
                   <RowList
                     rows={[
-                      { label: 'Racha', value: checkinStreak > 0 ? `${checkinStreak} días seguidos` : 'retomar hoy' },
+                      { label: 'Racha', value: snap.streakLabel },
                       { label: 'Módulo activo', value: `0${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title.split(/[\s:]/)[0]}` },
                       { label: 'Próxima lección', value: `${nextLesson.pct}% avanzado` },
                       { label: 'Día de protocolo', value: `${protocolDay} / 90` },
@@ -1410,6 +1387,8 @@ export default function DashboardScreen() {
                 {mNormanCard}
               </>) },
               { id: 'cuerpo', label: 'CUERPO', render: () => (<>
+                {/* Biometría + wearable: lectura del cuerpo, no decisión del día. */}
+                {estadoBlock}
                 {mQuickAccessBlock}
                 {wellnessBlock}
               </>) },
@@ -1420,6 +1399,7 @@ export default function DashboardScreen() {
                 <CommunityPreview />
               </>) },
               { id: 'norte', label: 'MI NORTE', render: () => (<>
+          {northAnchorStrip}
           <PremiumCard style={styles.northCard}>
             <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
             <Text style={styles.northBody}>
@@ -1494,7 +1474,7 @@ const styles = StyleSheet.create({
   deskHeroEyebrow: {
     ...typography.label,
     color: palette.goldText,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
   },
   deskHeroTitle: {
@@ -1860,7 +1840,7 @@ const styles = StyleSheet.create({
   tableroLabel: {
     color: palette.smoke,
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 2,
   },
@@ -1910,7 +1890,7 @@ const styles = StyleSheet.create({
   tableroChipIndex: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '700',
   },
 
@@ -2115,7 +2095,7 @@ const styles = StyleSheet.create({
   mentoriaHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   mentoriaEyebrow: {
     fontFamily:    Fonts.mono,
-    fontSize:      10,
+    fontSize:      11,
     color:         palette.gold,
     letterSpacing: 1,
   },
@@ -2251,7 +2231,7 @@ const mob = StyleSheet.create({
   headerDate: {
     ...typography.mono,
     color: palette.goldText,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase',
     marginBottom: 7,
@@ -2279,7 +2259,7 @@ const mob = StyleSheet.create({
   eyebrow: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
@@ -2442,7 +2422,7 @@ const mob = StyleSheet.create({
   normanStatusText: {
     ...typography.mono,
     color: palette.success,
-    fontSize: 9.5,
+    fontSize: 11,
     letterSpacing: 1,
   },
   normanChip: {
@@ -2524,7 +2504,7 @@ const mob = StyleSheet.create({
     top: 12,
     left: 14,
     color: palette.goldText,
-    fontSize: 9.5,
+    fontSize: 11,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
   },
@@ -2549,7 +2529,7 @@ const mob = StyleSheet.create({
   lessonPct: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // Acceso rápido grid
@@ -2570,7 +2550,7 @@ const mob = StyleSheet.create({
   quickLabel: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 9.5,
+    fontSize: 11,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     textAlign: 'center',

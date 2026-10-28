@@ -19,7 +19,6 @@ import {
   PrimaryButton,
   ProgressCard,
   SecondaryButton,
-  SovereignDeltaTag,
   WeeklySparkline,
   screen,
   useScreen,
@@ -32,12 +31,13 @@ import { alpha } from '@/constants/themeColors';
 import { useStaffRole } from '@/hooks/useIsAdmin';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { arcForDay, buildHistoria } from '@/lib/narrativeLogic';
-import { ArcHeader } from '@/components/narrative';
+import { arcForDay, buildHistoria, GLOSS } from '@/lib/narrativeLogic';
+import { ArcHeader, BaselineNote, GlossToggle } from '@/components/narrative';
+import { protocolSnapshot } from '@/lib/protocolSnapshot';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserIntelligence } from '@/hooks/useUserIntelligence';
 import { useWellnessStore } from '@/store/wellnessStore';
-import { calcSovereignScore, calcSovereignBaseline, calcSovereignDelta, computeStreak } from '@/lib/utils';
+import { calcSovereignDelta } from '@/lib/utils';
 import {
   requestNotificationPermissions,
   scheduleCheckinReminder,
@@ -407,7 +407,7 @@ const ringStyles = StyleSheet.create({
   sub: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 2,
   },
 });
@@ -474,15 +474,15 @@ const wmStyles = StyleSheet.create({
   label: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     flex: 1,
   },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   value: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 24, fontWeight: '700' },
-  unit: { ...typography.mono, color: palette.ash, fontSize: 11 },
-  trend: { ...typography.mono, fontSize: 10, marginLeft: 'auto' },
+  unit: { ...typography.mono, color: palette.ash },
+  trend: { ...typography.mono, marginLeft: 'auto' },
   spark: { height: 34, marginTop: 2 },
 });
 
@@ -491,7 +491,7 @@ export default function ProgresoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
-    state, protocolDay, averages,
+    state, averages,
     updateProfile, updateNorthStar,
     resetOnboarding, clearData, signOut,
     deleteAccount, exportData,
@@ -553,8 +553,6 @@ export default function ProgresoScreen() {
     );
   }, []);
 
-  const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
-
   // Wellness session counts for score
   const wellnessSessions = state.wellnessSessions ?? [];
   const wellnessMeditation = wellnessSessions.filter((s) => s.type === 'meditation').length;
@@ -582,34 +580,28 @@ export default function ProgresoScreen() {
     return streak;
   }, [wellnessSessions]);
 
-  // Racha real de check-ins (días consecutivos hacia atrás desde hoy).
-  const checkinStreak = useMemo(() => computeStreak(state.checkIns), [state.checkIns]);
-
+  // Día, racha, score y línea base: la MISMA función que Comando
+  // (lib/protocolSnapshot) — antes cada pantalla daba su propio número.
+  const snap = useMemo(() => protocolSnapshot({
+    protocolStartDate: state.protocolStartDate,
+    checkIns: state.checkIns,
+    completedLessons: (state.completedLessons ?? []).length,
+    completedTasks: Object.keys(state.completedTasks ?? {}).length,
+    wellness: { meditation: wellnessMeditation, breathing: wellnessBreathing, binaural: wellnessBinaural },
+    now: new Date(),
+  }), [state.protocolStartDate, state.checkIns, state.completedLessons, state.completedTasks, wellnessMeditation, wellnessBreathing, wellnessBinaural]);
+  const protocolDay = snap.protocolDay;
+  const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
+  const checkinStreak = snap.streak;
   /** Sin lecturas el score no mide nada — ver el comentario en su render. */
-  const sinLecturas = state.checkIns.length === 0;
-
-  // Sovereign Score v2 — includes wellness bonus
-  const score = calcSovereignScore({
-    energy:            averages.energy ?? 0,
-    clarity:           averages.clarity ?? 0,
-    stress:            averages.stress ?? 5,
-    sleep:             averages.sleep ?? 0,
-    streak:            checkinStreak,
-    completedLessons:  (state.completedLessons ?? []).length,
-    completedTasks:    Object.keys(state.completedTasks ?? {}).length,
-    wellnessMeditation,
-    wellnessBreathing,
-    wellnessBinaural,
-  });
+  const sinLecturas = !snap.hasReadings;
+  const score = snap.score ?? 0;
 
   // Sovereign delta — progreso vs línea base propia (acompaña al score absoluto).
   const sovereignDelta = useMemo(() => calcSovereignDelta(state.checkIns), [state.checkIns]);
-  const baselineDay = useMemo(() => {
-    if (calcSovereignBaseline(state.checkIns).ready) return 7;
-    if (!state.checkIns.length) return 1;
-    const oldest = Math.min(...state.checkIns.map((c) => new Date(c.date).getTime()));
-    return Math.min(Math.max(Math.floor((Date.now() - oldest) / 86400000) + 1, 1), 7);
-  }, [state.checkIns]);
+  const baselineNote = (
+    <BaselineNote delta={sovereignDelta} baselineDay={snap.baselineDay} hasReadings={snap.hasReadings} />
+  );
 
   // Last 7 check-ins for sparklines.
   // Sin datos NO se rellena con ceros: una línea plana en cero se lee como
@@ -738,11 +730,12 @@ export default function ProgresoScreen() {
       checkInsCount: state.checkIns.length,
       avgEnergy: averages.energy ?? 0,
       archetypesEarned: archetypes.filter((a) => a.earned).map((a) => a.name),
+      daysSinceLastCheckIn: snap.daysSinceLastReading,
     })
       .filter((c) => c.label !== 'EL ARCO')
       .map((c) => c.text)
       .slice(0, 3);
-  }, [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, archetypes]);
+  }, [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, archetypes, snap.daysSinceLastReading]);
 
   const toggleNotifications = async (value: boolean) => {
     if (value) {
@@ -839,37 +832,64 @@ export default function ProgresoScreen() {
   };
 
   // GDPR: Delete account — 2-step confirmation
+  // Borrar la cuenta NO cancela la suscripción de la tienda: Apple/Google la
+  // siguen cobrando. Se avisa y se ofrece el enlace — y exportar antes —, sin
+  // bloquear el borrado.
+  const SUBS_URL = Platform.OS === 'ios'
+    ? 'https://apps.apple.com/account/subscriptions'
+    : 'https://play.google.com/store/account/subscriptions';
+  const SUBS_AVISO = 'Tu suscripción de Apple o Google NO se cancela sola al borrar la cuenta: gestiónala en la tienda.';
+
   const handleDeleteAccount = () => {
+    const runDelete = async () => {
+      setDeleting(true);
+      try {
+        await deleteAccount();
+        router.replace('/');
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Error al eliminar';
+        Alert.alert('Error', `No se pudo eliminar la cuenta: ${msg}`);
+      } finally {
+        setDeleting(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Alert.alert no existe en web: confirm nativo, mismo contenido.
+      if (window.confirm(`¿Exportar tus datos antes de borrar la cuenta?\n\n${SUBS_AVISO}`)) {
+        void handleExport();
+        return;
+      }
+      if (window.confirm('Se eliminará tu cuenta y TODOS tus datos de Polaris de forma permanente. Esta acción NO SE PUEDE DESHACER.')) {
+        void runDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       'ELIMINAR CUENTA',
-      '¿Estás seguro? Esta acción eliminará tu cuenta y TODOS tus datos de Polaris de forma permanente e irreversible.',
+      `¿Estás seguro? Esta acción eliminará tu cuenta y TODOS tus datos de Polaris de forma permanente e irreversible.\n\n${SUBS_AVISO}`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Exportar mis datos', onPress: () => { void handleExport(); } },
+        // Android admite 3 botones: ahí el enlace a la tienda va en el aviso
+        // de la confirmación final.
+        ...(Platform.OS === 'ios'
+          ? [{ text: 'Gestionar suscripción', onPress: () => { void Linking.openURL(SUBS_URL); } }]
+          : []),
+        { text: 'Cancelar', style: 'cancel' as const },
         {
           text: 'Continuar',
-          style: 'destructive',
+          style: 'destructive' as const,
           onPress: () => {
             Alert.alert(
               'CONFIRMACIÓN FINAL',
-              'Se eliminarán: historial de check-ins, conversaciones con Norman, progreso de lecciones y todos los datos biométricos. Esta acción NO SE PUEDE DESHACER.',
+              `Se eliminarán: historial de check-ins, conversaciones con Norman IA, progreso de lecciones y todos los datos biométricos. Esta acción NO SE PUEDE DESHACER.\n\n${SUBS_AVISO}`,
               [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'ELIMINAR MI CUENTA',
-                  style: 'destructive',
-                  onPress: async () => {
-                    setDeleting(true);
-                    try {
-                      await deleteAccount();
-                      router.replace('/');
-                    } catch (e: unknown) {
-                      const msg = e instanceof Error ? e.message : 'Error al eliminar';
-                      Alert.alert('Error', `No se pudo eliminar la cuenta: ${msg}`);
-                    } finally {
-                      setDeleting(false);
-                    }
-                  },
-                },
+                ...(Platform.OS === 'android'
+                  ? [{ text: 'Gestionar suscripción', onPress: () => { void Linking.openURL(SUBS_URL); } }]
+                  : []),
+                { text: 'Cancelar', style: 'cancel' as const },
+                { text: 'ELIMINAR MI CUENTA', style: 'destructive' as const, onPress: () => { void runDelete(); } },
               ],
             );
           },
@@ -884,7 +904,7 @@ export default function ProgresoScreen() {
       <KeyboardAvoidingView
         style={sc.root}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={insets.top}>
+        keyboardVerticalOffset={0}>
         <ScrollView
           contentContainerStyle={[deskStyles.contentDesktop, { paddingTop: insets.top + 32 }]}
           showsVerticalScrollIndicator={false}
@@ -899,12 +919,13 @@ export default function ProgresoScreen() {
               habría sido caja-dentro-de-caja (PremiumCard dentro del panel
               dorado). Se porta la MISMA composición sin marco que ya usa
               móvil (líneas ~1166-1229) — no se reescribe, se reusa. */}
-          <AppHeader title="PROGRESO" />
+          {/* La pestaña se llama «Perfil» (la ruta sigue siendo progreso). */}
+          <AppHeader title="PERFIL" />
           <HeroPanel>
             <View style={styles.scoreCard}>
               <View style={styles.scoreTopRow}>
                 <View>
-                  <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
+                  <GlossToggle label="SCORE SOBERANO" gloss={GLOSS.score} labelStyle={styles.scoreEyebrow} />
                   <View style={styles.scoreNumberRow}>
                     {sinLecturas ? (
                       <Text style={styles.scoreNumber}>—</Text>
@@ -925,7 +946,7 @@ export default function ProgresoScreen() {
                   <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
                 </View>
               )}
-              <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+              {baselineNote}
             </View>
 
             <Pressable
@@ -943,7 +964,8 @@ export default function ProgresoScreen() {
                 1 a 6 no veía dónde estaba — justo cuando más importa. */}
             <View style={styles.narrativeCard}>
               <ArcHeader
-                arc={arcForDay(protocolDay, arcoSuyas)}
+                arc={arcForDay(protocolDay, arcoSuyas, snap.daysSinceLastReading)}
+                explain
                 compact={narrativeBlock.length > 0}
               />
               {narrativeBlock.length > 0 && (
@@ -1009,6 +1031,7 @@ export default function ProgresoScreen() {
 
 
               <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
+      <Text style={styles.glossLine}>{GLOSS.archetypes}</Text>
               <View style={styles.archetypeList}>
                 {archetypes.map((arch) => (
                   <PremiumCard
@@ -1226,7 +1249,7 @@ export default function ProgresoScreen() {
     <KeyboardAvoidingView
       style={sc.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}>
+      keyboardVerticalOffset={0}>
     <ScrollView
       contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       showsVerticalScrollIndicator={false}
@@ -1234,6 +1257,8 @@ export default function ProgresoScreen() {
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
 
+      {/* El título coincide con la pestaña («Perfil»); la ruta sigue siendo progreso. */}
+      <Text style={styles.scoreEyebrow} accessibilityRole="header">PERFIL</Text>
       {/* ── Profile header (avatar · name · día de protocolo · racha) ── */}
       <View style={styles.profileHeader}>
         <View style={styles.profileAvatar}>
@@ -1258,7 +1283,7 @@ export default function ProgresoScreen() {
         <View style={styles.scoreCard}>
           <View style={styles.scoreTopRow}>
             <View>
-              <Text style={styles.scoreEyebrow}>SCORE SOBERANO</Text>
+              <GlossToggle label="SCORE SOBERANO" gloss={GLOSS.score} labelStyle={styles.scoreEyebrow} />
               <View style={styles.scoreNumberRow}>
                 {/* Sin una sola lectura el score no mide nada: los 25 puntos que
                     salían el día 1 venían del `stress ?? 5` de arriba, con el
@@ -1286,7 +1311,7 @@ export default function ProgresoScreen() {
               <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
             </View>
           )}
-          <SovereignDeltaTag delta={sovereignDelta} baselineDay={baselineDay} />
+          {baselineNote}
         </View>
 
         {/* ── Share profile CTA ── */}
@@ -1309,7 +1334,8 @@ export default function ProgresoScreen() {
             haya que contar. */}
         <View style={styles.narrativeCard}>
           <ArcHeader
-            arc={arcForDay(protocolDay, arcoSuyas)}
+            arc={arcForDay(protocolDay, arcoSuyas, snap.daysSinceLastReading)}
+            explain
             compact={narrativeBlock.length > 0}
           />
           {narrativeBlock.length > 0 && (
@@ -1630,6 +1656,7 @@ export default function ProgresoScreen() {
           { id: 'logros', label: 'LOGROS', render: () => (<>
       {/* ── Archetype badges ── */}
       <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
+      <Text style={styles.glossLine}>{GLOSS.archetypes}</Text>
       <View style={styles.archetypeList}>
         {archetypes.map((arch) => (
           <PremiumCard
@@ -1934,7 +1961,7 @@ const styles = StyleSheet.create({
   profileDay: {
     ...typography.mono,
     color: palette.goldText,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.2,
   },
   streakChip: {
@@ -1968,6 +1995,10 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: palette.ash,
   },
+  glossLine: {
+    ...typography.caption,
+    color: palette.ash,
+  },
   scoreNumberRow: {
     alignItems: 'baseline',
     flexDirection: 'row',
@@ -1989,7 +2020,7 @@ const styles = StyleSheet.create({
   scoreCaption: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 9.5,
+    fontSize: 11,
     letterSpacing: 1,
     textAlign: 'right',
   },
@@ -2028,7 +2059,7 @@ const styles = StyleSheet.create({
   modulesMeta: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.5,
   },
 
@@ -2195,7 +2226,7 @@ const styles = StyleSheet.create({
   tierSub: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
   },
   tierUpgradeBtn: {
     backgroundColor: palette.gold,
@@ -2347,7 +2378,7 @@ const styles = StyleSheet.create({
   gdprBtnMeta: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
   },
   gdprDeleteBtn: {
     flexDirection: 'row',
@@ -2373,7 +2404,7 @@ const styles = StyleSheet.create({
   versionText: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'center',
     paddingBottom: spacing.xl,
     paddingTop: spacing.sm,

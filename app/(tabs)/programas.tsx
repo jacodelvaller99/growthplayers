@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -15,7 +15,7 @@ import {
 } from '@/components/polaris';
 import { LensTabs } from '@/components/focus-deck';
 import EmptyState from '@/components/EmptyState';
-import { POLARIS_MODULES } from '@/data/modules';
+import { POLARIS_MODULES, arquetipoConArticulo } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -49,11 +49,17 @@ export function isModuleUnlocked(
   return modules[moduleIndex].status !== 'coming_soon';
 }
 
+const MOBILE_LENSES = [
+  { id: 'activo', label: 'Activo' },
+  { id: 'completado', label: 'Completados' },
+  { id: 'porvenir', label: 'Por venir' },
+] as const;
+
 // "Por qué importa" — el peso del módulo en el camino, no su contenido literal.
 // Mantiene al usuario dentro del producto en vez de mandarlo a Skool.
 function moduleStakes(module: typeof POLARIS_MODULES[number]): string {
   if (module.arquetipo) {
-    return `Al cerrarlo integras el arquetipo del ${module.arquetipo}. No es teoría: es una capa de identidad que el resto del protocolo da por hecha.`;
+    return `Al cerrarlo integras ${arquetipoConArticulo(module.arquetipo)}. No es teoría: es una capa de identidad que el resto del protocolo da por hecha.`;
   }
   return 'Cada módulo abre el siguiente. Cuando llegue tu turno aquí, ya habrás construido la base que lo sostiene.';
 }
@@ -100,6 +106,7 @@ export default function ProgramasScreen() {
     activo: [], completado: [], porvenir: [],
   };
   POLARIS_MODULES.forEach((m, i) => groupedModules[moduleGroup(m, i)].push([m, i]));
+  const [mobileLens, setMobileLens] = useState<ModuleGroup>('activo');
 
   // ── Module card renderer (shared between mobile and desktop) ──────────────
   // Vertical "compass" card: module nº top-left, state indicator top-right,
@@ -162,18 +169,24 @@ export default function ProgramasScreen() {
             <View style={styles.moduleBase}>
               {module.arquetipo ? (
                 isAllDone ? (
-                  <View style={styles.arqConquered}>
+                  <View
+                    style={styles.arqConquered}
+                    accessible
+                    accessibilityLabel={`Arquetipo integrado: ${arquetipoConArticulo(module.arquetipo)}`}>
                     <MaterialIcons name="military-tech" size={10} color={palette.goldText} />
                     <Text style={styles.arqConqueredText} numberOfLines={1}>
-                      EL {module.arquetipo.toUpperCase()} · CONQUISTADO
+                      {arquetipoConArticulo(module.arquetipo).toUpperCase()}
                     </Text>
                   </View>
                 ) : (
-                  <Text style={styles.moduleArq} numberOfLines={1}>EL {module.arquetipo.toUpperCase()}</Text>
+                  <Text style={styles.moduleArq} numberOfLines={1}>{arquetipoConArticulo(module.arquetipo).toUpperCase()}</Text>
                 )
               ) : null}
-              <Text style={styles.moduleTitle} numberOfLines={2}>{module.title}</Text>
-              <Text style={styles.moduleSubtitle} numberOfLines={1}>{module.subtitle} · {lessonsLabel}</Text>
+              {/* Móvil: la tarjeta mide ~170px y «AUTOCONOCIMIENTO» en versalitas
+                  extendidas no cabe ni en una línea entera → se cortaba. Caja
+                  normal + 14pt + hasta 3 líneas: el título se lee completo. */}
+              <Text style={[styles.moduleTitle, !isDesktop && styles.moduleTitleCompact]} numberOfLines={isDesktop ? 2 : 3}>{module.title}</Text>
+              <Text style={styles.moduleSubtitle} numberOfLines={2}>{module.subtitle} · {lessonsLabel}</Text>
               {isActive && (
                 <View style={styles.progressWrap}>
                   <View style={styles.progressTrack}>
@@ -229,7 +242,7 @@ export default function ProgramasScreen() {
               </View>
 
               {teaser.arquetipo ? (
-                <Text style={styles.teaserArq}>EL {teaser.arquetipo.toUpperCase()}</Text>
+                <Text style={styles.teaserArq}>{arquetipoConArticulo(teaser.arquetipo).toUpperCase()}</Text>
               ) : null}
               <Text style={styles.teaserTitle}>{teaser.title}</Text>
               <Text style={styles.teaserSub}>{teaser.subtitle}</Text>
@@ -390,32 +403,40 @@ export default function ProgramasScreen() {
           <Text style={styles.routePct}>{overallProgress}%</Text>
         </PremiumCard>
 
-        {/* ── Módulos — lentes en vez de los 9 en una sola pila ── */}
-        <LensTabs
-          lenses={[
-            { id: 'activo', label: `ACTIVO (${groupedModules.activo.length})`, render: () => (
-              <View style={styles.grid}>
-                {groupedModules.activo.length > 0
-                  ? groupedModules.activo.map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
-                  : <EmptyState icon="play-circle-outline" title="Nada activo ahora mismo" />}
-              </View>
-            ) },
-            { id: 'completado', label: `COMPLETADOS (${groupedModules.completado.length})`, render: () => (
-              <View style={styles.grid}>
-                {groupedModules.completado.length > 0
-                  ? groupedModules.completado.map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
-                  : <EmptyState icon="military-tech" title="Todavía ningún módulo cerrado" body="Cuando termines el primero, aparece aquí." />}
-              </View>
-            ) },
-            { id: 'porvenir', label: `POR VENIR (${groupedModules.porvenir.length})`, render: () => (
-              <View style={styles.grid}>
-                {groupedModules.porvenir.length > 0
-                  ? groupedModules.porvenir.map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
-                  : <EmptyState icon="check-circle-outline" title="Nada pendiente — vas al día" />}
-              </View>
-            ) },
-          ]}
-        />
+        {/* ── Módulos — segmentado que reparte el ancho ──
+            LensTabs (scroll horizontal) cortaba «POR VENIR» en 390px sin
+            indicar que había más. Tres lentes caben: etiqueta arriba, conteo
+            abajo, cada segmento 1/3 del ancho. */}
+        <View style={styles.segmented} accessibilityRole="tablist">
+          {MOBILE_LENSES.map(({ id, label }) => {
+            const on = id === mobileLens;
+            const count = groupedModules[id].length;
+            return (
+              <Pressable
+                key={id}
+                onPress={() => {
+                  if (Platform.OS !== 'web') Haptics.selectionAsync();
+                  setMobileLens(id);
+                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`${label}, ${count} ${count === 1 ? 'módulo' : 'módulos'}`}
+                style={({ pressed }) => [styles.segment, on && styles.segmentOn, pressed && { opacity: 0.8 }]}>
+                <Text style={[styles.segmentLabel, on && styles.segmentLabelOn]} numberOfLines={1}>{label}</Text>
+                <Text style={[styles.segmentCount, on && styles.segmentLabelOn]}>{count}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.grid}>
+          {groupedModules[mobileLens].length > 0
+            ? groupedModules[mobileLens].map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
+            : mobileLens === 'activo'
+              ? <EmptyState icon="play-circle-outline" title="Nada activo ahora mismo" />
+              : mobileLens === 'completado'
+                ? <EmptyState icon="military-tech" title="Todavía ningún módulo cerrado" body="Cuando termines el primero, aparece aquí." />
+                : <EmptyState icon="check-circle-outline" title="Nada pendiente — vas al día" />}
+        </View>
       </ScrollView>
 
       {/* ── Toast ── */}
@@ -468,7 +489,7 @@ const styles = StyleSheet.create({
   routeLabel: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
   },
   routeTrack: {
@@ -487,6 +508,44 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 15,
     fontWeight: '700',
+  },
+
+  // ── Segmentado móvil (reparte el ancho, sin scroll oculto) ──
+  segmented: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginBottom: -spacing.sm,
+  },
+  segment: {
+    alignItems: 'center',
+    borderColor: palette.lineSoft,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    minWidth: 0,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  segmentOn: {
+    backgroundColor: palette.goldLight,
+    borderColor: palette.lineGold,
+  },
+  segmentLabel: {
+    color: palette.ash,
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  segmentLabelOn: {
+    color: palette.goldText,
+  },
+  segmentCount: {
+    color: palette.smoke,
+    fontFamily: Fonts.mono,
+    fontSize: 12,
+    marginTop: 2,
   },
 
   // ── Module grid ──
@@ -543,7 +602,7 @@ const styles = StyleSheet.create({
   soonBadgeText: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   moduleBase: {
@@ -553,7 +612,7 @@ const styles = StyleSheet.create({
   moduleArq: {
     color: palette.ash,
     fontFamily: Fonts.mono,
-    fontSize: 8.5,
+    fontSize: 11,
     letterSpacing: 1.6,
   },
   moduleTitle: {
@@ -564,6 +623,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     lineHeight: 19,
     textTransform: 'uppercase',
+  },
+  moduleTitleCompact: {
+    fontSize: 14,
+    letterSpacing: 0,
+    textTransform: 'none',
   },
   moduleSubtitle: {
     ...typography.caption,
@@ -591,7 +655,7 @@ const styles = StyleSheet.create({
   progressPct: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
   },
 
   // ── Desktop hero (unchanged) ──
@@ -666,7 +730,7 @@ const styles = StyleSheet.create({
   arqConqueredText: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 7.5,
+    fontSize: 11,
     letterSpacing: 1.2,
   },
 
@@ -696,13 +760,13 @@ const styles = StyleSheet.create({
   teaserEyebrow: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.6,
   },
   teaserArq: {
     color: palette.ash,
     fontFamily: Fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     marginTop: spacing.xs,
   },
@@ -734,7 +798,7 @@ const styles = StyleSheet.create({
   teaserStakesLabel: {
     color: palette.goldText,
     fontFamily: Fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2,
   },
   teaserStakesText: {
@@ -755,8 +819,8 @@ const styles = StyleSheet.create({
   teaserLessonNum: {
     color: palette.smoke,
     fontFamily: Fonts.mono,
-    fontSize: 10,
-    width: 20,
+    fontSize: 11,
+    width: 22,
   },
   teaserLessonTitle: {
     color: palette.ash,

@@ -134,6 +134,6 @@ const styles = StyleSheet.create({
   text: {
     ...typography.label,
     color: palette.ivory,
-    fontSize: 9,
+    fontSize: 11,
   },
 });

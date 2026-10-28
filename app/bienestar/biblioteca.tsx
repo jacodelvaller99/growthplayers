@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   readingTitle:  { ...typography.label, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },
   readingAuthor: { ...typography.caption, color: palette.goldText, fontSize: 11 },
   readingWhy:    { ...typography.caption, color: palette.smoke, fontSize: 11.5, lineHeight: 16, marginTop: 2 },
-  readingTag:    { ...typography.mono, color: palette.smoke, fontSize: 8.5, letterSpacing: 1, flexShrink: 0 },
+  readingTag:    { ...typography.mono, color: palette.smoke, letterSpacing: 1, flexShrink: 0 },
 
   emptyBox: {
     alignItems: 'center',

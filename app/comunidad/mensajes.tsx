@@ -235,6 +235,6 @@ const styles = StyleSheet.create({
   rowPreview:  { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, lineHeight: 18 },
   rowPreviewUnread: { color: palette.ivory },
   rowMeta:     { alignItems: 'flex-end', gap: 6 },
-  rowTime:     { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  rowTime:     { ...typography.mono, color: palette.smoke },
   unreadDot:   { width: 9, height: 9, borderRadius: 5, backgroundColor: palette.gold },
 });

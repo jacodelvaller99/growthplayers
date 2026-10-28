@@ -215,7 +215,7 @@ const metricStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.graphiteLight,
   },
-  label: { ...typography.mono, color: palette.ash, fontSize: 9, letterSpacing: 1 },
+  label: { ...typography.mono, color: palette.ash, letterSpacing: 1 },
   value: { ...typography.body, color: palette.ivory, fontWeight: '700', fontSize: 18 },
 });
 
@@ -352,7 +352,7 @@ const connStyles = StyleSheet.create({
   },
   info: { flex: 1 },
   name: { ...typography.section, color: palette.ivory, fontSize: 15 },
-  sub:  { ...typography.mono,    color: palette.smoke, fontSize: 10, marginTop: 2 },
+  sub:  { ...typography.mono,    color: palette.smoke, marginTop: 2 },
   activeBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: alpha(palette.success, '14'),
@@ -360,10 +360,10 @@ const connStyles = StyleSheet.create({
     borderRadius: radii.sm,
   },
   activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: palette.success },
-  activeText: { ...typography.label, color: palette.success, fontSize: 9 },
+  activeText: { ...typography.label, color: palette.success },
   metricsRow: { flexDirection: 'row', gap: spacing.sm },
   barWrap: { gap: 6 },
-  barLabel: { ...typography.mono, color: palette.ash, fontSize: 10, letterSpacing: 1 },
+  barLabel: { ...typography.mono, color: palette.ash, letterSpacing: 1 },
   noData: {
     paddingVertical: spacing.md,
     backgroundColor: palette.black,
@@ -377,7 +377,7 @@ const connStyles = StyleSheet.create({
     gap: spacing.sm, borderWidth: 1, borderColor: palette.gold,
     borderRadius: radii.sm, paddingVertical: spacing.md, minHeight: 44,
   },
-  syncText:       { ...typography.label, color: palette.goldText, fontWeight: '700', fontSize: 11 },
+  syncText:       { ...typography.label, color: palette.goldText, fontWeight: '700' },
   disconnectBtn:  { paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 44, justifyContent: 'center' },
   disconnectText: { ...typography.caption, color: palette.smoke },
 });
@@ -453,13 +453,13 @@ const discStyles = StyleSheet.create({
   },
   info: { flex: 1 },
   name: { ...typography.section, color: palette.ash, fontSize: 15 },
-  sub:  { ...typography.mono,    color: palette.smoke, fontSize: 10, marginTop: 2 },
+  sub:  { ...typography.mono,    color: palette.smoke, marginTop: 2 },
   offBadge: {
     backgroundColor: palette.graphite,
     paddingHorizontal: spacing.sm, paddingVertical: 5,
     borderRadius: radii.sm,
   },
-  offText: { ...typography.label, color: palette.smoke, fontSize: 9 },
+  offText: { ...typography.label, color: palette.smoke },
   description: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tag: {
@@ -470,7 +470,7 @@ const discStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.charcoal,
   },
-  tagText: { ...typography.mono, color: palette.smoke, fontSize: 10 },
+  tagText: { ...typography.mono, color: palette.smoke },
   connectBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: palette.gold,
@@ -579,7 +579,7 @@ const heroStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: 4,
     borderRadius: radii.sm,
   },
-  ribbonText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
+  ribbonText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   iconWrap: {
     width: 52, height: 52,
@@ -591,7 +591,7 @@ const heroStyles = StyleSheet.create({
   },
   info: { flex: 1 },
   name: { ...typography.section, color: palette.ivory, fontSize: 18 },
-  sub:  { ...typography.mono, color: palette.goldText, fontSize: 10, marginTop: 3, letterSpacing: 0.5 },
+  sub:  { ...typography.mono, color: palette.goldText, marginTop: 3, letterSpacing: 0.5 },
   description: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
   brandRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   brandChip: {
@@ -601,7 +601,7 @@ const heroStyles = StyleSheet.create({
     borderWidth: 1, borderColor: palette.charcoal,
   },
   brandChipMore: { borderColor: palette.lineGold, backgroundColor: palette.goldGlow },
-  brandText: { ...typography.mono, color: palette.ash, fontSize: 10 },
+  brandText: { ...typography.mono, color: palette.ash },
   brandTextMore: { color: palette.goldText },
   coverageNote: { ...typography.caption, color: palette.smoke, fontSize: 11, lineHeight: 16 },
   connectBtn: {
@@ -1153,7 +1153,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radii.sm,
   },
-  countText: { ...typography.label, color: palette.goldText, fontSize: 10 },
+  countText: { ...typography.label, color: palette.goldText },
 
   // Banner
   banner: {
@@ -1200,7 +1200,7 @@ const styles = StyleSheet.create({
     borderColor: alpha(palette.danger, '55'),
     backgroundColor: alpha(palette.danger, '14'),
   },
-  staleNoticeText: { ...typography.label, color: palette.danger, fontSize: 9, flex: 1 },
+  staleNoticeText: { ...typography.label, color: palette.danger, flex: 1 },
 
   // Selector de marca (Open Wearables self-host)
   owBackdrop: {

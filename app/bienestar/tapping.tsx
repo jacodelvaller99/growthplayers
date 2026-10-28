@@ -241,7 +241,7 @@ export default function TappingScreen() {
       <KeyboardAvoidingView
         style={sc.root}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={insets.top}>
+        keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
         <ScrollView
           style={sc.root}
           contentContainerStyle={contentStyle}
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   compareCol: { alignItems: 'center' },
-  compareEyebrow: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
+  compareEyebrow: { fontFamily: Fonts.mono, color: palette.ash, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
   compareNum: { fontFamily: Fonts.display, fontSize: 34, fontWeight: '800', marginTop: 6 },
 
   resultBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },

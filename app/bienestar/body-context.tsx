@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   metricLabel: {
     ...typography.mono,
     color: palette.ash,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   frameText: {
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   disclaimer: {
     ...typography.mono,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
   },
   emptyText: {

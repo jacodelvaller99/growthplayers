@@ -65,5 +65,5 @@ const s = StyleSheet.create({
   name:  { ...typography.body, color: palette.ivory, fontSize: 12, flexShrink: 0 },
   routes:{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end' },
   routeChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radii.sm, backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.charcoal },
-  routeText: { ...typography.mono, color: palette.smoke, fontSize: 9, letterSpacing: 0.5 },
+  routeText: { ...typography.mono, color: palette.smoke, letterSpacing: 0.5 },
 });

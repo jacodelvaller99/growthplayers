@@ -286,8 +286,8 @@ const styles = StyleSheet.create({
   cardTitle: { ...typography.section, color: palette.ivory, fontSize: 14, letterSpacing: 2 },
   cardTags: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   tag: { borderWidth: 1, borderColor: palette.line, borderRadius: radii.sm, paddingHorizontal: 6, paddingVertical: 2 },
-  tagText: { ...typography.label, color: palette.smoke, fontSize: 8, letterSpacing: 1.5 },
-  duration: { ...typography.mono, color: palette.smoke, fontSize: 11 },
+  tagText: { ...typography.label, color: palette.smoke, letterSpacing: 1.5 },
+  duration: { ...typography.mono, color: palette.smoke },
   cardDesc: { ...typography.body, color: palette.ash, fontSize: 13 },
 });
 

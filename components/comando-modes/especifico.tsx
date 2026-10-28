@@ -60,7 +60,7 @@ const s = StyleSheet.create({
   container: { gap: spacing.lg },
   eyebrow: {
     fontFamily: Fonts.display,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2.4,
     color: palette.goldText,
@@ -83,7 +83,7 @@ const s = StyleSheet.create({
   sectionLabel: {
     ...typography.label,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.6,
     marginBottom: spacing.xs,
   },

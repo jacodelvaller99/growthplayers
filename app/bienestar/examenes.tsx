@@ -447,6 +447,6 @@ const s = StyleSheet.create({
     paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.line,
   },
   examName: { ...typography.section, color: palette.ivory, fontSize: 12, letterSpacing: 0.3 },
-  examMeta: { ...typography.caption, color: palette.smoke, fontSize: 10, marginTop: 1 },
+  examMeta: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 });

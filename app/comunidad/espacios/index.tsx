@@ -130,10 +130,10 @@ const s = StyleSheet.create({
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, flex: 1 },
   createBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: 8, minHeight: 44 },
-  createBtnText: { ...typography.label, color: palette.ink, fontSize: 9, letterSpacing: 1 },
+  createBtnText: { ...typography.label, color: palette.ink, letterSpacing: 1 },
   intro: { ...typography.caption, color: palette.smoke, paddingHorizontal: spacing.lg, marginBottom: spacing.md, fontSize: 12 },
   list: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   rowWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   joinBtn: { borderWidth: 1, borderColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center' },
-  joinBtnText: { ...typography.label, color: palette.goldText, fontSize: 9, letterSpacing: 1 },
+  joinBtnText: { ...typography.label, color: palette.goldText, letterSpacing: 1 },
 });

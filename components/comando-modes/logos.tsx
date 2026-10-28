@@ -85,7 +85,7 @@ const s = StyleSheet.create({
   },
   label: {
     fontFamily: Fonts.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.6,
     color: palette.ash,
   },

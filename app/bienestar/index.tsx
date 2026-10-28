@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.charcoal,
   },
   dotActive: { backgroundColor: palette.gold },
-  dotLabel: { ...typography.label, color: palette.smoke, fontSize: 8, letterSpacing: 0.4 },
+  dotLabel: { ...typography.label, color: palette.smoke, letterSpacing: 0.4 },
 
   // Quick-stats card — sessions headline + week dots (design)
   statsCard: {
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   statsHeadline: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   statsNumber: { fontFamily: Fonts.display, color: palette.goldText, fontSize: 26, letterSpacing: 0.5 },
   statsUnit: { ...typography.mono, color: palette.ash },
-  statsMeta: { ...typography.mono, color: palette.smoke, fontSize: 10, letterSpacing: 1 },
+  statsMeta: { ...typography.mono, color: palette.smoke, letterSpacing: 1 },
 
   // Desktop stats row (kept for desktop branch)
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
   gridLabel: {
     ...typography.label,
     color: palette.ash,
-    fontSize: 9.5,
+    fontSize: 11,
     letterSpacing: 1.2,
     textAlign: 'center',
   },
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
   gridSub: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 9,
+    fontSize: 11,
     lineHeight: 13,
     textAlign: 'center',
   },
@@ -791,13 +791,13 @@ const desktopStyles = StyleSheet.create({
   gridLabel: {
     ...typography.label,
     color: palette.ivory,
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'center',
   },
   gridSub: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'center',
   },
 });
