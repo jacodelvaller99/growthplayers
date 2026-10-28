@@ -57,7 +57,9 @@ import { getTopConfrontationsForMentor } from '@/lib/confrontation';
 import { buildMentorMemoryContext } from '@/lib/memory';
 import { makeMinimalContext, summarizeConversation, updateProfileFromSummary } from '@/lib/memorySummarizer';
 import { suggestTasksFromCommitments } from '@/lib/mentorExecution';
-import { db2, intel } from '@/lib/supabase';
+import { db, intel } from '@/lib/supabase';
+import { groupChatDays, localDay, type ChatDay } from '@/lib/chatDays';
+import { logSilentError } from '@/lib/observability';
 import { computeStreak } from '@/lib/utils';
 import { useWearableConnections, useWearableDaily } from '@/lib/wearables';
 import type { CheckIn, MentorMessage } from '@/types/lifeflow';
@@ -346,7 +348,11 @@ function MentorScreenInner() {
 
   // Threads state
   const [showThreads, setShowThreads] = useState(false);
-  const [threads, setThreads] = useState<Array<{ id: string; title: string; created_at: string }>>([]);
+  const [threads, setThreads] = useState<ChatDay[]>([]);
+  // Salto a un día del historial: carga hacia atrás hasta ese día y desplaza ahí.
+  const [jumpDay, setJumpDay] = useState<string | null>(null);
+  const jumpingRef = useRef(false); // suprime el auto-scroll al final mientras se salta
+  const threadYRef = useRef(0);
   // Sheet gesto-driven (audit "Fluidez Polaris" §Fase 4) — la animación de
   // apertura/cierre la maneja el hook, el <Modal> solo controla el montaje.
   const { pan: threadsPan, sheetStyle: threadsSheetStyle, open: openThreadsSheet, close: closeThreadsSheet } =
@@ -358,13 +364,39 @@ function MentorScreenInner() {
   const loadThreads = async () => {
     if (!userId) return;
     try {
-      const { data } = await db2.mentorThreads()
-        .select('id, title, created_at')
+      // ponytail: últimos 1000 mensajes; más atrás no aparece en la lista (paginar si hace falta).
+      const { data } = await db.messages()
+        .select('role, content, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(20);
-      if (data) setThreads(data as typeof threads);
-    } catch { /* tabla puede no existir */ }
+        .limit(1000);
+      if (data) setThreads(groupChatDays(data as { role: string; content: string; created_at: string }[]));
+    } catch (e) { logSilentError('mentor.loadChatDays', e); }
+  };
+
+  const jumpToDay = async (day: string) => {
+    closeThreadsSheet();
+    if (!userId) return;
+    jumpingRef.current = true;
+    try {
+      // Cuántos mensajes hay desde el inicio de ese día (local) hasta hoy.
+      const [y, m, d] = day.split('-').map(Number);
+      const { count } = await db.messages()
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', new Date(y, m - 1, d).toISOString());
+      let loaded = state.mentorMessages.length;
+      let more = hasMoreMessages;
+      while (more && loaded < (count ?? 0)) {
+        more = await loadMoreMentorMessages(loaded);
+        loaded += 50;
+      }
+      setHasMoreMessages(more);
+      setJumpDay(day);
+    } catch (e) {
+      jumpingRef.current = false;
+      logSilentError('mentor.jumpToDay', e);
+    }
   };
 
   const scrollRef = useRef<ScrollView>(null);
@@ -479,6 +511,7 @@ function MentorScreenInner() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     analytics.chatMessage(clean.length);
     setInput('');
+    jumpingRef.current = false; // al escribir, el chat vuelve a seguir el final
 
     const userMsg: MentorMessage = {
       id:        `u-${Date.now()}`,
@@ -725,7 +758,7 @@ function MentorScreenInner() {
         bounces
         overScrollMode="never"
         keyboardShouldPersistTaps="handled"
-        onContentSizeChange={() => scrollToBottom(false)}>
+        onContentSizeChange={() => { if (!jumpingRef.current) scrollToBottom(false); }}>
         <AppHeader
           title="MENTOR POLARIS"
           right={
@@ -895,12 +928,28 @@ function MentorScreenInner() {
                 )}
               </Pressable>
             )}
-            <View style={styles.thread}>
-              {displayMessages.map((message) => (
-                <ChatBubble key={message.id} role={message.role}>
-                  {message.text}
-                </ChatBubble>
-              ))}
+            <View style={styles.thread} onLayout={(e) => { threadYRef.current = e.nativeEvent.layout.y; }}>
+              {displayMessages.map((message, i) => {
+                const bubble = (
+                  <ChatBubble key={message.id} role={message.role}>
+                    {message.text}
+                  </ChatBubble>
+                );
+                // Ancla del salto: primer mensaje del día elegido en el historial.
+                const isAnchor = jumpDay !== null && localDay(message.createdAt) === jumpDay
+                  && (i === 0 || localDay(displayMessages[i - 1].createdAt) !== jumpDay);
+                if (!isAnchor) return bubble;
+                return (
+                  <View
+                    key={message.id}
+                    onLayout={(e) => {
+                      scrollRef.current?.scrollTo({ y: Math.max(0, threadYRef.current + e.nativeEvent.layout.y - 16), animated: true });
+                      setJumpDay(null);
+                    }}>
+                    {bubble}
+                  </View>
+                );
+              })}
               {isStreaming && <TypingBubble text={streamingText} />}
             </View>
           </>
@@ -943,28 +992,35 @@ function MentorScreenInner() {
                 <EmptyState
                   icon="chat-bubble-outline"
                   title="Sin conversaciones guardadas"
-                  body="Cuando hables con Norman, tus conversaciones quedarán aquí para retomarlas cuando quieras."
+                  body="Cuando hables con Norman, cada día de conversación quedará aquí para volver a él."
                 />
               ) : (
-                threads.map(t => (
+                threads.map(t => {
+                  const [y, m, d] = t.day.split('-').map(Number);
+                  const dateLabel = new Date(y, m - 1, d).toLocaleDateString('es-CO', {
+                    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+                  });
+                  return (
                   <Pressable
-                    key={t.id}
-                    onPress={closeThreadsSheet}
+                    key={t.day}
+                    onPress={() => jumpToDay(t.day)}
                     accessibilityRole="button"
-                    accessibilityLabel={t.title || 'Conversación sin título'}
+                    accessibilityLabel={`${dateLabel}: ${t.title}`}
+                    accessibilityHint="Abre la conversación de ese día"
                     style={({ pressed }) => [styles.threadRow, pressed && styles.threadRowPressed]}>
                     <MaterialIcons name="chat-bubble-outline" size={16} color={palette.goldText} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.threadTitle} numberOfLines={1}>
-                        {t.title || 'Conversación sin título'}
+                        {t.title}
                       </Text>
                       <Text style={styles.threadDate}>
-                        {new Date(t.created_at).toLocaleDateString('es-CO')}
+                        {dateLabel} · {t.count} {t.count === 1 ? 'mensaje' : 'mensajes'}
                       </Text>
                     </View>
                     <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
                   </Pressable>
-                ))
+                  );
+                })
               )}
             </ScrollView>
           </Animated.View>
