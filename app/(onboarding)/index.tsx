@@ -32,7 +32,7 @@ import { AI_PROVIDERS_LABEL, aiConsentEntry, markAiConsentLocal } from '@/lib/ai
 import { logSilentError } from '@/lib/observability';
 import { purchasesAvailable } from '@/lib/subscription';
 import { ENV } from '@/app/config/env';
-import { intel } from '@/lib/supabase';
+import { intel, supabase } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
 // 0 bienvenida · 1 acuerdos legales · 2 datos y Norman IA · 3 identidad ·
@@ -204,6 +204,27 @@ export default function OnboardingScreen() {
 
   // Chips de ejemplo para arrancar el obstáculo sin enfrentar un textarea en blanco.
   const obstacleChip = (text: string) => () => setPainPoint(text);
+
+  // El registro valida el código y lo deja en user_metadata.access_code. Antes
+  // nadie lo leía: el paso 7 lo volvía a pedir y "Iniciar sin código" dejaba
+  // a un cliente que pagó en Free. Se rellena y se canjea solo al llegar.
+  const signupCode = useRef<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const c = data.user?.user_metadata?.access_code;
+      if (typeof c === 'string' && c.trim()) {
+        signupCode.current = c.trim();
+        setAccessCode(c.trim());
+      }
+    }).catch((e) => logSilentError('onboarding.readSignupCode', e));
+  }, []);
+  useEffect(() => {
+    if (step === 6 && signupCode.current && accessCode === signupCode.current && codeStatus === 'idle') {
+      signupCode.current = null; // un solo intento automático
+      handleApplyCode();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, accessCode, codeStatus]);
 
   const handleApplyCode = async () => {
     if (!accessCode.trim()) return;
@@ -644,13 +665,13 @@ export default function OnboardingScreen() {
             disabled={finishing}
             accessibilityRole="button"
             accessibilityLabel="Iniciar sin código"
-            accessibilityHint={`Entras con el plan Operador; puedes canjear el código después ${CODE_LATER_WHERE}`}
+            accessibilityHint={`Entras con el plan Free; puedes canjear el código después ${CODE_LATER_WHERE}`}
             style={styles.skipBtn}>
             <Text style={styles.skipText}>Iniciar sin código →</Text>
           </Pressable>
           <Text style={styles.skipNote}>
-            Sin código entras con el plan Operador: Norman IA con mensajes limitados y parte de los
-            módulos cerrados. Puedes canjear tu código después {CODE_LATER_WHERE}.
+            Sin código entras con el plan Free: check-in diario, Norman IA y el Módulo 1; el resto
+            de módulos queda cerrado. Puedes canjear tu código después {CODE_LATER_WHERE}.
           </Text>
           {finishError ? (
             <Text

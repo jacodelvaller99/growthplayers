@@ -126,8 +126,9 @@ export default function AuthScreen() {
   };
 
   const handleRegister = async () => {
-    if (!email.trim() || !password.trim() || !accessCode.trim()) {
-      setError('Completa todos los campos, incluyendo el código de acceso.');
+    // El código es opcional: sin él se entra en plan Free (lo que anuncia /pricing).
+    if (!email.trim() || !password.trim()) {
+      setError('Ingresa tu email y una contraseña.');
       return;
     }
     if (password.length < 6) {
@@ -147,9 +148,10 @@ export default function AuthScreen() {
       // `uses_count`. El consumo Y la activación ocurren juntos, después, con
       // `auth.uid()`.
       const code = accessCode.trim().toUpperCase();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: status, error: rpcErr } = await (supabase as any)
-        .rpc('check_access_code', { p_code: code });
+      const { data: status, error: rpcErr } = code
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? await (supabase as any).rpc('check_access_code', { p_code: code })
+        : { data: 'ok', error: null };
 
       if (rpcErr) {
         setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
@@ -172,7 +174,7 @@ export default function AuthScreen() {
       const { error: err } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
-        options: { data: { access_code: code } },
+        options: code ? { data: { access_code: code } } : undefined,
       });
       if (err) {
         setError(err.message);
@@ -318,7 +320,7 @@ export default function AuthScreen() {
           )}
           {mode === 'register' && (
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO</Text>
+              <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO (OPCIONAL)</Text>
               <PremiumInput
                 value={accessCode}
                 onChangeText={(t) => setAccessCode(t.toUpperCase())}
@@ -331,7 +333,7 @@ export default function AuthScreen() {
                 onSubmitEditing={submit}
               />
               <Text style={styles.codeHint}>
-                Tu coach te entregó este código al inscribirte.
+                Tu coach te entregó este código al inscribirte. Sin código entras con el plan Free.
               </Text>
             </View>
           )}

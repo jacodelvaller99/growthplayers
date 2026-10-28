@@ -26,6 +26,7 @@ jest.mock('@/hooks/use-lifeflow', () => ({
 jest.mock('@/lib/analytics', () => ({ analytics: { setConsent: jest.fn() } }));
 jest.mock('@/lib/supabase', () => ({
   intel: { profiles: () => ({ update: () => ({ eq: jest.fn().mockResolvedValue({}) }) }) },
+  supabase: { auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) } },
 }));
 jest.mock('@/lib/admin/actions', () => ({ redeemAccessCode: jest.fn() }));
 jest.mock('@/lib/admin/types', () => ({ PRODUCT_LABELS: {} }));

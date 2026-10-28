@@ -60,7 +60,9 @@ function PlanCard({
   const accentColor = info.color;                                   // fills (dot/badge/borde)
   // El tier premium usa #FFC804 (gold brillante). Como TEXTO/ícono sobre la tarjeta
   // (fondo graphite theme-aware) es ilegible en tema claro → goldText (theme-aware).
-  const accentText  = accentColor === palette.gold ? palette.goldText : accentColor;
+  // Por clave del tier, no por color: en web palette.gold es var(--c-gold) y nunca
+  // iguala al hex literal de SUBSCRIPTION_TIERS.
+  const accentText  = tier === 'premium' ? palette.goldText : accentColor;
 
   return (
     <PremiumCard
@@ -104,7 +106,8 @@ function PlanCard({
           onPress={onPressCta}
           accessibilityRole="button"
           accessibilityLabel={ctaLabel}>
-          <Text style={[s.planCtaText, { color: accentColor === palette.gold ? palette.ink : palette.ivory }]}>
+          {/* Todos los rellenos de tier son claros: ink cumple 4.5:1 en todos. */}
+          <Text style={[s.planCtaText, { color: palette.ink }]}>
             {ctaLabel}
           </Text>
         </PressableScale>
