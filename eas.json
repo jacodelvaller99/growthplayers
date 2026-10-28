@@ -1,10 +1,15 @@
 {
-  "cli": { "version": ">= 16.0.0" },
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "android": { "buildType": "apk" }
+      "android": {
+        "buildType": "apk"
+      }
     },
     "preview": {
       "distribution": "internal",
@@ -19,18 +24,29 @@
     },
     "ios-simulator": {
       "extends": "preview",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      }
     },
     "production": {
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
-      "ios": { "distribution": "store" }
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "distribution": "store"
+      }
     }
   },
   "submit": {
     "production": {
-      "android": { "serviceAccountKeyPath": "./google-service-account.json" },
-      "ios": { "appleId": "ncapuozzo@polarisgrowthinstitute.com" }
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json"
+      },
+      "ios": {
+        "appleId": "ncapuozzo@polarisgrowthinstitute.com",
+        "ascAppId": "6816809399"
+      }
     }
   }
 }

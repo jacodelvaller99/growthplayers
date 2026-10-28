@@ -81,3 +81,4 @@ debug.log
 # Estado local de ruflo (política activa, stats). Es runtime de la herramienta,
 # no configuración del proyecto: cambia solo y por máquina.
 .claude-flow/
+.secrets/
