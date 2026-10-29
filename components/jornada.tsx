@@ -134,11 +134,11 @@ export function JornadaTracker({ jornada, turno, onPressCta, arcPhrase, flat }: 
     );
   }
 
+  // El Mando tenía el verbo como texto oro de 13pt con una flecha: la acción
+  // más importante del día era lo que menos parecía un botón. Ahora es el
+  // único PrimaryButton de la pantalla (lleva su propio háptico).
   return (
-    <GoldAccentCard style={chrome}
-      onPress={handlePress}
-      accessibilityRole="button"
-      accessibilityLabel={`${turno.headline}. ${turno.why}`}>
+    <GoldAccentCard style={chrome}>
       <Text style={s.mandoLabel}>TU JORNADA</Text>
       {jornada && <StepsRow jornada={jornada} />}
       <Text style={s.mandoText}>{turno.headline}</Text>
@@ -146,8 +146,7 @@ export function JornadaTracker({ jornada, turno, onPressCta, arcPhrase, flat }: 
       {turno.delta && <Text style={s.mandoDelta}>{turno.delta}</Text>}
       <Text style={s.mandoCaption}>{turno.why}</Text>
       <View style={s.mandoCta}>
-        <Text style={s.mandoCtaText}>{turno.verb}</Text>
-        <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
+        <PrimaryButton label={turno.verb} icon="arrow-forward" onPress={onPressCta} />
       </View>
     </GoldAccentCard>
   );
@@ -217,17 +216,7 @@ const s = StyleSheet.create({
     marginTop: spacing.sm,
   },
   mandoCta: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
     marginTop: spacing.md,
-  },
-  mandoCtaText: {
-    color: palette.goldText,
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.5,
   },
 
   stepsRow: {
