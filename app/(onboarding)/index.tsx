@@ -29,15 +29,19 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { AI_PROVIDERS_LABEL, aiConsentEntry, markAiConsentLocal } from '@/lib/aiConsent';
+import { ACTS } from '@/lib/narrativeLogic';
 import { logSilentError } from '@/lib/observability';
 import { purchasesAvailable } from '@/lib/subscription';
 import { ENV } from '@/app/config/env';
 import { intel, supabase } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
-// 0 bienvenida · 1 acuerdos legales · 2 datos y Norman IA · 3 identidad ·
-// 4 Mi Norte · 5 obstáculo · 6 código. El consentimiento se partió en dos
-// pasos (legal / datos) para que nadie firme seis casillas en una pantalla.
+// 0 bienvenida · 1 nombre · 2 Mi Norte · 3 obstáculo · 4 acuerdos legales ·
+// 5 datos y Norman IA · 6 código.
+// Valor antes que papeleo: antes abría con DOS pantallas de casillas en frío.
+// Ahora lo que el usuario escribe en 1-3 vive solo en el estado local; nada
+// se guarda ni se envía a IA hasta aceptar los acuerdos (4-5) — se persiste
+// en `acceptConsentAndContinue` y `finish`, ambos después del gate.
 const TOTAL_STEPS = 7;
 
 // iOS v1 sin compras (regla 3.1.1): la pantalla de canje se llama "Tu acceso"
@@ -45,25 +49,14 @@ const TOTAL_STEPS = 7;
 const CODE_LATER_WHERE =
   Platform.OS === 'ios' && !purchasesAvailable(Platform.OS, ENV) ? 'desde Progreso' : 'en Planes';
 
-// Intro de valor — vive ahora en la bienvenida, junto al manifiesto.
-// COPY AFINABLE POR EL DUEÑO: 3 viñetas sobrias, voz Polaris, sin claims/métricas.
-const VALUE_BULLETS: { icon: 'military-tech' | 'psychology' | 'insights'; title: string; body: string }[] = [
-  {
-    icon: 'military-tech',
-    title: 'Un protocolo. 4 cuerpos. 90 días.',
-    body: 'Físico, mental, emocional y energético en un solo sistema.',
-  },
-  {
-    icon: 'psychology',
-    title: 'Norman te acompaña con tus datos, no con frases.',
-    body: 'Tu mentor lee tu biometría y tu historia antes de hablar.',
-  },
-  {
-    icon: 'insights',
-    title: 'Persigues el estado; el resultado es consecuencia.',
-    body: 'El sistema interno se entrena; el rendimiento llega solo.',
-  },
-];
+// La bienvenida cuenta la historia antes de pedir nada: los tres actos (los
+// mismos de `ACTS`, que luego pinta el mapa de Comando) y el día a día.
+// COPY AFINABLE POR EL DUEÑO.
+const ACT_LINES: Record<1 | 2 | 3, string> = {
+  1: 'Ves cómo entras cada día.',
+  2: 'Lo que haces empieza a sostenerse.',
+  3: 'Ya no lo haces: lo eres.',
+};
 
 // Consent gate — Términos, Privacidad y Descargo de Salud (compliance de lanzamiento)
 type ConsentKey = 'terms' | 'privacy' | 'health' | 'confrontation' | 'softwareLearning' | 'aiSharing';
@@ -191,7 +184,7 @@ export default function OnboardingScreen() {
         logSilentError('onboarding.persistConsents', e);
       }
     }
-    setStep(3); // → identidad
+    setStep(6); // → membresía
   };
 
   // El obstáculo ya NO se disfraza de propósito. Antes se copiaba a
@@ -200,7 +193,7 @@ export default function OnboardingScreen() {
   // Ahora painPoint viaja por derecho propio en finish() y siembra la
   // historia de origen (transformation_goal + primera entrada de la línea
   // de tiempo). Un dolor no es un propósito; no se mezclan.
-  const goFromObstacleToCode = () => setStep(6);
+  const goFromObstacleToAgreements = () => setStep(4);
 
   // Chips de ejemplo para arrancar el obstáculo sin enfrentar un textarea en blanco.
   const obstacleChip = (text: string) => () => setPainPoint(text);
@@ -316,32 +309,27 @@ export default function OnboardingScreen() {
         entering={reducedMotion ? undefined : FadeInRight.duration(220)}
         exiting={reducedMotion ? undefined : FadeOutLeft.duration(160)}>
       {/* ─────────────────────────────────────────── STEP 0 — BIENVENIDA ── */}
-      {/* Manifiesto + qué es Polaris. Sin nada legal: el "no es para todos"
-          es una invitación, no puede ir pegado a una firma. */}
+      {/* Qué es Polaris en un vistazo: la historia de 90 días en tres actos.
+          Sin nada legal todavía — primero el porqué, después la firma. */}
       {step === 0 && (
         <View style={styles.welcomeWrap}>
           <View style={styles.markWrap}>
-            <PolarisMark size={72} />
+            <PolarisMark size={56} />
           </View>
-          <Text style={styles.eyebrow}>POLARIS GROWTH INSTITUTE</Text>
-
-          <View style={styles.goldAccent} />
-
-          <Text style={styles.welcomeTitle}>TU SALA{'\n'}DE MANDO{'\n'}PERSONAL.</Text>
+          <Text style={styles.welcomeTitle}>90 DÍAS.{'\n'}TRES ACTOS.</Text>
           <Text style={styles.welcomeBody}>
-            Esta app no es para todos. Es para quien ya sabe que la distancia entre donde está y
-            donde quiere estar no es de estrategia — es de sistema interno.
+            Busca el estado, no el resultado. Cada día: una lectura de cómo entras y un paso.
           </Text>
 
           <View style={styles.introList}>
-            {VALUE_BULLETS.map(({ icon, title, body }) => (
-              <View key={title} style={styles.introRow}>
-                <View style={styles.introIcon}>
-                  <MaterialIcons name={icon} size={18} color={palette.goldText} />
-                </View>
+            {ACTS.map((a) => (
+              <View key={a.n} style={styles.introRow}>
+                <Text style={styles.actNum}>{['I', 'II', 'III'][a.n - 1]}</Text>
                 <View style={styles.introCopy}>
-                  <Text style={styles.introBulletTitle}>{title}</Text>
-                  <Text style={styles.introBulletBody}>{body}</Text>
+                  <Text style={styles.introBulletTitle}>{a.name}</Text>
+                  <Text style={styles.introBulletBody}>
+                    {`Días ${a.from}–${a.to} · ${ACT_LINES[a.n]}`}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -351,15 +339,128 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      {/* ──────────────────────────────────── STEP 1 — ACUERDOS LEGALES ── */}
+      {/* ──────────────────────────────────────────────── STEP 1 — NOMBRE ── */}
       {step === 1 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="ACUERDOS" />
-          <Text style={styles.stepTitle}>ANTES DE{'\n'}ENTRAR.</Text>
+          <Text style={styles.stepTitle}>¿CÓMO TE{'\n'}LLAMAS?</Text>
+          <Text style={styles.stepBody}>Así te habla Norman, tu mentor.</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>NOMBRE</Text>
+            <PremiumInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Tu nombre"
+              accessibilityLabel="Tu nombre"
+              returnKeyType="next"
+              autoCapitalize="words"
+            />
+          </View>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>A QUÉ TE DEDICAS · OPCIONAL</Text>
+            <PremiumInput
+              value={role}
+              onChangeText={setRole}
+              placeholder="Fundador, CEO, médica…"
+              accessibilityLabel="A qué te dedicas, opcional"
+              returnKeyType="done"
+              autoCapitalize="words"
+            />
+          </View>
+          <View style={styles.actions}>
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(0)} />
+            <PrimaryButton
+              label="CONTINUAR"
+              icon="arrow-forward"
+              disabled={!name.trim()}
+              onPress={() => setStep(2)}
+            />
+          </View>
+        </PremiumCard>
+      )}
+
+      {/* ──────────────────────────────────────────── STEP 2 — MI NORTE ── */}
+      {/* Solo el propósito. Identidad y recordatorio se editan luego en la
+          pestaña Norte: aquí eran dos campos opcionales más en la misma
+          pantalla. */}
+      {step === 2 && (
+        <PremiumCard style={styles.formCard}>
+          <Text style={styles.stepTitle}>TU NORTE.</Text>
           <Text style={styles.stepBody}>
-            Tres documentos, cada uno resumido en una línea. El texto completo está a un toque y
-            puedes volver a leerlo cuando quieras.
+            ¿Qué tiene que haber pasado en 90 días para que esto haya valido la pena?
           </Text>
+          <PremiumInput
+            value={north.purpose}
+            onChangeText={(purpose) => setNorth({ ...north, purpose })}
+            placeholder='Ej.: "Dormir 7 h, delegar la operación y entrenar 3 veces por semana."'
+            multiline
+            style={styles.textArea}
+            accessibilityLabel="Tu propósito para los 90 días"
+          />
+          <View style={styles.actions}>
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(1)} />
+            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(3)} />
+          </View>
+          <Pressable
+            onPress={() => setStep(3)}
+            accessibilityRole="button"
+            accessibilityLabel="Definir mi Norte después"
+            style={styles.skipBtn}>
+            <Text style={styles.skipText}>Lo defino después →</Text>
+          </Pressable>
+        </PremiumCard>
+      )}
+
+      {/* ──────────────────────────────────────────── STEP 3 — OBSTÁCULO ── */}
+      {step === 3 && (
+        <PremiumCard style={styles.formCard}>
+          <Text style={styles.stepTitle}>¿QUÉ SE{'\n'}INTERPONE?</Text>
+          <Text style={styles.stepBody}>Opcional. Una línea basta.</Text>
+          <View style={styles.chipRow}>
+            {[
+              'Trabajo demasiado y no delego',
+              'Mi energía no aguanta el día',
+              'Avanzo sin dirección clara',
+              'Empiezo y no sostengo',
+            ].map((chip) => (
+              <Pressable
+                key={chip}
+                onPress={obstacleChip(chip)}
+                accessibilityRole="button"
+                accessibilityLabel={`Usar ejemplo: ${chip}`}
+                style={({ pressed }) => [
+                  styles.chip,
+                  painPoint === chip && styles.chipActive,
+                  pressed && { opacity: 0.7 },
+                ]}>
+                <Text style={[styles.chipText, painPoint === chip && styles.chipTextActive]}>
+                  {chip}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <PremiumInput
+            value={painPoint}
+            onChangeText={setPainPoint}
+            placeholder="O escríbelo con tus palabras."
+            multiline
+            style={styles.textArea}
+            accessibilityLabel="Lo que se interpone, opcional"
+          />
+          <View style={styles.actions}>
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(2)} />
+            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={goFromObstacleToAgreements} />
+          </View>
+        </PremiumCard>
+      )}
+
+      {/* ──────────────────────────────────── STEP 4 — ACUERDOS LEGALES ── */}
+      {/* Los tres documentos siguen siendo obligatorios y uno por uno, con
+          resumen y enlace al texto completo. Solo cambió el orden y el copy. */}
+      {step === 4 && (
+        <PremiumCard style={styles.formCard}>
+          <StatusPill label="ACUERDOS · 1 DE 2" />
+          <Text style={styles.stepTitle}>ANTES DE{'\n'}EMPEZAR.</Text>
+          <Text style={styles.stepBody}>Tres acuerdos. Cada uno, en una línea.</Text>
           <GoldDivider />
           {LEGAL_ITEMS.map(({ key, label, summary, link, route }) => (
             <View key={key} style={styles.legalItem}>
@@ -379,25 +480,24 @@ export default function OnboardingScreen() {
             </View>
           ))}
           <View style={styles.actions}>
-            <SecondaryButton label="ATRÁS" onPress={() => setStep(0)} />
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(3)} />
             <PrimaryButton
               label="CONTINUAR"
               icon="arrow-forward"
-              onPress={() => setStep(2)}
+              onPress={() => setStep(5)}
               disabled={!legalConsented}
             />
           </View>
         </PremiumCard>
       )}
 
-      {/* ─────────────────────────────────── STEP 2 — DATOS Y NORMAN IA ── */}
-      {step === 2 && (
+      {/* ─────────────────────────────────── STEP 5 — DATOS Y NORMAN IA ── */}
+      {step === 5 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="TUS DATOS" />
-          <Text style={styles.stepTitle}>CÓMO TE{'\n'}ACOMPAÑA{'\n'}NORMAN IA.</Text>
+          <StatusPill label="ACUERDOS · 2 DE 2" />
+          <Text style={styles.stepTitle}>NORMAN{'\n'}Y TUS DATOS.</Text>
           <Text style={styles.stepBody}>
-            Norman IA lee lo que registras para acompañarte. Estos tres permisos son los que lo
-            hacen funcionar; el último es opcional.
+            Norman es una IA. Sin estos tres permisos no puede acompañarte.
           </Text>
           <GoldDivider />
           {DATA_ITEMS.map(({ key, label }) => (
@@ -427,9 +527,9 @@ export default function OnboardingScreen() {
           </View>
 
           <View style={styles.actions}>
-            <SecondaryButton label="ATRÁS" onPress={() => setStep(1)} />
+            <SecondaryButton label="ATRÁS" onPress={() => setStep(4)} />
             <PrimaryButton
-              label="CONTINUAR"
+              label="ACEPTAR"
               icon="arrow-forward"
               onPress={acceptConsentAndContinue}
               disabled={!allConsented}
@@ -438,184 +538,13 @@ export default function OnboardingScreen() {
         </PremiumCard>
       )}
 
-      {/* ─────────────────────────────────────────── STEP 3 — IDENTIDAD ── */}
-      {step === 3 && (
-        <PremiumCard style={styles.formCard}>
-          <StatusPill label="IDENTIDAD" />
-          <Text style={styles.stepSubtitle}>Cuéntame quién eres</Text>
-          <Text style={styles.stepTitle}>OPERADOR{'\n'}SOBERANO.</Text>
-          <Text style={styles.stepBody}>
-            Define como opera el sistema. Tu nombre y rol aparecen en el perfil y contextualizan al mentor.
-          </Text>
-          <GoldDivider />
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>NOMBRE DEL OPERADOR</Text>
-            <PremiumInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Tu nombre completo..."
-              accessibilityLabel="Nombre del operador"
-              returnKeyType="next"
-              autoCapitalize="words"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>ROL / IDENTIDAD</Text>
-            <PremiumInput
-              value={role}
-              onChangeText={setRole}
-              placeholder="Empresario, CEO, Fundador..."
-              accessibilityLabel="Rol o identidad"
-              returnKeyType="done"
-              autoCapitalize="words"
-            />
-          </View>
-          <View style={styles.actions}>
-            <SecondaryButton label="ATRÁS" onPress={() => setStep(2)} />
-            <PrimaryButton
-              label="CONTINUAR"
-              icon="arrow-forward"
-              disabled={!name.trim()}
-              onPress={() => setStep(4)}
-            />
-          </View>
-        </PremiumCard>
-      )}
-
-      {/* ──────────────────────────────────────────── STEP 4 — MI NORTE ── */}
-      {step === 4 && (
-        <PremiumCard style={styles.formCard}>
-          <StatusPill label="MI NORTE" tone="gold" dot />
-          <Text style={styles.stepSubtitle}>Tu propósito para los próximos 90 días</Text>
-          <Text style={styles.stepTitle}>ANCLA TU{'\n'}NORTE.</Text>
-          <Text style={styles.stepBody}>
-            Hoy basta con el propósito, en una frase. Las otras dos son opcionales y todo se edita
-            después en Mi Norte; Norman IA las usa en cada sesión.
-          </Text>
-          <GoldDivider />
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
-            <Text style={styles.fieldHint}>
-              ¿Qué tiene que haber pasado en estos 90 días para que Polaris haya valido la pena?
-            </Text>
-            <PremiumInput
-              value={north.purpose}
-              onChangeText={(purpose) => setNorth({ ...north, purpose })}
-              placeholder='Ej.: "Dormir 7 h, delegar la operación diaria y volver a entrenar 3 veces por semana."'
-              multiline
-              style={styles.textArea}
-              accessibilityLabel="Propósito principal"
-              accessibilityHint="Qué tiene que haber pasado en estos 90 días"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD · OPCIONAL</Text>
-            <Text style={styles.fieldHint}>Cómo quieres operar mientras llegas ahí.</Text>
-            <PremiumInput
-              value={north.identity}
-              onChangeText={(identity) => setNorth({ ...north, identity })}
-              placeholder='Ej.: "Decido con calma y protejo mi energía."'
-              multiline
-              style={styles.textArea}
-              accessibilityLabel="Declaración de identidad, opcional"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>RECORDATORIO DIARIO · OPCIONAL</Text>
-            <Text style={styles.fieldHint}>Una línea corta para volver a tu Norte.</Text>
-            <PremiumInput
-              value={north.dailyReminder}
-              onChangeText={(dailyReminder) => setNorth({ ...north, dailyReminder })}
-              placeholder='Ej.: "Primero el estado, después la agenda."'
-              multiline
-              style={styles.textArea}
-              accessibilityLabel="Recordatorio diario, opcional"
-            />
-          </View>
-          <View style={styles.actions}>
-            <SecondaryButton label="ATRÁS" onPress={() => setStep(3)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={() => setStep(5)} />
-          </View>
-          <Pressable
-            onPress={() => setStep(5)}
-            accessibilityRole="button"
-            accessibilityLabel="Completar Mi Norte después"
-            style={styles.skipBtn}>
-            <Text style={styles.skipText}>Lo completo después en Mi Norte →</Text>
-          </Pressable>
-        </PremiumCard>
-      )}
-
-      {/* ──────────────────────────────────────────── STEP 5 — OBSTÁCULO ── */}
-      {step === 5 && (
-        <PremiumCard style={styles.formCard}>
-          <StatusPill label="TU SITUACIÓN" />
-          <Text style={styles.stepSubtitle}>Qué cambia todo — opcional</Text>
-          <Text style={styles.stepTitle}>NOMBRA EL{'\n'}OBSTÁCULO.</Text>
-          <Text style={styles.stepBody}>
-            Opcional, pero útil: una línea sobre lo que se interpone te da a tu mentor contexto desde
-            el primer mensaje. Puedes dejarlo para después.
-          </Text>
-          <GoldDivider />
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>¿QUÉ SE INTERPONE HOY?</Text>
-            <View style={styles.chipRow}>
-              {[
-                'Trabajo demasiado y no delego',
-                'Mi energía no aguanta el día',
-                'Avanzo sin dirección clara',
-                'Empiezo y no sostengo',
-              ].map((chip) => (
-                <Pressable
-                  key={chip}
-                  onPress={obstacleChip(chip)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Usar ejemplo: ${chip}`}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    painPoint === chip && styles.chipActive,
-                    pressed && { opacity: 0.7 },
-                  ]}>
-                  <Text style={[styles.chipText, painPoint === chip && styles.chipTextActive]}>
-                    {chip}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <PremiumInput
-              value={painPoint}
-              onChangeText={setPainPoint}
-              placeholder={"Toca un ejemplo o escribe el tuyo. Cuanto más concreto, mejor te lee el mentor."}
-              multiline
-              style={styles.textArea}
-              accessibilityLabel="Tu mayor obstaculo"
-            />
-          </View>
-          <View style={styles.actions}>
-            <SecondaryButton label="ATRÁS" onPress={() => setStep(4)} />
-            <PrimaryButton label="CONTINUAR" icon="arrow-forward" onPress={goFromObstacleToCode} />
-          </View>
-          <Pressable
-            onPress={goFromObstacleToCode}
-            accessibilityRole="button"
-            accessibilityLabel="Continuar sin definir el obstáculo"
-            style={styles.skipBtn}>
-            <Text style={styles.skipText}>Continuar sin definirlo →</Text>
-          </Pressable>
-        </PremiumCard>
-      )}
-
       {/* ──────────────────────────────── STEP 6 — CÓDIGO DE ACCESO ── */}
       {step === 6 && (
         <PremiumCard style={styles.formCard}>
-          <StatusPill label="MEMBRESÍA" />
-          <Text style={styles.stepSubtitle}>Tu código de acceso, si tienes</Text>
-          <Text style={styles.stepTitle}>ACTIVA TU{'\n'}MEMBRESÍA.</Text>
+          <Text style={styles.stepTitle}>TU{'\n'}ACCESO.</Text>
           <Text style={styles.stepBody}>
-            Tu coach te entregó un código al inscribirte. Ingrésalo aquí para desbloquear el acceso
-            completo al Protocolo Soberano. Si aún no lo tienes, inicia y actívalo después.
+            Si tu coach te dio un código, va aquí. Si ya lo pusiste al registrarte, se aplica solo.
           </Text>
-          <GoldDivider />
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO</Text>
             <View style={styles.codeRow}>
@@ -718,24 +647,13 @@ const styles = StyleSheet.create({
   markWrap: {
     alignItems: 'flex-start',
   },
-  eyebrow: {
-    ...typography.label,
-    color: palette.goldText,
-    letterSpacing: 2,
-  },
-  goldAccent: {
-    width: 40,
-    height: 2,
-    backgroundColor: palette.gold,
-    borderRadius: 1,
-  },
   welcomeTitle: {
     color: palette.ivory,
     fontFamily: Fonts.display,
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: '800',
     letterSpacing: -0.5,
-    lineHeight: 52,
+    lineHeight: 44,
     textTransform: 'uppercase',
   },
   welcomeBody: {
@@ -752,13 +670,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  introIcon: {
-    alignItems: 'center',
-    backgroundColor: palette.goldLight,
-    borderRadius: radii.md,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
+  actNum: {
+    color: palette.goldText,
+    fontFamily: Fonts.display,
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 21,
+    width: 32,
   },
   introCopy: {
     flex: 1,
@@ -852,12 +770,6 @@ const styles = StyleSheet.create({
     lineHeight: 40,
     textTransform: 'uppercase',
   },
-  stepSubtitle: {
-    ...typography.caption,
-    color: palette.goldText,
-    fontSize: 12,
-    marginTop: -spacing.sm,
-  },
   stepBody: {
     ...typography.body,
     color: palette.ash,
@@ -868,12 +780,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     ...typography.label,
     color: palette.ash,
-  },
-  fieldHint: {
-    ...typography.caption,
-    color: palette.smoke,
-    fontSize: 12,
-    lineHeight: 18,
   },
   codeRow: {
     flexDirection: 'row',
