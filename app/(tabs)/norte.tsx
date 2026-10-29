@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +24,6 @@ import { logSilentError } from '@/lib/observability';
 export default function NorteScreen() {
   const sc = useScreen();
   const { isDesktop } = useBreakpoint();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { state, updateNorthStar } = useLifeFlow();
   const [purpose, setPurpose] = useState(state.northStar.purpose);
@@ -143,19 +141,6 @@ export default function NorteScreen() {
                   {identity || 'Define tu identidad'}
                 </Text>
               </GoldAccentCard>
-
-              {isNorteEmpty && (
-                <Pressable
-                  onPress={() => router.push('/(onboarding)' as never)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Configurar tu Norte ahora"
-                  style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}>
-                  <MaterialIcons name="explore" size={20} color={palette.goldText} />
-                  <Text style={styles.emptyCtaText}>
-                    Tu Norte guía cada decisión. Configúralo ahora →
-                  </Text>
-                </Pressable>
-              )}
 
               {state.northStar.dailyReminder ? (
                 <PremiumCard style={styles.reminderCard}>
@@ -285,35 +270,16 @@ export default function NorteScreen() {
       bounces
       overScrollMode="never"
       keyboardShouldPersistTaps="handled">
-      {/* ── Header: back → comando · título · subtítulo ── */}
+      {/* Es una pestaña: sin botón atrás. Vacío no redirige al onboarding —
+          las preguntas están justo debajo. */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.replace('/(tabs)/comando')}
-          accessibilityRole="button"
-          accessibilityLabel="Volver al centro de comando"
-          hitSlop={8}
-          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.65, transform: [{ scale: 0.97 }] }]}>
-          <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
-        </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle}>MI NORTE</Text>
-          <Text style={styles.headerSub}>La dirección maestra que ordena cada decisión.</Text>
+          <Text style={styles.headerSub}>
+            {isNorteEmpty ? 'Empieza por la primera pregunta.' : 'Hacia dónde vas en estos 90 días.'}
+          </Text>
         </View>
       </View>
-
-      {/* ── Empty State CTA ── */}
-      {isNorteEmpty && (
-        <Pressable
-          onPress={() => router.push('/(onboarding)' as never)}
-          accessibilityRole="button"
-          accessibilityLabel="Configurar tu Norte ahora"
-          style={({ pressed }) => [styles.emptyCta, pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] }]}>
-          <MaterialIcons name="explore" size={20} color={palette.goldText} />
-          <Text style={styles.emptyCtaText}>
-            Tu Norte guía cada decisión. Configúralo ahora →
-          </Text>
-        </Pressable>
-      )}
 
       {/* ── Dirección maestra ── */}
       <GoldDivider label="DIRECCIÓN MAESTRA" />
@@ -433,22 +399,11 @@ export default function NorteScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Header (mobile) — back · title · sub
+  // Header (mobile) — title · sub
   header: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     gap: spacing.md,
-  },
-  backBtn: {
-    alignItems: 'center',
-    backgroundColor: palette.graphite,
-    borderColor: palette.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    marginTop: 2,
-    width: 44,
   },
   headerCopy: {
     flex: 1,
@@ -715,24 +670,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 12,
     lineHeight: 16,
-  },
-
-  // Empty state CTA
-  emptyCta: {
-    alignItems: 'center',
-    borderColor: palette.gold,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    backgroundColor: 'rgba(201, 160, 0, 0.08)',
-  },
-  emptyCtaText: {
-    ...typography.body,
-    color: palette.goldText,
-    flex: 1,
-    fontWeight: '600',
   },
 });
