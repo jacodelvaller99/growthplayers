@@ -1,5 +1,6 @@
 import {
   arcForDay,
+  journeyOf,
   coherenceOf,
   deltaSince,
   milestoneCrossed,
@@ -358,5 +359,31 @@ describe('buildHistoria', () => {
     for (const prohibida of ['patológic', 'deficiente', 'anormal', 'guerra', 'batalla', 'arma', 'enemigo']) {
       expect(all).not.toContain(prohibida);
     }
+  });
+});
+
+describe('journeyOf — estás aquí en los 90 días', () => {
+  it('tres actos de 30 días, con fronteras exactas', () => {
+    expect(journeyOf(1).actNumber).toBe(1);
+    expect(journeyOf(30).actNumber).toBe(1);
+    expect(journeyOf(31).actNumber).toBe(2);
+    expect(journeyOf(60).actNumber).toBe(2);
+    expect(journeyOf(61).actNumber).toBe(3);
+    expect(arcForDay(30).actNumber).toBe(1);
+    expect(arcForDay(31).actNumber).toBe(2);
+  });
+
+  it('llena lo recorrido y deja vacío lo futuro', () => {
+    const j = journeyOf(45);
+    expect(j.fill[0]).toBe(1);
+    expect(j.fill[1]).toBeCloseTo(0.5);
+    expect(j.fill[2]).toBe(0);
+    expect(j.week).toBe(7);
+    expect(j.daysToNextAct).toBe(16);
+  });
+
+  it('clampa y cierra en el III sin próximo acto', () => {
+    expect(journeyOf(0).day).toBe(1);
+    expect(journeyOf(200)).toMatchObject({ day: 90, week: 13, actNumber: 3, daysToNextAct: null });
   });
 });

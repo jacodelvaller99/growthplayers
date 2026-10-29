@@ -24,7 +24,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, ty
 import { PremiumCard, SovereignDeltaTag } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { GLOSS, type Arc, type Milestone } from '@/lib/narrativeLogic';
+import { ACTS, GLOSS, journeyOf, type Arc, type Milestone } from '@/lib/narrativeLogic';
 import type { SovereignDelta } from '@/lib/utils';
 
 // ─── ArcHeader — dónde estoy en la historia ─────────────────────────────────
@@ -45,11 +45,14 @@ export function ArcHeader({
   arc,
   compact = false,
   explain = false,
+  day,
 }: {
   arc: Arc;
   compact?: boolean;
   /** Un toque despliega qué es el «Acto» (GLOSS.arc). Sin glosario aparte. */
   explain?: boolean;
+  /** Con día, pinta el mapa de los tres actos con «estás aquí». */
+  day?: number;
 }) {
   const [open, setOpen] = useState(false);
   const label = `${arc.actLabel}. ${arc.dayLabel}. ${arc.line}`;
@@ -74,6 +77,7 @@ export function ArcHeader({
         </Text>
         <View style={styles.arcRule} />
       </View>
+      {day !== undefined ? <JourneyBar day={day} /> : null}
       {/* La cita va en ORO. Es la misma gramática del Umbral y del mapa: el oro
           marca lo que escribió el usuario. Sin distinguirla, la continuidad
           existe en el string y no se nota en la pantalla — que es como estuvo
@@ -83,6 +87,45 @@ export function ArcHeader({
       )}
       {open ? <Text style={styles.gloss}>{GLOSS.arc}</Text> : null}
     </Pressable>
+  );
+}
+
+// ─── JourneyBar — los 90 días como tres actos, con «estás aquí» ─────────────
+
+/**
+ * La columna vertebral de la historia: tres tramos de 30 días, lo recorrido
+ * en oro, el acto actual nombrado y cuánto falta para el siguiente. Es el
+ * único mapa que la app necesita — el usuario sabe dónde está sin leer nada.
+ */
+export function JourneyBar({ day }: { day: number }) {
+  const j = journeyOf(day);
+  const next = j.daysToNextAct;
+  return (
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={`Semana ${j.week} de 13. Acto ${j.actNumber} de 3.`}
+      accessibilityValue={{ min: 1, max: 90, now: j.day }}
+      style={styles.journey}>
+      <View style={styles.journeyRow}>
+        {ACTS.map((a, i) => (
+          <View key={a.n} style={styles.journeyAct}>
+            <View style={styles.journeyTrack}>
+              <View style={[styles.journeyFill, { width: `${Math.round(j.fill[i] * 100)}%` }]} />
+            </View>
+            <Text
+              numberOfLines={1}
+              style={[styles.journeyLabel, a.n === j.actNumber && styles.journeyLabelNow]}>
+              {a.name}
+            </Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.journeyMeta}>
+        {`Semana ${j.week} de 13`}
+        {next !== null && j.nextActName ? ` · ${next === 1 ? 'mañana' : `en ${next} días`} empieza ${j.nextActName}` : ' · último acto'}
+      </Text>
+    </View>
   );
 }
 
@@ -289,6 +332,41 @@ const styles = StyleSheet.create({
   // matar. El color dice "esto es tuyo"; el tamaño sigue diciendo "esto manda".
   arcLineQuoted: {
     color: palette.goldText,
+  },
+  journey: {
+    gap: spacing.sm,
+  },
+  journeyRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  journeyAct: {
+    flex: 1,
+    gap: 6,
+  },
+  journeyTrack: {
+    backgroundColor: palette.line,
+    borderRadius: 2,
+    height: 4,
+    overflow: 'hidden',
+  },
+  journeyFill: {
+    backgroundColor: palette.gold,
+    height: 4,
+  },
+  journeyLabel: {
+    ...typography.caption,
+    color: palette.smoke,
+    fontSize: 11,
+  },
+  journeyLabelNow: {
+    color: palette.goldText,
+    fontWeight: '700',
+  },
+  journeyMeta: {
+    ...typography.caption,
+    color: palette.ash,
+    textAlign: 'center',
   },
   gloss: {
     ...typography.caption,

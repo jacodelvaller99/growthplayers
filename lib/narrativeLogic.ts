@@ -32,8 +32,8 @@ export const RETURN_LINE =
  * pantallas (Biblia §2). Sin glosarios largos: quien toca, entiende.
  */
 export const GLOSS = {
-  score: 'Score Soberano: el acumulado de tus lecturas, lecciones y tareas (0–1000). No baja; lo reciente lo marca el delta.',
-  arc: 'El Arco: tus 90 días en tres actos — I Base, II Profundidad, III Identidad.',
+  score: 'Suma de tus lecturas, lecciones y tareas (0–1000). No baja; lo de esta semana lo marca el cambio.',
+  arc: 'Tus 90 días son tres actos de 30: I Base, II Profundidad, III Identidad.',
   archetypes: 'Arquetipos: las capas de identidad que integra el protocolo. Cada una se abre al completar su módulo.',
 } as const;
 
@@ -63,6 +63,55 @@ export interface Arc {
    * dándoles el mismo color — que es lo que hace que la continuidad no se note.
    */
   quoted: boolean;
+}
+
+/**
+ * Los tres actos: 30 días cada uno. Antes el Acto I duraba 7 días y el II
+ * 53 — no coincidía con el glosario ni con la barra de escritorio (Base <30,
+ * Profundidad <60, Final). Ahora una sola regla, la que el usuario puede
+ * recordar: un mes por acto.
+ */
+export const ACTS = [
+  { n: 1, name: 'Base', from: 1, to: 30 },
+  { n: 2, name: 'Profundidad', from: 31, to: 60 },
+  { n: 3, name: 'Identidad', from: 61, to: 90 },
+] as const;
+
+const ROMAN = ['I', 'II', 'III'] as const;
+
+function actOf(day: number): Pick<Arc, 'actNumber' | 'actLabel'> {
+  const a = ACTS.find((x) => day <= x.to) ?? ACTS[2];
+  return { actNumber: a.n, actLabel: `ACTO ${ROMAN[a.n - 1]} · ${a.name.toUpperCase()}` };
+}
+
+export interface Journey {
+  day: number;
+  /** 1..13 */
+  week: number;
+  actNumber: 1 | 2 | 3;
+  /** 0..1 dentro de cada acto: [I, II, III]. Lo hecho = 1, lo futuro = 0. */
+  fill: [number, number, number];
+  /** Días que faltan para el siguiente acto (null en el III). */
+  daysToNextAct: number | null;
+  nextActName: string | null;
+}
+
+/** «Estás aquí» en los 90 días — pura, la consume `ArcHeader`. */
+export function journeyOf(protocolDay: number): Journey {
+  const day = Math.min(90, Math.max(1, Math.floor(protocolDay || 1)));
+  const { actNumber } = actOf(day);
+  const fill = ACTS.map((a) =>
+    day >= a.to ? 1 : day < a.from ? 0 : (day - a.from + 1) / (a.to - a.from + 1),
+  ) as [number, number, number];
+  const current = ACTS[actNumber - 1];
+  return {
+    day,
+    week: Math.min(13, Math.ceil(day / 7)),
+    actNumber,
+    fill,
+    daysToNextAct: actNumber === 3 ? null : current.to - day + 1,
+    nextActName: ACTS.find((a) => a.n === actNumber + 1)?.name ?? null,
+  };
 }
 
 /**
@@ -99,8 +148,7 @@ export function arcForDay(
   if (day > 7 && daysSinceLastCheckIn !== undefined && !isRecent(daysSinceLastCheckIn)) {
     return {
       act: day <= 14 ? 'grabado' : day <= 30 ? 'automatico' : day <= 60 ? 'profundidad' : 'identidad',
-      actNumber: day <= 60 ? 2 : 3,
-      actLabel: day <= 60 ? 'ACTO II · PROFUNDIDAD' : 'ACTO III · IDENTIDAD',
+      ...actOf(day),
       dayLabel: `DÍA ${day} · 90`,
       quoted: false,
       line: RETURN_LINE,
@@ -118,8 +166,7 @@ export function arcForDay(
   if (day <= 3) {
     return {
       act: 'inicio',
-      actNumber: 1,
-      actLabel: 'ACTO I · BASE',
+      ...actOf(day),
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!obstaculo,
       line: obstaculo
@@ -130,8 +177,7 @@ export function arcForDay(
   if (day <= 7) {
     return {
       act: 'filtro',
-      actNumber: 1,
-      actLabel: 'ACTO I · BASE',
+      ...actOf(day),
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!quien,
       line: quien
@@ -142,8 +188,7 @@ export function arcForDay(
   if (day <= 14) {
     return {
       act: 'grabado',
-      actNumber: 2,
-      actLabel: 'ACTO II · PROFUNDIDAD',
+      ...actOf(day),
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!obstaculo,
       line: obstaculo
@@ -154,8 +199,7 @@ export function arcForDay(
   if (day <= 30) {
     return {
       act: 'automatico',
-      actNumber: 2,
-      actLabel: 'ACTO II · PROFUNDIDAD',
+      ...actOf(day),
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!norte,
       line: norte
@@ -166,8 +210,7 @@ export function arcForDay(
   if (day <= 60) {
     return {
       act: 'profundidad',
-      actNumber: 2,
-      actLabel: 'ACTO II · PROFUNDIDAD',
+      ...actOf(day),
       dayLabel: `DÍA ${day} · 90`,
       quoted: !!norte,
       line: norte
@@ -177,8 +220,7 @@ export function arcForDay(
   }
   return {
     act: 'identidad',
-    actNumber: 3,
-    actLabel: 'ACTO III · IDENTIDAD',
+    ...actOf(day),
     dayLabel: `DÍA ${day} · 90`,
     quoted: !!quien,
     line: quien
