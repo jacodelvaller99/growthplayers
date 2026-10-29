@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedNumber } from '@/components/AnimatedNumber';
 
-import { HeroPanel, HeroRule, LensTabs, MetricTile, RowList } from '@/components/focus-deck';
+import { HeroPanel, LensTabs, MetricTile } from '@/components/focus-deck';
 import { useMetricasDia } from '@/hooks/use-metricas-dia';
 import { useAppMode } from '@/hooks/use-app-mode';
 import { NovedadesNorman } from '@/components/NovedadesNorman';
@@ -250,13 +250,13 @@ export default function DashboardScreen() {
       return 'Tu energía ha bajado estos días. Hablemos con Norman sobre cómo reconectarte.';
     }
     if (intelligence.churn_risk_label === 'critical') {
-      return 'Llevas varios días sin actividad. Un pequeño paso hoy reactiva todo el sistema.';
+      return 'Llevas unos días fuera. Se retoma donde estás, con un paso.';
     }
     if (intelligence.churn_risk_label === 'high') {
-      return 'Tu consistencia puede estar en riesgo. ¿Qué bloqueó tu práctica?';
+      return '¿Qué se interpuso estos días? Cuéntaselo a Norman.';
     }
     if (engagementTier === 'excellent') {
-      return '¡Excelente racha! Tu disciplina está construyendo constancia.';
+      return 'Vas constante. Lo que haces está funcionando.';
     }
     return null;
   })();
@@ -438,7 +438,7 @@ export default function DashboardScreen() {
     const lastMentor = [...state.mentorMessages].reverse().find((m) => m.role === 'mentor');
     if (lastMentor?.text?.trim()) return lastMentor.text.trim();
     const first = state.profile.name.split(' ')[0] || state.profile.name;
-    if (!todayCheckIn) return `Sin lectura de hoy, ${first}. Calibra tu sistema antes de avanzar.`;
+    if (!todayCheckIn) return `Sin lectura de hoy, ${first}. Empieza por ahí.`;
     if (checkIn && checkIn.stress >= 8) return 'Tensión alta detectada. Hoy: un frente, no diez. Define el objetivo único.';
     if (checkIn && checkIn.energy <= 3) return 'Energía baja hoy. Cambiamos el protocolo: una sola acción de alto impacto.';
     return `Día ${protocolDay} — ${ACTIVE_MODULE.title.split(':')[0]}. ¿En qué trabajamos hoy?`;
@@ -473,16 +473,16 @@ export default function DashboardScreen() {
     <HoverCard
       onPress={() => router.push('/(tabs)/mentor')}
       accessibilityRole="button"
-      accessibilityLabel="Señal detectada — hablar con Norman"
+      accessibilityLabel="Norman notó algo — hablar con Norman"
       style={styles.anomalyCard}>
       <MaterialIcons name="warning-amber" size={18} color={palette.goldText} />
       <View style={styles.anomalyTextBlock}>
-        <Text style={styles.anomalyTitle}>SEÑAL DETECTADA</Text>
+        <Text style={styles.anomalyTitle}>NORMAN NOTÓ ALGO</Text>
         <Text style={styles.anomalyBody}>
           {intelligence.anomaly_type === 'mood_drop'
             ? 'Bajón de energía detectado. Norman puede ayudarte a entender qué está pasando.'
             : intelligence.anomaly_type === 'streak_break'
-            ? 'Racha rota. Hoy es el mejor día para retomar.'
+            ? 'Unos días sin lectura. Se retoma donde estás.'
             : 'Llevas días sin conectar con tu mentor. ¿Cómo estás?'}
         </Text>
       </View>
@@ -570,7 +570,7 @@ export default function DashboardScreen() {
           <MaterialIcons name="assignment" size={20} color={palette.smoke} />
           <View style={{ flex: 1 }}>
             <Text style={styles.estadoEmptyTitle}>SIN LECTURA HOY</Text>
-            <Text style={styles.estadoEmptySub}>Registra tu check-in para calibrar el sistema</Text>
+            <Text style={styles.estadoEmptySub}>Haz tu lectura de hoy para ver estos datos</Text>
           </View>
         </View>
       )}
@@ -836,20 +836,17 @@ export default function DashboardScreen() {
       style={styles.communityCard}
       onPress={() => router.push('/bienestar/comunidad' as never)}
       accessibilityRole="button"
-      accessibilityLabel="Ver comunidad de Operadores Soberanos">
+      accessibilityLabel="Ver comunidad">
       <View style={styles.communityHeader}>
         <View style={styles.communityIconBox}>
           <MaterialIcons name="groups" size={22} color={palette.goldText} />
         </View>
         <View style={styles.communityCopy}>
-          <Text style={styles.communityTitle}>OPERADORES SOBERANOS</Text>
+          <Text style={styles.communityTitle}>COMUNIDAD</Text>
           <Text style={styles.communitySub}>Quienes hacen el Protocolo contigo</Text>
         </View>
         <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
       </View>
-      <Text style={styles.communityBody}>
-        Comparte insights, celebra victorias y mantén la accountability con otros en el protocolo.
-      </Text>
     </HoverCard>
   );
 
@@ -886,7 +883,9 @@ export default function DashboardScreen() {
     <View style={mob.header}>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={mob.headerDate}>{todayLabel()}</Text>
-        <Text style={mob.headerTitle}>CENTRO DE COMANDO</Text>
+        <Text style={mob.headerTitle} numberOfLines={2}>
+          {`${greeting()}, ${state.profile.name.split(' ')[0] || state.profile.name}`}
+        </Text>
       </View>
       {/* Personalizar — en escritorio vive en la barra lateral; el teléfono no
           la tiene, y llegar a los 3 ejes exigía Perfil → Apariencia. Un toque
@@ -898,13 +897,8 @@ export default function DashboardScreen() {
         style={({ pressed }) => [mob.headerAction, pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] }]}>
         <MaterialIcons name="tune" size={20} color={palette.goldText} />
       </Pressable>
-      <Pressable
-        onPress={() => router.push('/(tabs)/norte')}
-        accessibilityRole="button"
-        accessibilityLabel="Ir a Mi Norte"
-        style={({ pressed }) => [mob.headerAction, pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] }]}>
-        <MaterialIcons name="explore" size={20} color={palette.goldText} />
-      </Pressable>
+      {/* El botón a Norte se quitó: era el 4.º camino al mismo sitio. Norte es
+          una pestaña. */}
     </View>
   );
 
@@ -922,7 +916,7 @@ export default function DashboardScreen() {
       <View style={{ flex: 1 }}>
         {/* Compacto: la explicación larga (acumulado vitalicio, no baja) pasa
             a un toque — vive en GLOSS.score, igual que en Perfil. */}
-        <GlossToggle label="SCORE SOBERANO" gloss={GLOSS.score} labelStyle={mob.eyebrow} />
+        <GlossToggle label="TU PUNTAJE" gloss={GLOSS.score} labelStyle={mob.eyebrow} />
         {sinLecturas ? (
           <Text style={mob.scoreDesc}>Se enciende con tu primera lectura.</Text>
         ) : null}
@@ -950,7 +944,7 @@ export default function DashboardScreen() {
       accessibilityLabel="Revisar coherencia de hoy"
       style={mob.checkinDoneCard}>
       <View style={mob.rowBetween}>
-        <Text style={[mob.eyebrow, { color: palette.goldText }]}>COHERENCIA DE HOY</Text>
+        <Text style={[mob.eyebrow, { color: palette.goldText }]}>TU ESTADO HOY</Text>
         <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
       </View>
       <View style={mob.coherenceRow}>
@@ -968,14 +962,14 @@ export default function DashboardScreen() {
     <HoverCard
       onPress={() => router.push('/checkin')}
       accessibilityRole="button"
-      accessibilityLabel="Calibrar sistema hoy"
+      accessibilityLabel="Hacer mi lectura de hoy"
       style={mob.checkinCta}>
       <View style={mob.checkinCtaIcon}>
         <MaterialIcons name="monitor-heart" size={24} color={palette.goldText} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={mob.checkinCtaTitle}>CALIBRAR SISTEMA HOY</Text>
-        <Text style={mob.checkinCtaSub}>Aún no lees tu estado de hoy</Text>
+        <Text style={mob.checkinCtaTitle}>MI LECTURA DE HOY</Text>
+        <Text style={mob.checkinCtaSub}>Dos minutos: cómo entras hoy</Text>
       </View>
       <MaterialIcons name="arrow-forward" size={22} color={palette.goldText} />
     </HoverCard>
@@ -1248,7 +1242,7 @@ export default function DashboardScreen() {
               problema real era el PÁRRAFO de tres oraciones, no la línea — así
               que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
               al eyebrow. El Mando sigue siendo lo único grande. */}
-          <ArcHeader arc={arc} />
+          <ArcHeader arc={arc} day={protocolDay} />
           {northAnchorStrip}
           {/* Novedades — una vez por versión, en voz de Norman IA */}
           <NovedadesNorman />
@@ -1304,18 +1298,6 @@ export default function DashboardScreen() {
                 <GoldDivider label="COMUNIDAD" />
                 {communityBlock}
                 <CommunityPreview />
-                <GoldDivider label="MI NORTE" />
-                <PremiumCard style={styles.northCard}>
-                  <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
-                  <Text style={styles.northBody}>
-                    {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
-                  </Text>
-                  <PrimaryButton
-                    label="EDITAR NORTE"
-                    icon="explore"
-                    onPress={() => router.push('/(tabs)/norte')}
-                  />
-                </PremiumCard>
               </View>
             </Animated.View>
           </View>
@@ -1335,7 +1317,9 @@ export default function DashboardScreen() {
               problema real era el PÁRRAFO de tres oraciones, no la línea — así
               que la rama se acortó a una sola frase y el «DÍA N · 90» se mudó
               al eyebrow. El Mando sigue siendo lo único grande. */}
-          <ArcHeader arc={arc} explain />
+          {/* La historia primero: dónde estás en los 90 días (mapa de tres
+              actos) y la frase del arco. Después, UNA acción. */}
+          <ArcHeader arc={arc} explain day={protocolDay} />
           {/* El hito de calendario (día 30/90) se evalúa al montar: antes solo
               lo evaluaba el guardado del check-in y se perdía si ese día no
               había lectura. `milestone:v1` lo hace idempotente. */}
@@ -1350,10 +1334,10 @@ export default function DashboardScreen() {
           {/* Uso de 30 s: UNA decisión (la Jornada, un CTA) + el score
               compacto. La coherencia de hoy, el ancla del norte y las
               novedades bajan a sus lentes — siguen a un toque. */}
+          {/* El héroe es SOLO la acción de hoy. El puntaje bajó a HOY: un
+              número sin contexto encima del botón competía con él. */}
           <HeroPanel>
             {mandoStripBlock}
-            <HeroRule />
-            {mScoreCard}
           </HeroPanel>
 
           {/* Alerta puntual: solo existe cuando hay algo que decir. */}
@@ -1375,21 +1359,13 @@ export default function DashboardScreen() {
                     "continuar lección" que `mNextLessonBlock`, dibujada dos
                     veces con dos estilos distintos (detectado en captura de
                     página completa). */}
+                {/* La lista «Estado del día» se fue: día y semana ya los dice
+                    el mapa de actos, y el % de lección lo dice la tarjeta. */}
                 {mCheckinCard}
-                <NovedadesNorman />
-                <View style={{ gap: spacing.sm }}>
-                  <Text style={screen.sectionTitle}>Estado del día</Text>
-                  <RowList
-                    rows={[
-                      { label: 'Racha', value: snap.streakLabel },
-                      { label: 'Módulo activo', value: `0${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title.split(/[\s:]/)[0]}` },
-                      { label: 'Próxima lección', value: `${nextLesson.pct}% avanzado` },
-                      { label: 'Día de protocolo', value: `${protocolDay} / 90` },
-                    ]}
-                  />
-                </View>
+                {mScoreCard}
                 {mNextLessonBlock}
                 {mNormanCard}
+                <NovedadesNorman />
               </>) },
               { id: 'cuerpo', label: 'CUERPO', render: () => (<>
                 {/* Biometría + wearable: lectura del cuerpo, no decisión del día. */}
@@ -1403,20 +1379,7 @@ export default function DashboardScreen() {
                 {communityBlock}
                 <CommunityPreview />
               </>) },
-              { id: 'norte', label: 'MI NORTE', render: () => (<>
-          {northAnchorStrip}
-          <PremiumCard style={styles.northCard}>
-            <Text style={styles.northTitle}>{state.northStar.purpose || 'Define tu norte'}</Text>
-            <Text style={styles.northBody}>
-              {state.northStar.dailyReminder || 'Agrega tu recordatorio diario en Mi Norte.'}
-            </Text>
-            <PrimaryButton
-              label="EDITAR NORTE"
-              icon="explore"
-              onPress={() => router.push('/(tabs)/norte')}
-            />
-          </PremiumCard>
-              </>) },
+              // La lente MI NORTE se quitó: duplicaba la pestaña Norte.
             ]}
           />
         </>
@@ -1816,24 +1779,6 @@ const styles = StyleSheet.create({
     height: 28,
     backgroundColor: palette.purpleDim,
   },
-  northCard: {
-    gap: spacing.lg,
-  },
-  northTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    lineHeight: 26,
-    textTransform: 'uppercase',
-  },
-  northBody: {
-    ...typography.body,
-    color: palette.ash,
-    fontStyle: 'italic',
-  },
-
   // ── Tablero personalizable ──────────────────────────────────────────────────
   tableroHeader: {
     alignItems: 'center',
@@ -2147,12 +2092,6 @@ const styles = StyleSheet.create({
     color:   palette.smoke,
     fontSize: 11,
   },
-  communityBody: {
-    ...typography.body,
-    color:    palette.ash,
-    fontSize: 13,
-    lineHeight: 20,
-  },
 
   // ── Biometrics empty state ──────────────────────────────────────────────────
   estadoEmpty: {
@@ -2244,10 +2183,10 @@ const mob = StyleSheet.create({
   headerTitle: {
     fontFamily: Fonts.display,
     color: palette.ivory,
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     letterSpacing: 1.2,
-    lineHeight: 28,
+    lineHeight: 26,
     textTransform: 'uppercase',
   },
   headerAction: {
