@@ -140,21 +140,39 @@ const BLOCKS: Block[] = [
   { route: '/bienestar/diario',      icon: 'edit-note',        label: 'DIARIO',      sub: 'procesa el día',       color: palette.ash, type: 'journal'    },
 ];
 
-const BLOCKS_EXTENDED = [
-  { id: 'internista',  icon: 'medical-services' as const, label: 'INTERNISTA',  sub: 'entiende tus exámenes', route: '/bienestar/internista' },
-  { id: 'habitos',     icon: 'checklist' as const,        label: 'HÁBITOS',     sub: 'rutinas diarias',       route: '/bienestar/habitos' },
-  { id: 'ayuno',       icon: 'schedule' as const,         label: 'AYUNO',       sub: 'timer + guía',          route: '/bienestar/ayuno' },
-  { id: 'nutricion',   icon: 'restaurant' as const,       label: 'NUTRICIÓN',   sub: 'tu plan de comidas',    route: '/bienestar/nutricion' },
-  { id: 'cuerpo',      icon: 'fitness-center' as const,   label: 'CUERPO',      sub: 'registra medidas',      route: '/bienestar/cuerpo' },
-  { id: 'suplementos', icon: 'medication' as const,       label: 'SUPLEMENTOS', sub: 'dosis y horarios',      route: '/bienestar/suplementacion' },
-  { id: 'comunidad',   icon: 'groups' as const,           label: 'COMUNIDAD',   sub: 'feed del grupo',        route: '/bienestar/comunidad' },
-];
+// Cuatro grupos, de lo más respaldado por evidencia a lo complementario.
+// Antes eran tres lentes con nombres internos (PRÁCTICA / SISTEMA /
+// EMOCIONAL) y GRITO/TAPPING al mismo nivel que respiración y sueño.
+type HubItem = Pick<Block, 'route' | 'icon' | 'label' | 'sub'>;
+const fromBlock = (route: string): HubItem => BLOCKS.find((b) => b.route === route)!;
 
-// Herramientas emocionales del curso (Docs 3.2, 3.4 y 4.3)
-const BLOCKS_EMOCIONAL = [
-  { id: 'grito',       icon: 'campaign' as const,        label: 'GRITO',       sub: 'descarga emocional', route: '/bienestar/grito' },
-  { id: 'tapping',     icon: 'touch-app' as const,       label: 'TAPPING',     sub: 'EFT, baja tensión',  route: '/bienestar/tapping' },
-  { id: 'consciencia', icon: 'psychology-alt' as const,  label: 'CONSCIENCIA', sub: 'calibra tu estado',  route: '/bienestar/consciencia' },
+const GROUPS: { id: string; label: string; items: HubItem[] }[] = [
+  { id: 'calma', label: 'CALMA', items: [
+    fromBlock('/bienestar/respiracion'),
+    fromBlock('/bienestar/meditacion'),
+    fromBlock('/bienestar/sueno'),
+    fromBlock('/bienestar/binaurales'),
+  ] },
+  { id: 'cuerpo', label: 'CUERPO', items: [
+    fromBlock('/bienestar/movimiento'),
+    { route: '/bienestar/habitos',   icon: 'checklist',      label: 'HÁBITOS',   sub: 'rutina de mañana y noche' },
+    { route: '/bienestar/nutricion', icon: 'restaurant',     label: 'NUTRICIÓN', sub: 'tu plan de comidas' },
+    { route: '/bienestar/cuerpo',    icon: 'fitness-center', label: 'MEDIDAS',   sub: 'peso y medidas' },
+  ] },
+  { id: 'salud', label: 'SALUD', items: [
+    { route: '/bienestar/internista',     icon: 'medical-services', label: 'INTERNISTA',  sub: 'entiende tus exámenes' },
+    { route: '/bienestar/ayuno',          icon: 'schedule',         label: 'AYUNO',       sub: 'temporizador y guía' },
+    { route: '/bienestar/suplementacion', icon: 'medication',       label: 'SUPLEMENTOS', sub: 'dosis y horarios' },
+  ] },
+  { id: 'mente', label: 'MENTE', items: [
+    fromBlock('/bienestar/diario'),
+    fromBlock('/bienestar/biblioteca'),
+    { route: '/bienestar/consciencia', icon: 'psychology-alt', label: 'CONSCIENCIA', sub: 'revisión semanal' },
+    { route: '/bienestar/comunidad',   icon: 'groups',         label: 'COMUNIDAD',   sub: 'el grupo del protocolo' },
+    // Complementarias: menos evidencia — al final y dichas como tal.
+    { route: '/bienestar/tapping', icon: 'touch-app', label: 'TAPPING', sub: 'complementaria · EFT' },
+    { route: '/bienestar/grito',   icon: 'campaign',  label: 'GRITO',   sub: 'complementaria · descarga' },
+  ] },
 ];
 
 function getWeekDots(sessions: { completedAt: string }[]): boolean[] {
@@ -346,6 +364,19 @@ export default function BienestarHub() {
   /** El porqué real cuando el turno manda; si no, el texto de siempre. */
   const todayHint = turnoBlock ? turno.why : 'Para tu momento del día. Empieza por aquí.';
 
+  const lenses = GROUPS.map((g) => ({
+    id: g.id,
+    label: g.label,
+    render: () => (
+      <>
+        {g.items.map((b) => (
+          <LensRow key={b.route} icon={b.icon} label={b.label} sub={b.sub}
+            onPress={() => router.push(b.route as never)} />
+        ))}
+      </>
+    ),
+  }));
+
   // ── Desktop layout ──────────────────────────────────────────────────────────
   if (isDesktop) {
     return (
@@ -397,16 +428,7 @@ export default function BienestarHub() {
               </HeroPanel>
 
               {/* ── Lentes: 17 destinos dejan de pedir que bajes por todos ── */}
-              <LensTabs
-                lenses={[
-                  { id: 'practica',  label: 'PRÁCTICA',  render: () => <>{BLOCKS.map((b) => (
-                    <LensRow key={b.route} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />))}</> },
-                  { id: 'cuerpo',    label: 'SISTEMA',   render: () => <>{BLOCKS_EXTENDED.map((b) => (
-                    <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />))}</> },
-                  { id: 'emocional', label: 'EMOCIONAL', render: () => <>{BLOCKS_EMOCIONAL.map((b) => (
-                    <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub} onPress={() => router.push(b.route as never)} />))}</> },
-                ]}
-              />
+              <LensTabs lenses={lenses} />
 
             </View>
             {/* ──────────────── RIGHT COLUMN ──────────────── */}
@@ -498,7 +520,7 @@ export default function BienestarHub() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.screenTitle}>BIENESTAR</Text>
-        <Text style={styles.headerSub}>El cuerpo es el primer sistema. Lo demás se apoya ahí.</Text>
+        <Text style={styles.headerSub}>Una práctica para hoy. El resto, por grupos.</Text>
       </View>
 
       {/* ── UN HÉROE, UNA DECISIÓN ──────────────────────────────────────────
@@ -539,46 +561,7 @@ export default function BienestarHub() {
       {/* ── LENTES EN VEZ DE PILA ───────────────────────────────────────────
           17 destinos en mosaicos idénticos (7 + 7 + 3) obligaban a recorrer la
           pantalla entera para llegar a uno. Ahora se elige por dónde mirar. */}
-      <LensTabs
-        lenses={[
-          {
-            id: 'practica',
-            label: 'PRÁCTICA',
-            render: () => (
-              <>
-                {BLOCKS.map((b) => (
-                  <LensRow key={b.route} icon={b.icon} label={b.label} sub={b.sub}
-                    onPress={() => router.push(b.route as never)} />
-                ))}
-              </>
-            ),
-          },
-          {
-            id: 'cuerpo',
-            label: 'SISTEMA',
-            render: () => (
-              <>
-                {BLOCKS_EXTENDED.map((b) => (
-                  <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub}
-                    onPress={() => router.push(b.route as never)} />
-                ))}
-              </>
-            ),
-          },
-          {
-            id: 'emocional',
-            label: 'EMOCIONAL',
-            render: () => (
-              <>
-                {BLOCKS_EMOCIONAL.map((b) => (
-                  <LensRow key={b.id} icon={b.icon} label={b.label} sub={b.sub}
-                    onPress={() => router.push(b.route as never)} />
-                ))}
-              </>
-            ),
-          },
-        ]}
-      />
+      <LensTabs lenses={lenses} />
 
       {/* ── Wearable card (real biometrics — shown if connected, else connect prompt) ── */}
       <WearableCard router={router} />
