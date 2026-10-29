@@ -50,13 +50,9 @@ function todayLabel() {
 }
 
 const CHECK_IN_TITLES = [
-  'LEE EL\nSISTEMA.',
-  'AUDITA\nTU ESTADO.',
-  'CALIBRA\nEL SISTEMA.',
-  'MIDE EL\nTERRENO.',
-  'LEE TU\nSEÑAL.',
-  'REGISTRA\nLA SEÑAL.',
-  'VERIFICA\nTU BASE.',
+  // Una sola pregunta, en llano. Los siete titulares rotativos («AUDITA TU
+  // ESTADO», «CALIBRA EL SISTEMA»…) eran jerga distinta cada día.
+  '¿CÓMO\nENTRAS HOY?',
 ];
 
 function checkInTitle(streak: number): string {
@@ -341,12 +337,12 @@ export default function CheckInScreen() {
   const coherenceStrong = coherence >= 7;
   const coherenceLabel =
     coherence >= 8
-      ? 'CAPACIDAD MAXIMA · EJECUTA SIN LIMITE'
+      ? 'CAPACIDAD ALTA · BUEN DÍA PARA LO DIFÍCIL'
       : coherence >= 6
-        ? 'SISTEMA OPERATIVO · CALIBRA Y MUEVE'
+        ? 'EN RANGO · AVANZA CON FOCO'
         : coherence >= 4
           ? 'CARGA ALTA · UN FOCO, UNA ACCIÓN'
-          : 'MODO RECUPERACION · PRIMERO EL SISTEMA';
+          : 'PIDE RECUPERACIÓN · PRIMERO EL CUERPO';
 
   // Stress as intelligence — never a failure
   const stressReading =
@@ -751,6 +747,7 @@ export default function CheckInScreen() {
           se quedó gritando. En caja baja se lee como lo que es: alguien
           preguntándote algo. */}
       <Text style={styles.bodyQuestion}>¿Dónde lo sientes?</Text>
+      <Text style={styles.bodyOptional}>Opcional · toca la zona del cuerpo</Text>
 
       {/* LA RESPUESTA VA ANTES DEL MAPA, no después.
           Renderizada debajo, nacía ~124pt por DEBAJO del borde de la pantalla:
@@ -924,8 +921,7 @@ export default function CheckInScreen() {
                 <Text style={styles.dateLabel}>{todayLabel()}</Text>
                 <Text style={styles.introTitle}>{checkInTitle(streak)}</Text>
                 <Text style={styles.introBody}>
-                  Esta medición calibra tu dashboard, mentor y score soberano. La honestidad aquí es
-                  una ventaja competitiva.
+                  Cuatro respuestas. Con ellas Norman y tu jornada se ajustan a cómo entras hoy.
                 </Text>
               </GoldAccentCard>
 
@@ -934,20 +930,20 @@ export default function CheckInScreen() {
               <PremiumCard style={styles.card}>
                 <ScaleSelector label="ENERGÍA" value={energy} onChange={setEnergy} icon="bolt" />
                 <ScaleSelector
-                  label="CLARIDAD MENTAL"
+                  label="CLARIDAD"
                   value={clarity}
                   onChange={setClarity}
                   icon="center-focus-strong"
                 />
                 <ScaleSelector
-                  label="NIVEL DE SATURACIÓN"
+                  label="ESTRÉS"
                   value={stress}
                   onChange={setStress}
                   icon="device-thermostat"
-                  guide="1-3 Despejado · 4-7 Cargado · 8-10 Saturado"
+                  guide="1-3 Tranquilo · 4-7 Cargado · 8-10 Al límite"
                 />
                 <ScaleSelector
-                  label="CALIDAD DE SUEÑO"
+                  label="SUEÑO"
                   value={sleep}
                   onChange={setSleep}
                   icon="bedtime"
@@ -1017,51 +1013,37 @@ export default function CheckInScreen() {
       </View>
 
       {/* ── Intro: "LEE EL SISTEMA." ── */}
+      {/* Sin racha («no la rompas hoy») ni arenga militar: la pantalla pide
+          cuatro respuestas honestas, nada más. */}
       <GoldAccentCard>
-        {streak >= 3 && (
-          <View style={styles.streakRow}>
-            <MaterialIcons name="local-fire-department" size={14} color={palette.goldText} />
-            <Text style={styles.streakText}>Racha de {streak} días — no la rompas hoy</Text>
-          </View>
-        )}
         <Text style={styles.introTitle}>{checkInTitle(streak)}</Text>
-        <Text style={styles.introBody}>
-          No calibras para sentirte bien. Calibras para saber con qué tropas sales hoy al campo.
-        </Text>
+        <Text style={styles.introBody}>Cuatro respuestas. Dos minutos.</Text>
       </GoldAccentCard>
 
-      {/* La pregunta abre; los deslizadores completan.
-          Estaba el CUARTO bloque: header → intro → BIOMETRÍA → cuatro
-          ScaleSelector (que en 375px envuelven a dos filas cada uno) → tarjeta
-          de capacidad, y recién ahí el cuerpo — unos 1.200px de scroll y 40
-          objetivos táctiles administrativos antes de la pieza que el dueño
-          llamó el mejor UX que ha visto. La ronda anterior le quitó el plegado
-          pero no lo sacó del sótano. En escritorio ya estaba arriba. */}
-      {!saved && bodyCard}
-
-      {/* ── Biometrics ── */}
-      {/* `!saved` como el mapa: post-guardado se podían seguir moviendo los
-          cuatro y el ÍNDICE DE CAPACIDAD recalculaba sobre un dato que ya no
-          se guarda. Un número que cambia y no significa nada. */}
+      {/* ── Lo obligatorio primero ── */}
+      {/* Antes el mapa corporal (opcional, ~510pt) iba ANTES de las cuatro
+          escalas que sí bloquean el guardado: el usuario tenía que pasar por
+          lo opcional para llegar a lo necesario. Ahora: escalas → lectura →
+          mapa (opcional) → guardar. `!saved`: post-guardado mover una escala
+          recalculaba sobre un dato que ya no se guarda. */}
       {!saved && (
       <>
-      <GoldDivider label="BIOMETRÍA" />
       <PremiumCard style={styles.card}>
         <ScaleSelector label="ENERGÍA" value={energy} onChange={setEnergy} icon="bolt" />
         <ScaleSelector
-          label="CLARIDAD MENTAL"
+          label="CLARIDAD"
           value={clarity}
           onChange={setClarity}
           icon="adjust"
         />
         <ScaleSelector
-          label="NIVEL DE SATURACIÓN"
+          label="ESTRÉS"
           value={stress}
           onChange={setStress}
           icon="device-thermostat"
-          guide="1-3 Despejado · 4-7 Cargado · 8-10 Saturado"
+          guide="1-3 Tranquilo · 4-7 Cargado · 8-10 Al límite"
         />
-        <ScaleSelector label="CALIDAD DE SUEÑO" value={sleep} onChange={setSleep} icon="bedtime" />
+        <ScaleSelector label="SUEÑO" value={sleep} onChange={setSleep} icon="bedtime" />
       </PremiumCard>
       </>
       )}
@@ -1072,9 +1054,10 @@ export default function CheckInScreen() {
           antes de haber dicho nada sobre hoy. */}
       {listo && capacityCardMobile}
 
-      {/* ── Camino mínimo: guardar. Lectura interna opcional · regulación diferida ── */}
+      {/* ── Camino mínimo: guardar. Mapa y lectura interna opcionales ── */}
       {!saved ? (
         <>
+          {bodyCard}
           {submitButton}
           {needToggle}
           {showNeed && systemNeedCard}
@@ -1118,17 +1101,6 @@ const styles = StyleSheet.create({
   dateLabel: {
     ...typography.mono,
     color: palette.ash,
-  },
-  streakRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  streakText: {
-    color: palette.goldText,
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    letterSpacing: 1.5,
   },
   introTitle: {
     color: palette.ivory,
@@ -1312,6 +1284,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  bodyOptional: {
+    ...typography.caption,
+    color: palette.ash,
+  },
   bodyQuestion: {
     ...typography.statement,
     color: palette.ivory,
