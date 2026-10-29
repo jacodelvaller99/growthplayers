@@ -45,7 +45,9 @@ const tabStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 2,
     width: 52,
-    minHeight: 44,
+    // 24, no 44: la zona pulsable es la pestaña entera (55px), no el ícono, y
+    // react-navigation solo le da 28 al contenedor del ícono.
+    minHeight: 24,
   },
   indicator: {
     position: 'absolute',
@@ -66,7 +68,10 @@ export function BottomNavigation() {
   // por debajo del mínimo de 44. Medido en el DOM a 390px, en las 25 apariciones
   // (5 pestañas × 5 pantallas). Es la navegación principal de la app: el
   // objetivo que más se pulsa era el que peor cumplía.
-  const tabBarHeight = 60 + insets.bottom;
+  // Y 70, no 60: react-navigation pone 5+5 de padding dentro de cada botón
+  // (no se puede pisar) y reserva 28 al ícono; con 60 a la etiqueta le
+  // quedaban 5px y "Inicio", "Norte"… salían cortadas en el celular.
+  const tabBarHeight = 70 + insets.bottom;
 
   return (
     <Tabs
