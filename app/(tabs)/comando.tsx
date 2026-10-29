@@ -948,7 +948,7 @@ export default function DashboardScreen() {
         <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
       </View>
       <View style={mob.coherenceRow}>
-        <Text style={mob.coherenceNum}>{coherenceToday}</Text>
+        <Text style={mob.coherenceNum} numberOfLines={1}>{coherenceToday}</Text>
         <Text style={mob.coherenceMax}>/ 10</Text>
         {/* Decía «SISTEMA EN LÍNEA» sin comprobar nada. Lo único verificable
             aquí es que la lectura de hoy existe. */}

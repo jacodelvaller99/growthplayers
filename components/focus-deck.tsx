@@ -88,7 +88,7 @@ export function FocusHero({ eyebrow, statement, metric, directive }: FocusHeroPr
       <View style={s.heroTop}>
         {metric && (
           <View style={s.metricWrap}>
-            <Text style={s.metricValue}>{metric.value}</Text>
+            <Text style={s.metricValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{metric.value}</Text>
             <Text style={s.metricCaption}>{metric.caption}</Text>
           </View>
         )}
@@ -190,7 +190,7 @@ export function MetricTile({
         {stateLabel ? <Text style={[s.tileState, { color: tint }]}>{stateLabel}</Text> : null}
       </View>
       <View style={s.tileValueRow}>
-        <Text style={s.tileValue}>{value}</Text>
+        <Text style={s.tileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{value}</Text>
         {unit ? <Text style={s.tileUnit}>{unit}</Text> : null}
       </View>
       {series.length > 0 && (
@@ -476,7 +476,7 @@ const s = StyleSheet.create({
   tileState: { ...typography.label, letterSpacing: 1.2 },
   tileValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
   tileValue: {
-    fontFamily: Fonts.display, fontSize: 26, fontWeight: '800',
+    fontFamily: Fonts.display, fontSize: 26, fontWeight: '800', flexShrink: 1,
     color: palette.ivory, fontVariant: ['tabular-nums'],
   },
   tileUnit: { ...typography.caption, color: palette.smoke, fontSize: 11 },
