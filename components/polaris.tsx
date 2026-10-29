@@ -141,14 +141,12 @@ export function GoldAccentCard({
         style={[styles.goldAccentCard, style]}
         accessibilityRole={props.accessibilityRole}
         accessibilityLabel={props.accessibilityLabel}>
-        <View style={styles.goldAccentStripe} />
         <View style={styles.goldAccentContent}>{children}</View>
       </HoverCard>
     );
   }
   return (
     <View style={[styles.goldAccentCard, style]} {...props}>
-      <View style={styles.goldAccentStripe} />
       <View style={styles.goldAccentContent}>{children}</View>
     </View>
   );
@@ -1147,13 +1145,12 @@ const styles = StyleSheet.create({
   },
   goldAccentCard: {
     ...surfaces.premiumCard,
+    // Borde dorado completo, no franja lateral: la franja de 3px se repetía en
+    // cada tarjeta y recargaba la pantalla.
+    borderColor: palette.lineGold,
     flexDirection: 'row',
     overflow: 'hidden',
     padding: 0,
-  },
-  goldAccentStripe: {
-    backgroundColor: palette.gold,
-    width: 3,
   },
   goldAccentContent: {
     flex: 1,
