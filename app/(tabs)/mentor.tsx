@@ -31,10 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppHeader,
   ChatBubble,
-  GoldDivider,
   MarkdownText,
-  PolarisMark,
-  PremiumCard,
   PremiumInput,
   StatusPill,
   screen,
@@ -343,7 +340,6 @@ function MentorScreenInner() {
   // "Analizo en base a" — qué recibe Norman (plegable)
   const [showBasis, setShowBasis] = useState(false);
   // Tras el primer turno del operador: consultas rápidas plegadas, modos en un selector.
-  const [showPrompts, setShowPrompts] = useState(false);
   const [modesOpen, setModesOpen] = useState(false);
 
   // Threads state
@@ -723,14 +719,6 @@ function MentorScreenInner() {
     ],
     [],
   );
-  const memoryText = useMemo(
-    () => state.mentorMessages
-      .filter((m) => m.role === 'user')
-      .slice(-2)
-      .map((m) => m.text.slice(0, 80))
-      .join(' · '),
-    [state.mentorMessages],
-  );
 
   // ── Auto-send prompt from home screen quick chips ───────────────────────────
   // Placed after `submit` so it's available in closure without TDZ error
@@ -760,7 +748,7 @@ function MentorScreenInner() {
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => { if (!jumpingRef.current) scrollToBottom(false); }}>
         <AppHeader
-          title="MENTOR POLARIS"
+          title="NORMAN"
           right={
             <View style={styles.onlineBlock}>
               <Pressable
@@ -774,7 +762,6 @@ function MentorScreenInner() {
                 style={({ pressed }) => [styles.chatsBtn, pressed && styles.chatsBtnPressed]}>
                 <Text style={styles.chatsBtnText}>CHATS</Text>
               </Pressable>
-              <PolarisMark size={36} />
               <View
                 accessibilityLiveRegion="polite"
                 accessibilityLabel={
@@ -790,123 +777,67 @@ function MentorScreenInner() {
           }
         />
 
-        {/* ── Divulgación de IA (persistente) ── */}
+        {/* ── Divulgación de IA (persistente, requisito App Store) ──
+            Compacta: una línea. Antes eran dos líneas + tarjeta de contexto +
+            8 consultas + 4 modos + ancla de sesión ENCIMA de la conversación;
+            el chat quedaba a un scroll de distancia. */}
         <View style={styles.aiDisclosure} accessibilityRole="text">
           <MaterialIcons name="smart-toy" size={13} color={palette.smoke} />
           <Text style={styles.aiDisclosureText}>
-            Norman es un mentor de IA. Acompaña tu desarrollo, pero no sustituye atención médica
-            ni psicológica profesional.
+            Norman es un mentor de IA. No sustituye atención médica ni psicológica.
           </Text>
         </View>
 
-        {/* ── Operative Context ── */}
-        <PremiumCard style={styles.contextCard}>
-          <StatusPill label={`MÓDULO ${ACTIVE_MODULE.order} · ${ACTIVE_MODULE.title}`} />
-          <Text style={styles.contextTitle}>CONTEXTO OPERATIVO</Text>
-          {todayCheckIn ? (
-            <View style={styles.metricsRow}>
-              <View style={styles.metricPill}>
-                <MaterialIcons name="bolt" size={12} color={palette.goldText} />
-                <Text style={styles.metricPillText}>ENERGÍA {todayCheckIn.energy}/10</Text>
-              </View>
-              <View style={styles.metricPill}>
-                <MaterialIcons name="center-focus-strong" size={12} color={palette.goldText} />
-                <Text style={styles.metricPillText}>CLARIDAD {todayCheckIn.clarity}/10</Text>
-              </View>
-              <View style={styles.metricPill}>
-                <MaterialIcons name="device-thermostat" size={12} color={palette.goldText} />
-                <Text style={styles.metricPillText}>ESTRÉS {todayCheckIn.stress}/10</Text>
-              </View>
-            </View>
-          ) : (
+        {/* ── Qué ve Norman: plegado por defecto ── */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Qué ve Norman"
+          accessibilityHint="Muestra qué datos tuyos recibe Norman"
+          accessibilityState={{ expanded: showBasis }}
+          onPress={() => setShowBasis((v) => !v)}
+          style={styles.basisToggle}>
+          <MaterialIcons name="visibility" size={13} color={palette.goldText} />
+          <Text style={styles.basisToggleText}>QUÉ VE NORMAN</Text>
+          <MaterialIcons
+            name={showBasis ? 'expand-less' : 'expand-more'}
+            size={16}
+            color={palette.smoke}
+          />
+        </Pressable>
+        {showBasis ? (
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeIn.duration(160).easing(Easing.bezier(...EASING_HOUSE))}
+            exiting={reducedMotion ? undefined : FadeOut.duration(120).easing(Easing.bezier(...EASING_HOUSE))}
+            style={styles.basisList}>
             <Text style={styles.noCheckin}>
-              Sin check-in hoy. El mentor puede orientar, pero falta lectura del sistema.
+              {todayCheckIn
+                ? `Hoy: energía ${todayCheckIn.energy}/10 · claridad ${todayCheckIn.clarity}/10 · estrés ${todayCheckIn.stress}/10`
+                : 'Aún no hay lectura de hoy.'}
             </Text>
-          )}
-          {state.northStar.dailyReminder ? (
-            <Text style={styles.contextNorth}>{state.northStar.dailyReminder}</Text>
-          ) : null}
+            <BasisRows />
+          </Animated.View>
+        ) : null}
 
-          {/* ── Transparencia: qué recibe Norman ── */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Analizo en base a"
-            accessibilityHint="Muestra qué datos tuyos recibe Norman"
-            accessibilityState={{ expanded: showBasis }}
-            onPress={() => setShowBasis((v) => !v)}
-            style={styles.basisToggle}>
-            <MaterialIcons name="visibility" size={13} color={palette.goldText} />
-            <Text style={styles.basisToggleText}>ANALIZO EN BASE A</Text>
-            <MaterialIcons
-              name={showBasis ? 'expand-less' : 'expand-more'}
-              size={16}
-              color={palette.smoke}
-            />
-          </Pressable>
-          {showBasis ? (
-            reducedMotion ? (
-              <View style={styles.basisList}>
-                <BasisRows />
-              </View>
-            ) : (
-              <Animated.View
-                entering={FadeIn.duration(160).easing(Easing.bezier(...EASING_HOUSE))}
-                exiting={FadeOut.duration(120).easing(Easing.bezier(...EASING_HOUSE))}
-                style={styles.basisList}>
-                <BasisRows />
-              </Animated.View>
-            )
-          ) : null}
-        </PremiumCard>
-
-        {/* ── Quick Prompts ── */}
-        {hasUserTurn ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Consultas rápidas"
-            accessibilityState={{ expanded: showPrompts }}
-            onPress={() => setShowPrompts((v) => !v)}
-            style={styles.basisToggle}>
-            <MaterialIcons name="bolt" size={13} color={palette.goldText} />
-            <Text style={styles.basisToggleText}>CONSULTAS RÁPIDAS</Text>
-            <MaterialIcons name={showPrompts ? 'expand-less' : 'expand-more'} size={16} color={palette.smoke} />
-          </Pressable>
-        ) : (
-          <GoldDivider label="CONSULTAS RÁPIDAS" />
-        )}
-        {(!hasUserTurn || showPrompts) && (
-        <View style={styles.promptGrid}>
-          {quickPrompts.map((p) => (
-            <Pressable
-              key={p.label}
-              accessibilityRole="button"
-              accessibilityLabel={p.label}
-              onPress={() => handlePromptPress(p.label)}
-              style={promptPressStyle}>
-              <MaterialIcons name={p.icon} size={16} color={palette.goldText} />
-              <Text style={styles.promptText}>{p.label.toUpperCase()}</Text>
-            </Pressable>
-          ))}
-        </View>
-        )}
-
-        {/* ── Last session memory anchor ── */}
-        {state.mentorMessages.length >= 6 && (
-          <PremiumCard style={styles.memoryCard}>
-            <View style={styles.memoryHeader}>
-              <MaterialIcons name="history" size={12} color={palette.goldText} />
-              <Text style={styles.memoryLabel}>ÚLTIMA SESIÓN</Text>
-            </View>
-            <Text style={styles.memoryText} numberOfLines={2}>
-              {memoryText}
-            </Text>
-          </PremiumCard>
+        {/* ── Para empezar: solo con la conversación vacía, tres ideas ── */}
+        {!hasUserTurn && (
+          <View style={styles.promptGrid}>
+            {quickPrompts.slice(0, 3).map((p) => (
+              <Pressable
+                key={p.label}
+                accessibilityRole="button"
+                accessibilityLabel={p.label}
+                onPress={() => handlePromptPress(p.label)}
+                style={promptPressStyle}>
+                <MaterialIcons name={p.icon} size={16} color={palette.goldText} />
+                <Text style={styles.promptText}>{p.label}</Text>
+              </Pressable>
+            ))}
+          </View>
         )}
 
         {/* ── Message Thread ── */}
         {displayMessages.length > 0 && (
           <>
-            <GoldDivider label="CONVERSACIÓN" />
             {hasMoreMessages && (
               <Pressable
                 onPress={handleLoadMore}
@@ -957,7 +888,6 @@ function MentorScreenInner() {
 
         {displayMessages.length === 0 && !isStreaming && (
           <>
-            <GoldDivider label="CONVERSACIÓN" />
             <View style={styles.thread}>
               <ChatBubble role="mentor">{openingMessage}</ChatBubble>
               {commitmentPrimer ? (
@@ -1029,7 +959,7 @@ function MentorScreenInner() {
 
       {/* ── Selector de modo ── */}
       <View style={[styles.modeRow, { maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}>
-        {hasUserTurn && !modesOpen ? (
+        {!modesOpen ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Modo ${MENTOR_MODES.find((m) => m.key === mentorMode)?.label ?? 'adaptativo'}. Cambiar modo`}
@@ -1071,7 +1001,7 @@ function MentorScreenInner() {
         <PremiumInput
           value={input}
           onChangeText={setInput}
-          placeholder="CONSULTA AL MENTOR..."
+          placeholder="Escríbele a Norman…"
           style={styles.input}
           onSubmitEditing={() => submit()}
           returnKeyType="send"
@@ -1208,43 +1138,9 @@ const styles = StyleSheet.create({
   },
 
   // Context card
-  contextCard: {
-    gap: spacing.md,
-  },
-  contextTitle: {
-    ...typography.section,
-    color: palette.ivory,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  metricPill: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,200,4,0.18)',
-    borderColor: alpha(palette.gold, '44'),
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-  },
-  metricPillText: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 11,
-  },
   noCheckin: {
     ...typography.mono,
     color: palette.smoke,
-  },
-  contextNorth: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-    fontStyle: 'italic',
   },
   basisToggle: {
     alignItems: 'center',
@@ -1273,28 +1169,6 @@ const styles = StyleSheet.create({
   },
 
   // Memory summary card
-  memoryCard: {
-    gap: 6,
-    backgroundColor: 'rgba(201, 160, 0, 0.04)',
-    borderColor: alpha(palette.gold, '22'),
-  },
-  memoryHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 5,
-  },
-  memoryLabel: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  memoryText: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    lineHeight: 16,
-  },
 
   // Quick prompts
   promptGrid: {
