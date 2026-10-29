@@ -72,7 +72,9 @@ export function AnimatedNumber({
   );
 
   return (
-    <Text style={style}>
+    // Una cifra nunca se parte en dos líneas: en contenedores estrechos (anillos
+    // de score en móvil) "143" salía como "14 / 3". En nativo se encoge para caber.
+    <Text style={style} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
       {prefix}{display}{suffix}
     </Text>
   );

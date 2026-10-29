@@ -151,7 +151,12 @@ function ScoreRing({
         {empty ? (
           <Text style={ringStyles.big}>—</Text>
         ) : (
-          <AnimatedNumber value={value} delay={120} style={ringStyles.big} />
+          // El tamaño del número sigue al del anillo (44px era para 132px; en móvil el anillo es 96).
+          <AnimatedNumber
+            value={value}
+            delay={120}
+            style={{ ...ringStyles.big, fontSize: Math.round(size / 3), lineHeight: Math.round(size / 3) + 4 }}
+          />
         )}
         {empty ? (
           <Text style={ringStyles.sub}>SIN LECTURAS</Text>
