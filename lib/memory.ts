@@ -123,9 +123,21 @@ export async function fetchLatestSummaries(
   }
 }
 
-export async function insertSummary(row: MemorySummaryRow & { user_id: string }): Promise<boolean> {
+export async function insertSummary(
+  row: MemorySummaryRow & { user_id: string },
+  replace = false,
+): Promise<boolean> {
   if (!row.user_id) return false;
   try {
+    // `replace`: la misma fuente se re-resume (notas del mentor que crecen).
+    // El índice único parcial (user_id, source_type, source_id) rechazaría el
+    // segundo insert, y PostgREST no hace upsert contra un índice parcial.
+    if (replace && row.source_id) {
+      await mem.summaries().delete()
+        .eq('user_id', row.user_id)
+        .eq('source_type', row.source_type ?? 'chat')
+        .eq('source_id', row.source_id);
+    }
     const { error } = await mem.summaries().insert({
       user_id:              row.user_id,
       source_type:          row.source_type ?? 'chat',

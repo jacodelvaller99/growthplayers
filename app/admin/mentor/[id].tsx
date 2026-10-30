@@ -52,6 +52,10 @@ const CHAT_QUICK = ['¿Qué confronto hoy?', 'Dame 3 preguntas para la sesión',
 // no se regenera.
 const BRIEFING_REGEN_COOLDOWN_MS = 60 * 60 * 1000; // 1h
 const briefingRegenAttempts = new Map<string, number>();
+// Notas → resumen + briefing cuando el mentor deja de escribir este rato. No
+// por tecla: cada pasada son 3 llamadas a IA.
+const NOTES_SUMMARY_IDLE_MS = 20 * 1000;
+const NOTES_SUMMARY_MIN_CHARS = 40;
 
 // Mensaje honesto cuando falta EXPO_PUBLIC_AI_PROXY_URL — sin esto, el briefing
 // y el plan con Norman caían a la simulación local (voz de Norman al cliente,
@@ -177,11 +181,17 @@ export default function MentorDeskScreen() {
   weekRef.current = week;
   const latestRef = useRef({ adminId, userId });
   latestRef.current = { adminId, userId };
+  const clientNameRef = useRef<string | undefined>(undefined);
+  clientNameRef.current = client?.name ?? undefined;
   const draftsRef = useRef<Map<number, string>>(new Map());
   const savedRef = useRef<Map<number, string>>(new Map());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
   const pendingRef = useRef<{ week: number; text: string } | null>(null);
+  const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const summaryJobRef = useRef<(() => void) | null>(null);
+  const pendingSessionRef = useRef<string | null>(null);
+  const summarizedRef = useRef<Map<string, string>>(new Map()); // sessionId → notas ya resumidas
 
   // Ecosistema que se alimenta solo (Fase 2 del plan): el briefing YA NO
   // depende exclusivamente del clic manual en GENERAR. Si no existe, o si hay
@@ -215,6 +225,14 @@ export default function MentorDeskScreen() {
 
   const load = useCallback(async () => {
     if (!userId) return;
+    // Cambio de cliente sin remount (misma pantalla, otro :id): nada del
+    // cliente anterior — borradores por semana, copiloto, resumen pendiente —
+    // puede quedar vivo, o se guardaría/resumiría en la ficha equivocada.
+    draftsRef.current.clear();
+    savedRef.current.clear();
+    // El resumen pendiente del cliente anterior corre ya (va atado a SU uid).
+    if (summaryTimerRef.current) { clearTimeout(summaryTimerRef.current); summaryJobRef.current?.(); }
+    setChatTurns([]);
     const [detail, mentorship, exec, mem] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserMentorship(userId),
@@ -239,6 +257,41 @@ export default function MentorDeskScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Programa el resumen de las notas para cuando el mentor deje de escribir.
+  // Todo va atado a `uid` capturado aquí, nunca al cliente en pantalla al
+  // disparar: si el mentor cambió de cliente, el resumen sigue yendo al suyo.
+  const scheduleNotesSummary = useCallback((uid: string, w: number, sessionId: string, notes: string) => {
+    if (summaryTimerRef.current) clearTimeout(summaryTimerRef.current);
+    // Otra sesión (cambió de semana o de cliente): la pendiente no se pisa, corre ya.
+    if (summaryJobRef.current && pendingSessionRef.current !== sessionId) summaryJobRef.current();
+    pendingSessionRef.current = sessionId;
+    if (!ENV.aiProxyUrl || notes.trim().length < NOTES_SUMMARY_MIN_CHARS) { summaryJobRef.current = null; return; }
+    const userName = clientNameRef.current;
+    const job = () => {
+      summaryTimerRef.current = null;
+      summaryJobRef.current = null;
+      if (summarizedRef.current.get(sessionId) === notes) return;
+      summarizedRef.current.set(sessionId, notes);
+      briefingRegenAttempts.set(uid, Date.now());
+      if (latestRef.current.userId === uid) setGenBrief(true);
+      void (async () => {
+        try {
+          const { summarizeMentorNotes } = await import('@/lib/memorySummarizer');
+          const briefing = await summarizeMentorNotes(uid, notes, { sessionId, week: w, userName });
+          if (!briefing) summarizedRef.current.delete(sessionId); // reintenta en la próxima pausa
+          if (latestRef.current.userId === uid) setMemory(await fetchUserMemory(uid));
+        } catch (e) {
+          summarizedRef.current.delete(sessionId);
+          logSilentError('mentorDesk.notesSummary', e);
+        } finally {
+          if (latestRef.current.userId === uid) setGenBrief(false);
+        }
+      })();
+    };
+    summaryJobRef.current = job;
+    summaryTimerRef.current = setTimeout(job, NOTES_SUMMARY_IDLE_MS);
+  }, []);
+
   const persist = useCallback(async (w: number, t: string) => {
     const { adminId: aId, userId: uId } = latestRef.current;
     if (!aId || !uId) return;
@@ -251,6 +304,7 @@ export default function MentorDeskScreen() {
       savedRef.current.set(w, t);
       setSessions((prev) => mergeDeskSession(prev, w, t, res.sessionId!));
       if (weekRef.current === w) setSaveState('saved');
+      scheduleNotesSummary(uId, w, res.sessionId, t);
     } catch (e) {
       logSilentError('mentorDesk.autosave', e);
       if (weekRef.current === w) setSaveState('error');
@@ -259,7 +313,7 @@ export default function MentorDeskScreen() {
       const pending = pendingRef.current;
       if (pending) { pendingRef.current = null; void persist(pending.week, pending.text); }
     }
-  }, []);
+  }, [scheduleNotesSummary]);
 
   // Flush al desmontar: si queda un cambio sin guardar (usuario cerró la
   // pestaña o navegó fuera durante el debounce), lo mandamos igual.
@@ -269,6 +323,8 @@ export default function MentorDeskScreen() {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      // Salió antes de los 20s de pausa: el resumen corre igual, ya.
+      if (summaryTimerRef.current) { clearTimeout(summaryTimerRef.current); summaryJobRef.current?.(); }
       const w = weekRef.current;
       // Se quiere el valor MÁS RECIENTE del Map al desmontar, no uno capturado
       // en el momento del efecto — por eso .current se lee dentro del cleanup.

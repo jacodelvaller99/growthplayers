@@ -85,6 +85,7 @@ export async function summarizeConversation(
   turns: ConversationTurn[],
   source: SummarySource,
   sourceId?: string,
+  replace = false,
 ): Promise<ParsedSummary | null> {
   if (!userId || turns.length === 0) return null;
   try {
@@ -104,11 +105,37 @@ export async function summarizeConversation(
       source_id: sourceId ?? null,
       ...parsed,
     };
-    await insertSummary(row);
+    await insertSummary(row, replace);
     return parsed;
   } catch {
     return null;
   }
+}
+
+/**
+ * Notas que el mentor escribe en el Espacio del Mentor → resumen de la sesión
+ * (reemplaza el anterior de la misma sesión) + perfil + briefing nuevo. Antes
+ * esas notas solo se guardaban: no entraban al Memory OS y el briefing no se
+ * enteraba hasta el clic manual en GENERAR.
+ */
+export async function summarizeMentorNotes(
+  userId: string,
+  notes: string,
+  opts: { sessionId: string; week: number; userName?: string },
+): Promise<AdminBriefing | null> {
+  if (!ENV.aiProxyUrl || !userId || !notes.trim()) return null;
+  const ctx = makeMinimalContext(opts.userName);
+  const parsed = await summarizeConversation(
+    userId,
+    ctx,
+    [{ role: 'user', text: `NOTAS DEL MENTOR (semana ${opts.week}):\n${notes}` }],
+    'mentorship',
+    opts.sessionId,
+    true,
+  );
+  if (!parsed) return null;
+  void updateProfileFromSummary(userId, ctx, parsed);
+  return generateAdminBriefing(userId, { ctx, userName: opts.userName });
 }
 
 // ─── 2. Síntesis del perfil vivo ─────────────────────────────────────────────────
