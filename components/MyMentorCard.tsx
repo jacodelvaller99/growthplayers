@@ -10,7 +10,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -46,7 +46,7 @@ export function useMyMentor(): MyMentor | null {
   return mentor;
 }
 
-export function MyMentorCard() {
+export function MyMentorCard({ style }: { style?: StyleProp<ViewStyle> }) {
   const router = useRouter();
   const mentor = useMyMentor();
   if (!mentor) return null;
@@ -57,7 +57,7 @@ export function MyMentorCard() {
     : null;
 
   return (
-    <View style={s.card} accessibilityLabel={`Tu mentor es ${name}`}>
+    <View style={[s.card, style]} accessibilityLabel={`Tu mentor es ${name}`}>
       <View style={s.avatar}>
         {mentor.avatar_url ? (
           <Image source={{ uri: mentor.avatar_url }} style={s.avatarImg} contentFit="cover" accessibilityIgnoresInvertColors />

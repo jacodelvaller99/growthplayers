@@ -429,7 +429,7 @@ export default function MentoriaScreen() {
       >
         <AppHeader title="MENTORÍA" />
         {/* Quién te acompaña en estas sesiones — la mentoría tiene cara. */}
-        <View style={{ marginBottom: spacing.lg }}><MyMentorCard /></View>
+        <MyMentorCard style={{ marginBottom: spacing.lg }} />
         {hero}
 
         {isDesktop ? (

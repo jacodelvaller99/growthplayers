@@ -281,7 +281,7 @@ export default function FocusDeskScreen() {
       <View style={s.header}>
         <Text style={s.headerTitle}>HOY</Text>
         <Text style={s.headerDate}>
-          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, (ch) => ch.toUpperCase())}
         </Text>
       </View>
 
@@ -375,7 +375,7 @@ const s = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   headerTitle: { ...typography.title, color: palette.ivory },
-  headerDate: { ...typography.caption, color: palette.ash, textTransform: 'capitalize' },
+  headerDate: { ...typography.caption, color: palette.ash },
   queueTitle: { ...typography.body, fontWeight: '600', color: palette.ivory, marginBottom: spacing.xs },
 
   emptyLens: { ...typography.caption, color: palette.smoke, fontStyle: 'italic', paddingVertical: spacing.md },

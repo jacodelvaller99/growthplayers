@@ -927,7 +927,7 @@ export default function ProgresoScreen() {
               móvil (líneas ~1166-1229) — no se reescribe, se reusa. */}
           {/* La pestaña se llama «Perfil» (la ruta sigue siendo progreso). */}
           <AppHeader title="PERFIL" />
-          <View style={styles.myMentor}><MyMentorCard /></View>
+          <MyMentorCard style={styles.myMentor} />
           <HeroPanel>
             <View style={styles.scoreCard}>
               <View style={styles.scoreTopRow}>
@@ -1281,7 +1281,7 @@ export default function ProgresoScreen() {
         </View>
       </View>
 
-      <View style={styles.myMentor}><MyMentorCard /></View>
+      <MyMentorCard style={styles.myMentor} />
 
       {/* ── HÉROE CONSOLIDADO ──────────────────────────────────────────────
           Score, compartir y tu historia eran tres tarjetas apiladas. En el
