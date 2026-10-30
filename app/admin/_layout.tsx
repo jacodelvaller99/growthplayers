@@ -25,6 +25,7 @@ import { palette, spacing, typography, radii, Fonts } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { PressableScale } from '@/components/polaris';
 import { ModeSwitch } from '@/components/ModeSwitch';
+import { AiConsentBanner } from '@/components/AiConsentBanner';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -395,6 +396,7 @@ export default function AdminLayout() {
         <View style={s.mobileRoot}>
           <StaffTopBar topInset={insets.top} simple />
           <View style={s.mobileContent}>
+            <AiConsentBanner />
             <Slot />
           </View>
         </View>
@@ -408,6 +410,7 @@ export default function AdminLayout() {
         <View style={s.webRoot}>
           <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
           <View style={s.webContent}>
+            <AiConsentBanner />
             <Slot />
           </View>
         </View>
@@ -421,7 +424,8 @@ export default function AdminLayout() {
       <View style={s.mobileRoot}>
         <StaffTopBar topInset={insets.top} />
         <View style={s.mobileContent}>
-          <Slot />
+          <AiConsentBanner />
+            <Slot />
         </View>
         <AdminBottomNav />
       </View>

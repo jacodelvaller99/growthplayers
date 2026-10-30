@@ -98,6 +98,8 @@ export async function summarizeConversation(
       `${SUMMARY_INSTRUCTION}\n\nINTERACCIÓN:\n${transcript}`,
       [],
       (d) => { out += d; },
+      undefined,
+      false,
     );
     const parsed = parseSummaryBlocks(out);
     if (!parsed.summary && parsed.commitments.length === 0) return null;
@@ -114,12 +116,6 @@ export async function summarizeConversation(
   }
 }
 
-/**
- * Notas que el mentor escribe en el Espacio del Mentor → resumen de la sesión
- * (reemplaza el anterior de la misma sesión) + perfil + briefing nuevo. Antes
- * esas notas solo se guardaban: no entraban al Memory OS y el briefing no se
- * enteraba hasta el clic manual en GENERAR.
- */
 const SESSION_SPLIT_INSTRUCTION =
   'Te paso las NOTAS o la TRANSCRIPCIÓN de una sesión de mentoría. Repártela PARA EL MENTOR ' +
   '(no le hables al cliente). Concreto, en español, sin relleno. Devuelve EXACTAMENTE estos ' +
@@ -153,6 +149,8 @@ export async function summarizeMentorNotes(
       `${SESSION_SPLIT_INSTRUCTION}\n\nSESIÓN (semana ${opts.week}):\n${notes.slice(0, 12000)}`,
       [],
       (d) => { out += d; },
+      undefined,
+      false,
     );
     const digest = parseSessionDigest(out);
     if (!digest.summary && digest.talked.length === 0 && digest.commitments.length === 0) return null;
@@ -213,7 +211,7 @@ export async function updateProfileFromSummary(
         identity: existing.identity_summary, goal: existing.current_goal,
         blockers: existing.recurring_blockers, focus: existing.mentorship_focus,
       }) : '(vacío)'}`;
-    await streamMentorResponse(ctx, `${PROFILE_SYNTH_INSTRUCTION}\n\n${digest}`, [], (d) => { out += d; });
+    await streamMentorResponse(ctx, `${PROFILE_SYNTH_INSTRUCTION}\n\n${digest}`, [], (d) => { out += d; }, undefined, false);
 
     const patch = profilePatchFromBlocks(out);
     // Compromisos del resumen → nuevos compromisos abiertos (mergeMemoryProfile re-normaliza).
@@ -283,7 +281,7 @@ export async function generateAdminBriefing(
       friccionesBlock;
 
     let out = '';
-    await streamMentorResponse(ctx, `${BRIEFING_INSTRUCTION}\n\n${digest}`, [], (d) => { out += d; });
+    await streamMentorResponse(ctx, `${BRIEFING_INSTRUCTION}\n\n${digest}`, [], (d) => { out += d; }, undefined, false);
 
     const briefing: AdminBriefing = {
       user_id: userId,

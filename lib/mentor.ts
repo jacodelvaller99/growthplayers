@@ -784,9 +784,17 @@ export async function streamMentorResponse(
   history: { role: 'mentor' | 'user'; text: string }[],
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
+  /** false = si no hay IA real, lanza en vez de simular. Lo usan los procesos
+   *  que GUARDAN el resultado (resúmenes, briefings, reparto de sesión): una
+   *  frase de relleno de Norman se guardaba como si fuera un briefing. */
+  allowSimulation = true,
 ): Promise<string> {
   // Si el usuario canceló antes de empezar, no hacemos nada.
   if (signal?.aborted) return '';
+  const simulate = (msg: string) => {
+    if (!allowSimulation) throw new Error('IA_NO_DISPONIBLE');
+    return streamDevSimulation(msg, onChunk);
+  };
 
   // Helper: ¿este error es una cancelación del usuario? Si sí, NO seguimos la
   // cadena de fallback — el usuario pidió parar.
@@ -798,7 +806,7 @@ export async function streamMentorResponse(
   // web — cualquiera las sacaba de devtools y facturaba contra la cuenta del
   // dueño. Sin proxy la única salida honesta es la simulación local.
   if (!ENV.aiProxyUrl) {
-    return streamDevSimulation(userMessage, onChunk);
+    return simulate(userMessage);
   }
 
   const systemPrompt = buildSystemPrompt(ctx);
@@ -828,9 +836,14 @@ export async function streamMentorResponse(
       return await stream(messages, onChunk, signal);
     } catch (err) {
       if (isAbort(err)) throw err;
+      // Sin permiso de IA no sirve probar los otros tres: es el mismo cerrojo.
+      if ((err as Error)?.name === 'AiConsentRequiredError') {
+        if (!allowSimulation) throw err;
+        break;
+      }
       console.warn(`[Mentor] ${name} falló, siguiente proveedor:`, err);
     }
   }
 
-  return streamDevSimulation(userMessage, onChunk);
+  return simulate(userMessage);
 }
