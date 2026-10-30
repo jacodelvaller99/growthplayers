@@ -30,6 +30,8 @@ import { TOTAL_WEEKS } from '@/data/mentorship';
 import { logSilentError } from '@/lib/observability';
 import { deskClientId, deskWeek, splitWeekSessions } from '@/lib/mentorDeskLogic';
 import { nextInDeskQueue } from '@/lib/admin/deskLogic';
+import { mergeAutoPlan } from '@/lib/mentorDeskLogic';
+import { fetchSessionDigests, type SessionDigestRow } from '@/lib/memory';
 import { streamClientDesk, type ClientDeskContext, type CopilotTurn } from '@/lib/adminCopilot';
 import { adminUpdateActionPlan, adminUpsertSessionNote } from '@/lib/admin/actions';
 import {
@@ -57,6 +59,8 @@ const briefingRegenAttempts = new Map<string, number>();
 // por tecla: cada pasada son 3 llamadas a IA.
 const NOTES_SUMMARY_IDLE_MS = 20 * 1000;
 const NOTES_SUMMARY_MIN_CHARS = 40;
+const NOTES_PASTE_DELAY_MS = 2 * 1000;
+const PASTE_MIN_CHARS = 200; // un salto así de grande en un solo cambio = pegó texto
 
 // Mensaje honesto cuando falta EXPO_PUBLIC_AI_PROXY_URL — sin esto, el briefing
 // y el plan con Norman caían a la simulación local (voz de Norman al cliente,
@@ -207,6 +211,12 @@ export function MentorSpace({
   const summaryJobRef = useRef<(() => void) | null>(null);
   const pendingSessionRef = useRef<string | null>(null);
   const summarizedRef = useRef<Map<string, string>>(new Map()); // sessionId → notas ya resumidas
+  // Pegar una transcripción no debe esperar 20s: reparte casi de inmediato.
+  const pastedRef = useRef(false);
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+  const [digests, setDigests] = useState<Map<string, SessionDigestRow>>(new Map());
+  const [splitting, setSplitting] = useState(false);
 
   // Ecosistema que se alimenta solo (Fase 2 del plan): el briefing YA NO
   // depende exclusivamente del clic manual en GENERAR. Si no existe, o si hay
@@ -248,12 +258,14 @@ export function MentorSpace({
     // El resumen pendiente del cliente anterior corre ya (va atado a SU uid).
     if (summaryTimerRef.current) { clearTimeout(summaryTimerRef.current); summaryJobRef.current?.(); }
     setChatTurns([]);
-    const [detail, mentorship, exec, mem] = await Promise.all([
+    const [detail, mentorship, exec, mem, digestRows] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserMentorship(userId),
       fetchUserExecution(userId),
       fetchUserMemory(userId),
+      fetchSessionDigests(userId),
     ]);
+    setDigests(new Map(digestRows.map((d) => [d.session_id, d])));
     setClient(detail);
     setSessions(mentorship.sessions);
     setExecution(exec);
@@ -275,7 +287,7 @@ export function MentorSpace({
   // Programa el resumen de las notas para cuando el mentor deje de escribir.
   // Todo va atado a `uid` capturado aquí, nunca al cliente en pantalla al
   // disparar: si el mentor cambió de cliente, el resumen sigue yendo al suyo.
-  const scheduleNotesSummary = useCallback((uid: string, w: number, sessionId: string, notes: string) => {
+  const scheduleNotesSummary = useCallback((uid: string, w: number, sessionId: string, notes: string, delayMs = NOTES_SUMMARY_IDLE_MS) => {
     if (summaryTimerRef.current) clearTimeout(summaryTimerRef.current);
     // Otra sesión (cambió de semana o de cliente): la pendiente no se pisa, corre ya.
     if (summaryJobRef.current && pendingSessionRef.current !== sessionId) summaryJobRef.current();
@@ -288,23 +300,36 @@ export function MentorSpace({
       if (summarizedRef.current.get(sessionId) === notes) return;
       summarizedRef.current.set(sessionId, notes);
       briefingRegenAttempts.set(uid, Date.now());
-      if (latestRef.current.userId === uid) setGenBrief(true);
+      if (latestRef.current.userId === uid) { setGenBrief(true); setSplitting(true); }
       void (async () => {
         try {
           const { summarizeMentorNotes } = await import('@/lib/memorySummarizer');
-          const briefing = await summarizeMentorNotes(uid, notes, { sessionId, week: w, userName });
-          if (!briefing) summarizedRef.current.delete(sessionId); // reintenta en la próxima pausa
-          if (latestRef.current.userId === uid) setMemory(await fetchUserMemory(uid));
+          const result = await summarizeMentorNotes(uid, notes, { sessionId, week: w, userName });
+          if (!result) { summarizedRef.current.delete(sessionId); return; } // reintenta en la próxima pausa
+          // Los compromisos van solos al plan de esa semana (lo manual no se toca).
+          const aId = latestRef.current.adminId;
+          const sess = sessionsRef.current.find((sx) => sx.id === sessionId);
+          if (aId && result.digest.commitments.length > 0) {
+            const plan = mergeAutoPlan(normalizePlan(sess?.action_plan ?? [], w), result.digest.commitments, w);
+            const res = await adminUpdateActionPlan({ adminId: aId, userId: uid, sessionId, actionPlan: plan });
+            if (res.success && latestRef.current.userId === uid) {
+              setSessions((prev) => prev.map((sx) => (sx.id === sessionId ? { ...sx, action_plan: plan } : sx)));
+            }
+          }
+          if (latestRef.current.userId === uid) {
+            setDigests((prev) => new Map(prev).set(sessionId, { session_id: sessionId, user_id: uid, week: w, ...result.digest }));
+            setMemory(await fetchUserMemory(uid));
+          }
         } catch (e) {
           summarizedRef.current.delete(sessionId);
           logSilentError('mentorDesk.notesSummary', e);
         } finally {
-          if (latestRef.current.userId === uid) setGenBrief(false);
+          if (latestRef.current.userId === uid) { setGenBrief(false); setSplitting(false); }
         }
       })();
     };
     summaryJobRef.current = job;
-    summaryTimerRef.current = setTimeout(job, NOTES_SUMMARY_IDLE_MS);
+    summaryTimerRef.current = setTimeout(job, delayMs);
   }, []);
 
   const persist = useCallback(async (w: number, t: string) => {
@@ -319,7 +344,8 @@ export function MentorSpace({
       savedRef.current.set(w, t);
       setSessions((prev) => mergeDeskSession(prev, w, t, res.sessionId!));
       if (weekRef.current === w) setSaveState('saved');
-      scheduleNotesSummary(uId, w, res.sessionId, t);
+      scheduleNotesSummary(uId, w, res.sessionId, t, pastedRef.current ? NOTES_PASTE_DELAY_MS : NOTES_SUMMARY_IDLE_MS);
+      pastedRef.current = false;
     } catch (e) {
       logSilentError('mentorDesk.autosave', e);
       if (weekRef.current === w) setSaveState('error');
@@ -403,6 +429,7 @@ export function MentorSpace({
 
   // ── Editor: autosave ──────────────────────────────────────────────────────
   const applyText = (next: string) => {
+    if (next.length - text.length >= PASTE_MIN_CHARS) pastedRef.current = true;
     setText(next);
     draftsRef.current.set(week, next);
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -628,6 +655,49 @@ export function MentorSpace({
   const weekChips = [week - 1, week, week + 1].filter((w) => w >= 1 && w <= TOTAL_WEEKS);
   const momentum = execution.scores?.weekly_momentum_state;
 
+  // Lo que la IA repartió de las notas de ESTA semana: qué se habló, qué puede
+  // mejorar y los compromisos (que ya están en el Plan). Solo staff lo ve.
+  const renderDigest = () => {
+    const sid = splitWeekSessions(sessions, week).draft?.id;
+    const d = sid ? digests.get(sid) : undefined;
+    if (!d && !splitting) {
+      if (!ENV.aiProxyUrl || text.trim().length < NOTES_SUMMARY_MIN_CHARS) return null;
+      return <Text style={s.digestHint}>Cuando dejes de escribir (o pegues la sesión), la IA la reparte aquí.</Text>;
+    }
+    const section = (title: string, items: string[], icon: React.ComponentProps<typeof MaterialIcons>['name']) =>
+      items.length === 0 ? null : (
+        <View style={s.digestSection}>
+          <View style={s.digestTitleRow}>
+            <MaterialIcons name={icon} size={16} color={palette.goldText} />
+            <Text style={s.digestTitle}>{title}</Text>
+          </View>
+          {items.map((it, i) => (
+            <Text key={i} style={s.digestItem}>·  {it}</Text>
+          ))}
+        </View>
+      );
+    return (
+      <View style={s.digestCard} accessibilityLabel="Sesión repartida por la IA">
+        <View style={s.digestHeader}>
+          <Text style={s.digestHeading}>La sesión, repartida</Text>
+          {splitting && <Text style={s.digestBusy}>Repartiendo…</Text>}
+        </View>
+        {d?.summary ? <Text style={s.digestSummary}>{d.summary}</Text> : null}
+        {d && section('Lo que se habló', d.talked, 'forum')}
+        {d && section('Qué puede mejorar', d.improve, 'trending-up')}
+        {d && d.commitments.length > 0 && (
+          <View style={s.digestSection}>
+            <View style={s.digestTitleRow}>
+              <MaterialIcons name="task-alt" size={16} color={palette.goldText} />
+              <Text style={s.digestTitle}>Compromisos · ya están en el Plan</Text>
+            </View>
+            {d.commitments.map((c, i) => <Text key={i} style={s.digestItem}>·  {c}</Text>)}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const renderEditor = () => (
     <View>
       <ZoneHeader number="①" title="ESCRIBE AQUÍ" hint="Lo que pasó en la sesión de hoy. Se guarda solo." />
@@ -663,6 +733,7 @@ export function MentorSpace({
           accessibilityLabel="Notas de la sesión"
         />
       </PremiumCard>
+      {renderDigest()}
       {previous.length > 0 && (
         <View style={{ marginTop: spacing.md }}>
           <Pressable
@@ -993,6 +1064,24 @@ const s = StyleSheet.create({
   headerPills: { flexDirection: 'row', gap: spacing.xs, marginTop: 4 },
   dossierLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
   dossierLinkText: { ...typography.label, color: palette.goldText, fontSize: 10 },
+  digestHint: { ...typography.caption, color: palette.ash, marginTop: spacing.sm },
+  digestCard: {
+    marginTop: spacing.md,
+    padding: spacing.lg,
+    gap: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: palette.lineGold,
+    backgroundColor: palette.graphite,
+  },
+  digestHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  digestHeading: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 15, color: palette.ivory },
+  digestBusy: { ...typography.caption, color: palette.goldText },
+  digestSummary: { ...typography.body, color: palette.ivory },
+  digestSection: { gap: 4 },
+  digestTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 2 },
+  digestTitle: { ...typography.body, fontWeight: '600', color: palette.ivory },
+  digestItem: { ...typography.body, color: palette.ash, paddingLeft: spacing.lg },
   nextBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     minHeight: 44, paddingHorizontal: spacing.md,

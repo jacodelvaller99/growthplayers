@@ -48,3 +48,21 @@ export function splitWeekSessions<T extends { week: number | null; client_id?: s
   const previous = ofWeek.filter((s) => s !== draft);
   return { draft, previous };
 }
+
+/** Compromisos repartidos por la IA → plan de la semana. Lo que puso el mentor
+ * a mano no se toca; lo automático anterior se reemplaza (la IA re-reparte
+ * cuando las notas crecen), conservando lo ya marcado como hecho. */
+export function mergeAutoPlan<T extends { text: string; source?: string; done?: boolean; week?: number | null }>(
+  current: T[],
+  commitments: string[],
+  week: number,
+): { text: string; source?: string; done?: boolean; week?: number | null }[] {
+  const doneAuto = new Set(current.filter((p) => p.source === 'auto' && p.done).map((p) => p.text.trim().toLowerCase()));
+  const kept = current.filter((p) => p.source !== 'auto');
+  const keptTexts = new Set(kept.map((p) => p.text.trim().toLowerCase()));
+  const auto = commitments
+    .map((t) => t.trim())
+    .filter((t) => t && !keptTexts.has(t.toLowerCase()))
+    .map((text) => ({ text, week, source: 'auto', done: doneAuto.has(text.toLowerCase()) }));
+  return [...kept, ...auto];
+}

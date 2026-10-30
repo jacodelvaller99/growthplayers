@@ -1,6 +1,6 @@
 // ─── lib/mentorDeskLogic.ts — Espacio del Mentor: semana activa + autosave ─────
 
-import { deskClientId, deskWeek, splitWeekSessions } from '@/lib/mentorDeskLogic';
+import { deskClientId, deskWeek, mergeAutoPlan, splitWeekSessions } from '@/lib/mentorDeskLogic';
 import { TOTAL_WEEKS } from '@/data/mentorship';
 
 describe('deskClientId', () => {
@@ -71,5 +71,21 @@ describe('splitWeekSessions', () => {
     const { draft, previous } = splitWeekSessions(sessions, 3);
     expect(draft).toBeNull();
     expect(previous).toEqual([]);
+  });
+});
+
+describe('mergeAutoPlan', () => {
+  it('reemplaza lo automático, respeta lo manual y conserva lo hecho', () => {
+    const current = [
+      { text: 'Llamar al médico', source: 'manual', done: false, week: 3 },
+      { text: 'Entrenar 3 veces', source: 'auto', done: true, week: 3 },
+      { text: 'Leer 10 páginas', source: 'auto', done: false, week: 3 },
+    ];
+    const out = mergeAutoPlan(current, ['Entrenar 3 veces', 'Dormir antes de las 11', 'llamar al médico'], 3);
+    expect(out.map((p) => [p.text, p.source, p.done])).toEqual([
+      ['Llamar al médico', 'manual', false],
+      ['Entrenar 3 veces', 'auto', true],
+      ['Dormir antes de las 11', 'auto', false],
+    ]);
   });
 });

@@ -8,7 +8,7 @@
  * Privacidad: `admin_briefings` y `admin_notes` son admin-only por RLS; un cliente
  * que intente leerlas recibe filas vacías. Nunca se inyectan al contexto de Norman.
  */
-import { mem, intel } from '@/lib/supabase';
+import { mem, intel, supabase } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
 import {
   assembleMentorMemory,
@@ -20,6 +20,7 @@ import {
   type MemoryProfile,
   type MemorySnippet,
   type MemorySummaryRow,
+  type SessionDigest,
 } from '@/lib/memoryLogic';
 
 export type {
@@ -101,6 +102,39 @@ export async function upsertMemoryProfile(
     return !error;
   } catch {
     return false;
+  }
+}
+
+// ─── Sesión repartida para el mentor (mentor_session_digests, solo staff) ───────
+export interface SessionDigestRow extends SessionDigest {
+  session_id: string;
+  user_id: string;
+  week: number;
+  updated_at?: string;
+}
+
+export async function upsertSessionDigest(row: SessionDigestRow): Promise<boolean> {
+  try {
+    const { error } = await (supabase as any).from('mentor_session_digests').upsert(
+      { ...row, updated_at: new Date().toISOString() },
+      { onConflict: 'session_id' },
+    );
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchSessionDigests(userId: string): Promise<SessionDigestRow[]> {
+  if (!userId) return [];
+  try {
+    const { data, error } = await (supabase as any).from('mentor_session_digests')
+      .select('session_id,user_id,week,summary,talked,improve,commitments,updated_at')
+      .eq('user_id', userId);
+    if (error || !data) return [];
+    return data as SessionDigestRow[];
+  } catch {
+    return [];
   }
 }
 

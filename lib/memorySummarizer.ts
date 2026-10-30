@@ -15,10 +15,12 @@ import { streamMentorResponse, type MentorContext } from '@/lib/mentor';
 import {
   extractSection,
   mergeMemoryProfile,
+  parseSessionDigest,
   parseSummaryBlocks,
   splitList,
   type MemoryProfile,
   type ParsedSummary,
+  type SessionDigest,
 } from '@/lib/memoryLogic';
 import {
   fetchLatestSummaries,
@@ -26,6 +28,7 @@ import {
   insertBriefing,
   insertSummary,
   upsertMemoryProfile,
+  upsertSessionDigest,
   type AdminBriefing,
   type MemorySummaryRow,
 } from '@/lib/memory';
@@ -85,7 +88,6 @@ export async function summarizeConversation(
   turns: ConversationTurn[],
   source: SummarySource,
   sourceId?: string,
-  replace = false,
 ): Promise<ParsedSummary | null> {
   if (!userId || turns.length === 0) return null;
   try {
@@ -105,7 +107,7 @@ export async function summarizeConversation(
       source_id: sourceId ?? null,
       ...parsed,
     };
-    await insertSummary(row, replace);
+    await insertSummary(row);
     return parsed;
   } catch {
     return null;
@@ -118,24 +120,54 @@ export async function summarizeConversation(
  * esas notas solo se guardaban: no entraban al Memory OS y el briefing no se
  * enteraba hasta el clic manual en GENERAR.
  */
+const SESSION_SPLIT_INSTRUCTION =
+  'Te paso las NOTAS o la TRANSCRIPCIÓN de una sesión de mentoría. Repártela PARA EL MENTOR ' +
+  '(no le hables al cliente). Concreto, en español, sin relleno. Devuelve EXACTAMENTE estos ' +
+  'bloques con sus marcadores (sin texto fuera de ellos):\n' +
+  '===RESUMEN===\n(2-3 frases: de qué fue la sesión y cómo quedó)\n' +
+  '===TEMAS===\n- cada cosa que se habló, una por línea\n' +
+  '===MEJORAR===\n- qué puede mejorar el cliente, concreto y accionable (si nada, deja vacío)\n' +
+  '===COMPROMISOS===\n- lo que el cliente se comprometió a hacer (verbo + plazo si lo hay)\n' +
+  '===PREGUNTAS===\n- asuntos que quedaron abiertos\n' +
+  '===TONO===\n(una línea: estado emocional dominante)\n' +
+  '===FOCO===\n(una frase: el foco para la próxima sesión)';
+
+/**
+ * Notas o transcripción de la sesión → repartidas solas: lo que se habló,
+ * qué puede mejorar y compromisos (mentor_session_digests, solo staff), el
+ * resumen para el Memory OS (reemplaza el anterior de la misma sesión), el
+ * perfil y un briefing nuevo. Antes esas notas solo se guardaban y el briefing
+ * no se enteraba hasta el clic manual en GENERAR.
+ */
 export async function summarizeMentorNotes(
   userId: string,
   notes: string,
   opts: { sessionId: string; week: number; userName?: string },
-): Promise<AdminBriefing | null> {
+): Promise<{ digest: SessionDigest; briefing: AdminBriefing | null } | null> {
   if (!ENV.aiProxyUrl || !userId || !notes.trim()) return null;
   const ctx = makeMinimalContext(opts.userName);
-  const parsed = await summarizeConversation(
-    userId,
-    ctx,
-    [{ role: 'user', text: `NOTAS DEL MENTOR (semana ${opts.week}):\n${notes}` }],
-    'mentorship',
-    opts.sessionId,
-    true,
-  );
-  if (!parsed) return null;
-  void updateProfileFromSummary(userId, ctx, parsed);
-  return generateAdminBriefing(userId, { ctx, userName: opts.userName });
+  try {
+    let out = '';
+    await streamMentorResponse(
+      ctx,
+      `${SESSION_SPLIT_INSTRUCTION}\n\nSESIÓN (semana ${opts.week}):\n${notes.slice(0, 12000)}`,
+      [],
+      (d) => { out += d; },
+    );
+    const digest = parseSessionDigest(out);
+    if (!digest.summary && digest.talked.length === 0 && digest.commitments.length === 0) return null;
+    await upsertSessionDigest({ session_id: opts.sessionId, user_id: userId, week: opts.week, ...digest });
+    const parsed = parseSummaryBlocks(out);
+    await insertSummary(
+      { user_id: userId, source_type: 'mentorship', source_id: opts.sessionId, ...parsed },
+      true,
+    );
+    void updateProfileFromSummary(userId, ctx, parsed);
+    const briefing = await generateAdminBriefing(userId, { ctx, userName: opts.userName });
+    return { digest, briefing };
+  } catch {
+    return null;
+  }
 }
 
 // ─── 2. Síntesis del perfil vivo ─────────────────────────────────────────────────

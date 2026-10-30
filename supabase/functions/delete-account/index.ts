@@ -123,6 +123,7 @@ Deno.serve(async (req: Request) => {
       adminSupabase.from('memory_summaries').delete().eq('user_id', userId),
       adminSupabase.from('admin_briefings').delete().eq('user_id', userId),
       adminSupabase.from('admin_notes').delete().eq('user_id', userId),
+      adminSupabase.from('mentor_session_digests').delete().eq('user_id', userId),
       // Mentor Execution OS (tareas normalizadas + reviews/scores/cola)
       adminSupabase.from('mentor_tasks').delete().eq('user_id', userId),
       adminSupabase.from('mentor_task_reviews').delete().eq('user_id', userId),

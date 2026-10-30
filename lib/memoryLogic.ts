@@ -223,6 +223,32 @@ export function splitList(raw: string): string[] {
   return lines;
 }
 
+// ─── Sesión repartida para el mentor ─────────────────────────────────────────
+export interface SessionDigest {
+  summary: string;
+  /** Lo que se habló. */
+  talked: string[];
+  /** Qué puede mejorar. */
+  improve: string[];
+  commitments: string[];
+}
+
+/** Parser de la sesión repartida (`summarizeMentorNotes`). Sin marcadores, el
+ * texto entero queda como resumen y nada se inventa en las listas. */
+export function parseSessionDigest(aiOutput: string): SessionDigest {
+  const text = clean(aiOutput);
+  if (!text) return { summary: '', talked: [], improve: [], commitments: [] };
+  if (!/===\s*[A-ZÁÉÍÓÚÑ]+\s*===/i.test(text)) {
+    return { summary: text.slice(0, 1500), talked: [], improve: [], commitments: [] };
+  }
+  return {
+    summary:     extractSection(text, 'RESUMEN').slice(0, 1500),
+    talked:      splitList(extractSection(text, 'TEMAS')),
+    improve:     splitList(extractSection(text, 'MEJORAR')),
+    commitments: splitList(extractSection(text, 'COMPROMISOS')),
+  };
+}
+
 // ─── 2. parseSummaryBlocks — parser tolerante de la salida de Norman ─────────────
 /**
  * Norman devuelve secciones etiquetadas con marcadores `===CLAVE===`:
