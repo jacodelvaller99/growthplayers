@@ -23,7 +23,23 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: authError } = await adminSupabase.auth.getUser(token);
   if (authError || !userData.user) return json({ error: 'Unauthorized' }, 401);
 
-  const userId = userData.user.id;
+  // Modo admin: body { target_user_id } borra a OTRO usuario. Solo un
+  // superadmin, y nunca a otro miembro del staff (evita borrar un admin por error).
+  let userId = userData.user.id;
+  const body = await req.json().catch(() => ({}));
+  const target = typeof body?.target_user_id === 'string' ? body.target_user_id : '';
+  if (target && target !== userId) {
+    const { data: caller } = await adminSupabase
+      .from('profiles').select('is_superadmin').eq('id', userId).maybeSingle();
+    if (!caller?.is_superadmin) return json({ error: 'Solo un SuperAdmin puede eliminar perfiles.' }, 403);
+    const { data: victim } = await adminSupabase
+      .from('profiles').select('is_admin, is_superadmin, is_mentor').eq('id', target).maybeSingle();
+    if (victim?.is_admin || victim?.is_superadmin || victim?.is_mentor) {
+      return json({ error: 'No se puede eliminar a un miembro del equipo. Quítale el rol primero.' }, 403);
+    }
+    console.log(`[delete-account] ${userId} elimina a ${target}`);
+    userId = target;
+  }
 
   try {
     // ── Step 0: Revocar tokens wearable ante los PROVEEDORES ─────────────────

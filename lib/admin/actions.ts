@@ -377,6 +377,29 @@ export async function sendPasswordRecovery(params: {
   }
 }
 
+// ─── ELIMINAR PERFIL ─────────────────────────────────────────────────────────
+// Reusa la edge function `delete-account` (borrado GDPR completo) en modo admin:
+// el servidor exige SuperAdmin y rechaza borrar a alguien del equipo.
+export async function deleteUserProfile(params: {
+  adminId: string;
+  userId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { adminId, userId } = params;
+  // Antes del borrado: después ya no existe el usuario al que apunta el log.
+  await auditLog(adminId, 'delete_user', 'user', userId, {});
+  const { data, error } = await supabase.functions.invoke('delete-account', {
+    body: { target_user_id: userId },
+  });
+  const serverMsg = (data as { error?: string } | null)?.error;
+  if (error || serverMsg) {
+    let msg = serverMsg ?? error?.message ?? 'Error desconocido';
+    // FunctionsHttpError trae el cuerpo en context (403 con el motivo).
+    try { msg = (await (error as any)?.context?.json?.())?.error ?? msg; } catch { /* sin cuerpo */ }
+    return { success: false, error: msg };
+  }
+  return { success: true };
+}
+
 // ─── SET USER ROLE (panel de 4 niveles: superadmin/admin/premium/inicial) ─────
 // Vía la RPC SECURITY DEFINER admin_set_user_role, que verifica los privilegios
 // del LLAMANTE en el servidor (solo SuperAdmin asigna admin/superadmin). El cambio

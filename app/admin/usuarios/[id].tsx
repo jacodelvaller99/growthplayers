@@ -96,6 +96,7 @@ import {
   sendMessageAsNorman,
   setUserRole,
   sendPasswordRecovery,
+  deleteUserProfile,
   updateUserProfile,
   APP_ROLE_LABEL,
   type AppRole,
@@ -627,6 +628,28 @@ export default function UserDetailScreen() {
       ],
     );
   }, [userId, adminId, roleBusy, load]);
+
+  const handleDeleteProfile = useCallback(() => {
+    if (!userId || !adminId) return;
+    showAlert(
+      'Eliminar perfil',
+      `Se borra para siempre la cuenta de ${user?.name || 'este cliente'}: acceso, check-ins, mentorías, notas y datos de salud. No se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setEditOpen(false);
+            const res = await deleteUserProfile({ adminId, userId });
+            if (!res.success) { showAlert('No se pudo eliminar', res.error ?? 'Intenta de nuevo.'); return; }
+            showAlert('Perfil eliminado', 'La cuenta y todos sus datos se borraron.');
+            router.replace('/admin/usuarios' as never);
+          },
+        },
+      ],
+    );
+  }, [userId, adminId, user?.name, router]);
 
   const handleDeactivateMembership = async (membership: UserMembership) => {
     if (!adminId) return;
@@ -1564,6 +1587,16 @@ export default function UserDetailScreen() {
               Le llega un correo para crear una contraseña nueva. No cambia su clave actual
               hasta que él la defina.
             </Text>
+
+            {viewerSuper && !user?.is_admin && !user?.is_superadmin && (
+              <Pressable
+                style={[mo.edCancel, { marginTop: spacing.lg, borderColor: palette.danger }]}
+                onPress={handleDeleteProfile}
+                accessibilityRole="button"
+                accessibilityLabel="Eliminar perfil del cliente">
+                <Text style={[mo.edCancelText, { color: palette.danger }]}>ELIMINAR PERFIL</Text>
+              </Pressable>
+            )}
 
             <View style={mo.edFooter}>
               <Pressable style={mo.edCancel} onPress={() => setEditOpen(false)} accessibilityRole="button" accessibilityLabel="Cancelar">
