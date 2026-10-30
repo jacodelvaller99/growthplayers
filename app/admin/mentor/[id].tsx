@@ -33,7 +33,8 @@ import { nextInDeskQueue } from '@/lib/admin/deskLogic';
 import { mergeAutoPlan } from '@/lib/mentorDeskLogic';
 import { fetchSessionDigests, type SessionDigestRow } from '@/lib/memory';
 import { streamClientDesk, type ClientDeskContext, type CopilotTurn } from '@/lib/adminCopilot';
-import { adminUpdateActionPlan, adminUpsertSessionNote } from '@/lib/admin/actions';
+import { adminUpdateActionPlan, adminUpsertSessionNote, deleteUserProfile } from '@/lib/admin/actions';
+import { showAlert } from '@/lib/confirm';
 import {
   fetchUserDetail, fetchUserMentorship, fetchUserMemory,
   type AdminMentorshipSession, type UserMemoryBundle,
@@ -1005,6 +1006,29 @@ export function MentorSpace({
             <Text style={s.dossierLinkText}>DOSSIER →</Text>
           </Pressable>
         )}
+        {/* Eliminar: el servidor solo deja a un SuperAdmin o al mentor asignado. */}
+        <Pressable
+          onPress={() => showAlert(
+            'Eliminar perfil',
+            `Se borra para siempre la cuenta de ${client.name}: acceso, check-ins, mentorías, notas y datos de salud. No se puede deshacer.`,
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Eliminar',
+                style: 'destructive',
+                onPress: async () => {
+                  if (!adminId) return;
+                  const res = await deleteUserProfile({ adminId, userId });
+                  if (!res.success) { showAlert('No se pudo eliminar', res.error ?? 'Intenta de nuevo.'); return; }
+                  showAlert('Perfil eliminado', 'La cuenta y todos sus datos se borraron.');
+                  if (embedded && onClose) onClose(); else router.replace('/admin' as never);
+                },
+              },
+            ],
+          )}
+          style={s.dossierLink} accessibilityRole="button" accessibilityLabel="Eliminar perfil del cliente">
+          <MaterialIcons name="delete-outline" size={20} color={palette.danger} />
+        </Pressable>
         {/* SIGUIENTE: el próximo de la bandeja "Hoy" sin volver a la lista.
             replace, no push — el atrás vuelve a Hoy, no recorre la cola. */}
         {(onNext || nextClientId) && (

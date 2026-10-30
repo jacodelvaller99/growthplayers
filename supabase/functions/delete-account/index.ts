@@ -23,15 +23,23 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: authError } = await adminSupabase.auth.getUser(token);
   if (authError || !userData.user) return json({ error: 'Unauthorized' }, 401);
 
-  // Modo admin: body { target_user_id } borra a OTRO usuario. Solo un
-  // superadmin, y nunca a otro miembro del staff (evita borrar un admin por error).
+  // Modo staff: body { target_user_id } borra a OTRO usuario. Un SuperAdmin a
+  // cualquiera; un mentor solo a sus clientes asignados. Nunca a otro miembro
+  // del staff (evita borrar un admin por error).
   let userId = userData.user.id;
   const body = await req.json().catch(() => ({}));
   const target = typeof body?.target_user_id === 'string' ? body.target_user_id : '';
   if (target && target !== userId) {
     const { data: caller } = await adminSupabase
-      .from('profiles').select('is_superadmin').eq('id', userId).maybeSingle();
-    if (!caller?.is_superadmin) return json({ error: 'Solo un SuperAdmin puede eliminar perfiles.' }, 403);
+      .from('profiles').select('is_superadmin, is_mentor').eq('id', userId).maybeSingle();
+    let allowed = caller?.is_superadmin === true;
+    if (!allowed && caller?.is_mentor) {
+      const { data: assigned } = await adminSupabase
+        .from('mentor_assignments').select('user_id')
+        .eq('user_id', target).eq('mentor_id', userId).maybeSingle();
+      allowed = !!assigned;
+    }
+    if (!allowed) return json({ error: 'Solo puedes eliminar a tus propios clientes.' }, 403);
     const { data: victim } = await adminSupabase
       .from('profiles').select('is_admin, is_superadmin, is_mentor').eq('id', target).maybeSingle();
     if (victim?.is_admin || victim?.is_superadmin || victim?.is_mentor) {
