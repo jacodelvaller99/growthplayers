@@ -260,19 +260,43 @@ function AdminGateState({
 /** Barra superior liviana: el mentor restringido (sin sidebar — solo tiene
  * 2 destinos reales, Hoy y el Espacio de cada cliente) y el admin en el
  * teléfono. Lleva el mismo interruptor CLIENTE | MENTOR que la app cliente. */
-function StaffTopBar({ topInset }: { topInset: number }) {
+function StaffTopBar({ topInset, simple = false }: { topInset: number; simple?: boolean }) {
   const { mode } = useAppTheme();
+  const router = useRouter();
+  const pathname = usePathname();
+  const onClients = pathname === '/admin/clientes';
   return (
     <View style={[s.mentorBar, { paddingTop: topInset + spacing.sm }]}>
       <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
-      <MaterialIcons name="dashboard-customize" size={18} color={palette.goldText} />
-      <Text style={s.mentorBarTitle}>POLARIS · PANEL</Text>
+      {simple ? (
+        // Vista simple: solo dos destinos, Mentorías y Clientes. Nada más.
+        <View style={s.simpleNav}>
+          {([['/admin', 'Mentorías', !onClients], ['/admin/clientes', 'Clientes', onClients]] as const).map(([route, label, on]) => (
+            <Pressable
+              key={route}
+              onPress={() => router.replace(route as never)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              style={s.simpleTab}>
+              <Text style={[s.simpleTabText, on && s.simpleTabTextOn]}>{label}</Text>
+              {on && <View style={s.simpleTabRule} />}
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <>
+          <MaterialIcons name="dashboard-customize" size={18} color={palette.goldText} />
+          <Text style={s.mentorBarTitle}>POLARIS · PANEL</Text>
+        </>
+      )}
       <ModeSwitch current="staff" />
     </View>
   );
 }
 
-type GateState = 'loading' | 'denied' | 'admin' | 'mentor';
+// 'admin' = panel completo (profiles.full_admin_panel); 'simple' = admin sin
+// el flag, trabaja como mentor (vista de mentorías) con permisos de admin.
+type GateState = 'loading' | 'denied' | 'admin' | 'simple' | 'mentor';
 
 export default function AdminLayout() {
   const router = useRouter();
@@ -312,7 +336,7 @@ export default function AdminLayout() {
       if (!isLoaded) return;
       if (!userId) { if (!cancelled) setGate('denied'); return; }
       const { data, error } = await intel.profiles()
-        .select('is_admin, is_mentor')
+        .select('is_admin, is_mentor, full_admin_panel')
         .eq('id', userId)
         .maybeSingle();
       if (cancelled) return;
@@ -321,8 +345,8 @@ export default function AdminLayout() {
         if (attempt < 1) setTimeout(() => { if (!cancelled) check(attempt + 1); }, 1200);
         return; // mantener loading; nunca conceder acceso ante error
       }
-      const row = data as { is_admin?: boolean; is_mentor?: boolean } | null;
-      if (row?.is_admin === true) { setGate('admin'); return; }
+      const row = data as { is_admin?: boolean; is_mentor?: boolean; full_admin_panel?: boolean } | null;
+      if (row?.is_admin === true) { setGate(row.full_admin_panel === true ? 'admin' : 'simple'); return; }
       if (row?.is_mentor === true) { setGate('mentor'); return; }
       setGate('denied');
       router.replace('/(tabs)/comando' as never);
@@ -339,8 +363,9 @@ export default function AdminLayout() {
   // Router mantiene este _layout montado entre navegaciones hermanas bajo
   // /admin/*, solo cambia lo que pinta <Slot/>).
   useEffect(() => {
-    if (gate !== 'mentor') return;
-    const allowed = pathname === '/admin' || pathname.startsWith('/admin/mentor/');
+    if (gate !== 'mentor' && gate !== 'simple') return;
+    // Vista simple (mentores y admins sin panel completo): Mentorías y Clientes.
+    const allowed = pathname === '/admin' || pathname === '/admin/clientes' || pathname.startsWith('/admin/mentor/');
     if (!allowed) router.replace('/admin' as never);
   }, [gate, pathname, router]);
 
@@ -364,11 +389,11 @@ export default function AdminLayout() {
   }
   if (gate === 'denied') return <AdminGateState texto="SIN ACCESO · VOLVIENDO A COMANDO" />;
 
-  if (gate === 'mentor') {
+  if (gate === 'mentor' || gate === 'simple') {
     return (
-      <AdminRoleProvider role="mentor">
+      <AdminRoleProvider role={gate === 'simple' ? 'admin' : 'mentor'}>
         <View style={s.mobileRoot}>
-          <StaffTopBar topInset={insets.top} />
+          <StaffTopBar topInset={insets.top} simple />
           <View style={s.mobileContent}>
             <Slot />
           </View>
@@ -379,7 +404,7 @@ export default function AdminLayout() {
 
   if (showSidebar) {
     return (
-      <AdminRoleProvider role="admin">
+      <AdminRoleProvider role="admin" fullPanel>
         <View style={s.webRoot}>
           <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
           <View style={s.webContent}>
@@ -392,7 +417,7 @@ export default function AdminLayout() {
 
   // Móvil (nativo o web angosto): contenido + barra inferior persistente.
   return (
-    <AdminRoleProvider role="admin">
+    <AdminRoleProvider role="admin" fullPanel>
       <View style={s.mobileRoot}>
         <StaffTopBar topInset={insets.top} />
         <View style={s.mobileContent}>
@@ -478,6 +503,11 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   mentorBarTitle: { ...typography.label, color: palette.ivory, fontSize: 11, flex: 1 },
+  simpleNav: { flex: 1, flexDirection: 'row', gap: spacing.lg },
+  simpleTab: { minHeight: 44, justifyContent: 'center' },
+  simpleTabText: { ...typography.body, fontSize: 15, color: palette.ash },
+  simpleTabTextOn: { color: palette.ivory, fontWeight: '600' },
+  simpleTabRule: { position: 'absolute', left: 0, right: 0, bottom: 4, height: 2, borderRadius: 1, backgroundColor: palette.gold },
   sidebarSwitch: { paddingHorizontal: spacing.xs, marginBottom: spacing.md },
   navGroup: { marginBottom: spacing.md },
   navGroupLabel: {

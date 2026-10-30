@@ -39,17 +39,28 @@ jest.mock('@/lib/admin/queries', () => ({
     { id: 'admin1', email: '', name: 'Coach', is_admin: true, created_at: '' },
   ]),
 }));
+jest.mock('@/components/mentor-board', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  MentorBoard: ({ footer }: { footer?: React.ReactNode }) => require('react').createElement(require('react-native').View, null, footer),
+}));
 jest.mock('@/lib/admin/actions', () => ({
   assignMentor: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const FocusDeskScreen = require('@/app/admin/index').default;
+const HoyScreen = require('@/app/admin/index').default;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { AdminRoleProvider } = require('@/hooks/use-admin-role');
 
-describe('FocusDeskScreen (admin) — render smoke', () => {
-  it('héroe + lente MIS CLIENTES renderizan con el cliente asignado, sin throw', async () => {
-    render(<FocusDeskScreen />);
-    await waitFor(() => expect(screen.getByText('EL EQUIPO')).toBeTruthy());
+describe('Hoy (admin) — render smoke', () => {
+  it('panel completo: tablero + asignación de mentores con el cliente, sin throw', async () => {
+    render(<AdminRoleProvider role="admin" fullPanel><HoyScreen /></AdminRoleProvider>);
+    await waitFor(() => expect(screen.getByText('Mentores y asignación')).toBeTruthy());
     expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
+  });
+
+  it('vista simple: solo el tablero, sin la asignación', () => {
+    render(<AdminRoleProvider role="admin"><HoyScreen /></AdminRoleProvider>);
+    expect(screen.queryByText('Mentores y asignación')).toBeNull();
   });
 });

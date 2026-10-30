@@ -13,6 +13,8 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { supabase, intel, mem } from '@/lib/supabase';
 import { POLARIS_MODULES } from '@/data/modules';
+import type { BoardSourceClient } from '@/lib/admin/boardLogic';
+import { logSilentError } from '@/lib/observability';
 import { TIER_ORDER } from '@/constants/subscriptions';
 import {
   fetchAdminBriefing,
@@ -1132,6 +1134,19 @@ export interface MentorInfo {
  * exactamente sus clientes asignados. Sin esto, buildDesk no tenía cómo
  * resolver el nombre de un cliente asignado que aún no tiene mentor_tasks.
  */
+/** Tablero de mentorías: admin → todos los clientes; mentor → los suyos. RPC
+ * mentor_board() (migración 20261030010000). Sin la migración, lista vacía. */
+export async function fetchMentorBoard(): Promise<BoardSourceClient[]> {
+  try {
+    const { data, error } = await supa.rpc('mentor_board');
+    if (error) { logSilentError('fetchMentorBoard', error); return []; }
+    return (data ?? []) as BoardSourceClient[];
+  } catch (e) {
+    logSilentError('fetchMentorBoard', e);
+    return [];
+  }
+}
+
 export async function fetchClientNames(ids: string[]): Promise<{ user_id: string; name: string }[]> {
   if (ids.length === 0) return [];
   try {

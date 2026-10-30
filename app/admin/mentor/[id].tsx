@@ -24,7 +24,7 @@ import { NextMentorshipAgendaCard } from '@/components/mentor-execution';
 import { AdminBriefingCard, ConversationTimeline, ProfileSynopsisCard } from '@/components/memory';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { useAdminRole } from '@/hooks/use-admin-role';
+import { useAdminRole, useFullPanel } from '@/hooks/use-admin-role';
 import { parseAIList, PLAN_PROMPT_TAIL } from '@/hooks/use-mentorship';
 import { TOTAL_WEEKS } from '@/data/mentorship';
 import { logSilentError } from '@/lib/observability';
@@ -131,10 +131,24 @@ function mergeDeskSession(prev: AdminMentorshipSession[], week: number, text: st
 }
 
 export default function MentorDeskScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return <MentorSpace userId={id} />;
+}
+
+/**
+ * El Espacio del Mentor como pieza: pantalla propia en el teléfono (ruta
+ * /admin/mentor/[id]) y panel lateral del tablero en escritorio (`embedded`),
+ * igual que el panel de alumno de LifeFlow.
+ */
+export function MentorSpace({
+  userId, embedded = false, onClose, onNext,
+}: { userId: string; embedded?: boolean; onClose?: () => void; onNext?: () => void }) {
   const sc = useScreen();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { id: userId } = useLocalSearchParams<{ id: string }>();
+  const safeInsets = useSafeAreaInsets();
+  const insets = embedded ? { top: 0, bottom: 0, left: 0, right: 0 } : safeInsets;
+  const fullPanel = useFullPanel();
+  const wide = sc.isDesktop && !embedded;
   const { userId: adminId, state } = useLifeFlow();
   const role = useAdminRole();
 
@@ -357,7 +371,7 @@ export default function MentorDeskScreen() {
     notesExcerpt: text.slice(0, 500),
   }), [state.profile?.name, client?.name, week, execution.prep, memory.briefing, text]);
 
-  const nextClientId = userId ? nextInDeskQueue(userId) : null;
+  const nextClientId = embedded ? null : (userId ? nextInDeskQueue(userId) : null);
 
   const openTasks = useMemo(
     () => execution.tasks.filter((t) => { const st = deriveStatus(t); return st !== 'completed' && st !== 'canceled'; }).slice(0, 8),
@@ -901,8 +915,8 @@ export default function MentorDeskScreen() {
   return (
     <KeyboardAvoidingView style={sc.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
+        <Pressable onPress={() => (onClose ? onClose() : router.back())} style={s.backBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel={embedded ? 'Cerrar panel' : 'Volver'}>
+          <MaterialIcons name={embedded ? 'close' : 'arrow-back'} size={22} color={palette.ash} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={s.headerName} numberOfLines={1}>{client.name}</Text>
@@ -913,7 +927,7 @@ export default function MentorDeskScreen() {
             )}
           </View>
         </View>
-        {role === 'admin' && (
+        {role === 'admin' && fullPanel && (
           <Pressable
             onPress={() => router.push(`/admin/usuarios/${userId}` as never)}
             style={s.dossierLink} accessibilityRole="button" accessibilityLabel="Abrir dossier completo del cliente">
@@ -922,9 +936,9 @@ export default function MentorDeskScreen() {
         )}
         {/* SIGUIENTE: el próximo de la bandeja "Hoy" sin volver a la lista.
             replace, no push — el atrás vuelve a Hoy, no recorre la cola. */}
-        {nextClientId && (
+        {(onNext || nextClientId) && (
           <Pressable
-            onPress={() => router.replace(`/admin/mentor/${nextClientId}` as never)}
+            onPress={() => (onNext ? onNext() : router.replace(`/admin/mentor/${nextClientId}` as never))}
             style={s.nextBtn} accessibilityRole="button" accessibilityLabel="Siguiente cliente">
             <Text style={s.nextBtnText}>SIGUIENTE</Text>
             <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
@@ -932,7 +946,7 @@ export default function MentorDeskScreen() {
         )}
       </View>
 
-      {sc.isDesktop ? (
+      {wide ? (
         <ScrollView
           contentContainerStyle={[sc.content, { maxWidth: 960, paddingBottom: insets.bottom + spacing.xxxl }]}
           showsVerticalScrollIndicator={false}>

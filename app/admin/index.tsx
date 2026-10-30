@@ -25,7 +25,8 @@ import { FocusHero, HeroPanel, HeroRule, LensRow, LensTabs, RowList, type Lens }
 import { useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { useAdminRole } from '@/hooks/use-admin-role';
+import { useAdminRole, useFullPanel } from '@/hooks/use-admin-role';
+import { MentorBoard } from '@/components/mentor-board';
 import { assignMentor } from '@/lib/admin/actions';
 import {
   fetchClientNames, fetchMentorAssignments, fetchMentorsList, fetchUsers,
@@ -41,7 +42,14 @@ const MOMENTUM_LABEL: Record<string, string> = {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function FocusDeskScreen() {
+export default function HoyScreen() {
+  // Todos trabajan en el tablero de mentorías (patrón LifeFlow). Quien tiene el
+  // panel completo además ve debajo la asignación de mentores y el equipo.
+  const fullPanel = useFullPanel();
+  return <MentorBoard footer={fullPanel ? <FocusDeskScreen lensesOnly /> : undefined} />;
+}
+
+function FocusDeskScreen({ lensesOnly = false }: { lensesOnly?: boolean }) {
   const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -135,6 +143,7 @@ export default function FocusDeskScreen() {
     setAssigning(null);
   };
 
+  if (loading && lensesOnly) return <ActivityIndicator color={palette.goldText} />;
   if (loading) {
     return (
       <View style={[sc.root, s.center]}>
@@ -270,38 +279,8 @@ export default function FocusDeskScreen() {
     },
   ];
 
-  return (
-    <ScrollView
-      style={sc.root}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + spacing.lg }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.gold} />
-      }>
-      <View style={s.header}>
-        <Text style={s.headerTitle}>HOY</Text>
-        <Text style={s.headerDate}>
-          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, (ch) => ch.toUpperCase())}
-        </Text>
-      </View>
-
-      <HeroPanel>
-        <FocusHero
-          eyebrow={isMentor ? 'TUS CLIENTES' : 'EL EQUIPO'}
-          statement={statement}
-          metric={{ value: String(clientCount), caption: 'EN ATENCIÓN' }}
-          directive={topUrgent ? {
-            title: `EMPEZAR POR ${topUrgent.name.toUpperCase()}`,
-            reason: topUrgent.topReason ?? `atención ${topUrgent.attention} · ${topUrgent.overdue} vencidas`,
-            onPress: () => openClient(topUrgent.user_id),
-          } : undefined}
-        />
-        <HeroRule />
-        <RowList rows={stats} />
-      </HeroPanel>
-
-      {isMentor ? renderMisClientes() : <LensTabs initial="mios" lenses={lenses} />}
-
+  const assignModal = (
+    <>
       {/* ══════════════════════ MODAL: ASIGNAR MENTOR ══════════════════════ */}
       <Modal visible={!!assigning} transparent animationType="slide" onRequestClose={closeAssign}>
         <View style={modal.overlay}>
@@ -357,6 +336,53 @@ export default function FocusDeskScreen() {
           </View>
         </View>
       </Modal>
+
+    </>
+  );
+
+  if (lensesOnly) {
+    return (
+      <View style={{ gap: spacing.md }}>
+        <Text style={s.queueTitle}>Mentores y asignación</Text>
+        <LensTabs initial="asignar" lenses={lenses.filter((l) => l.id !== 'mios')} />
+        {assignModal}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={sc.root}
+      contentContainerStyle={[sc.content, { paddingTop: insets.top + spacing.lg }]}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.gold} />
+      }>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>HOY</Text>
+        <Text style={s.headerDate}>
+          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, (ch) => ch.toUpperCase())}
+        </Text>
+      </View>
+
+      <HeroPanel>
+        <FocusHero
+          eyebrow={isMentor ? 'TUS CLIENTES' : 'EL EQUIPO'}
+          statement={statement}
+          metric={{ value: String(clientCount), caption: 'EN ATENCIÓN' }}
+          directive={topUrgent ? {
+            title: `EMPEZAR POR ${topUrgent.name.toUpperCase()}`,
+            reason: topUrgent.topReason ?? `atención ${topUrgent.attention} · ${topUrgent.overdue} vencidas`,
+            onPress: () => openClient(topUrgent.user_id),
+          } : undefined}
+        />
+        <HeroRule />
+        <RowList rows={stats} />
+      </HeroPanel>
+
+      {isMentor ? renderMisClientes() : <LensTabs initial="mios" lenses={lenses} />}
+
+      {assignModal}
 
       <View style={{ height: insets.bottom + spacing.xxxl }} />
     </ScrollView>
