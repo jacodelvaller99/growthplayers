@@ -159,7 +159,7 @@ export async function assembleConfrontationBundle(userId: string): Promise<Confr
     fetchLastTimestamp('mentor_messages', userId, 'user_id'),
     fetchLastDmAt(userId),
     fetchLastTimestamp('user_events', userId, 'user_id'),
-    fetchLastTimestamp('completed_lessons', userId, 'user_id'),
+    fetchLastTimestamp('completed_lessons', userId, 'user_id', 'completed_at'), // la tabla no tiene created_at → 400 y la señal llegaba siempre vacía
     fetchBaselineRecovery30d(userId),
     fetchDismissals(userId, nowIso),
     fetchOnboardingCompletedAt(userId),
