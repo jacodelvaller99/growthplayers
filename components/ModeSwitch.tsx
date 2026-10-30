@@ -8,13 +8,13 @@
  * autorización real sigue en RLS + el guard de app/admin/_layout.tsx.
  */
 import { useRouter } from 'expo-router';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import { Fonts, palette } from '@/constants/theme';
 import { useStaffRole } from '@/hooks/useIsAdmin';
 
-export function ModeSwitch({ current }: { current: 'client' | 'staff' }) {
+export function ModeSwitch({ current, style }: { current: 'client' | 'staff'; style?: StyleProp<ViewStyle> }) {
   const router = useRouter();
   const { isAdmin, isMentor } = useStaffRole();
   if (!isAdmin && !isMentor) return null;
@@ -28,7 +28,7 @@ export function ModeSwitch({ current }: { current: 'client' | 'staff' }) {
   };
 
   return (
-    <View style={s.track} accessibilityRole="tablist" accessibilityLabel="Cambiar de modo">
+    <View style={[s.track, style]} accessibilityRole="tablist" accessibilityLabel="Cambiar de modo">
       {(['client', 'staff'] as const).map((m) => {
         const on = m === current;
         const label = m === 'client' ? 'CLIENTE' : staffLabel;

@@ -887,7 +887,7 @@ export default function DashboardScreen() {
           {`${greeting()}, ${state.profile.name.split(' ')[0] || state.profile.name}`}
         </Text>
         {/* Solo staff: pasar a su panel sin bajar hasta Perfil. */}
-        <View style={mob.modeSwitch}><ModeSwitch current="client" /></View>
+        <ModeSwitch current="client" style={mob.modeSwitch} />
       </View>
       {/* Personalizar — en escritorio vive en la barra lateral; el teléfono no
           la tiene, y llegar a los 3 ejes exigía Perfil → Apariencia. Un toque
@@ -1210,6 +1210,9 @@ export default function DashboardScreen() {
         overScrollMode="never"
         keyboardShouldPersistTaps="handled">
         {isDesktop && <AppHeader title="POLARIS" />}
+        {/* Los modos alternos no pintan la cabecera de Inicio: sin esto, el
+            staff en Esencial/Operador/Calma… no veía el interruptor en el celular. */}
+        {!isDesktop && <ModeSwitch current="client" style={mob.modeSwitchTop} />}
         <ModeComponent {...modeProps} />
       </ScrollView>
     );
@@ -2189,6 +2192,7 @@ const mob = StyleSheet.create({
     textTransform: 'uppercase',
   },
   modeSwitch: { marginTop: spacing.md },
+  modeSwitchTop: { marginBottom: spacing.lg },
   headerAction: {
     width: 44,
     height: 44,

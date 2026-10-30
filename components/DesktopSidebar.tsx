@@ -115,9 +115,7 @@ export function DesktopSidebar() {
           <Text style={styles.logoSub}>GROWTH INSTITUTE</Text>
         </View>
       </View>
-      <View style={styles.modeSwitch}>
-        <ModeSwitch current="client" />
-      </View>
+      <ModeSwitch current="client" style={styles.modeSwitch} />
 
       {/* ── Navegación agrupada + tema + usuario — TODO scrollable: si el
           contenido no cabe en la altura del viewport (ventanas bajas,
