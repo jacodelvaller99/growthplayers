@@ -33,6 +33,7 @@ import {
   useScreen,
 } from '@/components/polaris';
 import EmptyState from '@/components/EmptyState';
+import { MyMentorCard } from '@/components/MyMentorCard';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -427,6 +428,8 @@ export default function MentoriaScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <AppHeader title="MENTORÍA" />
+        {/* Quién te acompaña en estas sesiones — la mentoría tiene cara. */}
+        <View style={{ marginBottom: spacing.lg }}><MyMentorCard /></View>
         {hero}
 
         {isDesktop ? (

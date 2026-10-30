@@ -52,6 +52,7 @@ import { clientSafeNarrative } from '@/lib/coachIntelligenceLogic';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { ArcHeader, BaselineNote, GlossToggle, MilestoneToast } from '@/components/narrative';
 import { JornadaTracker } from '@/components/jornada';
+import { ModeSwitch } from '@/components/ModeSwitch';
 import { arcForDay, GLOSS } from '@/lib/narrativeLogic';
 import { checkMilestone } from '@/lib/milestoneCheck';
 import { useJornada } from '@/hooks/use-jornada';
@@ -885,6 +886,8 @@ export default function DashboardScreen() {
         <Text style={mob.headerTitle} numberOfLines={2}>
           {`${greeting()}, ${state.profile.name.split(' ')[0] || state.profile.name}`}
         </Text>
+        {/* Solo staff: pasar a su panel sin bajar hasta Perfil. */}
+        <View style={mob.modeSwitch}><ModeSwitch current="client" /></View>
       </View>
       {/* Personalizar — en escritorio vive en la barra lateral; el teléfono no
           la tiene, y llegar a los 3 ejes exigía Perfil → Apariencia. Un toque
@@ -2185,6 +2188,7 @@ const mob = StyleSheet.create({
     lineHeight: 26,
     textTransform: 'uppercase',
   },
+  modeSwitch: { marginTop: spacing.md },
   headerAction: {
     width: 44,
     height: 44,

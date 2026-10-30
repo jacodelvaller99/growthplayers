@@ -9,6 +9,7 @@ import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { PolarisLogo } from '@/components/PolarisLogo';
+import { ModeSwitch } from '@/components/ModeSwitch';
 import { computeStreak } from '@/lib/utils';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
@@ -113,6 +114,9 @@ export function DesktopSidebar() {
           <Text style={styles.logoText}>POLARIS</Text>
           <Text style={styles.logoSub}>GROWTH INSTITUTE</Text>
         </View>
+      </View>
+      <View style={styles.modeSwitch}>
+        <ModeSwitch current="client" />
       </View>
 
       {/* ── Navegación agrupada + tema + usuario — TODO scrollable: si el
@@ -231,6 +235,8 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     overflow: 'hidden',
   },
+
+  modeSwitch: { marginTop: -6, marginBottom: 16 },
 
   // Logo — usa SVG oficial del Manual de Marca
   logoArea: {

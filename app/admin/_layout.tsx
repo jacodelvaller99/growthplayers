@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { palette, spacing, typography, radii, Fonts } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { PressableScale } from '@/components/polaris';
+import { ModeSwitch } from '@/components/ModeSwitch';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -37,25 +38,36 @@ interface NavItem {
   route: string;
   label: string;
   icon: IconName;
-  group?: 'top' | 'data' | 'bottom';
+  group?: NavGroupKey;
 }
 
+// Tres grupos por lo que la persona VIENE A HACER, no por cómo está construido:
+// atender clientes (todos los días), administrar el negocio (de vez en cuando),
+// leer datos (cuando hay una pregunta). Antes eran 16 entradas en dos listas
+// sin nombre, con "Mission Control" y "Membresías" mezclados en la primera.
+type NavGroupKey = 'work' | 'business' | 'data';
+const NAV_GROUP_LABEL: Record<NavGroupKey, string> = {
+  work: 'CLIENTES',
+  business: 'NEGOCIO',
+  data: 'DATOS',
+};
+
 const NAV_ITEMS: NavItem[] = [
-  { route: '/admin',               label: 'Escritorio',       icon: 'dashboard',      group: 'top' },
-  { route: '/admin/mission-control', label: 'Mission Control', icon: 'insights',      group: 'top' },
-  { route: '/admin/usuarios',      label: 'Usuarios',         icon: 'people',         group: 'top' },
-  { route: '/admin/ranking',       label: 'Ranking',          icon: 'leaderboard',    group: 'top' },
-  { route: '/admin/copilot',       label: 'Copiloto IA',      icon: 'smart-toy',      group: 'top' },
-  { route: '/admin/membresias',    label: 'Membresías',       icon: 'credit-card',    group: 'top' },
-  { route: '/admin/cursos',        label: 'Cursos',           icon: 'school',         group: 'top' },
-  { route: '/admin/codigos',       label: 'Códigos Acceso',   icon: 'vpn-key',        group: 'top' },
-  { route: '/admin/inteligencia',  label: 'Inteligencia ML',  icon: 'psychology',     group: 'data' },
-  { route: '/admin/memoria',       label: 'Memoria',          icon: 'memory',         group: 'data' },
+  { route: '/admin',               label: 'Hoy',              icon: 'today',          group: 'work' },
+  { route: '/admin/usuarios',      label: 'Clientes',         icon: 'people',         group: 'work' },
+  { route: '/admin/copilot',       label: 'Copiloto IA',      icon: 'smart-toy',      group: 'work' },
+  { route: '/admin/plaud',         label: 'Grabaciones Plaud', icon: 'mic',           group: 'work' },
+  { route: '/admin/membresias',    label: 'Membresías',       icon: 'credit-card',    group: 'business' },
+  { route: '/admin/codigos',       label: 'Códigos de acceso', icon: 'vpn-key',       group: 'business' },
+  { route: '/admin/cursos',        label: 'Cursos',           icon: 'school',         group: 'business' },
+  { route: '/admin/contenido',     label: 'Contenido',        icon: 'article',        group: 'business' },
+  { route: '/admin/comunidad',     label: 'Moderación',       icon: 'flag',           group: 'business' },
+  { route: '/admin/mission-control', label: 'Retención',      icon: 'insights',       group: 'data' },
   { route: '/admin/mentores/ejecucion', label: 'Ejecución',   icon: 'task-alt',       group: 'data' },
   { route: '/admin/biometria',     label: 'Biométricos',      icon: 'monitor-heart',  group: 'data' },
-  { route: '/admin/contenido',     label: 'Contenido',        icon: 'article',        group: 'data' },
-  { route: '/admin/plaud',         label: 'Plaud',            icon: 'mic',            group: 'data' },
-  { route: '/admin/comunidad',     label: 'Moderación',       icon: 'flag',           group: 'data' },
+  { route: '/admin/memoria',       label: 'Memoria',          icon: 'memory',         group: 'data' },
+  { route: '/admin/inteligencia',  label: 'Inteligencia ML',  icon: 'psychology',     group: 'data' },
+  { route: '/admin/ranking',       label: 'Ranking',          icon: 'leaderboard',    group: 'data' },
   { route: '/admin/auditoria',     label: 'Auditoría',        icon: 'history',        group: 'data' },
 ];
 
@@ -70,10 +82,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
     return pathname.startsWith(route);
   };
 
-  const groups: Array<{ key: string; items: NavItem[] }> = [
-    { key: 'top',    items: NAV_ITEMS.filter(i => i.group === 'top') },
-    { key: 'data',   items: NAV_ITEMS.filter(i => i.group === 'data') },
-  ];
+  const groups = (Object.keys(NAV_GROUP_LABEL) as NavGroupKey[]).map((key) => ({
+    key,
+    items: NAV_ITEMS.filter((i) => i.group === key),
+  }));
 
   return (
     <View style={[
@@ -87,16 +99,20 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       <BlurView intensity={100} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
 
       {/* Logo / toggle */}
-      <Pressable style={s.sidebarLogo} onPress={onToggle}>
+      <Pressable
+        style={s.sidebarLogo}
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityLabel={collapsed ? 'Expandir menú' : 'Contraer menú'}>
         <MaterialIcons name="dashboard-customize" size={20} color={palette.goldText} />
-        {!collapsed && <Text style={s.sidebarTitle}>CMI POLARIS</Text>}
+        {!collapsed && <Text style={s.sidebarTitle}>POLARIS · PANEL</Text>}
       </Pressable>
-
-      <View style={s.sidebarDivider} />
+      {!collapsed && <View style={s.sidebarSwitch}><ModeSwitch current="staff" /></View>}
 
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
         {groups.map(group => (
-          <View key={group.key}>
+          <View key={group.key} style={s.navGroup}>
+            {!collapsed && <Text style={s.navGroupLabel}>{NAV_GROUP_LABEL[group.key]}</Text>}
             {group.items.map(item => {
               const active = isActive(item.route);
               return (
@@ -117,7 +133,6 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
                 </PressableScale>
               );
             })}
-            <View style={s.sidebarDivider} />
           </View>
         ))}
       </ScrollView>
@@ -134,14 +149,8 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         <MaterialIcons name="tune" size={18} color={palette.goldText} />
         {!collapsed && <Text style={s.navLabel}>Personalizar</Text>}
       </PressableScale>
-
-      {/* Back to app */}
-      <PressableScale
-        style={s.navItem}
-        onPress={() => router.replace('/(tabs)/comando' as never)}>
-        <MaterialIcons name="arrow-back" size={18} color={palette.smoke} />
-        {!collapsed && <Text style={s.navLabelMuted}>Volver a la App</Text>}
-      </PressableScale>
+      {/* "Volver a la App" se fue: el interruptor CLIENTE | ADMIN de arriba
+          hace eso mismo y es el mismo control que hay del lado del cliente. */}
     </View>
   );
 }
@@ -150,10 +159,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 // El admin en móvil no tenía navegación persistente. 4 destinos clave + "Más"
 // (abre una hoja con todas las secciones). Bottom nav ≤5 ítems con label+icono.
 const BOTTOM_TABS: NavItem[] = [
-  { route: '/admin',                  label: 'Inicio',     icon: 'dashboard' },
-  { route: '/admin/usuarios',         label: 'Usuarios',   icon: 'people' },
-  { route: '/admin/mission-control',  label: 'Control',    icon: 'insights' },
+  { route: '/admin',                  label: 'Hoy',        icon: 'today' },
+  { route: '/admin/usuarios',         label: 'Clientes',   icon: 'people' },
   { route: '/admin/membresias',       label: 'Membresías', icon: 'credit-card' },
+  { route: '/admin/mission-control',  label: 'Retención',  icon: 'insights' },
 ];
 
 function AdminBottomNav() {
@@ -214,12 +223,6 @@ function AdminBottomNav() {
                   </Pressable>
                 );
               })}
-              <Pressable
-                style={s.sheetRow}
-                onPress={() => { setMoreOpen(false); router.replace('/(tabs)/comando' as never); }}>
-                <MaterialIcons name="arrow-back" size={20} color={palette.smoke} />
-                <Text style={[s.sheetRowLabel, { color: palette.smoke }]}>Volver a la App</Text>
-              </Pressable>
             </ScrollView>
           </Pressable>
         </Pressable>
@@ -254,24 +257,17 @@ function AdminGateState({
   );
 }
 
-/** Chrome liviano del mentor restringido — sin sidebar ni bottom nav de 16
- * secciones: el mentor solo tiene 2 destinos reales (su Escritorio y el
- * Espacio de cada cliente), ninguno necesita un menú. */
-function MentorChrome({ topInset }: { topInset: number }) {
-  const router = useRouter();
+/** Barra superior liviana: el mentor restringido (sin sidebar — solo tiene
+ * 2 destinos reales, Hoy y el Espacio de cada cliente) y el admin en el
+ * teléfono. Lleva el mismo interruptor CLIENTE | MENTOR que la app cliente. */
+function StaffTopBar({ topInset }: { topInset: number }) {
   const { mode } = useAppTheme();
   return (
     <View style={[s.mentorBar, { paddingTop: topInset + spacing.sm }]}>
       <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
       <MaterialIcons name="dashboard-customize" size={18} color={palette.goldText} />
-      <Text style={s.mentorBarTitle}>ESCRITORIO DEL MENTOR</Text>
-      <Pressable
-        onPress={() => router.replace('/(tabs)/comando' as never)}
-        style={s.mentorBarExit}
-        accessibilityRole="button"
-        accessibilityLabel="Salir, volver a la app">
-        <Text style={s.mentorBarExitText}>SALIR</Text>
-      </Pressable>
+      <Text style={s.mentorBarTitle}>POLARIS · PANEL</Text>
+      <ModeSwitch current="staff" />
     </View>
   );
 }
@@ -372,7 +368,7 @@ export default function AdminLayout() {
     return (
       <AdminRoleProvider role="mentor">
         <View style={s.mobileRoot}>
-          <MentorChrome topInset={insets.top} />
+          <StaffTopBar topInset={insets.top} />
           <View style={s.mobileContent}>
             <Slot />
           </View>
@@ -398,6 +394,7 @@ export default function AdminLayout() {
   return (
     <AdminRoleProvider role="admin">
       <View style={s.mobileRoot}>
+        <StaffTopBar topInset={insets.top} />
         <View style={s.mobileContent}>
           <Slot />
         </View>
@@ -481,8 +478,17 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   mentorBarTitle: { ...typography.label, color: palette.ivory, fontSize: 11, flex: 1 },
-  mentorBarExit: { minHeight: 36, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  mentorBarExitText: { ...typography.label, color: palette.smoke, fontSize: 10 },
+  sidebarSwitch: { paddingHorizontal: spacing.xs, marginBottom: spacing.md },
+  navGroup: { marginBottom: spacing.md },
+  navGroupLabel: {
+    ...typography.label,
+    color: palette.smoke,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: alpha(palette.graphite, '99'),
@@ -563,10 +569,5 @@ const s = StyleSheet.create({
   },
   navLabelActive: {
     color: palette.goldText,
-  },
-  navLabelMuted: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    color: palette.smoke,
   },
 });

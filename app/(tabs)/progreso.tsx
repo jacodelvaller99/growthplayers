@@ -29,6 +29,7 @@ import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
 import { DURATION_HOUSE, EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useStaffRole } from '@/hooks/useIsAdmin';
+import { MyMentorCard } from '@/components/MyMentorCard';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { arcForDay, buildHistoria, GLOSS } from '@/lib/narrativeLogic';
@@ -926,6 +927,7 @@ export default function ProgresoScreen() {
               móvil (líneas ~1166-1229) — no se reescribe, se reusa. */}
           {/* La pestaña se llama «Perfil» (la ruta sigue siendo progreso). */}
           <AppHeader title="PERFIL" />
+          <View style={styles.myMentor}><MyMentorCard /></View>
           <HeroPanel>
             <View style={styles.scoreCard}>
               <View style={styles.scoreTopRow}>
@@ -1278,6 +1280,8 @@ export default function ProgresoScreen() {
           <Text style={styles.streakChipText}>{checkinStreak}</Text>
         </View>
       </View>
+
+      <View style={styles.myMentor}><MyMentorCard /></View>
 
       {/* ── HÉROE CONSOLIDADO ──────────────────────────────────────────────
           Score, compartir y tu historia eran tres tarjetas apiladas. En el
@@ -1930,6 +1934,7 @@ const styles = StyleSheet.create({
   },
 
   // Profile header (design: avatar · name · día de protocolo · racha chip)
+  myMentor: { marginBottom: spacing.lg },
   profileHeader: {
     alignItems: 'center',
     flexDirection: 'row',

@@ -29,6 +29,7 @@ import { parseAIList, PLAN_PROMPT_TAIL } from '@/hooks/use-mentorship';
 import { TOTAL_WEEKS } from '@/data/mentorship';
 import { logSilentError } from '@/lib/observability';
 import { deskClientId, deskWeek, splitWeekSessions } from '@/lib/mentorDeskLogic';
+import { nextInDeskQueue } from '@/lib/admin/deskLogic';
 import { streamClientDesk, type ClientDeskContext, type CopilotTurn } from '@/lib/adminCopilot';
 import { adminUpdateActionPlan, adminUpsertSessionNote } from '@/lib/admin/actions';
 import {
@@ -355,6 +356,8 @@ export default function MentorDeskScreen() {
     ] : [],
     notesExcerpt: text.slice(0, 500),
   }), [state.profile?.name, client?.name, week, execution.prep, memory.briefing, text]);
+
+  const nextClientId = userId ? nextInDeskQueue(userId) : null;
 
   const openTasks = useMemo(
     () => execution.tasks.filter((t) => { const st = deriveStatus(t); return st !== 'completed' && st !== 'canceled'; }).slice(0, 8),
@@ -917,6 +920,16 @@ export default function MentorDeskScreen() {
             <Text style={s.dossierLinkText}>DOSSIER →</Text>
           </Pressable>
         )}
+        {/* SIGUIENTE: el próximo de la bandeja "Hoy" sin volver a la lista.
+            replace, no push — el atrás vuelve a Hoy, no recorre la cola. */}
+        {nextClientId && (
+          <Pressable
+            onPress={() => router.replace(`/admin/mentor/${nextClientId}` as never)}
+            style={s.nextBtn} accessibilityRole="button" accessibilityLabel="Siguiente cliente">
+            <Text style={s.nextBtnText}>SIGUIENTE</Text>
+            <MaterialIcons name="arrow-forward" size={16} color={palette.goldText} />
+          </Pressable>
+        )}
       </View>
 
       {sc.isDesktop ? (
@@ -966,6 +979,12 @@ const s = StyleSheet.create({
   headerPills: { flexDirection: 'row', gap: spacing.xs, marginTop: 4 },
   dossierLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
   dossierLinkText: { ...typography.label, color: palette.goldText, fontSize: 10 },
+  nextBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    minHeight: 44, paddingHorizontal: spacing.md,
+    borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold,
+  },
+  nextBtnText: { ...typography.label, color: palette.goldText, fontSize: 11 },
 
   desktopRow: { flexDirection: 'row', gap: spacing.xl },
 

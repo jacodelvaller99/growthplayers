@@ -126,3 +126,23 @@ export function buildDesk(input: {
 
   return { clients, needsIntervention, topUrgent, unassigned, overdueTotal, momentumRisk, mine, byMentor };
 }
+
+/** Necesita al mentor hoy: algo que atender o una tarea vencida. */
+export function needsAttention(c: Pick<DeskClient, 'attention' | 'overdue'>): boolean {
+  return c.attention > 0 || c.overdue > 0;
+}
+
+// ─── Cola de trabajo del mentor ──────────────────────────────────────────────
+// El orden que el mentor vio en "Hoy", para que el Espacio del Mentor ofrezca
+// SIGUIENTE sin volver a la lista. ponytail: estado de módulo — un deep link
+// directo al Espacio no trae cola y simplemente no muestra SIGUIENTE.
+let deskQueue: string[] = [];
+
+export function setDeskQueue(ids: string[]): void {
+  deskQueue = ids;
+}
+
+export function nextInDeskQueue(current: string): string | null {
+  const i = deskQueue.indexOf(current);
+  return i >= 0 && i + 1 < deskQueue.length ? deskQueue[i + 1] : null;
+}

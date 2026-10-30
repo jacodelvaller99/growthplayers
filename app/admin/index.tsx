@@ -22,7 +22,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FocusHero, HeroPanel, HeroRule, LensRow, LensTabs, RowList, type Lens } from '@/components/focus-deck';
-import { StatusPill, useScreen } from '@/components/polaris';
+import { useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAdminRole } from '@/hooks/use-admin-role';
@@ -32,7 +32,7 @@ import {
   type MentorAssignment, type MentorInfo,
 } from '@/lib/admin/queries';
 import type { AdminUser } from '@/lib/admin/types';
-import { buildDesk, type DeskClient } from '@/lib/admin/deskLogic';
+import { buildDesk, needsAttention, setDeskQueue, type DeskClient } from '@/lib/admin/deskLogic';
 import { fetchExecutionDashboard, type ExecutionDashboardRow } from '@/lib/mentorExecution';
 
 const MOMENTUM_LABEL: Record<string, string> = {
@@ -168,26 +168,57 @@ export default function FocusDeskScreen() {
         { label: 'Momentum en riesgo', value: String(desk.momentumRisk) },
       ];
 
-  const renderMisClientes = () => (
-    desk.mine.length === 0 ? (
-      <Text style={s.emptyLens}>
-        {isMentor ? 'Aún no tienes clientes asignados.' : 'Sin clientes asignados. Asígnate desde la lente ASIGNACIÓN.'}
-      </Text>
-    ) : (
-      <View style={{ gap: spacing.xs }}>
-        {desk.mine.map((c) => (
-          <LensRow
-            key={c.user_id}
-            icon="person"
-            label={c.name}
-            sub={`${c.openTasks} abiertas · ${c.overdue} vencidas · ${MOMENTUM_LABEL[c.momentum] ?? c.momentum}`}
-            badge={c.attention > 0 ? String(c.attention) : undefined}
-            onPress={() => router.push(`/admin/mentor/${c.user_id}` as never)}
-          />
-        ))}
-      </View>
-    )
+  // La bandeja: primero quien necesita al mentor (ya viene ordenado por
+  // atención), después quien va al día. Cada fila dice POR QUÉ en una línea —
+  // el motivo real, no un conteo — y abrir uno fija la cola para SIGUIENTE.
+  const openClient = (id: string) => {
+    setDeskQueue(desk.mine.map((c) => c.user_id));
+    router.push(`/admin/mentor/${id}` as never);
+  };
+  const clientRow = (c: DeskClient) => (
+    <LensRow
+      key={c.user_id}
+      icon={needsAttention(c) ? 'priority-high' : 'person'}
+      label={c.name}
+      sub={
+        c.topReason
+          ?? (c.overdue > 0
+            ? `${c.overdue} tarea${c.overdue === 1 ? '' : 's'} vencida${c.overdue === 1 ? '' : 's'} · momentum ${MOMENTUM_LABEL[c.momentum] ?? c.momentum}`
+            : `${c.openTasks} abiertas · momentum ${MOMENTUM_LABEL[c.momentum] ?? c.momentum}`)
+      }
+      badge={c.attention > 0 ? String(c.attention) : undefined}
+      onPress={() => openClient(c.user_id)}
+    />
   );
+  const renderMisClientes = () => {
+    if (desk.mine.length === 0) {
+      return (
+        <Text style={s.emptyLens}>
+          {isMentor
+            ? 'Aún no tienes clientes asignados. Cuando un admin te asigne uno, aparece aquí.'
+            : 'No tienes clientes asignados. Asígnate desde ASIGNACIÓN.'}
+        </Text>
+      );
+    }
+    const urgent = desk.mine.filter(needsAttention);
+    const calm = desk.mine.filter((c) => !needsAttention(c));
+    return (
+      <View style={{ gap: spacing.lg }}>
+        {urgent.length > 0 && (
+          <View style={{ gap: spacing.xs }}>
+            <Text style={s.queueTitle}>Necesitan atención · {urgent.length}</Text>
+            {urgent.map(clientRow)}
+          </View>
+        )}
+        {calm.length > 0 && (
+          <View style={{ gap: spacing.xs }}>
+            <Text style={s.queueTitle}>Al día · {calm.length}</Text>
+            {calm.map(clientRow)}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const lenses: Lens[] = [
     { id: 'mios', label: 'MIS CLIENTES', render: renderMisClientes },
@@ -248,22 +279,21 @@ export default function FocusDeskScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.gold} />
       }>
       <View style={s.header}>
-        <View>
-          <Text style={s.headerEyebrow}>POLARIS GROWTH INSTITUTE</Text>
-          <Text style={s.headerTitle}>ESCRITORIO</Text>
-        </View>
-        <StatusPill label={isMentor ? 'MENTOR' : 'ADMIN'} tone="gold" dot />
+        <Text style={s.headerTitle}>HOY</Text>
+        <Text style={s.headerDate}>
+          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </Text>
       </View>
 
       <HeroPanel>
         <FocusHero
-          eyebrow="ESCRITORIO DEL MENTOR"
+          eyebrow={isMentor ? 'TUS CLIENTES' : 'EL EQUIPO'}
           statement={statement}
           metric={{ value: String(clientCount), caption: 'EN ATENCIÓN' }}
           directive={topUrgent ? {
-            title: `ATIENDE A ${topUrgent.name.toUpperCase()}`,
+            title: `EMPEZAR POR ${topUrgent.name.toUpperCase()}`,
             reason: topUrgent.topReason ?? `atención ${topUrgent.attention} · ${topUrgent.overdue} vencidas`,
-            onPress: () => router.push(`/admin/mentor/${topUrgent.user_id}` as never),
+            onPress: () => openClient(topUrgent.user_id),
           } : undefined}
         />
         <HeroRule />
@@ -340,11 +370,13 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'baseline',
+    gap: spacing.md,
     marginBottom: spacing.xl,
   },
-  headerEyebrow: { ...typography.label, color: palette.smoke, marginBottom: 2 },
   headerTitle: { ...typography.title, color: palette.ivory },
+  headerDate: { ...typography.caption, color: palette.ash, textTransform: 'capitalize' },
+  queueTitle: { ...typography.body, fontWeight: '600', color: palette.ivory, marginBottom: spacing.xs },
 
   emptyLens: { ...typography.caption, color: palette.smoke, fontStyle: 'italic', paddingVertical: spacing.md },
 

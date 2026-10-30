@@ -1,6 +1,6 @@
 /**
  * Render smoke test del Focus Desk (nuevo home del admin).
- * Héroe "ESCRITORIO DEL MENTOR" + 3 números + 3 lentes (MIS CLIENTES ·
+ * Héroe "EL EQUIPO" + 3 números + 3 lentes (MIS CLIENTES ·
  * ASIGNACIÓN · EQUIPO). Monta con datos poblados sin throw (IO mockeado;
  * deskLogic real — el armado del escritorio se ejercita de verdad).
  */
@@ -49,7 +49,7 @@ const FocusDeskScreen = require('@/app/admin/index').default;
 describe('FocusDeskScreen (admin) — render smoke', () => {
   it('héroe + lente MIS CLIENTES renderizan con el cliente asignado, sin throw', async () => {
     render(<FocusDeskScreen />);
-    await waitFor(() => expect(screen.getByText('ESCRITORIO DEL MENTOR')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('EL EQUIPO')).toBeTruthy());
     expect(screen.getAllByText('Ana').length).toBeGreaterThan(0);
   });
 });

@@ -2,6 +2,9 @@
 
 import {
   buildDesk,
+  needsAttention,
+  nextInDeskQueue,
+  setDeskQueue,
   type DeskAssignmentEntry,
   type DeskMentor,
   type DeskRosterEntry,
@@ -213,5 +216,20 @@ describe('buildDesk', () => {
       assignments: [], mentors: [], myId: 'admin1',
     });
     expect(desk.needsIntervention).toBe(2);
+  });
+});
+
+describe('cola de trabajo del mentor', () => {
+  it('SIGUIENTE avanza en el orden de Hoy y se detiene al final', () => {
+    setDeskQueue(['a', 'b', 'c']);
+    expect(nextInDeskQueue('a')).toBe('b');
+    expect(nextInDeskQueue('c')).toBeNull();
+    expect(nextInDeskQueue('fuera-de-cola')).toBeNull();
+  });
+
+  it('necesita atención = algo que atender o una tarea vencida', () => {
+    expect(needsAttention({ attention: 0, overdue: 0 })).toBe(false);
+    expect(needsAttention({ attention: 3, overdue: 0 })).toBe(true);
+    expect(needsAttention({ attention: 0, overdue: 1 })).toBe(true);
   });
 });

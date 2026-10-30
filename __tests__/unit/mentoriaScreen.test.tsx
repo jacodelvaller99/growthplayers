@@ -84,3 +84,7 @@ describe('MentoriaScreen — render smoke', () => {
     expect(() => render(<MentoriaScreen />)).not.toThrow();
   });
 });
+
+// Componentes con su propia lectura a Supabase: fuera del alcance de este smoke.
+jest.mock('@/components/ModeSwitch', () => ({ ModeSwitch: () => null }));
+jest.mock('@/components/MyMentorCard', () => ({ MyMentorCard: () => null }));
