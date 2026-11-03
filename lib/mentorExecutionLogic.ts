@@ -184,6 +184,10 @@ export function computeClientScores(input: {
   commitmentsFulfilled?: number;
   churnRisk?: number;
   daysSinceReview?: number;
+  /** Días desde la última señal del cliente en la app; `null` = nunca la usó;
+   * `undefined` = desconocido (no se aplica). Sin esto, un cliente sin tareas
+   * vencidas salía "en ascenso" aunque llevara dos meses sin aparecer. */
+  daysSinceActivity?: number | null;
 }): ClientScores {
   const now = input.nowMs ?? Date.now();
   const tasks = input.tasks ?? [];
@@ -202,7 +206,7 @@ export function computeClientScores(input: {
     if (st === 'overdue' && t.priority === 'critical') counts.criticalOverdue++;
   }
 
-  const attention = scoreMentorAttention({
+  let attention = scoreMentorAttention({
     friction,
     adherence,
     churnRisk: input.churnRisk,
@@ -210,16 +214,33 @@ export function computeClientScores(input: {
     daysSinceReview: input.daysSinceReview,
   });
 
+  let momentum = momentumState(adherence, friction);
+  const idle = input.daysSinceActivity === null ? Infinity : input.daysSinceActivity;
+  if (idle != null && idle >= INACTIVE_DAYS) {
+    const cap: MomentumState = idle >= 21 ? 'declining' : 'fragile';
+    if (MOMENTUM_RANK[momentum] < MOMENTUM_RANK[cap]) momentum = cap;
+    attention = clamp(attention + Math.min(40, 20 + (Number.isFinite(idle) ? idle - INACTIVE_DAYS : 20)));
+  }
+
   return {
     adherence_score: adherence,
     execution_quality_score: quality,
     follow_through_score: followThrough,
     friction_score: friction,
     mentor_attention_score: attention,
-    weekly_momentum_state: momentumState(adherence, friction),
-    drivers: { ...counts, churnRisk: Math.round((input.churnRisk ?? 0) * 100) },
+    weekly_momentum_state: momentum,
+    drivers: {
+      ...counts,
+      churnRisk: Math.round((input.churnRisk ?? 0) * 100),
+      // -1 = nunca usó la app; ausente = sin dato.
+      ...(idle != null ? { daysInactive: Number.isFinite(idle) ? idle : -1 } : {}),
+    },
   };
 }
+
+/** Umbral a partir del cual la ausencia del cliente pesa por sí sola. */
+export const INACTIVE_DAYS = 14;
+const MOMENTUM_RANK: Record<MomentumState, number> = { rising: 0, stable: 1, fragile: 2, declining: 3, critical: 4 };
 
 // ─── Diferencial por tier ───────────────────────────────────────────────────────
 export function tierDepth(tier?: string | null): TierDepth {
@@ -236,6 +257,17 @@ export function buildInterventions(
 ): InterventionItem[] {
   const out: InterventionItem[] = [];
   const d = scores.drivers;
+
+  if (d.daysInactive === -1 || (d.daysInactive ?? 0) >= INACTIVE_DAYS) {
+    out.push({
+      queue_reason: 'inactive',
+      severity: d.daysInactive === -1 || d.daysInactive >= 30 ? 'high' : 'medium',
+      summary: d.daysInactive === -1
+        ? 'Nunca ha usado la app: sin check-ins ni mensajes a Norman.'
+        : `${d.daysInactive} días sin actividad en la app.`,
+      recommended_action: 'Contactarlo directo esta semana; entender qué lo frena antes de pedir resultados.',
+    });
+  }
 
   if (scores.mentor_attention_score >= 70) {
     out.push({

@@ -13,6 +13,7 @@ import { logSilentError } from '@/lib/observability';
 import { intel, supabase } from '@/lib/supabase';
 import { fetchMemoryProfile } from '@/lib/memory';
 import { fetchUserExecution } from '@/lib/mentorExecution';
+import { deriveStatus } from '@/lib/mentorExecutionLogic';
 import { fetchBiometricSnapshot } from '@/lib/biometric';
 import {
   fetchConfrontationItems,
@@ -258,10 +259,8 @@ export async function assembleCoachBundle(
       }
     } else if (st !== 'canceled' && st !== 'blocked' && st !== 'avoided') {
       openTasks += 1;
-      if (t.due_date) {
-        const due = Date.parse(t.due_date);
-        if (!Number.isNaN(due) && due < nowMs) overdue += 1;
-      }
+      // deriveStatus: las tareas sin fecha también vencen (a los 7 días).
+      if (deriveStatus(t, nowMs) === 'overdue') overdue += 1;
     }
   }
 

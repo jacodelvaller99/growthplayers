@@ -1,6 +1,7 @@
 import { dedupeActions, isSameAction, parseDay, prepCommitments, prepSignals } from '@/lib/mentorPrepLogic';
 import { mergeAutoPlan } from '@/lib/mentorDeskLogic';
-import { deriveStatus, scoreAdherence } from '@/lib/mentorExecutionLogic';
+import { buildInterventions, computeClientScores, deriveStatus, scoreAdherence } from '@/lib/mentorExecutionLogic';
+import { computeDrivers, weightedChurnScore, churnLabel } from '@/lib/coachIntelligenceLogic';
 
 const NOW = Date.parse('2026-11-03T15:00:00Z');
 const DAY = 86_400_000;
@@ -102,5 +103,31 @@ describe('adherencia honesta con tareas sin fecha', () => {
   it('tarea recién creada aún no cuenta', () => {
     const t = { title: 'x', status: 'not_started' as const, created_at: new Date(NOW - DAY).toISOString() };
     expect(scoreAdherence([t], NOW)).toBe(100);
+  });
+});
+
+describe('ausencia del cliente: Ejecución y riesgo dicen lo mismo que PREPARAR', () => {
+  it('sin tareas pero nunca usó la app → no "en ascenso", alerta de inactividad', () => {
+    const sc = computeClientScores({ tasks: [], nowMs: NOW, daysSinceActivity: null });
+    expect(sc.weekly_momentum_state).toBe('declining');
+    expect(sc.drivers.daysInactive).toBe(-1);
+    expect(sc.mentor_attention_score).toBeGreaterThanOrEqual(40);
+    expect(buildInterventions(sc, [], NOW).some((i) => i.queue_reason === 'inactive')).toBe(true);
+  });
+  it('cliente activo no se toca; dato desconocido tampoco', () => {
+    expect(computeClientScores({ tasks: [], nowMs: NOW, daysSinceActivity: 1 }).weekly_momentum_state).toBe('rising');
+    expect(computeClientScores({ tasks: [], nowMs: NOW }).drivers.daysInactive).toBeUndefined();
+  });
+  it('coach: "nunca usó la app" sube el riesgo por encima de bajo', () => {
+    const execution = computeClientScores({ tasks: [], nowMs: NOW, daysSinceActivity: null });
+    const drivers = computeDrivers({
+      intelligence: null, memory: null, execution, topConfrontation: null, confrontation_high_count: 0,
+      biometric: null, checkin_energy_7d: null, checkin_energy_prev: null, checkin_count_7d: 0,
+      checkin_count_prev: 0, current_streak_days: 0, user_turns_7d: 0, user_turns_prev: 0,
+      days_since_last_message: Infinity, ever_wrote: false, overdue_count: 0, open_tasks_count: 0,
+      completed_tasks_7d: 0, completed_tasks_prev: 0,
+    });
+    expect(drivers[0].label).toBe('Nunca ha usado la app');
+    expect(churnLabel(weightedChurnScore(drivers))).not.toBe('low');
   });
 });

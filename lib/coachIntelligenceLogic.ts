@@ -255,9 +255,19 @@ export function computeDrivers(bundle: CoachBundle): ChurnDriver[] {
     });
   }
 
-  // 8. Inactividad total (días sin actividad reportada).
-  const daysIdle = bundle.intelligence?.days_since_last_act ?? 0;
-  if (daysIdle >= 7) {
+  // 8. Inactividad total. El cache de `intelligence` queda en 0 si el cron no
+  // corrió, así que manda la medición directa que trae Ejecución
+  // (`daysInactive`, -1 = nunca usó la app).
+  const measuredIdle = bundle.execution?.drivers?.daysInactive;
+  const daysIdle = Math.max(bundle.intelligence?.days_since_last_act ?? 0, measuredIdle ?? 0);
+  if (measuredIdle === -1) {
+    out.push({
+      kind: 'no_recent_activity',
+      weight: 0.35,
+      label: 'Nunca ha usado la app',
+      evidence: 'Sin check-ins ni mensajes a Norman desde que entró al programa',
+    });
+  } else if (daysIdle >= 7) {
     out.push({
       kind: 'no_recent_activity',
       weight: clamp(0.10 + (daysIdle - 7) * 0.03, 0.10, 0.28),

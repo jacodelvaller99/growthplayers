@@ -12,6 +12,7 @@
 import { intel, mex } from '@/lib/supabase';
 import { fetchMemoryProfile } from '@/lib/memory';
 import { logSilentError } from '@/lib/observability';
+import { prepSignals } from '@/lib/mentorPrepLogic';
 import {
   assembleMentorPrep,
   buildInterventions,
@@ -259,6 +260,25 @@ function daysSince(iso?: string | null): number {
   return Math.floor((Date.now() - t) / 86_400_000);
 }
 
+/**
+ * Días desde la última señal real del cliente en la app: check-in, mensaje a
+ * Norman o evento. `null` = nunca usó la app. Lo comparten Ejecución y Coach
+ * Intelligence para que no se contradigan con "Preparar" del dossier.
+ */
+export async function fetchDaysSinceActivity(userId: string, nowMs = Date.now()): Promise<number | null> {
+  const { supabase } = await import('@/lib/supabase');
+  const sb = supabase as unknown as { from: (t: string) => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const latest = async (q: PromiseLike<{ data: Record<string, string>[] | null }>, key: string) => {
+    try { const { data } = await q; return data?.[0]?.[key] ?? null; } catch { return null; }
+  };
+  const dates = await Promise.all([
+    latest(sb.from('daily_checkins').select('date').eq('user_id', userId).order('date', { ascending: false }).limit(1), 'date'),
+    latest(sb.from('mentor_messages').select('created_at').eq('user_id', userId).eq('role', 'user').order('created_at', { ascending: false }).limit(1), 'created_at'),
+    latest(intel.events().select('created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(1), 'created_at'),
+  ]);
+  return prepSignals({ activityDates: dates, checkInDates: [], commitments: [], nowMs }).daysSinceActivity;
+}
+
 /** Computa los scores, los persiste y regenera la cola de intervención del usuario. */
 export async function computeAndPersistScores(userId: string, tasks?: MentorTask[]): Promise<ClientScores | null> {
   if (!userId) return null;
@@ -267,12 +287,12 @@ export async function computeAndPersistScores(userId: string, tasks?: MentorTask
     const profile = await fetchMemoryProfile(userId);
     const made = (profile?.commitments_open?.length ?? 0) + (profile?.commitments_completed?.length ?? 0);
     const fulfilled = profile?.commitments_completed?.length ?? 0;
-    const churnRisk = await fetchChurnRisk(userId);
+    const [churnRisk, daysSinceActivity] = await Promise.all([fetchChurnRisk(userId), fetchDaysSinceActivity(userId)]);
     const lastReview = t.map((x) => x.reviewed_at).filter(Boolean).sort().pop();
 
     const scores = computeClientScores({
       tasks: t, commitmentsMade: made, commitmentsFulfilled: fulfilled,
-      churnRisk, daysSinceReview: daysSince(lastReview),
+      churnRisk, daysSinceReview: daysSince(lastReview), daysSinceActivity,
     });
 
     try {
