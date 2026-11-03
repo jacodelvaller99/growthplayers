@@ -79,7 +79,7 @@ const MentorDeskScreen = require('@/app/admin/mentor/[id]').default;
 describe('MentorDeskScreen (admin) — render smoke', () => {
   it('carga y muestra la semana + el editor sin throw', async () => {
     render(<MentorDeskScreen />);
-    await waitFor(() => expect(screen.getByText('SEMANA 1')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/^Semana 1/)).toBeTruthy());
     expect(screen.getByPlaceholderText(/Escribe lo de la sesión/)).toBeTruthy();
   });
 
@@ -87,7 +87,7 @@ describe('MentorDeskScreen (admin) — render smoke', () => {
     jest.useFakeTimers();
     try {
       render(<MentorDeskScreen />);
-      await waitFor(() => expect(screen.getByText('SEMANA 1')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText(/^Semana 1/)).toBeTruthy());
 
       const input = screen.getByPlaceholderText(/Escribe lo de la sesión/);
       fireEvent.changeText(input, 'Trabajamos el plan de la semana.');
@@ -98,7 +98,7 @@ describe('MentorDeskScreen (admin) — render smoke', () => {
       expect(adminUpsertSessionNote).toHaveBeenCalledWith(
         expect.objectContaining({ week: 1, text: 'Trabajamos el plan de la semana.' }),
       );
-      await waitFor(() => expect(screen.getByText('GUARDADO ✓')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText('Guardado')).toBeTruthy());
     } finally {
       jest.useRealTimers();
     }
