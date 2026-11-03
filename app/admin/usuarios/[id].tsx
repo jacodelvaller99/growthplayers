@@ -751,7 +751,7 @@ export default function UserDetailScreen() {
           <View style={{ flex: 1, minWidth: 180 }}>
             <Text style={s.headerTitle}>{user.name}</Text>
             <Text style={s.headerSub}>
-              Semana {week} · {getTierLabel(activeTier)}
+              {user.created_at || firstSession ? `Semana ${week}` : 'Sin primera sesión'} · {getTierLabel(activeTier)}
               {user.last_sign_in_at ? ` · Entró ${timeAgo(user.last_sign_in_at)}` : ' · Nunca ha entrado a la app'}
             </Text>
           </View>

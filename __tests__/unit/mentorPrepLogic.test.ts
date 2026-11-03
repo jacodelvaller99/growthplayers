@@ -1,6 +1,6 @@
-import { dedupeActions, isSameAction, parseDay, prepCommitments, prepSignals } from '@/lib/mentorPrepLogic';
+import { dedupeActions, firstSessionBriefing, hasClientHistory, isSameAction, parseDay, prepCommitments, prepSignals } from '@/lib/mentorPrepLogic';
 import { mergeAutoPlan } from '@/lib/mentorDeskLogic';
-import { buildInterventions, computeClientScores, deriveStatus, scoreAdherence } from '@/lib/mentorExecutionLogic';
+import { buildInterventions, computeClientScores, deriveStatus, executionStateLine, scoreAdherence } from '@/lib/mentorExecutionLogic';
 import { computeDrivers, weightedChurnScore, churnLabel } from '@/lib/coachIntelligenceLogic';
 
 const NOW = Date.parse('2026-11-03T15:00:00Z');
@@ -129,5 +129,23 @@ describe('ausencia del cliente: Ejecución y riesgo dicen lo mismo que PREPARAR'
     });
     expect(drivers[0].label).toBe('Nunca ha usado la app');
     expect(churnLabel(weightedChurnScore(drivers))).not.toBe('low');
+  });
+});
+
+describe('cliente sin historia', () => {
+  it('sin perfil, resúmenes ni fricciones → guía fija, sin confrontar', () => {
+    expect(hasClientHistory({ profile: null, summaries: 0, frictions: 0 })).toBe(false);
+    expect(hasClientHistory({ profile: { current_goal: 'x' }, summaries: 0, frictions: 0 })).toBe(true);
+    const b = firstSessionBriefing('u1', 'Pablito');
+    expect(b.summary).toMatch(/^Pablito todavía no tiene sesiones/);
+    expect(b.challenge_points).toEqual([]);
+    expect(b.risk_level).toBeUndefined();
+  });
+});
+
+describe('executionStateLine — en español y sin números inventados', () => {
+  it('sin tareas no muestra adherencia; dice que nunca usó la app', () => {
+    const sc = computeClientScores({ tasks: [], nowMs: NOW, daysSinceActivity: null });
+    expect(executionStateLine(sc, [], NOW)).toBe('Momentum en caída · nunca ha usado la app · atención del mentor 40.');
   });
 });

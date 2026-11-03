@@ -8,6 +8,9 @@
  * datos reales y explicables.
  */
 
+import type { AdminBriefing } from '@/lib/memory';
+import type { MemoryProfile } from '@/lib/memoryLogic';
+
 const DAY = 86_400_000;
 /** Un compromiso de una sesión se espera cumplido antes de la siguiente. */
 export const COMMITMENT_WINDOW_DAYS = 7;
@@ -113,6 +116,41 @@ export function prepCommitments(sessions: PrepSession[], nowMs = Date.now()): Pr
       fromAI: x.fromAI,
     };
   });
+}
+
+// ─── Cliente sin historia: guía de primera sesión ────────────────────────────
+/** ¿Hay algo real sobre lo que preparar? Perfil con contenido, resúmenes o fricciones. */
+export function hasClientHistory(input: { profile: MemoryProfile | null; summaries: number; frictions: number }): boolean {
+  const p = input.profile;
+  const profileSignal = !!p && !!(
+    p.identity_summary || p.current_goal || p.mentorship_focus ||
+    (p.commitments_open?.length ?? 0) || (p.commitments_completed?.length ?? 0)
+  );
+  return profileSignal || input.summaries > 0 || input.frictions > 0;
+}
+
+/** Antes la IA "confrontaba" a clientes sin un solo dato ("Llevas 0 días y 0
+ * compromisos…"): ficción con tono de certeza. Sin historia, lo útil es una
+ * guía fija para la primera sesión — no llama al modelo. */
+export function firstSessionBriefing(userId: string, name?: string): AdminBriefing {
+  const who = name?.trim() || 'Este cliente';
+  return {
+    user_id: userId,
+    summary: `${who} todavía no tiene sesiones ni actividad en la app. No hay nada que confrontar: esta primera sesión es para conocerlo y dejarlo arrancando.`,
+    suggested_mentorship_topics: [
+      'Qué lo trajo a Polaris y qué tendría que cambiar en 90 días para que valga la pena',
+      'Definir su Norte: propósito, identidad y no negociables',
+      'Diagnóstico PERAS: en cuál de las 5 áreas duele más hoy',
+      'Un primer compromiso pequeño y verificable para esta semana',
+    ],
+    open_loops: [
+      'Acordar día y hora fijos para las sesiones',
+      'Dejarlo con la app abierta y su primer check-in hecho antes de colgar',
+    ],
+    challenge_points: [],
+    frictions: [],
+    recent_progress: [],
+  };
 }
 
 // ─── Señales reales ──────────────────────────────────────────────────────────

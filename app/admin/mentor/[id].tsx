@@ -1014,7 +1014,11 @@ export function MentorSpace({
         <View style={{ flex: 1 }}>
           <Text style={s.headerName} numberOfLines={1}>{client.name}</Text>
           <View style={s.headerPills}>
-            <StatusPill label={`SEMANA ${week}`} tone="gold" />
+            {/* Sin protocolo iniciado ni notas, "SEMANA 1" no informa nada: se dice tal cual. */}
+            <StatusPill
+              label={!client.created_at && !text.trim() && !sessions.some((x) => x.notes?.trim()) ? 'SIN PRIMERA SESIÓN' : `SEMANA ${week}`}
+              tone="gold"
+            />
             {!!momentum && (
               <StatusPill label={MOMENTUM_LABEL[momentum] ?? momentum.toUpperCase()} tone={momentum === 'rising' ? 'success' : 'muted'} />
             )}

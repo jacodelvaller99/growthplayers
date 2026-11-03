@@ -383,9 +383,7 @@ export function assembleMentorPrep(input: {
   if (input.mentorshipFocus) questions.push(`¿Avanzaste en: ${input.mentorshipFocus}?`);
 
   return {
-    execution_state:
-      `Momentum ${input.scores.weekly_momentum_state} · adherencia ${input.scores.adherence_score} · ` +
-      `fricción ${input.scores.friction_score} · atención ${input.scores.mentor_attention_score}.`,
+    execution_state: executionStateLine(input.scores, tasks, now),
     said_would_do: (input.commitmentsOpen ?? []).slice(0, 5),
     actually_did: completed.slice(0, 5),
     highest_friction_area: frictionArea,
@@ -398,6 +396,28 @@ export function assembleMentorPrep(input: {
 }
 
 const PRIORITY_RANK: Record<TaskPriority, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+
+const MOMENTUM_ES: Record<MomentumState, string> = {
+  rising: 'en ascenso', stable: 'estable', fragile: 'frágil', declining: 'en caída', critical: 'crítico',
+};
+
+/** La línea de estado de la agenda, en español y solo con lo que tiene dato:
+ * "adherencia 100" sin ninguna tarea exigible era un número inventado. */
+export function executionStateLine(scores: ClientScores, tasks: MentorTask[], nowMs = Date.now()): string {
+  const parts = [`Momentum ${MOMENTUM_ES[scores.weekly_momentum_state]}`];
+  const idle = scores.drivers.daysInactive;
+  if (idle === -1) parts.push('nunca ha usado la app');
+  else if (idle != null && idle >= INACTIVE_DAYS) parts.push(`${idle} días sin actividad`);
+  const exigible = tasks.some((t) => {
+    if (t.status === 'canceled') return false;
+    const due = effectiveDue(t);
+    return t.status === 'completed' || (due != null && due < nowMs);
+  });
+  if (exigible) parts.push(`adherencia ${scores.adherence_score}`);
+  if (scores.friction_score > 0) parts.push(`fricción ${scores.friction_score}`);
+  parts.push(`atención del mentor ${scores.mentor_attention_score}`);
+  return `${parts.join(' · ')}.`;
+}
 
 // ─── Vista cliente (de apoyo; sin lenguaje duro de scoring) ──────────────────────
 export interface ClientTaskView {

@@ -34,6 +34,7 @@ import {
 } from '@/lib/memory';
 import { fetchConfrontationItems } from '@/lib/confrontation';
 import type { ConfrontationItem } from '@/lib/confrontationLogic';
+import { firstSessionBriefing, hasClientHistory } from '@/lib/mentorPrepLogic';
 
 export type SummarySource = 'chat' | 'mentorship' | 'plaud' | 'manual';
 
@@ -258,13 +259,19 @@ export async function generateAdminBriefing(
   // simulado se guardaba igual como `summary` (líneas 233-244 más abajo): un
   // briefing real en la BD, lleno de basura. Cortar acá, antes de llamar al
   // modelo, para no persistir jamás una simulación como si fuera briefing.
-  if (!ENV.aiProxyUrl) return null;
   try {
     const [profile, summaries, confrontations] = await Promise.all([
       fetchMemoryProfile(userId),
       fetchLatestSummaries(userId, 6),
       fetchConfrontationItems(userId).catch(() => [] as ConfrontationItem[]),
     ]);
+    // Sin historia no hay nada que la IA pueda leer: guía fija de primera sesión.
+    if (!hasClientHistory({ profile, summaries: summaries.length, frictions: confrontations.length })) {
+      const guide = firstSessionBriefing(userId, opts?.userName);
+      await insertBriefing(guide);
+      return guide;
+    }
+    if (!ENV.aiProxyUrl) return null;
     const ctx = opts?.ctx ?? makeMinimalContext(opts?.userName);
     const friccionesBlock = confrontations.length > 0
       ? `\n\nFRICCIONES DETECTADAS (pre-rankeadas — incluí las TOP 3 en el bloque ===FRICCIONES=== citando el dato literal; NO inventes otras):\n` +
