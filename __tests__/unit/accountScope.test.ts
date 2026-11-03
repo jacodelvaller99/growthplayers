@@ -18,6 +18,7 @@ describe('isLifeFlowOnlyAccount', () => {
     expect(isLifeFlowOnlyAccount({ ...blank, role: 'trainer' })).toBe(true);
     expect(isLifeFlowOnlyAccount({ ...blank, role: 'admin' })).toBe(true);
     expect(isLifeFlowOnlyAccount({ ...blank, hasLifeFlowData: true })).toBe(true);
+    expect(isLifeFlowOnlyAccount({ ...blank, createdByLifeFlow: true })).toBe(true);
   });
 
   it('cliente de Polaris que también usa LifeFlow → entra', () => {
@@ -28,5 +29,6 @@ describe('isLifeFlowOnlyAccount', () => {
     expect(isLifeFlowOnlyAccount({ ...lf, isSuperadmin: true })).toBe(false);
     expect(isLifeFlowOnlyAccount({ ...lf, clickupTaskId: 'abc' })).toBe(false);
     expect(isLifeFlowOnlyAccount({ ...lf, subscriptionTier: 'premium' })).toBe(false);
+    expect(isLifeFlowOnlyAccount({ ...lf, createdByLifeFlow: true, hasPolarisProfile: true })).toBe(false);
   });
 });

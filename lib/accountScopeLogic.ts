@@ -7,10 +7,9 @@
  * tampoco se bloquea (así un registro nuevo de Polaris, que aún no tiene nada,
  * sigue pudiendo hacer el onboarding).
  *
- * ponytail: una cuenta creada por LifeFlow que todavía no hizo NADA allá
- * (sin onboarding, sin programa, sin coach) es indistinguible de un registro
- * nuevo de Polaris. Cerrar ese hueco pide un marcador server-side (p.ej.
- * app_metadata.app='lifeflow' al crear la cuenta en LifeFlow).
+ * Una cuenta creada por LifeFlow lleva la marca `app: 'lifeflow'` en sus
+ * metadatos (registro → user_metadata; alta desde el admin → app_metadata), así
+ * que se reconoce aunque todavía no haya hecho nada allá.
  */
 export type AccountSignals = {
   /** Fila en `user_profiles` — la escribe el onboarding de Polaris, create-user y clickup-onboarding. */
@@ -27,6 +26,8 @@ export type AccountSignals = {
   role: string | null;
   /** Tiene filas en lf_enrollments o es alumno en lf_coach_assignments. */
   hasLifeFlowData: boolean;
+  /** Marca `app: 'lifeflow'` en app_metadata o user_metadata: la cuenta nació en LifeFlow. */
+  createdByLifeFlow?: boolean;
 };
 
 export function isLifeFlowOnlyAccount(s: AccountSignals): boolean {
@@ -35,5 +36,5 @@ export function isLifeFlowOnlyAccount(s: AccountSignals): boolean {
     !!s.clickupTaskId || (!!s.subscriptionTier && s.subscriptionTier !== 'free');
   if (polaris) return false;
   return !!s.lfOnboardedAt || !!s.lfTermsAcceptedAt ||
-    s.role === 'trainer' || s.role === 'admin' || s.hasLifeFlowData;
+    s.role === 'trainer' || s.role === 'admin' || s.hasLifeFlowData || !!s.createdByLifeFlow;
 }

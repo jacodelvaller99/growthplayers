@@ -422,14 +422,16 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
 async function fetchIsLifeFlowOnly(uid: string): Promise<boolean> {
   try {
     const sb = supabase as any;
-    const [prof, up, enr, coach] = await Promise.all([
+    const [prof, up, enr, coach, auth] = await Promise.all([
       sb.from('profiles')
         .select('is_admin, is_mentor, is_superadmin, clickup_task_id, subscription_tier, lf_onboarded_at, lf_terms_accepted_at, role')
         .eq('id', uid).maybeSingle(),
       sb.from('user_profiles').select('user_id', { count: 'exact', head: true }).eq('user_id', uid),
       sb.from('lf_enrollments').select('user_id', { count: 'exact', head: true }).eq('user_id', uid),
       sb.from('lf_coach_assignments').select('member_id', { count: 'exact', head: true }).eq('member_id', uid),
+      supabase.auth.getSession(),
     ]);
+    const authUser = auth.data.session?.user;
     if (prof.error || up.error || !prof.data) return false;
     const p = prof.data;
     return isLifeFlowOnlyAccount({
@@ -443,6 +445,7 @@ async function fetchIsLifeFlowOnly(uid: string): Promise<boolean> {
       lfTermsAcceptedAt: p.lf_terms_accepted_at ?? null,
       role:              p.role ?? null,
       hasLifeFlowData:   (enr.count ?? 0) > 0 || (coach.count ?? 0) > 0,
+      createdByLifeFlow: authUser?.app_metadata?.app === 'lifeflow' || authUser?.user_metadata?.app === 'lifeflow',
     });
   } catch (e) {
     logSilentError('accountScope.fetch', e);
