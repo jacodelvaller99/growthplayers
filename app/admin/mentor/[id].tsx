@@ -253,7 +253,10 @@ export function MentorSpace({
     setSessions(mentorship.sessions);
     setExecution(exec);
     setMemory(mem);
-    const w = deskWeek(detail?.created_at, mentorship.sessions);
+    // Igual que el dossier: sin protocolo iniciado en la app, la semana se
+    // cuenta desde la primera sesión de mentoría (antes quedaba en 1 para siempre).
+    const firstSession = mentorship.sessions.map((x) => x.session_date ?? x.created_at).filter(Boolean).sort()[0];
+    const w = deskWeek(detail?.created_at || firstSession, mentorship.sessions);
     setWeek(w);
     weekRef.current = w;
     const { draft } = splitWeekSessions(mentorship.sessions, w);
@@ -650,7 +653,10 @@ export function MentorSpace({
     }
   };
 
-  const { previous } = splitWeekSessions(sessions, week);
+  // "Sesiones anteriores" = todas las demás con notas, de cualquier semana: al
+  // contar la semana real, las notas de semanas pasadas no pueden desaparecer.
+  const currentDraft = splitWeekSessions(sessions, week).draft;
+  const previous = sessions.filter((x) => x !== currentDraft && x.notes?.trim());
   const weekChips = [week - 1, week, week + 1].filter((w) => w >= 1 && w <= TOTAL_WEEKS);
   const momentum = execution.scores?.weekly_momentum_state;
 
