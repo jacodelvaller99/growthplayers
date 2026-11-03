@@ -358,7 +358,10 @@ export default function CheckInScreen() {
     if (submitting || !listo) return;
     setSubmitting(true);
     try {
-      const syncStatus = await saveCheckIn({
+      // No se espera a Supabase para confirmar: el check-in ya quedó guardado
+      // en el dispositivo y, si no hay red, en la cola de reintento. Esperar
+      // la ida y vuelta (0,3–1,5 s cada escritura) era lo que se sentía lento.
+      const sync = saveCheckIn({
         energy: energy!,
         clarity: clarity!,
         stress: stress!,
@@ -367,6 +370,20 @@ export default function CheckInScreen() {
         zones: bodyZones.length ? bodyZones : undefined,
         bodyPoints: bodyPoints.length ? bodyPoints : undefined,
       });
+      // Honestidad de guardado: si no hubo red, el dato quedó encolado — se dice.
+      sync
+        .then((syncStatus) => {
+          if (syncStatus === 'queued') {
+            showToast('Guardado en este dispositivo — se sincronizará al recuperar conexión', 'warning');
+          }
+        })
+        .catch((e) => {
+          logSilentError('checkin.submit', e);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          showToast('No se pudo guardar tu check-in. Inténtalo de nuevo.', 'error');
+          setSaved(false);
+          setSubmitting(false);
+        });
       analytics.checkinSubmit(energy, clarity, stress, sleep);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -379,10 +396,6 @@ export default function CheckInScreen() {
         { streak: todayCheckIn ? streak : streak + 1, protocolDay },
         { painPoint: state.profile.painPoint, purpose: state.northStar.purpose },
       ));
-      // Honestidad de guardado: si no hubo red, el dato quedó encolado — se dice.
-      if (syncStatus === 'queued') {
-        showToast('Guardado en este dispositivo — se sincronizará al recuperar conexión', 'warning');
-      }
       // Revela la recomendación de cierre antes de redirigir (WS-3).
       setSaved(true);
     } catch (e) {

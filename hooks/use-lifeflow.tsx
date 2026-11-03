@@ -937,21 +937,18 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         syncStatus = 'queued';
       }
 
-      // Also update profile with latest score
-      try {
-        // Racha real. Era `next.checkIns.length` (total histórico), y este es el
-        // valor que el admin lee como proxy de "activo últimos 7 días"
-        // (lib/admin/queries.ts) — con el conteo total nunca volvía a 0.
-        const streak = computeStreak(next.checkIns, now);
-        await db.profiles().upsert({
-          user_id:         uid,
-          sovereign_score: newScore,
-          streak,
-          total_days:      calcProtocolDay(state.protocolStartDate),
-        }, { onConflict: 'user_id' });
-      } catch (e) {
-        console.warn('[Supabase] updateProfile score:', e);
-      }
+      // Also update profile with latest score — sin esperar: es un derivado
+      // (score/racha) y no debe alargar la confirmación del check-in.
+      // Racha real. Era `next.checkIns.length` (total histórico), y este es el
+      // valor que el admin lee como proxy de "activo últimos 7 días"
+      // (lib/admin/queries.ts) — con el conteo total nunca volvía a 0.
+      const streak = computeStreak(next.checkIns, now);
+      void Promise.resolve(db.profiles().upsert({
+        user_id:         uid,
+        sovereign_score: newScore,
+        streak,
+        total_days:      calcProtocolDay(state.protocolStartDate),
+      }, { onConflict: 'user_id' })).catch((e: unknown) => console.warn('[Supabase] updateProfile score:', e));
 
       return syncStatus;
     },
