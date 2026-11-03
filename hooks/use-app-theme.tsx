@@ -54,7 +54,7 @@ interface AppThemeValue {
 }
 
 const AppThemeContext = createContext<AppThemeValue>({
-  mode: 'dark',
+  mode: 'tinta',
   setMode: () => {},
   toggle: () => {},
   signal: 'oro',
@@ -93,7 +93,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
     // Misma ventana que las variables de color: antes del primer render de los
     // hijos. La marca es la tipografía tanto como el oro.
     injectBrandFont();
-    const initial = readStored(STORAGE_KEY, isBackdrop, 'dark');
+    const initial = readStored(STORAGE_KEY, isBackdrop, 'tinta');
     if (isWeb && typeof document !== 'undefined') {
       document.documentElement.dataset.theme = initial;
     }
@@ -122,7 +122,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
     setModeState((prev) => {
       // Solo alterna la pareja histórica: desde carbon/aura, "alternar" lleva a
       // claro, que es la contraparte que el usuario espera del interruptor.
-      const next: BackdropId = prev === 'light' ? 'dark' : 'light';
+      const next: BackdropId = prev === 'light' ? 'tinta' : 'light';
       applyAttr('theme', STORAGE_KEY, next);
       return next;
     });

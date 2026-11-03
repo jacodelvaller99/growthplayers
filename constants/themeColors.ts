@@ -609,7 +609,9 @@ function block(selector: string, vars: Record<string, string>): string {
 export function buildThemeCSS(): string {
   const backdrops = (Object.keys(THEME_VARS) as BackdropId[])
     .map((id) =>
-      block(id === 'dark' ? ':root,[data-theme="dark"]' : `[data-theme="${id}"]`, THEME_VARS[id]),
+      // Tinta es el fondo por defecto (negro real del manual): manda en :root
+      // hasta que el proveedor de tema marque <html data-theme>.
+      block(id === 'tinta' ? ':root,[data-theme="tinta"]' : `[data-theme="${id}"]`, THEME_VARS[id]),
     )
     .join('');
 

@@ -28,10 +28,10 @@ import { APP_MODES, useAppMode, type AppMode } from '@/hooks/use-app-mode';
 // ve ya está en pantalla al pulsarla.
 
 const BACKDROPS: { id: BackdropId; name: string; note: string }[] = [
-  { id: 'dark',    name: 'Smoky',   note: 'El original. Negro del manual con neutros grises.' },
+  { id: 'dark',    name: 'Smoky',   note: 'El anterior. Negro suave con neutros grises.' },
   { id: 'carbon',  name: 'Carbón',  note: 'El neutro se sesga al oro: menos quirófano, más cuero.' },
   { id: 'aura',    name: 'Aura',    note: 'Negro profundo con un resplandor detrás. Atmósfera.' },
-  { id: 'tinta',   name: 'Tinta',   note: 'Negro real. En pantallas OLED el píxel se apaga.' },
+  { id: 'tinta',   name: 'Tinta',   note: 'El original. Negro real del manual; en OLED el píxel se apaga.' },
   { id: 'pizarra', name: 'Pizarra', note: 'Frío, azulado. Baja la temperatura y el oro resalta.' },
   { id: 'bruma',   name: 'Bruma',   note: 'Negros levantados. Menos contraste: para sesiones largas y de noche.' },
   { id: 'bosque',  name: 'Bosque',  note: 'El neutro se sesga al verde. El unico fondo que no evoca una oficina.' },
@@ -119,7 +119,7 @@ export default function AparienciaScreen() {
         <>
           <GoldDivider label="CLARO U OSCURO" />
           <View style={s.pair} accessibilityRole="radiogroup">
-            {([['dark', 'Oscuro', 'dark-mode'], ['light', 'Claro', 'light-mode']] as const).map(([id, name, icon]) => {
+            {([['tinta', 'Oscuro', 'dark-mode'], ['light', 'Claro', 'light-mode']] as const).map(([id, name, icon]) => {
               const on = mode === id;
               return (
                 <Pressable
@@ -190,11 +190,11 @@ export default function AparienciaScreen() {
 
           <Pressable
             style={s.resetBtn}
-            onPress={() => { setMode('dark'); setSignal('oro'); }}
+            onPress={() => { setMode('tinta'); setSignal('oro'); }}
             accessibilityRole="button"
             accessibilityLabel="Volver a la paleta original">
             <MaterialIcons name="restart-alt" size={16} color={palette.smoke} />
-            <Text style={s.resetText}>Volver a la original (Smoky · Oro)</Text>
+            <Text style={s.resetText}>Volver a la original (Tinta · Oro)</Text>
           </Pressable>
         </>
       )}

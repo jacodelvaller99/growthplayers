@@ -16,12 +16,12 @@ export const BRAND = {
 // Dark Silver        #6D6D6D  PANTONE 424 C — secondary text
 export const palette = {
   // ── Base backgrounds — themeable (var on web · hex on native) ────────────────
-  black:          cv('--c-bg',         '#090909'),   // base canvas
-  blackDeep:      cv('--c-bg-deep',    '#050505'),   // absolute dark (player fullscreens)
-  graphite:       cv('--c-surface',    '#111111'),   // card/panel background
-  graphiteLight:  cv('--c-surface-2',  '#181818'),   // elevated surface (modals, drawers)
-  charcoal:       cv('--c-surface-3',  '#222222'),   // hover state, subtle separators
-  overlay:        cv('--c-overlay',    '#1C1C1C'),   // overlays
+  black:          cv('--c-bg',         '#000000'),   // base canvas
+  blackDeep:      cv('--c-bg-deep',    '#000000'),   // absolute dark (player fullscreens)
+  graphite:       cv('--c-surface',    '#0C0C0C'),   // card/panel background
+  graphiteLight:  cv('--c-surface-2',  '#161616'),   // elevated surface (modals, drawers)
+  charcoal:       cv('--c-surface-3',  '#202020'),   // hover state, subtle separators
+  overlay:        cv('--c-overlay',    '#1A1A1A'),   // overlays
 
   // ── Ink — CONSTANT dark, never themed. For text/icons that sit on gold or
   //    light surfaces (e.g. button labels on gold). Using palette.black here
@@ -57,23 +57,23 @@ export const palette = {
   goldText:       cv('--c-gold-text', '#FFC804'),
 
   // ── Text hierarchy — themeable ───────────────────────────────────────────────
-  ivory:          cv('--c-text',       '#EBEBEB'),   // primary text
-  ivoryWarm:      cv('--c-text-warm',  '#F0EBE0'),   // warm off-white for special headings
-  ivoryDim:       cv('--c-text-dim',   'rgba(235, 235, 235, 0.55)'), // dimmed text
+  ivory:          cv('--c-text',       '#F4F4F4'),   // primary text
+  ivoryWarm:      cv('--c-text-warm',  '#F6F1E6'),   // warm off-white for special headings
+  ivoryDim:       cv('--c-text-dim',   'rgba(244, 244, 244, 0.58)'), // dimmed text
   // Mapa corporal: la silueta y el borde de sus zonas tactiles. Son tokens y
   // no hex porque en tema claro la silueta se oscurece y el borde se invierte
   // -- con los valores del tema oscuro, en claro no se veia ninguno de los dos.
-  silhouette:     cv('--c-silhouette',  '#5F5F5F'),
-  zoneBorder:     cv('--c-zone-border', 'rgba(255,255,255,0.38)'),
-  ash:            cv('--c-text-2',     '#AAAAAA'),   // secondary text
-  smoke:          cv('--c-text-3',     '#898989'),   // tertiary/placeholder text — AA sobre TODA la rampa, incluida charcoal (antes 4.49:1 ahí).
-  muted:          cv('--c-text-faint', '#444444'),   // disabled, locked states
+  silhouette:     cv('--c-silhouette',  '#666666'),
+  zoneBorder:     cv('--c-zone-border', 'rgba(255,255,255,0.42)'),
+  ash:            cv('--c-text-2',     '#BDBDBD'),   // secondary text
+  smoke:          cv('--c-text-3',     '#949494'),   // tertiary/placeholder text — AA sobre TODA la rampa, incluida charcoal (antes 4.49:1 ahí).
+  muted:          cv('--c-text-faint', '#4E4E4E'),   // disabled, locked states
 
   // ── Borders — themeable ──────────────────────────────────────────────────────
-  line:           cv('--c-border',       'rgba(255, 255, 255, 0.07)'),  // DEFAULT card border
-  lineSoft:       cv('--c-border-soft',  'rgba(255, 255, 255, 0.05)'),  // extra-subtle separators
-  lineHard:       cv('--c-border-hard',  'rgba(255, 255, 255, 0.13)'),  // focus, emphasis borders
-  lineFocus:      cv('--c-border-focus', 'rgba(255, 255, 255, 0.20)'),  // input focus rings
+  line:           cv('--c-border',       'rgba(255, 255, 255, 0.11)'),  // DEFAULT card border
+  lineSoft:       cv('--c-border-soft',  'rgba(255, 255, 255, 0.07)'),  // extra-subtle separators
+  lineHard:       cv('--c-border-hard',  'rgba(255, 255, 255, 0.20)'),  // focus, emphasis borders
+  lineFocus:      cv('--c-border-focus', 'rgba(255, 255, 255, 0.30)'),  // input focus rings
   lineGold:       cv('--c-line-gold',        'rgba(255, 200, 4, 0.30)'),   // bordes dorados (con moderación)
   lineGoldSubtle: cv('--c-line-gold-subtle', 'rgba(255, 200, 4, 0.15)'),   // acento dorado muy sutil
 
@@ -96,7 +96,7 @@ export const palette = {
   // demasiado oscuro para llevar copy sobre superficie oscura, de ahí este token
   // aparte. Cada fondo define el suyo; themeContrast.test.ts fija que TODOS
   // llegan a AA sobre las cinco superficies, no solo sobre la tarjeta base.
-  dangerText:     cv('--c-danger-text', '#E65C51'),
+  dangerText:     cv('--c-danger-text', '#E5584C'),
   warning:        cv('--c-warning', '#D4A017'),
   // El cuarto semántico. Era hex constante y por eso era IMPOSIBLE que pasara
   // AA en los dos temas: sobre #111111 hace falta luminancia >= 0.201 y sobre

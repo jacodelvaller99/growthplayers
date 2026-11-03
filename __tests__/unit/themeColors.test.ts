@@ -109,7 +109,7 @@ describe('buildThemeCSS', () => {
   const css = buildThemeCSS();
 
   it('emite un bloque por cada fondo y por cada señal', () => {
-    expect(css).toContain(':root,[data-theme="dark"]');
+    expect(css).toContain(':root,[data-theme="tinta"]');
     expect(css).toContain(':root,[data-signal="oro"]');
     for (const id of BACKDROPS.filter((b) => b !== 'dark')) {
       expect(css).toContain(`[data-theme="${id}"]`);
