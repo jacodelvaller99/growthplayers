@@ -218,6 +218,8 @@ export function MentorSpace({
   sessionsRef.current = sessions;
   const [digests, setDigests] = useState<Map<string, SessionDigestRow>>(new Map());
   const [splitting, setSplitting] = useState(false);
+  const [splitFailed, setSplitFailed] = useState(false);
+  const autoSplitTriedRef = useRef<Set<string>>(new Set());
 
   // Ecosistema que se alimenta solo (Fase 2 del plan): el briefing YA NO
   // depende exclusivamente del clic manual en GENERAR. Si no existe, o si hay
@@ -301,12 +303,16 @@ export function MentorSpace({
       if (summarizedRef.current.get(sessionId) === notes) return;
       summarizedRef.current.set(sessionId, notes);
       briefingRegenAttempts.set(uid, Date.now());
-      if (latestRef.current.userId === uid) { setGenBrief(true); setSplitting(true); }
+      if (latestRef.current.userId === uid) { setGenBrief(true); setSplitting(true); setSplitFailed(false); }
       void (async () => {
         try {
           const { summarizeMentorNotes } = await import('@/lib/memorySummarizer');
           const result = await summarizeMentorNotes(uid, notes, { sessionId, week: w, userName });
-          if (!result) { summarizedRef.current.delete(sessionId); return; } // reintenta en la próxima pausa
+          if (!result) { // reintenta en la próxima pausa
+            summarizedRef.current.delete(sessionId);
+            if (latestRef.current.userId === uid) setSplitFailed(true);
+            return;
+          }
           // Los compromisos van solos al plan de esa semana (lo manual no se toca).
           const aId = latestRef.current.adminId;
           const sess = sessionsRef.current.find((sx) => sx.id === sessionId);
@@ -323,6 +329,7 @@ export function MentorSpace({
           }
         } catch (e) {
           summarizedRef.current.delete(sessionId);
+          if (latestRef.current.userId === uid) setSplitFailed(true);
           logSilentError('mentorDesk.notesSummary', e);
         } finally {
           if (latestRef.current.userId === uid) { setGenBrief(false); setSplitting(false); }
@@ -332,6 +339,17 @@ export function MentorSpace({
     summaryJobRef.current = job;
     summaryTimerRef.current = setTimeout(job, delayMs);
   }, []);
+
+  // Notas que ya estaban guardadas (pegadas antes del reparto, o desde Plaud)
+  // nunca se repartían: el reparto solo corría al editar. Si la semana abierta
+  // tiene notas y no tiene reparto, corre al abrirla — una vez por sesión.
+  useEffect(() => {
+    if (loading || !userId) return;
+    const draft = splitWeekSessions(sessions, week).draft;
+    if (!draft?.id || !draft.notes || digests.has(draft.id) || autoSplitTriedRef.current.has(draft.id)) return;
+    autoSplitTriedRef.current.add(draft.id);
+    scheduleNotesSummary(userId, week, draft.id, draft.notes, 0);
+  }, [loading, userId, week, sessions, digests, scheduleNotesSummary]);
 
   const persist = useCallback(async (w: number, t: string) => {
     const { adminId: aId, userId: uId } = latestRef.current;
@@ -663,6 +681,9 @@ export function MentorSpace({
     const d = sid ? digests.get(sid) : undefined;
     if (!d && !splitting) {
       if (!ENV.aiProxyUrl || text.trim().length < NOTES_SUMMARY_MIN_CHARS) return null;
+      if (splitFailed) {
+        return <Text style={s.digestHint}>La IA no pudo repartir esta sesión. Revisa que la IA esté autorizada (AUTORIZO · ACTIVAR IA) y vuelve a escribir para reintentar.</Text>;
+      }
       return <Text style={s.digestHint}>Cuando dejes de escribir (o pegues la sesión), la IA la reparte aquí.</Text>;
     }
     const section = (title: string, items: string[], icon: React.ComponentProps<typeof MaterialIcons>['name']) =>
