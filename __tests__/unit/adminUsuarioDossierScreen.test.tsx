@@ -78,7 +78,10 @@ jest.mock('@/lib/confrontation', () => ({
   fetchConfrontationItems: jest.fn().mockResolvedValue([]),
   dismissConfrontation: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/lib/memory', () => ({ addAdminNote: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/lib/memory', () => ({
+  addAdminNote: jest.fn().mockResolvedValue(undefined),
+  fetchSessionDigests: jest.fn().mockResolvedValue([]),
+}));
 jest.mock('@/lib/mentorExecution', () => ({
   fetchUserExecution: jest.fn().mockResolvedValue({ tasks: [], reviews: [], scores: null, interventions: [], prep: null }),
   submitReview: jest.fn().mockResolvedValue(undefined),

@@ -3,6 +3,7 @@
  */
 import { calcProtocolDay } from '@/lib/utils';
 import { currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
+import { dedupeActions, isSameAction } from '@/lib/mentorPrepLogic';
 
 /**
  * Identificador estable de la fila "de escritorio" de una semana. Hace el
@@ -59,10 +60,9 @@ export function mergeAutoPlan<T extends { text: string; source?: string; done?: 
 ): { text: string; source?: string; done?: boolean; week?: number | null }[] {
   const doneAuto = new Set(current.filter((p) => p.source === 'auto' && p.done).map((p) => p.text.trim().toLowerCase()));
   const kept = current.filter((p) => p.source !== 'auto');
-  const keptTexts = new Set(kept.map((p) => p.text.trim().toLowerCase()));
-  const auto = commitments
-    .map((t) => t.trim())
-    .filter((t) => t && !keptTexts.has(t.toLowerCase()))
-    .map((text) => ({ text, week, source: 'auto', done: doneAuto.has(text.toLowerCase()) }));
+  // Lo que el mentor ya escribió con otras palabras no se repite como "auto".
+  const auto = dedupeActions(commitments.map((t) => ({ text: t.trim() })).filter((t) => t.text))
+    .filter((t) => !kept.some((p) => isSameAction(p.text, t.text)))
+    .map(({ text }) => ({ text, week, source: 'auto', done: doneAuto.has(text.toLowerCase()) }));
   return [...kept, ...auto];
 }

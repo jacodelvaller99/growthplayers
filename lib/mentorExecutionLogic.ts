@@ -78,27 +78,42 @@ const clamp = (n: number, lo = 0, hi = 100): number => Math.max(lo, Math.min(hi,
 const avg = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const QUALITY_VALUE: Record<ExecutionQuality, number> = { low: 35, medium: 65, high: 90 };
 
+/** Una tarea sin fecha (las que crea la IA desde la sesión) se espera para la
+ * semana siguiente: sin esto, nunca vencía y la adherencia salía 100 a un
+ * cliente que no hizo nada en dos meses. */
+const IMPLIED_DUE_MS = 7 * 86_400_000;
+export function effectiveDue(task: MentorTask): number | null {
+  const explicit = task.due_date ? Date.parse(task.due_date) : NaN;
+  if (!Number.isNaN(explicit)) return explicit;
+  const from = Date.parse(task.assigned_at ?? task.created_at ?? '');
+  return Number.isNaN(from) ? null : from + IMPLIED_DUE_MS;
+}
+
 /** Normaliza el status: `overdue` es derivado del tiempo (no se persiste fijo). */
 export function deriveStatus(task: MentorTask, nowMs = Date.now()): TaskStatus {
   const s = task.status ?? 'not_started';
   if (s === 'completed' || s === 'canceled' || s === 'blocked' || s === 'avoided') return s;
-  if (task.due_date) {
-    const due = Date.parse(task.due_date);
-    if (!Number.isNaN(due) && due < nowMs) return 'overdue';
-  }
+  const due = effectiveDue(task);
+  if (due != null && due < nowMs) return 'overdue';
   return s;
 }
 
 // ─── Scores individuales ────────────────────────────────────────────────────────
-/** A. Adherencia: % de tareas con fecha cumplidas (a destiempo cuenta parcial). */
+/** A. Adherencia: % de tareas ya exigibles cumplidas (a destiempo cuenta parcial). */
 export function scoreAdherence(tasks: MentorTask[], nowMs = Date.now()): number {
-  const relevant = tasks.filter((t) => t.status !== 'canceled' && t.due_date);
+  const relevant = tasks.filter((t) => {
+    if (t.status === 'canceled') return false;
+    if (t.due_date) return true;
+    const due = effectiveDue(t);
+    return due != null && (due < nowMs || t.status === 'completed');
+  });
   if (relevant.length === 0) return 100;
   let pts = 0;
   for (const t of relevant) {
     if ((t.status ?? '') === 'completed') {
-      const onTime = t.completed_at && t.due_date
-        ? Date.parse(t.completed_at) <= Date.parse(t.due_date)
+      const due = effectiveDue(t);
+      const onTime = t.completed_at && due != null
+        ? Date.parse(t.completed_at) <= due
         : true;
       pts += onTime ? 1 : 0.6;
     }

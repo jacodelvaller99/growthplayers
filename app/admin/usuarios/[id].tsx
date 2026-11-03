@@ -51,14 +51,15 @@ import {
 import { dismissConfrontation, fetchConfrontationItems } from '@/lib/confrontation';
 import type { ConfrontationItem } from '@/lib/confrontationLogic';
 import {
-  AdminBriefingCard,
   AdminNotesCard,
-  CommitmentsCard,
   ConversationTimeline,
   ProfileSynopsisCard,
   RepeatedThemesCard,
 } from '@/components/memory';
-import { addAdminNote } from '@/lib/memory';
+import { addAdminNote, fetchSessionDigests, type SessionDigestRow } from '@/lib/memory';
+import { DigestBody, ForSessionCard, LastSessionCard, PrepCommitmentsCard, PrepSignalsCard } from '@/components/mentor-prep';
+import { formatDay, prepCommitments, prepSignals, type PrepCommitment } from '@/lib/mentorPrepLogic';
+import { deskWeek } from '@/lib/mentorDeskLogic';
 import { PlaudImport } from '@/components/PlaudImport';
 // generateAdminBriefing se importa dinámicamente en handleGenerateBriefing —
 // el módulo memorySummarizer arrastra el orquestador IA y solo se usa al click.
@@ -87,7 +88,6 @@ import {
 import type { Scenario } from '@/lib/biometricSimulator';
 import type { AdminUserDetail, AuditLogEntry, LiveEvent, MentorConversation, UserMembership } from '@/lib/admin/types';
 import {
-  adminAddMentorshipNote,
   adminDeleteMentorshipSession,
   adminToggleMentorshipTask,
   adminUpdateActionPlan,
@@ -138,8 +138,8 @@ function timeAgo(iso: string) {
   return `hace ${Math.floor(mins / 1440)}d`;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+function formatDate(iso: string | null | undefined) {
+  return formatDay(iso);
 }
 
 // El dueño lo pidió literal: "un cuadro enorme en cada persona EXACTAMENTE
@@ -188,18 +188,15 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
   );
 }
 
-// ─── Section anchors para navegación rápida (chip strip) ────────────────────
-const NAV_SECTIONS: { id: string; label: string }[] = [
-  { id: 'identity',   label: 'IDENTIDAD' },
-  { id: 'memberships',label: 'MEMBRESÍAS' },
-  { id: 'ml',         label: 'ML' },
-  { id: 'mentorship', label: 'MENTORÍA' },
-  { id: 'execution',  label: 'EJECUCIÓN' },
-  { id: 'frictions',  label: 'FRICCIONES' },
-  { id: 'memory',     label: 'MEMORIA' },
-  { id: 'biometrics', label: 'BIOMÉTRICOS' },
-  { id: 'body',       label: 'CUERPO' },
-  { id: 'reflections',label: 'REFLEXIONES' },
+// ─── Pestañas: lo del mentor primero, la cuenta al final ─────────────────────
+// Antes era un scroll de 18 secciones con la membresía arriba y el briefing
+// enterrado. Ahora la pestaña por defecto responde "¿qué hago en esta sesión?".
+type DossierTab = 'prep' | 'sessions' | 'client' | 'account';
+const TABS: { id: DossierTab; label: string }[] = [
+  { id: 'prep',     label: 'PREPARAR' },
+  { id: 'sessions', label: 'SESIONES' },
+  { id: 'client',   label: 'CLIENTE' },
+  { id: 'account',  label: 'CUENTA' },
 ];
 
 // ─── Engagement Gauge ────────────────────────────────────────────────────────
@@ -328,9 +325,6 @@ export default function UserDetailScreen() {
   const [reviewBusy, setReviewBusy] = useState(false);
 
   // Mentoría operable desde admin (el mentor hace la mentoría POR el cliente)
-  const [mentNoteText, setMentNoteText] = useState('');
-  const [mentNoteWeek, setMentNoteWeek] = useState('1');
-  const [mentNoteBusy, setMentNoteBusy] = useState(false);
   const [mentTaskBusy, setMentTaskBusy] = useState<string | null>(null);
   const [planBusy, setPlanBusy] = useState<string | null>(null);
   const [planItemText, setPlanItemText] = useState('');
@@ -353,21 +347,22 @@ export default function UserDetailScreen() {
   // Coach Intelligence v2 (drivers explicables + momentum + NBA específica)
   const [coachCI, setCoachCI] = useState<CoachIntelligence | null>(null);
 
-  // Section anchors (navegación por chips) — cada sección guarda su Y al onLayout.
   const scrollRef = useRef<ScrollView | null>(null);
-  const sectionYs = useRef<Record<string, number>>({});
-  const onSectionLayout = useCallback((id: string) => (e: { nativeEvent: { layout: { y: number } } }) => {
-    sectionYs.current[id] = e.nativeEvent.layout.y;
-  }, []);
-  const scrollToSection = useCallback((id: string) => {
-    const y = sectionYs.current[id];
-    if (y == null) return;
-    // -56: deja espacio para el strip sticky.
-    scrollRef.current?.scrollTo({ y: Math.max(0, y - 56), animated: true });
-  }, []);
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<DossierTab>(
+    TABS.some((t) => t.id === tabParam) ? (tabParam as DossierTab) : 'prep',
+  );
+  const changeTab = (t: DossierTab) => {
+    setTab(t);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
+  const [digests, setDigests] = useState<Map<string, SessionDigestRow>>(new Map());
+  const [commitBusy, setCommitBusy] = useState<string | null>(null);
+  const [openNotes, setOpenNotes] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!userId) return;
+    fetchSessionDigests(userId).then((rows) => setDigests(new Map(rows.map((d) => [d.session_id, d]))));
     const [userDetail, evts, convs, cis, ment, audit, memo, exec, bioSnap, act, frix] = await Promise.all([
       fetchUserDetail(userId),
       fetchUserEvents(userId, 30),
@@ -493,24 +488,6 @@ export default function UserDetailScreen() {
     }
   }, [userId, adminId, mentTaskBusy, reloadMentorship]);
 
-  const handleAddMentNote = useCallback(async () => {
-    if (!userId || !adminId || mentNoteBusy) return;
-    const week = Math.max(1, parseInt(mentNoteWeek, 10) || 1);
-    setMentNoteBusy(true);
-    setMentError(null);
-    try {
-      const res = await adminAddMentorshipNote({ adminId, userId, week, text: mentNoteText });
-      if (!res.success) {
-        setMentError(res.error ?? 'No se pudo guardar la nota');
-      } else {
-        setMentNoteText('');
-        await reloadMentorship();
-      }
-    } finally {
-      setMentNoteBusy(false);
-    }
-  }, [userId, adminId, mentNoteBusy, mentNoteWeek, mentNoteText, reloadMentorship]);
-
   const savePlan = useCallback(async (sessionId: string, actionPlan: NormalizedPlanItem[]) => {
     if (!userId || !adminId) return;
     setPlanBusy(sessionId);
@@ -523,6 +500,15 @@ export default function UserDetailScreen() {
       setPlanBusy(null);
     }
   }, [userId, adminId, reloadMentorship]);
+
+  const handleToggleCommitment = useCallback(async (c: PrepCommitment) => {
+    const sess = mentorship.sessions.find((x) => x.id === c.sessionId);
+    if (!sess) return;
+    const plan = normalizePlan(sess.action_plan, sess.week)
+      .map((p, i) => (i === c.index ? { ...p, done: c.state !== 'cumplido' } : p));
+    setCommitBusy(`${c.sessionId}:${c.index}`);
+    try { await savePlan(sess.id, plan); } finally { setCommitBusy(null); }
+  }, [mentorship.sessions, savePlan]);
 
   const handleGenerateSessionPlan = useCallback(async (sess: { id: string; week: number | null; notes: string | null }) => {
     if (!userId || !adminId || planBusy) return;
@@ -725,6 +711,24 @@ export default function UserDetailScreen() {
 
   const initials = user.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
 
+  // ── Preparar sesión: todo derivado de datos reales ──
+  // `created_at` aquí es protocol_start_date: vacío si el cliente nunca abrió la
+  // app. Entonces la semana se cuenta desde su primera sesión de mentoría.
+  const firstSession = mentorship.sessions.map((x) => x.session_date ?? x.created_at).filter(Boolean).sort()[0];
+  const week = deskWeek(user.created_at || firstSession, mentorship.sessions);
+  const commitments = prepCommitments(mentorship.sessions);
+  const signals = prepSignals({
+    activityDates: [user.last_sign_in_at, events[0]?.created_at, conversations[0]?.created_at, checkIns[0]?.date],
+    checkInDates: checkIns.map((c) => c.date),
+    commitments,
+  });
+  const lastSession = [...mentorship.sessions]
+    .filter((x) => x.notes?.trim())
+    .sort((a, b) => (b.week ?? 0) - (a.week ?? 0))[0];
+  const lastDigest = lastSession ? digests.get(lastSession.id) ?? null : null;
+  const activeTier = (user.memberships ?? []).find((m) => m.status === 'active')?.product ?? 'free';
+  const openDesk = () => router.push(`/admin/mentor/${userId}` as never);
+
   return (
     <>
       <ScrollView
@@ -744,42 +748,74 @@ export default function UserDetailScreen() {
             accessibilityLabel="Volver al listado de usuarios">
             <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
           </Pressable>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minWidth: 180 }}>
             <Text style={s.headerTitle}>{user.name}</Text>
-            <Text style={s.headerSub}>{user.role ?? 'Aprendiz'}</Text>
+            <Text style={s.headerSub}>
+              Semana {week} · {getTierLabel(activeTier)}
+              {user.last_sign_in_at ? ` · Entró ${timeAgo(user.last_sign_in_at)}` : ' · Nunca ha entrado a la app'}
+            </Text>
           </View>
-          <Pressable
-            onPress={() => router.push(`/admin/mentor/${userId}` as never)}
-            style={s.mentorSpaceLink}
-            accessibilityRole="button"
-            accessibilityLabel="Abrir espacio del mentor">
-            <Text style={s.mentorSpaceLinkText}>ESPACIO DEL MENTOR →</Text>
-          </Pressable>
+          <View style={s.headerActions}>
+            <Pressable
+              onPress={() => setShowNorman(true)}
+              style={({ pressed }) => [s.headerGhost, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Enviar mensaje a este cliente como Norman">
+              <MaterialIcons name="send" size={15} color={palette.goldText} />
+              <Text style={s.headerGhostText}>MENSAJE</Text>
+            </Pressable>
+            <Pressable
+              onPress={openDesk}
+              style={({ pressed }) => [s.headerPrimary, pressed && { opacity: 0.85 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir espacio del mentor para tomar notas de la sesión">
+              <MaterialIcons name="edit-note" size={18} color={palette.ink} />
+              <Text style={s.headerPrimaryText}>TOMAR NOTAS</Text>
+            </Pressable>
+          </View>
         </View>
 
-        {/* ── Chip strip sticky: navegación entre secciones ── */}
-        <View style={s.navStrip}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.navStripInner}>
-            {NAV_SECTIONS.map((sec) => (
-              <Pressable
-                key={sec.id}
-                onPress={() => scrollToSection(sec.id)}
-                hitSlop={4}
-                accessibilityRole="button"
-                accessibilityLabel={`Ir a la sección ${sec.label}`}
-                style={({ pressed }) => [s.navChip, pressed && { opacity: 0.6 }]}>
-                <Text style={s.navChipTxt}>{sec.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+        {/* ── Pestañas (sticky) ── */}
+        <View style={s.navStrip} accessibilityRole="tablist">
+          <View style={s.navStripInner}>
+            {TABS.map((t) => {
+              const on = tab === t.id;
+              return (
+                <Pressable
+                  key={t.id}
+                  onPress={() => changeTab(t.id)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  style={({ pressed }) => [s.tabBtn, on && s.tabBtnOn, pressed && !on && { opacity: 0.6 }]}>
+                  <Text style={[s.tabTxt, on && s.tabTxtOn]}>{t.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
+
+        {tab === 'prep' && (
+          <View style={s.tabBody}>
+            <PrepSignalsCard signals={signals} />
+            <LastSessionCard
+              title={lastSession ? `ÚLTIMA SESIÓN · SEMANA ${lastSession.week ?? '—'}` : 'ÚLTIMA SESIÓN'}
+              dateLabel={lastSession ? formatDate(lastSession.session_date ?? lastSession.created_at) : 'Sin sesiones todavía'}
+              digest={lastDigest}
+              onOpenDesk={openDesk}
+            />
+            <PrepCommitmentsCard items={commitments} busyKey={commitBusy} onToggle={handleToggleCommitment} />
+            <ForSessionCard briefing={memory.briefing} generating={genBrief} error={briefError} onGenerate={handleGenerateBriefing} />
+            {(frictions.length > 0) && <FriccionesCard items={frictions} onDismiss={handleDismissFriction} />}
+            <ProfileSynopsisCard profile={memory.profile} variant="admin" style={s.card} />
+          </View>
+        )}
+
+        {tab === 'account' && (<View style={s.tabBody}>
 
         {/* ─────────────────────────────────────────────────── */}
         {/* A. IDENTIDAD */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('identity')}>
-          <GoldDivider inset label="A. IDENTIDAD" />
-        </View>
+        <GoldDivider label="IDENTIDAD" />
         <PremiumCard style={s.card}>
           <View style={s.identityRow}>
             <View style={s.bigAvatar}>
@@ -789,7 +825,9 @@ export default function UserDetailScreen() {
               <Text style={s.userName}>{user.name}</Text>
               <Text style={s.userRole}>{user.role ?? '—'}</Text>
               {user.is_admin && <StatusPill label="ADMIN" tone="gold" dot />}
-              <Text style={s.userMeta}>Registrado {formatDate(user.created_at)}</Text>
+              <Text style={s.userMeta}>
+                {user.created_at ? `Inicio del protocolo ${formatDate(user.created_at)}` : 'No ha iniciado el protocolo en la app'}
+              </Text>
               {user.last_sign_in_at && (
                 <Text style={s.userMeta}>Último acceso {timeAgo(user.last_sign_in_at)}</Text>
               )}
@@ -803,22 +841,12 @@ export default function UserDetailScreen() {
               <MaterialIcons name="edit" size={18} color={palette.goldText} />
             </Pressable>
           </View>
-          <Pressable
-            style={s.normanBtn}
-            onPress={() => setShowNorman(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Enviar mensaje a este usuario como Norman">
-            <MaterialIcons name="send" size={16} color={palette.goldText} />
-            <Text style={s.normanBtnText}>ENVIAR MENSAJE COMO NORMAN</Text>
-          </Pressable>
         </PremiumCard>
 
         {/* ─────────────────────────────────────────────────── */}
         {/* B. MEMBRESÍAS */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('memberships')}>
-          <GoldDivider inset label="B. MEMBRESÍAS Y ACCESO" />
-        </View>
+        <GoldDivider label="MEMBRESÍA Y ACCESO" />
         <PremiumCard style={s.card}>
           {/* Current tier badge */}
           {(() => {
@@ -937,7 +965,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* C. CURSOS */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider inset label="C. ACCESO A CURSOS" />
+        <GoldDivider label="CURSOS" />
         <PremiumCard style={s.card}>
           {(user.course_access ?? []).length === 0 ? (
             <Text style={s.emptyText}>Sin acceso a cursos activos</Text>
@@ -951,13 +979,46 @@ export default function UserDetailScreen() {
             ))
           )}
         </PremiumCard>
+        </View>)}
+
+        {tab === 'client' && (<View style={s.tabBody}>
+        {/* ─────────────────────────────────────────────────── */}
+        {/* G. CHECK-INS HISTÓRICOS — primero: es lo que el cliente reporta */}
+        {/* ─────────────────────────────────────────────────── */}
+        <GoldDivider label={`CHECK-INS (${checkIns.length})`} />
+        {/* Alarma de bienestar — semáforo de "cómo se va sintiendo" (A1) */}
+        {checkIns.length > 0 && <WellbeingAlarmCard alarm={wellbeingAlarm(checkIns)} />}
+        <PremiumCard style={s.card}>
+          {checkIns.length === 0 ? (
+            <Text style={s.emptyText}>Nunca ha hecho check-in</Text>
+          ) : (
+            <View>
+              <View style={s.checkInHeader}>
+                <View style={{ width: 14 }} />
+                {['FECHA', 'ENERGÍA', 'CLARIDAD', 'ESTRÉS', 'SUEÑO'].map(col => (
+                  <Text key={col} style={[s.checkInHeaderCell, col === 'FECHA' && { flex: 2 }]}>{col}</Text>
+                ))}
+              </View>
+              {checkIns.slice(0, 14).map(ci => (
+                <View key={ci.date} style={s.checkInRow}>
+                  <View style={{ width: 14, alignItems: 'center' }}>
+                    <WellbeingDot score={wellbeingScore(ci)} />
+                  </View>
+                  <Text style={[s.checkInCell, { flex: 2 }]}>{formatDay(ci.date, false)}</Text>
+                  <Text style={s.checkInCell}>{ci.energy}</Text>
+                  <Text style={s.checkInCell}>{ci.clarity}</Text>
+                  <Text style={s.checkInCell}>{ci.stress}</Text>
+                  <Text style={s.checkInCell}>{ci.sleep}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </PremiumCard>
 
         {/* ─────────────────────────────────────────────────── */}
         {/* D. INTELLIGENCE ML */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('ml')}>
-          <GoldDivider inset label="D. INTELIGENCIA ML" />
-        </View>
+        <GoldDivider label="SEÑALES DEL MODELO" />
 
         {/* Coach Intelligence v2 — lo PRIMERO que ve el coach: por qué este score
             (drivers con evidencia), trayectoria semanal, salud relacional con
@@ -1023,7 +1084,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* E. ACTIVIDAD RECIENTE */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider inset label={`E. ACTIVIDAD RECIENTE (${events.length})`} />
+        <GoldDivider label={`ACTIVIDAD EN LA APP (${events.length})`} />
         <PremiumCard style={s.card}>
           {events.length === 0 ? (
             <Text style={s.emptyText}>Sin actividad registrada</Text>
@@ -1047,7 +1108,7 @@ export default function UserDetailScreen() {
         {/* "Un cuadro enorme, EXACTAMENTE qué le pregunta a la IA" — solo el
             turno del usuario, texto literal completo, fecha y hora exactas.
             `timeAgo` de abajo sirve para ojear el hilo; esto es para auditar. */}
-        <GoldDivider inset label={`F. QUÉ LE PREGUNTA A LA IA (${questions.length})`} />
+        <GoldDivider label={`QUÉ LE PREGUNTA A NORMAN (${questions.length})`} />
         <PremiumCard style={s.card}>
           {questions.length === 0 ? (
             <Text style={s.emptyText}>Sin preguntas registradas</Text>
@@ -1061,7 +1122,7 @@ export default function UserDetailScreen() {
           )}
         </PremiumCard>
 
-        <GoldDivider inset label={`F.bis HILO COMPLETO (${conversations.length})`} />
+        <GoldDivider label={`CONVERSACIÓN CON NORMAN (${conversations.length})`} />
         <PremiumCard style={s.card}>
           {conversations.length === 0 ? (
             <Text style={s.emptyText}>Sin conversaciones</Text>
@@ -1088,53 +1149,19 @@ export default function UserDetailScreen() {
           )}
         </PremiumCard>
 
-        {/* ─────────────────────────────────────────────────── */}
-        {/* G. CHECK-INS HISTÓRICOS */}
-        {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider inset label={`G. CHECK-INS (${checkIns.length})`} />
-        {/* Alarma de bienestar — semáforo de "cómo se va sintiendo" (A1) */}
-        {checkIns.length > 0 && <WellbeingAlarmCard alarm={wellbeingAlarm(checkIns)} />}
-        <PremiumCard style={s.card}>
-          {checkIns.length === 0 ? (
-            <Text style={s.emptyText}>Sin check-ins</Text>
-          ) : (
-            <View>
-              <View style={s.checkInHeader}>
-                <View style={{ width: 14 }} />
-                {['FECHA', 'E', 'C', 'S', 'D'].map(col => (
-                  <Text key={col} style={s.checkInHeaderCell}>{col}</Text>
-                ))}
-              </View>
-              {checkIns.slice(0, 14).map(ci => (
-                <View key={ci.date} style={s.checkInRow}>
-                  <View style={{ width: 14, alignItems: 'center' }}>
-                    <WellbeingDot score={wellbeingScore(ci)} />
-                  </View>
-                  <Text style={[s.checkInCell, { flex: 2 }]}>{ci.date}</Text>
-                  <Text style={s.checkInCell}>{ci.energy}</Text>
-                  <Text style={s.checkInCell}>{ci.clarity}</Text>
-                  <Text style={s.checkInCell}>{ci.stress}</Text>
-                  <Text style={s.checkInCell}>{ci.sleep}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </PremiumCard>
+        </View>)}
 
+        {tab === 'sessions' && (<View style={s.tabBody}>
         {/* ─────────────────────────────────────────────────── */}
         {/* M. MENTORÍA (sesiones + tareas) */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('mentorship')}>
-          <GoldDivider inset label={`M. MENTORÍA (${mentorship.sessions.length} sesiones · ${mentorship.tasks.filter(t => t.completed).length}/${mentorship.tasks.length} tareas)`} />
-        </View>
+        <GoldDivider label={`SESIONES (${mentorship.sessions.length})`} />
         <PremiumCard style={s.card}>
           {mentError && <Text style={s.mentError}>{mentError}</Text>}
 
           {/* Tareas — el mentor marca por el cliente */}
-          <Text style={s.mlLabel}>TAREAS DE LA SEMANA</Text>
-          {mentorship.tasks.length === 0 ? (
-            <Text style={s.emptyText}>Sin tareas asignadas</Text>
-          ) : (
+          {mentorship.tasks.length > 0 && <Text style={s.mlLabel}>TAREAS DE LA SEMANA</Text>}
+          {mentorship.tasks.length > 0 && (
             mentorship.tasks.slice(0, 12).map(t => (
               <Pressable
                 key={t.id}
@@ -1161,40 +1188,9 @@ export default function UserDetailScreen() {
             ))
           )}
 
-          {/* Composer: el mentor registra la nota de sesión por el cliente */}
-          <Text style={[s.mlLabel, { marginTop: spacing.md }]}>AÑADIR NOTA DE SESIÓN</Text>
-          <View style={s.mentComposerRow}>
-            <Text style={s.mentWeekLabel}>SEMANA</Text>
-            <TextInput
-              value={mentNoteWeek}
-              onChangeText={setMentNoteWeek}
-              keyboardType="number-pad"
-              style={s.mentWeekInput}
-              accessibilityLabel="Semana de la nota"
-            />
-          </View>
-          <TextInput
-            value={mentNoteText}
-            onChangeText={setMentNoteText}
-            placeholder="Qué se trabajó, insights, compromisos…"
-            placeholderTextColor={palette.smoke}
-            style={s.mentNoteInput}
-            multiline
-            textAlignVertical="top"
-          />
-          <Pressable
-            onPress={handleAddMentNote}
-            disabled={mentNoteBusy || !mentNoteText.trim()}
-            style={[s.mentBtn, (mentNoteBusy || !mentNoteText.trim()) && { opacity: 0.4 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Guardar nota de sesión">
-            {mentNoteBusy
-              ? <ActivityIndicator size="small" color={palette.ink} />
-              : <Text style={s.mentBtnText}>GUARDAR NOTA</Text>}
-          </Pressable>
-
+          {/* Las notas se toman en el Espacio del Mentor (TOMAR NOTAS, arriba): un solo lugar, con autoguardado y reparto por IA. */}
           {/* Sesiones: notas + plan de acción editable */}
-          <Text style={[s.mlLabel, { marginTop: spacing.md }]}>NOTAS Y PLAN DE ACCIÓN</Text>
+          <Text style={s.mlLabel}>CADA SESIÓN, REPARTIDA · Y SU PLAN DE ACCIÓN</Text>
           {mentorship.sessions.length === 0 ? (
             <Text style={s.emptyText}>Sin sesiones registradas</Text>
           ) : (
@@ -1220,11 +1216,41 @@ export default function UserDetailScreen() {
                       </Pressable>
                     </View>
                   </View>
-                  {sess.notes ? (
-                    <Text style={s.sessionNotes}>{sess.notes}</Text>
-                  ) : (
-                    <Text style={s.sessionNotesEmpty}>Sin notas</Text>
-                  )}
+                  {(() => {
+                    // Lo repartido por la IA primero; las notas crudas (a veces una
+                    // transcripción entera) quedan plegadas detrás de un toque.
+                    const dg = digests.get(sess.id);
+                    const hasDigest = !!dg && (!!dg.summary || dg.talked.length > 0);
+                    const notesOpen = openNotes.has(sess.id) || !hasDigest;
+                    return (
+                      <>
+                        {hasDigest && <DigestBody digest={dg!} compact />}
+                        {sess.notes ? (
+                          <>
+                            {hasDigest && (
+                              <Pressable
+                                onPress={() => setOpenNotes((prev) => {
+                                  const n = new Set(prev);
+                                  if (n.has(sess.id)) n.delete(sess.id); else n.add(sess.id);
+                                  return n;
+                                })}
+                                hitSlop={6}
+                                accessibilityRole="button"
+                                accessibilityState={{ expanded: notesOpen }}
+                                style={s.notesToggle}>
+                                <MaterialIcons name={notesOpen ? 'expand-less' : 'expand-more'} size={16} color={palette.goldText} />
+                                <Text style={s.notesToggleText}>{notesOpen ? 'OCULTAR NOTAS COMPLETAS' : 'VER NOTAS COMPLETAS'}</Text>
+                              </Pressable>
+                            )}
+                            {notesOpen && <Text style={s.sessionNotes}>{sess.notes}</Text>}
+                          </>
+                        ) : (
+                          <Text style={s.sessionNotesEmpty}>Sin notas</Text>
+                        )}
+                        {plan.length > 0 && <Text style={[s.mlLabel, { marginTop: spacing.md }]}>PLAN DE ACCIÓN</Text>}
+                      </>
+                    );
+                  })()}
                   {plan.length > 0 && (
                     <View style={s.planList}>
                       {plan.map((item, i) => (
@@ -1320,12 +1346,13 @@ export default function UserDetailScreen() {
           )}
         </PremiumCard>
 
+        </View>)}
+
+        {tab === 'client' && (<View style={s.tabBody}>
         {/* ─────────────────────────────────────────────────── */}
         {/* M3. EJECUCIÓN — tareas + scores + review + intervención */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('execution')}>
-          <GoldDivider inset label="EJECUCIÓN" />
-        </View>
+        <GoldDivider label="EJECUCIÓN" />
         <ExecutionScoreCard scores={execution.scores} />
         <InterventionQueueCard items={execution.scores ? buildInterventions(execution.scores, execution.tasks) : []} />
         <NextMentorshipAgendaCard prep={execution.prep} />
@@ -1347,30 +1374,21 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* FRICCIONES DETECTADAS — DIJO vs HIZO (Confrontation OS) */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('frictions')}>
-          <GoldDivider inset label="FRICCIONES DETECTADAS" />
-        </View>
+        <GoldDivider label="FRICCIONES DETECTADAS" />
         <FriccionesCard items={frictions} onDismiss={handleDismissFriction} />
+        </View>)}
 
+        {tab === 'sessions' && (<View style={s.tabBody}>
         {/* ─────────────────────────────────────────────────── */}
-        {/* M2. MEMORIA — perfil vivo + briefing operativo + notas */}
+        {/* M2. MEMORIA — historia de sesiones + notas privadas */}
+        {/* (briefing, síntesis y compromisos viven en PREPARAR) */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('memory')}>
-          <GoldDivider inset label="MEMORIA & BRIEFING" />
-        </View>
+        <GoldDivider label="HISTORIA" />
         <PlaudImport
           userId={userId ?? null}
           userName={user?.name}
           variant="admin"
           onProcessed={handleGenerateBriefing}
-        />
-        <AdminBriefingCard briefing={memory.briefing} generating={genBrief} onGenerate={handleGenerateBriefing} />
-        {briefError && <Text style={s.mentError}>{briefError}</Text>}
-        <ProfileSynopsisCard profile={memory.profile} variant="admin" />
-        <CommitmentsCard
-          open={memory.profile?.commitments_open}
-          completed={memory.profile?.commitments_completed}
-          variant="admin"
         />
         <RepeatedThemesCard themes={aggregateThemes(memory.summaries)} />
         <ConversationTimeline summaries={memory.summaries} variant="admin" />
@@ -1379,7 +1397,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* I. PREDICCIÓN & SESIÓN SEMANAL */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider inset label="I. PREDICCIÓN & SESIÓN SEMANAL" />
+        <GoldDivider label="SESIÓN SEMANAL DE NORMAN" />
         <PremiumCard style={s.card}>
           {burnoutRisk && (
             <View style={s.mlRow}>
@@ -1419,12 +1437,13 @@ export default function UserDetailScreen() {
           )}
         </PremiumCard>
 
+        </View>)}
+
+        {tab === 'client' && (<View style={s.tabBody}>
         {/* ─────────────────────────────────────────────────── */}
         {/* K. BIOMÉTRICOS */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('biometrics')}>
-          <GoldDivider inset label="K. BIOMÉTRICOS" />
-        </View>
+        <GoldDivider label="BIOMÉTRICOS" />
         <BiometricInsightCard insight={bio.latestInsight} variant="admin" />
         <BiometricSparkline series={bio.series} />
         <ConnectionStatusCard connections={bio.connections} />
@@ -1480,9 +1499,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* L. CUERPO & PROTOCOLO (lo que el cliente HACE) */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('body')}>
-          <GoldDivider inset label="L. CUERPO & PROTOCOLO" />
-        </View>
+        <GoldDivider label="CUERPO & PROTOCOLO" />
         <HabitsCard habits={activity.habits} logs={activity.habitLogs} />
         <WellnessSessionsCard sessions={activity.wellness} />
         <FastingCard sessions={activity.fasting} />
@@ -1493,9 +1510,7 @@ export default function UserDetailScreen() {
         {/* ─────────────────────────────────────────────────── */}
         {/* N. REFLEXIONES & COMUNIDAD (lo que el cliente PIENSA y CONECTA) */}
         {/* ─────────────────────────────────────────────────── */}
-        <View onLayout={onSectionLayout('reflections')}>
-          <GoldDivider inset label="N. REFLEXIONES & COMUNIDAD" />
-        </View>
+        <GoldDivider label="REFLEXIONES & COMUNIDAD" />
         <JournalCard entries={activity.journal} />
         <CommunityCard
           posts={activity.posts}
@@ -1504,10 +1519,13 @@ export default function UserDetailScreen() {
           dmLastActivity={activity.dmLastActivity}
         />
 
+        </View>)}
+
+        {tab === 'account' && (<View style={s.tabBody}>
         {/* ─────────────────────────────────────────────────── */}
         {/* H. AUDITORÍA DE ESTE USUARIO */}
         {/* ─────────────────────────────────────────────────── */}
-        <GoldDivider inset label={`H. AUDITORÍA (${auditLog.length})`} />
+        <GoldDivider label={`HISTORIAL DE CAMBIOS (${auditLog.length})`} />
         <PremiumCard style={s.card}>
           {auditLog.length === 0 ? (
             <Text style={s.emptyText}>Sin acciones admin sobre este usuario</Text>
@@ -1520,6 +1538,7 @@ export default function UserDetailScreen() {
             ))
           )}
         </PremiumCard>
+        </View>)}
       </ScrollView>
 
       <NormanModal
@@ -1627,33 +1646,33 @@ export default function UserDetailScreen() {
 
 const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { ...typography.title, color: palette.ivory, fontSize: 18, letterSpacing: 0.5 },
   headerSub: { ...typography.caption, color: palette.smoke, fontSize: 11, letterSpacing: 0.8, marginTop: 2 },
-  mentorSpaceLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
-  mentorSpaceLinkText: { ...typography.label, color: palette.goldText, fontSize: 9 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerGhost: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineGold },
+  headerGhostText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
+  headerPrimary: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, backgroundColor: palette.gold },
+  headerPrimaryText: { ...typography.label, color: palette.ink, fontSize: 11, letterSpacing: 1, fontWeight: '700' },
 
-  // Chip strip de navegación (sticky)
+  // Pestañas (sticky)
   navStrip: {
     backgroundColor: palette.blackDeep,
     borderBottomColor: palette.line,
     borderBottomWidth: 1,
-    marginBottom: spacing.sm,
-    paddingVertical: 8,
+    marginBottom: spacing.xs,
   },
-  navStripInner: { paddingHorizontal: spacing.lg, gap: 6 },
-  navChip: {
-    backgroundColor: palette.graphite,
-    borderRadius: 999,
-    borderColor: palette.line,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  navChipTxt: { ...typography.label, color: palette.ash, fontSize: 10, letterSpacing: 1 },
+  navStripInner: { flexDirection: 'row', paddingHorizontal: spacing.lg, gap: spacing.lg },
+  tabBtn: { minHeight: 44, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtnOn: { borderBottomColor: palette.gold },
+  tabTxt: { ...typography.label, color: palette.smoke, fontSize: 11, letterSpacing: 1.2 },
+  tabTxtOn: { color: palette.goldText },
+  notesToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, marginTop: spacing.sm, alignSelf: 'flex-start' },
+  notesToggleText: { ...typography.label, color: palette.goldText, fontSize: 10, letterSpacing: 1 },
 
-  card: { marginHorizontal: spacing.lg, marginBottom: spacing.sm, padding: spacing.md },
+  card: { marginBottom: spacing.sm, padding: spacing.md },
+  tabBody: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   emptyText: { ...typography.caption, color: palette.smoke, textAlign: 'center', paddingVertical: spacing.sm },
 
   identityRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
@@ -1663,8 +1682,6 @@ const s = StyleSheet.create({
   userRole: { ...typography.caption, color: palette.ash, marginTop: 2 },
   userMeta: { ...typography.mono, color: palette.smoke, marginTop: 2, fontSize: 10 },
 
-  normanBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderRadius: radii.md, borderWidth: 1, borderColor: palette.lineGold, alignSelf: 'flex-start' },
-  normanBtnText: { ...typography.label, color: palette.goldText, fontSize: 10 },
 
   currentTierRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, marginBottom: spacing.sm, backgroundColor: palette.graphite },
   currentTierDot: { width: 10, height: 10, borderRadius: 5 },
@@ -1748,21 +1765,6 @@ const s = StyleSheet.create({
 
   // Mentoría operable desde admin
   mentError: { ...typography.caption, color: palette.danger, fontSize: 11, marginBottom: spacing.xs },
-  mentComposerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
-  mentWeekLabel: { ...typography.label, color: palette.smoke, fontSize: 9, letterSpacing: 1 },
-  mentWeekInput: {
-    ...typography.mono, color: palette.ivory, fontSize: 12, backgroundColor: palette.charcoal,
-    borderRadius: radii.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minWidth: 52, textAlign: 'center',
-  },
-  mentNoteInput: {
-    ...typography.body, color: palette.ivory, fontSize: 13, backgroundColor: palette.charcoal,
-    borderRadius: radii.sm, padding: spacing.md, minHeight: 72, marginTop: spacing.xs,
-  },
-  mentBtn: {
-    backgroundColor: palette.gold, borderRadius: radii.sm, paddingVertical: spacing.sm,
-    alignItems: 'center', justifyContent: 'center', minHeight: 44, marginTop: spacing.sm,
-  },
-  mentBtnText: { ...typography.label, color: palette.ink, fontSize: 12, letterSpacing: 1 },
   sessionHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   planAddRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   planAddInput: {
