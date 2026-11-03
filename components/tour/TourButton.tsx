@@ -16,7 +16,7 @@ import { TourOverlay } from '@/components/tour/TourOverlay';
 
 const HIDDEN_ROOTS = new Set(['(auth)', '(onboarding)']);
 /** Pantallas cuyo control principal vive abajo (composer, CTA de compra, reproductor). */
-const HIDDEN_ROUTES = new Set(['ritual', 'checkin', 'paywall', 'lesson']);
+const HIDDEN_ROUTES = new Set(['ritual', 'checkin', 'paywall', 'lesson', 'cuenta-lifeflow']);
 /** Pestañas con composer anclado abajo — el FAB taparía el botón Enviar. */
 const HIDDEN_TABS = new Set(['mentor']);
 /** Prácticas inmersivas — el foco es la práctica, no un tour sobre ella. */

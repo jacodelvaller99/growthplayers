@@ -8,7 +8,7 @@ import { needsRitual, RITUAL_LOG_KEY, type RitualLog } from '@/lib/ritualLogic';
 import { readLocal } from '@/storage/local';
 
 export default function Index() {
-  const { isLoaded, isAuthenticated, state } = useLifeFlow();
+  const { isLoaded, isAuthenticated, state, isLifeFlowOnly } = useLifeFlow();
   const readyForRitual = isLoaded && isAuthenticated && state.onboardingCompleted;
   const [mustRitual, setMustRitual] = useState<boolean | null>(null);
 
@@ -26,13 +26,20 @@ export default function Index() {
 
   // Show skeleton while auth resolves (getSession from localStorage — typically < 100ms).
   // With two-phase init, returning users hit isLoaded=true almost instantly.
-  if (!isLoaded || (readyForRitual && mustRitual === null)) {
+  // Sin onboarding de Polaris todavía: esperar el veredicto LifeFlow-only antes
+  // de mandar al onboarding (una cuenta de LifeFlow no debe verlo ni completarlo).
+  const scopePending = isAuthenticated && !state.onboardingCompleted && isLifeFlowOnly === null;
+  if (!isLoaded || scopePending || (readyForRitual && mustRitual === null)) {
     return <HomeSkeleton />;
   }
 
   if (!isAuthenticated) {
     // Welcome screen first — cinematic brand entry before login/register form.
     return <Redirect href={'/(auth)/welcome' as never} />;
+  }
+
+  if (isLifeFlowOnly) {
+    return <Redirect href={'/cuenta-lifeflow' as never} />;
   }
 
   if (!state.onboardingCompleted) {

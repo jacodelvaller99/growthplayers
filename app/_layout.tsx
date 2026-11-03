@@ -66,8 +66,12 @@ function MainStack() {
   // deep links de notificaciones; al resolver sin sesión, Protected desmonta
   // → anchor (tabs) → su propio guard → /(auth). Sin loops: (auth),
   // (onboarding), legal, pricing y oauth callbacks quedan fuera del bloque.
-  const { isLoaded, isAuthenticated, state } = useLifeFlow();
-  const guard = !isLoaded || (isAuthenticated && state.onboardingCompleted);
+  const { isLoaded, isAuthenticated, state, isLifeFlowOnly } = useLifeFlow();
+  // Cuenta solo de LifeFlow (Supabase compartido): ni onboarding ni rutas
+  // privadas. Al resolverse en true, Protected desmonta → index →
+  // /cuenta-lifeflow. undefined/null/false no bloquean (falla abierto).
+  const notLifeFlowOnly = isLifeFlowOnly !== true;
+  const guard = notLifeFlowOnly && (!isLoaded || (isAuthenticated && state.onboardingCompleted));
   // La app "respira": transiciones sobrias entre pantallas en vez del corte
   // seco de siempre (WCAG 2.3.3 — 'none' con reduce-motion, cada pantalla
   // sigue pudiendo pedir la suya vía `options.animation`, como ya hacen
@@ -79,7 +83,7 @@ function MainStack() {
       {/* ── Públicas ── */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+      <Stack.Screen name="cuenta-lifeflow" options={{ headerShown: false }} />
       <Stack.Screen name="legal/privacidad" options={{ headerShown: false }} />
       <Stack.Screen name="legal/terminos" options={{ headerShown: false }} />
       <Stack.Screen name="legal/salud" options={{ headerShown: false }} />
@@ -158,6 +162,13 @@ function MainStack() {
         <Stack.Screen name="admin/auditoria/index" options={{ headerShown: false }} />
         <Stack.Screen name="admin/comunidad/index" options={{ headerShown: false }} />
       </Stack.Protected>
+
+      {/* ── Onboarding: público (alta sin perfil), salvo para una cuenta de
+          LifeFlow — completarlo le crearía un perfil de Polaris. Va DESPUÉS del
+          bloque privado: routeGuard.test.ts lee el primer <Stack.Protected>. ── */}
+      <Stack.Protected guard={notLifeFlowOnly}>
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -174,6 +185,7 @@ function AppShell() {
   const isImmersive =
     (segments as string[])[0] === '(auth)' ||
     (segments as string[])[0] === '(onboarding)' ||
+    (segments as string[])[0] === 'cuenta-lifeflow' ||
     (segments as string[])[0] === 'admin';
   const showSidebar = Platform.OS === 'web' && isDesktop && !isImmersive;
 

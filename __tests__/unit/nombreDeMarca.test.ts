@@ -64,7 +64,11 @@ const PARECE_CODIGO = (s: string) => /[=&|{}[\]();$]|\.\w+\(/.test(s);
 
 describe('el nombre interno no se filtra a la interfaz', () => {
   const ficheros = glob('{app,components}/**/*.tsx', { cwd: ROOT })
-    .filter((f) => !f.includes('__tests__'));
+    .filter((f) => !f.includes('__tests__'))
+    // Única excepción: LifeFlow es también una app hermana real (comparte
+    // Supabase) y esta pantalla existe para nombrarla — le dice a una cuenta
+    // de LifeFlow que Polaris no es para ella.
+    .filter((f) => !/cuenta-lifeflow\.tsx$/.test(f));
 
   it('hay ficheros que revisar (si no, esto no probaría nada)', () => {
     expect(ficheros.length).toBeGreaterThan(40);

@@ -18,6 +18,7 @@ import { calcProtocolDay, computeStreak } from '@/lib/utils';
 import { enqueueWrite, initOfflineFlush } from '@/lib/offlineQueue';
 import { checkCriticalSchema } from '@/lib/schemaHealth';
 import { resolveEntitlement } from '@/lib/subscription';
+import { isLifeFlowOnlyAccount } from '@/lib/accountScopeLogic';
 import { loadAiConsent, resetAiConsent } from '@/lib/aiConsent';
 import { logSilentError } from '@/lib/observability';
 import { readLocal, removeLocal, writeLocal } from '@/storage/local';
@@ -200,6 +201,9 @@ type LifeFlowContextValue = {
   protocolDay: number;
   /** Authenticated Supabase user ID — null when anonymous or unauthenticated */
   userId: string | null;
+  /** Cuenta solo de LifeFlow (proyecto Supabase compartido) → no entra a Polaris.
+   *  null = verificando; false sin sesión o ante cualquier error (falla abierto). */
+  isLifeFlowOnly: boolean | null;
   latestCheckIn: CheckIn | null;
   todayCheckIn: CheckIn | null;
   averages: { energy: number; clarity: number; stress: number; sleep: number };
@@ -413,6 +417,39 @@ async function loadUserData(uid: string): Promise<LifeFlowState | null> {
   return result;
 }
 
+// ─── ¿Cuenta solo de LifeFlow? (regla en lib/accountScopeLogic.ts) ───────────
+// Todas son lecturas propias permitidas por RLS. Cualquier error → false.
+async function fetchIsLifeFlowOnly(uid: string): Promise<boolean> {
+  try {
+    const sb = supabase as any;
+    const [prof, up, enr, coach] = await Promise.all([
+      sb.from('profiles')
+        .select('is_admin, is_mentor, is_superadmin, clickup_task_id, subscription_tier, lf_onboarded_at, lf_terms_accepted_at, role')
+        .eq('id', uid).maybeSingle(),
+      sb.from('user_profiles').select('user_id', { count: 'exact', head: true }).eq('user_id', uid),
+      sb.from('lf_enrollments').select('user_id', { count: 'exact', head: true }).eq('user_id', uid),
+      sb.from('lf_coach_assignments').select('member_id', { count: 'exact', head: true }).eq('member_id', uid),
+    ]);
+    if (prof.error || up.error || !prof.data) return false;
+    const p = prof.data;
+    return isLifeFlowOnlyAccount({
+      hasPolarisProfile: (up.count ?? 0) > 0,
+      isAdmin:           !!p.is_admin,
+      isMentor:          !!p.is_mentor,
+      isSuperadmin:      !!p.is_superadmin,
+      clickupTaskId:     p.clickup_task_id ?? null,
+      subscriptionTier:  p.subscription_tier ?? null,
+      lfOnboardedAt:     p.lf_onboarded_at ?? null,
+      lfTermsAcceptedAt: p.lf_terms_accepted_at ?? null,
+      role:              p.role ?? null,
+      hasLifeFlowData:   (enr.count ?? 0) > 0 || (coach.count ?? 0) > 0,
+    });
+  } catch (e) {
+    logSilentError('accountScope.fetch', e);
+    return false;
+  }
+}
+
 // ─── Migrate local storage → Supabase (first sync) ───────────────────────────
 async function migrateLocalToSupabase(uid: string, s: LifeFlowState) {
   try {
@@ -487,6 +524,17 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
     // el siguiente usuario de este dispositivo parte sin permiso.
     if (uid) void loadAiConsent(uid); else resetAiConsent();
   };
+
+  // Veredicto LifeFlow-only atado al uid que lo produjo: si el uid cambió y el
+  // veredicto aún no llega, es null (verificando) — nunca el del usuario anterior.
+  const [scope, setScope] = useState<{ uid: string; lfOnly: boolean } | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    fetchIsLifeFlowOnly(userId).then((lfOnly) => { if (alive) setScope({ uid: userId, lfOnly }); });
+    return () => { alive = false; };
+  }, [userId]);
+  const isLifeFlowOnly = !userId ? false : scope?.uid === userId ? scope.lfOnly : null;
 
   // ── Outbox offline ───────────────────────────────────────────────────────────
   // Reintenta escrituras idempotentes del core-loop (check-in, lecciones) que
@@ -1249,6 +1297,7 @@ export function LifeFlowProvider({ children }: { children: ReactNode }) {
         isSubscribed,
         protocolDay,
         userId,
+        isLifeFlowOnly,
         latestCheckIn,
         todayCheckIn,
         averages,
