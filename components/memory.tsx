@@ -217,6 +217,7 @@ export function ConversationTimeline({
 const RISK_COLOR: Record<string, string> = {
   low: palette.success, medium: palette.warning, high: palette.danger,
 };
+const RISK_ES: Record<string, string> = { low: 'BAJO', medium: 'MEDIO', high: 'ALTO' };
 
 export function AdminBriefingCard({
   briefing,
@@ -251,7 +252,7 @@ export function AdminBriefingCard({
           {!!briefing.risk_level && (
             <View style={[s.riskPill, { borderColor: RISK_COLOR[briefing.risk_level] ?? palette.smoke }]}>
               <Text style={[s.riskText, { color: RISK_COLOR[briefing.risk_level] ?? palette.smoke }]}>
-                RIESGO {briefing.risk_level.toUpperCase()}
+                RIESGO {RISK_ES[briefing.risk_level] ?? briefing.risk_level.toUpperCase()}
               </Text>
             </View>
           )}
