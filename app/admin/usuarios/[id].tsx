@@ -798,15 +798,16 @@ export default function UserDetailScreen() {
           <View style={s.tabBody}>
             <PrepSignalsCard signals={signals} />
             <LastSessionCard
-              title={lastSession ? `ÚLTIMA SESIÓN · SEMANA ${lastSession.week ?? '—'}` : 'ÚLTIMA SESIÓN'}
-              dateLabel={lastSession ? formatDate(lastSession.session_date ?? lastSession.created_at) : 'Sin sesiones todavía'}
+              title="Última sesión"
+              dateLabel={lastSession
+                ? `Semana ${lastSession.week ?? '—'} · ${formatDate(lastSession.session_date ?? lastSession.created_at)}`
+                : 'Sin sesiones todavía'}
               digest={lastDigest}
               onOpenDesk={openDesk}
             />
             <PrepCommitmentsCard items={commitments} busyKey={commitBusy} onToggle={handleToggleCommitment} />
             <ForSessionCard briefing={memory.briefing} generating={genBrief} error={briefError} onGenerate={handleGenerateBriefing} />
             {(frictions.length > 0) && <FriccionesCard items={frictions} onDismiss={handleDismissFriction} />}
-            <ProfileSynopsisCard profile={memory.profile} variant="admin" style={s.card} />
           </View>
         )}
 
@@ -982,6 +983,8 @@ export default function UserDetailScreen() {
         </View>)}
 
         {tab === 'client' && (<View style={s.tabBody}>
+        {/* Quién es — la síntesis vive aquí, no en PREPARAR (menos que leer antes de la sesión). */}
+        <ProfileSynopsisCard profile={memory.profile} variant="admin" style={s.card} />
         {/* ─────────────────────────────────────────────────── */}
         {/* G. CHECK-INS HISTÓRICOS — primero: es lo que el cliente reporta */}
         {/* ─────────────────────────────────────────────────── */}
