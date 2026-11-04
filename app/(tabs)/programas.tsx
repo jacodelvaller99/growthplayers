@@ -2,24 +2,14 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  AppHeader,
-  GoldDivider,
-  PremiumCard,
-  ProgressCard,
-  StatusPill,
-  useScreen,
-} from '@/components/polaris';
-import { LensTabs } from '@/components/focus-deck';
-import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES, arquetipoConArticulo } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
-import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { Pantalla, TarjetaOro } from '@/components/pantalla';
+import { PolarisLogo } from '@/components/PolarisLogo';
 
 /**
  * El catálogo está ABIERTO. Quien paga, entra donde quiera.
@@ -49,12 +39,6 @@ export function isModuleUnlocked(
   return modules[moduleIndex].status !== 'coming_soon';
 }
 
-const MOBILE_LENSES = [
-  { id: 'activo', label: 'Activo' },
-  { id: 'completado', label: 'Completados' },
-  { id: 'porvenir', label: 'Por venir' },
-] as const;
-
 // "Por qué importa" — el peso del módulo en el camino, no su contenido literal.
 // Mantiene al usuario dentro del producto en vez de mandarlo a Skool.
 function moduleStakes(module: typeof POLARIS_MODULES[number]): string {
@@ -65,22 +49,13 @@ function moduleStakes(module: typeof POLARIS_MODULES[number]): string {
 }
 
 export default function ProgramasScreen() {
-  const sc = useScreen();
-  const { isDesktop } = useBreakpoint();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { state } = useLifeFlow();
-  const [toast, setToast] = useState<string | null>(null);
   // Teaser in-app: módulo seleccionado para "Ver qué incluye" (no saca a Skool).
   const [teaser, setTeaser] = useState<typeof POLARIS_MODULES[number] | null>(null);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const completedLessons = state.completedLessons ?? [];
-  const completedCount = POLARIS_MODULES.filter((m) => m.status === 'completed').length;
   const totalLessons = POLARIS_MODULES.reduce((acc, m) => acc + m.lessons.length, 0);
   const overallProgress = totalLessons > 0
     ? Math.round((completedLessons.length / totalLessons) * 100)
@@ -106,116 +81,7 @@ export default function ProgramasScreen() {
     activo: [], completado: [], porvenir: [],
   };
   POLARIS_MODULES.forEach((m, i) => groupedModules[moduleGroup(m, i)].push([m, i]));
-  const [mobileLens, setMobileLens] = useState<ModuleGroup>('activo');
 
-  // ── Module card renderer (shared between mobile and desktop) ──────────────
-  // Vertical "compass" card: module nº top-left, state indicator top-right,
-  // archetype eyebrow + name + "subtitle · N lecciones" + progress at the base.
-  const renderModuleCard = (module: typeof POLARIS_MODULES[number], idx: number, wrapStyle?: object) => {
-    const isComingSoon = module.status === 'coming_soon';
-    const unlocked = isModuleUnlocked(POLARIS_MODULES, idx, completedLessons);
-    const isLocked = !unlocked && !isComingSoon;
-    const moduleDone = module.lessons.filter((l) => completedLessons.includes(l.id)).length;
-    const isAllDone = module.lessons.length > 0 && moduleDone === module.lessons.length;
-    const moduleProgress = module.lessons.length > 0
-      ? Math.round((moduleDone / module.lessons.length) * 100)
-      : 0;
-    const effectiveStatus = isAllDone ? 'completed' : unlocked ? 'active' : module.status;
-    const isActive = effectiveStatus === 'active';
-    const dimmed = isLocked || isComingSoon;
-    const lessonsLabel = module.lessons.length === 1 ? '1 lección' : `${module.lessons.length} lecciones`;
-
-    return (
-      <View key={module.id} style={wrapStyle}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Modulo ${module.order}: ${module.title}`}
-          onPress={() => {
-            if (isComingSoon) {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-              showToast(`Módulo ${module.order} en construcción — completa los anteriores mientras tanto`);
-              return;
-            }
-            if (isLocked) {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-              const prevModule = POLARIS_MODULES[idx - 1];
-              showToast(prevModule ? `Termina "${prevModule.title}" para abrir este` : 'Completa el módulo anterior para desbloquear este');
-              return;
-            }
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push({ pathname: '/module/[id]', params: { id: module.id } });
-          }}
-          style={({ pressed }) => [pressed && !dimmed && { opacity: 0.82 }]}>
-          <PremiumCard style={[styles.moduleCard, isActive && styles.moduleCardActive, dimmed && styles.moduleCardDimmed]}>
-            {/* Top row — number + state indicator */}
-            <View style={styles.moduleTop}>
-              <Text style={[styles.moduleNumber, isActive && styles.moduleNumberActive]}>
-                {String(module.order).padStart(2, '0')}
-              </Text>
-              {isComingSoon ? (
-                <View style={styles.soonBadge}>
-                  <Text style={styles.soonBadgeText}>PRONTO</Text>
-                </View>
-              ) : isLocked ? (
-                <MaterialIcons name="lock" size={18} color={palette.smoke} />
-              ) : isActive ? (
-                <View style={styles.liveDot} />
-              ) : (
-                <MaterialIcons name="check-circle" size={18} color={palette.success} />
-              )}
-            </View>
-
-            {/* Base — archetype, name, meta, progress */}
-            <View style={styles.moduleBase}>
-              {module.arquetipo ? (
-                isAllDone ? (
-                  <View
-                    style={styles.arqConquered}
-                    accessible
-                    accessibilityLabel={`Arquetipo integrado: ${arquetipoConArticulo(module.arquetipo)}`}>
-                    <MaterialIcons name="military-tech" size={10} color={palette.goldText} />
-                    <Text style={styles.arqConqueredText} numberOfLines={1}>
-                      {arquetipoConArticulo(module.arquetipo).toUpperCase()}
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.moduleArq} numberOfLines={1}>{arquetipoConArticulo(module.arquetipo).toUpperCase()}</Text>
-                )
-              ) : null}
-              {/* Móvil: la tarjeta mide ~170px y «AUTOCONOCIMIENTO» en versalitas
-                  extendidas no cabe ni en una línea entera → se cortaba. Caja
-                  normal + 14pt + hasta 3 líneas: el título se lee completo. */}
-              <Text style={[styles.moduleTitle, !isDesktop && styles.moduleTitleCompact]} numberOfLines={isDesktop ? 2 : 3}>{module.title}</Text>
-              <Text style={styles.moduleSubtitle} numberOfLines={2}>{module.subtitle} · {lessonsLabel}</Text>
-              {isActive && (
-                <View style={styles.progressWrap}>
-                  <View style={styles.progressTrack}>
-                    <View style={[styles.progressFill, { width: `${moduleProgress}%` }]} />
-                  </View>
-                  <Text style={styles.progressPct}>{moduleProgress}%</Text>
-                </View>
-              )}
-            </View>
-          </PremiumCard>
-        </Pressable>
-
-        {/* Ver qué incluye — teaser IN-APP (no saca al usuario a Skool) */}
-        {(isComingSoon || isLocked) && (
-          <Pressable
-            style={({ pressed }) => [styles.teaserLink, pressed && { opacity: 0.7 }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setTeaser(module);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`Ver qué incluye el módulo ${module.order}`}>
-            <MaterialIcons name="visibility" size={12} color={palette.goldText} />
-            <Text style={styles.teaserLinkText}>Ver qué incluye →</Text>
-          </Pressable>
-        )}
-      </View>
-    );
-  };
 
   // ── Teaser IN-APP — "qué viene + por qué importa" (sin sacar a Skool) ──────
   const teaserModal = (
@@ -285,169 +151,93 @@ export default function ProgramasScreen() {
   );
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────────────
-  if (isDesktop) {
-    return (
-      <View style={styles.root}>
-        <ScrollView
-          style={sc.root}
-          contentContainerStyle={styles.contentDesktop}
-          showsVerticalScrollIndicator={false}
-          bounces
-          overScrollMode="never"
-          keyboardShouldPersistTaps="handled">
-          <AppHeader title="PROGRAMA" />
+  // ── PROGRAMA (rediseño) ────────────────────────────────────────────────────
+  // Dónde estás, una sola acción para seguir, y el camino completo debajo.
+  // "Aquí" = el primer módulo (en orden) con lecciones aún sin terminar.
+  const conLecciones = POLARIS_MODULES.filter((m) => m.lessons.length > 0);
+  const hechas = (m: typeof POLARIS_MODULES[number]) =>
+    m.lessons.filter((l) => completedLessons.includes(l.id)).length;
+  const aqui = conLecciones.find((m) => hechas(m) < m.lessons.length) ?? conLecciones[conLecciones.length - 1];
+  const siguienteLeccion = aqui?.lessons.find((l) => !completedLessons.includes(l.id)) ?? aqui?.lessons[0];
+  const numerados = POLARIS_MODULES.filter((m) => m.order > 0);
 
-          {/* Hero row — left title + stats + progress */}
-          <View style={styles.desktopHero}>
-            <View style={styles.desktopHeroLeft}>
-              <Text style={styles.heroEyebrow}>PROTOCOLO SOBERANO</Text>
-              <Text style={styles.heroTitle}>90 DÍAS DE{'\n'}EJECUCIÓN.</Text>
-              <StatusPill label="ACTIVO" tone="gold" dot />
-            </View>
+  const abrir = (module: typeof POLARIS_MODULES[number], idx: number) => {
+    const isComingSoon = module.status === 'coming_soon';
+    if (isComingSoon || !isModuleUnlocked(POLARIS_MODULES, idx, completedLessons)) {
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setTeaser(module);
+      return;
+    }
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({ pathname: '/module/[id]', params: { id: module.id } } as never);
+  };
 
-            <View style={styles.desktopHeroStats}>
-              <View style={styles.heroStat}>
-                <Text style={styles.heroStatNum}>{completedCount}</Text>
-                <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}COMPLETADOS</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <View style={styles.heroStat}>
-                <Text style={styles.heroStatNum}>{POLARIS_MODULES.length}</Text>
-                <Text style={styles.heroStatMeta}>MÓDULOS{'\n'}TOTALES</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <View style={styles.heroStat}>
-                <Text style={styles.heroStatNum}>{totalLessons}</Text>
-                <Text style={styles.heroStatMeta}>LECCIONES{'\n'}EN TOTAL</Text>
-              </View>
-            </View>
-
-            <View style={styles.desktopHeroProgress}>
-              <ProgressCard
-                label="Avance total"
-                value={`${overallProgress}% · ${completedLessons.length}/${totalLessons} lecciones`}
-                progress={overallProgress}
-              />
-            </View>
-          </View>
-
-          {/* Módulos — lentes en vez de los 9 en una sola pila */}
-          <GoldDivider label="MÓDULOS" />
-          <LensTabs
-            lenses={[
-              { id: 'activo', label: `ACTIVO (${groupedModules.activo.length})`, render: () => (
-                <View style={styles.desktopModuleGrid}>
-                  {groupedModules.activo.length > 0
-                    ? groupedModules.activo.map(([m, i]) => renderModuleCard(m, i, styles.desktopModuleItem))
-                    : <EmptyState icon="play-circle-outline" title="Nada activo ahora mismo" />}
-                </View>
-              ) },
-              { id: 'completado', label: `COMPLETADOS (${groupedModules.completado.length})`, render: () => (
-                <View style={styles.desktopModuleGrid}>
-                  {groupedModules.completado.length > 0
-                    ? groupedModules.completado.map(([m, i]) => renderModuleCard(m, i, styles.desktopModuleItem))
-                    : <EmptyState icon="military-tech" title="Todavía ningún módulo cerrado" body="Cuando termines el primero, aparece aquí." />}
-                </View>
-              ) },
-              { id: 'porvenir', label: `POR VENIR (${groupedModules.porvenir.length})`, render: () => (
-                <View style={styles.desktopModuleGrid}>
-                  {groupedModules.porvenir.length > 0
-                    ? groupedModules.porvenir.map(([m, i]) => renderModuleCard(m, i, styles.desktopModuleItem))
-                    : <EmptyState icon="check-circle-outline" title="Nada pendiente — vas al día" />}
-                </View>
-              ) },
-            ]}
-          />
-        </ScrollView>
-
-        {/* Toast */}
-        {toast && (
-          <View
-            style={[styles.toast, { bottom: insets.bottom + 16 }]}
-            accessibilityLiveRegion="polite"
-            accessibilityRole="alert">
-            <Text style={styles.toastText}>{toast}</Text>
-          </View>
-        )}
-
-        {teaserModal}
-      </View>
-    );
-  }
-
-  // ── MOBILE / TABLET LAYOUT ───────────────────────────────────────────────
   return (
     <View style={styles.root}>
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24, gap: spacing.xl }]}
-        showsVerticalScrollIndicator={false}
-        bounces
-        overScrollMode="never"
-        keyboardShouldPersistTaps="handled">
-        {/* ── Header ── */}
-        <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>PROGRAMAS</Text>
-          <Text style={styles.pageSub}>Nueve arquetipos. Un camino de soberanía.</Text>
+      <Pantalla
+        meta="PROTOCOLO SOBERANO"
+        metaRight={aqui && aqui.order > 0 ? `MÓDULO ${aqui.order} DE ${numerados.length}` : `${overallProgress} % HECHO`}
+        title={aqui ? `${aqui.title.replace(': ', ':\n')}.` : 'Tu programa.'}
+        sub={aqui?.subtitle}
+        hero={siguienteLeccion ? (
+          <TarjetaOro
+            meta={hechas(aqui!) === 0 ? 'EMPIEZA AQUÍ' : 'SEGUIR'}
+            metaRight={`LECCIÓN ${siguienteLeccion.order} DE ${aqui!.lessons.length}`}
+            title={siguienteLeccion.title}
+            onPress={() => router.push(`/lesson/${siguienteLeccion.id}` as never)}
+          />
+        ) : undefined}>
+        <View style={styles.track} accessibilityLabel={`Programa completo al ${overallProgress} %`}>
+          <View style={[styles.trackFill, { width: `${Math.max(overallProgress, 2)}%` }]} />
         </View>
+        <Text style={styles.trackText}>{overallProgress} % del programa · {completedLessons.length} de {totalLessons} lecciones</Text>
 
-        {/* ── Ruta completada ── */}
-        <PremiumCard style={styles.routeCard}>
-          <MaterialIcons name="workspace-premium" size={20} color={palette.goldText} />
-          <View style={styles.routeBody}>
-            <Text style={styles.routeLabel}>RUTA COMPLETADA</Text>
-            <View style={styles.routeTrack}>
-              <View style={[styles.routeFill, { width: `${overallProgress}%` }]} />
-            </View>
-          </View>
-          <Text style={styles.routePct}>{overallProgress}%</Text>
-        </PremiumCard>
-
-        {/* ── Módulos — segmentado que reparte el ancho ──
-            LensTabs (scroll horizontal) cortaba «POR VENIR» en 390px sin
-            indicar que había más. Tres lentes caben: etiqueta arriba, conteo
-            abajo, cada segmento 1/3 del ancho. */}
-        <View style={styles.segmented} accessibilityRole="tablist">
-          {MOBILE_LENSES.map(({ id, label }) => {
-            const on = id === mobileLens;
-            const count = groupedModules[id].length;
+        <View style={styles.route}>
+          <View style={styles.routeLine} />
+          {POLARIS_MODULES.map((m, idx) => {
+            const total = m.lessons.length;
+            const done = hechas(m);
+            const completo = total > 0 && done === total;
+            const esAqui = m.id === aqui?.id;
+            const pronto = m.status === 'coming_soon';
+            const estado = completo
+              ? 'Completado'
+              : esAqui
+                ? `Estás aquí · ${done} de ${total}`
+                : pronto
+                  ? 'Pronto'
+                  : total > 0
+                    ? `${total} lecciones`
+                    : 'En el classroom';
             return (
               <Pressable
-                key={id}
-                onPress={() => {
-                  if (Platform.OS !== 'web') Haptics.selectionAsync();
-                  setMobileLens(id);
-                }}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={`${label}, ${count} ${count === 1 ? 'módulo' : 'módulos'}`}
-                style={({ pressed }) => [styles.segment, on && styles.segmentOn, pressed && { opacity: 0.8 }]}>
-                <Text style={[styles.segmentLabel, on && styles.segmentLabelOn]} numberOfLines={1}>{label}</Text>
-                <Text style={[styles.segmentCount, on && styles.segmentLabelOn]}>{count}</Text>
+                key={m.id}
+                onPress={() => abrir(m, idx)}
+                accessibilityRole="link"
+                accessibilityLabel={`${m.title}. ${estado}`}
+                style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                  styles.routeRow,
+                  (pressed || hovered) && styles.routeRowPressed,
+                ]}>
+                <View style={styles.routeMark}>
+                  {esAqui ? (
+                    <PolarisLogo size={22} color={palette.gold} />
+                  ) : (
+                    <View style={[styles.dot, completo && styles.dotDone]} />
+                  )}
+                </View>
+                <View style={styles.routeText}>
+                  <Text style={[styles.routeTitle, esAqui && styles.routeTitleNow, completo && styles.routeTitleDone]}>
+                    {m.title}
+                  </Text>
+                  <Text style={[styles.routeState, esAqui && styles.routeStateNow]}>{estado}</Text>
+                </View>
               </Pressable>
             );
           })}
         </View>
-        <View style={styles.grid}>
-          {groupedModules[mobileLens].length > 0
-            ? groupedModules[mobileLens].map(([m, i]) => renderModuleCard(m, i, styles.gridItem))
-            : mobileLens === 'activo'
-              ? <EmptyState icon="play-circle-outline" title="Nada activo ahora mismo" />
-              : mobileLens === 'completado'
-                ? <EmptyState icon="military-tech" title="Todavía ningún módulo cerrado" body="Cuando termines el primero, aparece aquí." />
-                : <EmptyState icon="check-circle-outline" title="Nada pendiente — vas al día" />}
-        </View>
-      </ScrollView>
+      </Pantalla>
 
-      {/* ── Toast ── */}
-      {toast && (
-        <View
-          style={[styles.toast, { bottom: insets.bottom + 16 }]}
-          accessibilityLiveRegion="polite"
-          accessibilityRole="alert">
-          <Text style={styles.toastText}>{toast}</Text>
-        </View>
-      )}
 
       {teaserModal}
     </View>
@@ -455,284 +245,35 @@ export default function ProgramasScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ── Rediseño ──
+  track: { height: 4, borderRadius: 999, backgroundColor: palette.line, overflow: 'hidden' },
+  trackFill: { height: 4, borderRadius: 999, backgroundColor: palette.gold },
+  trackText: { marginTop: 12, fontFamily: Fonts.sans, fontSize: 15, color: palette.ash },
+  route: { marginTop: 32, position: 'relative' },
+  routeLine: { position: 'absolute', left: 10, top: 20, bottom: 20, width: 1, backgroundColor: palette.line },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 18, minHeight: 64, paddingVertical: 10 },
+  routeRowPressed: { opacity: 0.7 },
+  routeMark: { width: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.black },
+  dot: { width: 10, height: 10, borderRadius: 999, borderWidth: 1.5, borderColor: palette.smoke, backgroundColor: palette.black },
+  dotDone: { backgroundColor: palette.ivory, borderColor: palette.ivory },
+  routeText: { flex: 1, gap: 2 },
+  routeTitle: { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, color: palette.ivory },
+  routeTitleNow: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 18, lineHeight: 24 },
+  routeTitleDone: { color: palette.ash },
+  routeState: { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },
+  routeStateNow: { color: palette.goldText },
   root: {
     flex: 1,
     backgroundColor: palette.black,
   },
 
-  // ── Page header ──
-  pageHeader: {
-    gap: spacing.sm,
-  },
-  pageTitle: {
-    ...typography.title,
-    color: palette.ivory,
-    fontSize: 21,
-  },
-  pageSub: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-  },
 
-  // ── Ruta completada card ──
-  routeCard: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  routeBody: {
-    flex: 1,
-    gap: spacing.sm,
-  },
-  routeLabel: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  routeTrack: {
-    backgroundColor: palette.charcoal,
-    borderRadius: radii.pill,
-    height: 6,
-    overflow: 'hidden',
-  },
-  routeFill: {
-    backgroundColor: palette.gold,
-    borderRadius: radii.pill,
-    height: '100%',
-  },
-  routePct: {
-    color: palette.goldText,
-    fontFamily: Fonts.display,
-    fontSize: 15,
-    fontWeight: '700',
-  },
 
-  // ── Segmentado móvil (reparte el ancho, sin scroll oculto) ──
-  segmented: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginBottom: -spacing.sm,
-  },
-  segment: {
-    alignItems: 'center',
-    borderColor: palette.lineSoft,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 52,
-    minWidth: 0,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  segmentOn: {
-    backgroundColor: palette.goldLight,
-    borderColor: palette.lineGold,
-  },
-  segmentLabel: {
-    color: palette.ash,
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  segmentLabelOn: {
-    color: palette.goldText,
-  },
-  segmentCount: {
-    color: palette.smoke,
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    marginTop: 2,
-  },
 
-  // ── Module grid ──
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  gridItem: {
-    width: '48%',
-  },
 
-  // ── Module card (vertical) ──
-  moduleCard: {
-    justifyContent: 'space-between',
-    minHeight: 168,
-    overflow: 'hidden',
-  },
-  moduleCardActive: {
-    borderColor: palette.lineGold,
-  },
-  moduleCardDimmed: {
-    opacity: 0.62,
-  },
-  moduleTop: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  moduleNumber: {
-    color: palette.smoke,
-    fontFamily: Fonts.display,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  moduleNumberActive: {
-    color: palette.goldText,
-  },
-  liveDot: {
-    backgroundColor: palette.success,
-    borderRadius: radii.pill,
-    height: 7,
-    marginTop: 7,
-    width: 7,
-  },
-  soonBadge: {
-    borderColor: palette.lineGold,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  soonBadgeText: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  moduleBase: {
-    gap: spacing.xs,
-    marginTop: spacing.lg,
-  },
-  moduleArq: {
-    color: palette.ash,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.6,
-  },
-  moduleTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    lineHeight: 19,
-    textTransform: 'uppercase',
-  },
-  moduleTitleCompact: {
-    fontSize: 14,
-    letterSpacing: 0,
-    textTransform: 'none',
-  },
-  moduleSubtitle: {
-    ...typography.caption,
-    color: palette.ash,
-    fontSize: 11.5,
-  },
-  progressWrap: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  progressTrack: {
-    backgroundColor: palette.charcoal,
-    borderRadius: radii.pill,
-    flex: 1,
-    height: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    backgroundColor: palette.gold,
-    borderRadius: radii.pill,
-    height: '100%',
-  },
-  progressPct: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-  },
 
-  // ── Desktop hero (unchanged) ──
-  heroEyebrow: {
-    ...typography.label,
-    color: palette.ash,
-  },
-  heroTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 30,
-    textTransform: 'uppercase',
-  },
-  heroStat: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 2,
-  },
-  heroStatNum: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 0,
-    lineHeight: 32,
-  },
-  heroStatMeta: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  heroStatDivider: {
-    backgroundColor: palette.lineSoft,
-    height: 40,
-    width: 1,
-  },
 
-  // Teaser link (reemplaza el antiguo link externo a Skool)
-  teaserLink: {
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: -spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  teaserLinkText: {
-    ...typography.mono,
-    color: palette.goldText,
-    fontSize: 11,
-    letterSpacing: 0.5,
-  },
 
-  // Arquetipo conquistado (sello persistente en el card del módulo)
-  arqConquered: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(179,141,60,0.10)',
-    borderColor: alpha(palette.gold, '55'),
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  arqConqueredText: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.2,
-  },
 
   // Teaser modal
   teaserOverlay: {
@@ -846,69 +387,5 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
-  // Toast
-  toast: {
-    alignSelf: 'center',
-    backgroundColor: palette.charcoal,
-    borderColor: palette.lineSoft,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    bottom: 16,
-    elevation: 8,
-    maxWidth: '85%',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    position: 'absolute',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-  },
-  toastText: {
-    ...typography.body,
-    color: palette.ivory,
-    textAlign: 'center',
-  },
 
-  // ── Desktop layout ──────────────────────────────────────────────────────
-  contentDesktop: {
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 1200,
-    paddingHorizontal: 40,
-    paddingTop: 32,
-    paddingBottom: 60,
-    gap: 24,
-  },
-  desktopHero: {
-    flexDirection: 'row',
-    gap: 24,
-    alignItems: 'stretch',
-    backgroundColor: palette.graphite,
-    borderRadius: 12,
-    padding: 24,
-  },
-  desktopHeroLeft: {
-    flex: 2,
-    gap: 12,
-    justifyContent: 'center',
-  },
-  desktopHeroStats: {
-    flex: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 0,
-  },
-  desktopHeroProgress: {
-    flex: 2,
-    justifyContent: 'center',
-  },
-  desktopModuleGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  desktopModuleItem: {
-    width: '48%',
-  },
 });

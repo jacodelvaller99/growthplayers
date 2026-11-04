@@ -3,36 +3,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  AppHeader,
-  GoldDivider,
-  PremiumCard,
-  PrimaryButton,
-  ProgressCard,
-  SecondaryButton,
-  StatusPill,
-  useScreen,
-} from '@/components/polaris';
+import { PrimaryButton, useScreen } from '@/components/polaris';
+import { PolarisLogo } from '@/components/PolarisLogo';
 import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES, arquetipoConArticulo } from '@/data/modules';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { Fonts, palette, spacing } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-
-function lessonIcon(status: string) {
-  if (status === 'completed') return 'check-circle' as const;
-  if (status === 'active') return 'play-circle-filled' as const;
-  // Contorno, no candado: está abierta, simplemente no es la que toca ahora.
-  return 'play-circle-outline' as const;
-}
-
-function lessonIconColor(status: string) {
-  if (status === 'completed') return palette.success;
-  // La fila activa tiene fondo gold (lessonRowActive) → el ícono debe ser ink
-  // (oscuro), no gold: gold-sobre-gold es invisible. El resto de la fila ya usa ink.
-  if (status === 'active') return palette.ink;
-  return palette.ash;
-}
 
 /**
  * Todas las lecciones están abiertas. Antes la N seguía cerrada hasta
@@ -101,426 +77,180 @@ export default function ModuleDetailScreen() {
   const siguiente = POLARIS_MODULES[currentModuleIdx + 1] ?? null;
   const nextModule = siguiente && siguiente.status !== 'coming_soon' ? siguiente : null;
 
+  const numerados = POLARIS_MODULES.filter((m) => m.order > 0).length;
+  const todoHecho = module.lessons.length > 0 && completedCount === module.lessons.length;
+  const volver = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/programas' as never));
+
   return (
-    <ScrollView
-      style={sc.root}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
-      showsVerticalScrollIndicator={false}
-      bounces
-      overScrollMode="never"
-      keyboardShouldPersistTaps="handled">
-      <AppHeader title={`MÓDULO ${String(module.order).padStart(2, '0')}`} />
-
-      {/* ── Module Hero ── */}
-      <PremiumCard style={styles.hero}>
-        <View style={styles.heroTop}>
-          <StatusPill
-            label={
-              module.status === 'active'
-                ? 'ACTIVO'
-                : module.status === 'completed'
-                  ? 'COMPLETADO'
-                  : 'BLOQUEADO'
-            }
-            tone={
-              module.status === 'active'
-                ? 'gold'
-                : module.status === 'completed'
-                  ? 'success'
-                  : 'muted'
-            }
-            dot={module.status === 'active'}
-          />
-          <Text style={styles.heroNumber}>{String(module.order).padStart(2, '0')}</Text>
-        </View>
-        <Text style={styles.heroTitle}>{module.title}</Text>
-        {module.arquetipo ? (
-          <View style={styles.arquetipoRow}>
-            <MaterialIcons name="person" size={12} color={palette.goldText} />
-            <Text style={styles.arquetipoText}>
-              {module.status === 'completed'
-                ? `Arquetipo integrado: ${module.arquetipo}`
-                : `Arquetipo: ${module.arquetipo}`}
-            </Text>
-          </View>
-        ) : null}
-        <Text style={styles.heroBody}>{module.subtitle}</Text>
-        <View style={styles.heroStats}>
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatNum}>{completedCount}</Text>
-            <Text style={styles.heroStatLabel}>COMPLETADAS</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatNum}>{module.lessons.length}</Text>
-            <Text style={styles.heroStatLabel}>LECCIONES</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatNum}>{dynamicProgress}%</Text>
-            <Text style={styles.heroStatLabel}>AVANCE</Text>
-          </View>
-        </View>
-      </PremiumCard>
-
-      <ProgressCard
-        label="Progreso del modulo"
-        value={`${dynamicProgress}%`}
-        progress={dynamicProgress}
-      />
-
-      {/* ── Lesson List ──
-          Algunos módulos (8, 9, Sesiones Semanales) no tienen lecciones sueltas:
-          su contenido vive entero en su classroom de Skool. Antes se renderizaba
-          una lista vacía y, como 0 === 0, el banner de abajo felicitaba por
-          "MÓDULO COMPLETADO" sin que el usuario hubiera abierto nada. */}
-      <GoldDivider label="LECCIONES" />
-      {module.lessons.length === 0 ? (
-        <PremiumCard style={styles.skoolOnly}>
-          <MaterialIcons name="school" size={22} color={palette.goldText} />
-          <Text style={styles.skoolOnlyTitle}>CONTENIDO EN EL CLASSROOM</Text>
-          <Text style={styles.skoolOnlyBody}>
-            Este módulo se trabaja completo en el classroom de Polaris, no por lecciones sueltas.
-          </Text>
-          {module.skoolUrl ? (
-            <PrimaryButton
-              label="ABRIR CLASSROOM"
-              icon="open-in-new"
-              onPress={() => { void Linking.openURL(module.skoolUrl as string); }}
-            />
-          ) : null}
-        </PremiumCard>
-      ) : null}
-      <View style={styles.lessons}>
-        {lessonsWithStatus.map((lesson, index) => {
-          const isActive = lesson.status === 'active';
-          const isCompleted = lesson.status === 'completed';
-          // Todas: ya no hay estado no-navegable en un módulo abierto.
-          const isNavigable = true;
-          return (
-            <Pressable
-              key={lesson.id}
-              disabled={!isNavigable}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !isNavigable }}
-              accessibilityLabel={`Lección ${index + 1}: ${lesson.title}. ${isCompleted ? 'Completada' : isActive ? 'Disponible' : 'Bloqueada'}`}
-              onPress={() => router.push(`/lesson/${lesson.id}` as never)}
-              style={({ pressed }) => pressed && styles.lessonRowPressed}>
-              <PremiumCard
-                style={[styles.lessonRow, isActive && styles.lessonRowActive]}>
-                <View style={styles.lessonIconWrap}>
-                  <MaterialIcons
-                    name={lessonIcon(lesson.status)}
-                    color={lessonIconColor(lesson.status)}
-                    size={20}
-                  />
-                </View>
-                <View style={styles.lessonCopy}>
-                  <Text style={[styles.lessonIndex, isActive && styles.lessonIndexActive]}>
-                    LECCION {String(index + 1).padStart(2, '0')}
-                  </Text>
-                  <Text style={[styles.lessonTitle, isActive && styles.lessonTitleActive]}>
-                    {lesson.title}
-                  </Text>
-                  {/* Condicional: NINGUNA lección de `data/modules.ts` trae
-                      `duration` (el campo es opcional en el tipo), así que
-                      esto pintaba una línea vacía bajo cada uno de los 41
-                      títulos. */}
-                  {lesson.duration ? (
-                    <Text style={[styles.lessonMeta, isActive && styles.lessonMetaActive]}>
-                      {lesson.duration}
-                    </Text>
-                  ) : null}
-                </View>
-                {isNavigable && (
-                  <View style={styles.activeIndicator}>
-                    <MaterialIcons
-                      name="chevron-right"
-                      size={18}
-                      color={isActive ? palette.ink : palette.ash}
-                    />
-                  </View>
-                )}
-              </PremiumCard>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {module.lessons.length > 0 && completedCount === module.lessons.length ? (
-        <>
-          <View style={styles.completionBanner}>
-            <MaterialIcons name="emoji-events" size={20} color={palette.goldText} />
-            <View style={styles.completionCopy}>
-              <Text style={styles.completionTitle}>MÓDULO COMPLETADO</Text>
-              <Text style={styles.completionBody}>
-                {module.arquetipo
-                  ? `Integraste ${arquetipoConArticulo(module.arquetipo)}. Eso no se puede desaprender.`
-                  : 'Has absorbido este módulo. Lleva lo aprendido al siguiente nivel.'}
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        showsVerticalScrollIndicator={false}>
+        {/* ── Cabecera amarilla: el módulo y su avance en marcas ── */}
+        <View style={[styles.hero, { paddingTop: insets.top + 12 }]}>
+          <View style={styles.inner}>
+            <View style={styles.heroTop}>
+              <Pressable onPress={volver} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={styles.back}>
+                <MaterialIcons name="arrow-back" size={22} color={palette.ink} />
+              </Pressable>
+              <Text style={styles.heroMeta}>
+                {module.order > 0 ? `MÓDULO ${module.order} DE ${numerados}` : 'PRIMEROS PASOS'}
               </Text>
             </View>
+            <PolarisLogo size={56} color={palette.ink} />
+            <Text accessibilityRole="header" style={styles.heroTitle}>{`${module.title.replace(': ', ':\n')}.`}</Text>
+            {!!module.subtitle && <Text style={styles.heroSub}>{module.subtitle}</Text>}
+            {module.lessons.length > 0 && (
+              <View
+                style={styles.ticks}
+                accessible
+                accessibilityLabel={`${completedCount} de ${module.lessons.length} lecciones · ${dynamicProgress} %`}>
+                {lessonsWithStatus.map((l) => (
+                  <View
+                    key={l.id}
+                    style={[
+                      styles.tick,
+                      l.status === 'completed' && styles.tickDone,
+                      l.status === 'active' && styles.tickNow,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
           </View>
-          {/* Terminar un módulo entero era un callejón: el banner no era
-              pulsable y la única salida era "VOLVER". Un final es donde MÁS
-              hace falta el siguiente paso. */}
-          {nextModule ? (
-            <PrimaryButton
-              label={`SIGUIENTE MÓDULO: ${(nextModule.arquetipo ?? nextModule.title).toUpperCase()}`}
-              icon="arrow-forward"
-              onPress={() => router.push(`/module/${nextModule.id}` as never)}
-            />
-          ) : (
-            <PrimaryButton
-              label="VER TU PROGRESO"
-              icon="insights"
-              onPress={() => router.push('/(tabs)/progreso' as never)}
-            />
+        </View>
+
+        <View style={[styles.inner, styles.body]}>
+          {module.arquetipo && (
+            <Text style={styles.arquetipo}>
+              {todoHecho
+                ? `Integraste ${arquetipoConArticulo(module.arquetipo)}.`
+                : `Al cerrarlo integras ${arquetipoConArticulo(module.arquetipo)}.`}
+            </Text>
           )}
-        </>
-      ) : activeLesson ? (
-        // `activeLesson` sale de `lessonsWithStatus[0]` (:65): en un módulo sin
-        // lecciones propias es `undefined`, y esto reventaba con "Cannot read
-        // properties of undefined (reading 'title')". Los módulos solo-classroom
-        // (8, 9, Sesiones Semanales) son exactamente ese caso. Antes costaba
-        // llegar porque la cadena de desbloqueo los dejaba cerrados; ahora que
-        // el catálogo abre, se entra directo. No hace falta CTA alternativo:
-        // esos módulos ya renderizan "ABRIR CLASSROOM" más arriba (:148-157).
-        <PrimaryButton
-          label={`CONTINUAR: ${activeLesson.title.toUpperCase()}`}
-          icon="play-arrow"
-          onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
-        />
-      ) : null}
 
-      {/* Next module strip — pulsable, y sin candado: el catálogo está
-          abierto a propósito (quien paga entra donde quiera), así que un
-          candado aquí mentía y un teaser que no navegaba era un callejón. */}
-      {nextModule && (
-        <Pressable
-          onPress={() => router.push(`/module/${nextModule.id}` as never)}
-          accessibilityRole="button"
-          accessibilityLabel={`Siguiente módulo: ${nextModule.title}`}
-          style={({ pressed }) => [styles.nextModuleTeaser, pressed && { opacity: 0.8 }]}>
-          <MaterialIcons name="arrow-forward" size={12} color={palette.smoke} />
-          <View style={styles.nextModuleCopy}>
-            <Text style={styles.nextModuleLabel}>SIGUIENTE MÓDULO</Text>
-            <Text style={styles.nextModuleTitle}>{nextModule.title}</Text>
+          {module.lessons.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>El contenido de este módulo vive en el classroom.</Text>
+              {module.skoolUrl ? (
+                <PrimaryButton
+                  label="ABRIR EL CLASSROOM"
+                  icon="open-in-new"
+                  onPress={() => Linking.openURL(module.skoolUrl!)}
+                />
+              ) : null}
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {lessonsWithStatus.map((lesson, i) => {
+                const isNavigable = true;
+                return (
+                  <Pressable
+                    key={lesson.id}
+                    disabled={!isNavigable}
+                    onPress={() => router.push(`/lesson/${lesson.id}` as never)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Lección ${lesson.order}: ${lesson.title}${lesson.status === 'completed' ? ', completada' : lesson.status === 'active' ? ', la que sigue' : ''}`}
+                    style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                      styles.row,
+                      i === lessonsWithStatus.length - 1 && styles.rowLast,
+                      (pressed || hovered) && styles.rowPressed,
+                    ]}>
+                    <View style={styles.mark}>
+                      {lesson.status === 'completed' ? (
+                        <MaterialIcons name="check" size={18} color={palette.ash} />
+                      ) : (
+                        <View style={[styles.dot, lesson.status === 'active' && styles.dotNow]} />
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.rowTitle,
+                        lesson.status === 'active' && styles.rowTitleNow,
+                        lesson.status === 'completed' && styles.rowTitleDone,
+                      ]}>
+                      {lesson.title}
+                    </Text>
+                    {!!lesson.duration && <Text style={styles.rowMeta}>{lesson.duration}</Text>}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          <View style={styles.actions}>
+            {todoHecho ? (
+              <PrimaryButton
+                label={nextModule ? `SIGUIENTE: ${nextModule.title.toUpperCase()}` : 'VER MI PROGRESO'}
+                icon="arrow-forward"
+                onPress={() =>
+                  router.push((nextModule ? `/module/${nextModule.id}` : '/(tabs)/progreso') as never)
+                }
+              />
+            ) : activeLesson ? (
+              <PrimaryButton
+                label={completedCount === 0 ? 'EMPEZAR' : 'SEGUIR DONDE IBA'}
+                icon="arrow-forward"
+                onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
+              />
+            ) : null}
+            {nextModule && !todoHecho && (
+              <Pressable
+                onPress={() => router.push(`/module/${nextModule.id}` as never)}
+                accessibilityRole="link"
+                style={styles.nextLink}>
+                <Text style={styles.nextLinkText}>Después: {nextModule.title}</Text>
+              </Pressable>
+            )}
           </View>
-        </Pressable>
-      )}
-
-      <SecondaryButton label="VOLVER" icon="arrow-back" onPress={() => router.back()} />
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  notFound: {
-    justifyContent: 'center',
-  },
-  // Hero
-  hero: {
-    gap: spacing.lg,
-  },
+  root: { flex: 1, backgroundColor: palette.black },
+  notFound: { justifyContent: 'center' },
+  inner: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: spacing.lg },
+
+  hero: { backgroundColor: palette.gold, paddingBottom: 28 },
   heroTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginLeft: -10, marginBottom: 24,
   },
-  heroNumber: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 13,
-  },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  heroMeta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink },
   heroTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 34,
-    textTransform: 'uppercase',
+    marginTop: 20, fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 36, color: palette.ink,
   },
-  arquetipoRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 5,
-  },
-  arquetipoText: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  heroBody: {
-    ...typography.body,
-    color: palette.ash,
-  },
-  heroStats: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  heroStat: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 2,
-  },
-  heroStatNum: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 22,
-    fontWeight: '800',
-    lineHeight: 26,
-  },
-  // Tres columnas en la tarjeta: a 11pt «COMPLETADAS» necesita tracking corto.
-  heroStatLabel: {
-    ...typography.label,
-    color: palette.ash,
-    letterSpacing: 0.4,
-    textAlign: 'center',
-  },
-  heroStatDivider: {
-    backgroundColor: palette.lineSoft,
-    height: 32,
-    width: 1,
-  },
+  heroSub: { marginTop: 10, fontFamily: Fonts.sans, fontSize: 16, lineHeight: 23, color: palette.ink },
+  ticks: { flexDirection: 'row', gap: 6, marginTop: 28 },
+  tick: { flex: 1, height: 6, borderRadius: 999, backgroundColor: 'rgba(0, 0, 0, 0.16)' },
+  tickDone: { backgroundColor: palette.ink },
+  tickNow: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: palette.ink },
 
-  // Módulos cuyo contenido vive entero en el classroom de Skool
-  skoolOnly: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
-  },
-  skoolOnlyTitle: {
-    ...typography.section,
-    color: palette.ivory,
-    textAlign: 'center',
-  },
-  skoolOnlyBody: {
-    ...typography.body,
-    color: palette.ash,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  body: { paddingTop: 28 },
+  arquetipo: { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 24, color: palette.ash, marginBottom: 20 },
 
-  // Lessons
-  lessons: {
-    gap: spacing.sm,
+  list: {},
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: palette.line,
   },
-  lessonRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  lessonRowActive: {
-    backgroundColor: palette.gold,
-    borderColor: palette.gold,
-  },
-  lessonRowPressed: {
-    opacity: 0.75,
-  },
-  lessonIconWrap: {
-    alignItems: 'center',
-    width: 28,
-  },
-  lessonCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  lessonIndex: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 11,
-  },
-  lessonIndexActive: {
-    color: palette.graphite,
-  },
-  lessonTitle: {
-    ...typography.section,
-    color: palette.ivory,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'none',
-  },
-  lessonTitleActive: {
-    color: palette.ink,
-  },
-  lessonMeta: {
-    ...typography.mono,
-    color: palette.ash,
-  },
-  lessonMetaActive: {
-    color: palette.graphite,
-  },
-  activeIndicator: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    borderRadius: radii.sm,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
+  rowLast: { borderBottomWidth: 1, borderBottomColor: palette.line },
+  rowPressed: { opacity: 0.7 },
+  mark: { width: 22, alignItems: 'center' },
+  dot: { width: 10, height: 10, borderRadius: 999, borderWidth: 1.5, borderColor: palette.smoke },
+  dotNow: { backgroundColor: palette.gold, borderColor: palette.gold },
+  rowTitle: { flex: 1, fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, color: palette.ivory },
+  rowTitleNow: { fontWeight: '600' },
+  rowTitleDone: { color: palette.ash },
+  rowMeta: { fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke },
 
-  // Next module teaser
-  nextModuleTeaser: {
-    alignItems: 'center',
-    backgroundColor: palette.lineSoft,
-    borderColor: palette.lineSoft,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    opacity: 0.6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  nextModuleCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  nextModuleLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 11,
-    letterSpacing: 2,
-  },
-  nextModuleTitle: {
-    color: palette.ash,
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    lineHeight: 16,
-  },
+  empty: { gap: spacing.lg },
+  emptyText: { fontFamily: Fonts.sans, fontSize: 17, lineHeight: 26, color: palette.ash },
 
-  // Module completion banner
-  completionBanner: {
-    alignItems: 'flex-start',
-    backgroundColor: alpha(palette.gold, '0F'),
-    borderColor: alpha(palette.gold, '55'),
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-  },
-  completionCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  completionTitle: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  completionBody: {
-    ...typography.body,
-    color: palette.ivory,
-    fontSize: 13,
-    lineHeight: 20,
-  },
+  actions: { marginTop: 32, gap: spacing.xs },
+  nextLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  nextLinkText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
 });

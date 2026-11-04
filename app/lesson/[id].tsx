@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SkoolVideo } from '@/components/SkoolVideo';
-import { GoldDivider, PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
+import { PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
 import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES } from '@/data/modules';
 import { LESSON_TASKS } from '@/data/tasks';
@@ -944,24 +944,15 @@ export default function LessonScreen() {
         {/* ── Lesson Info ── */}
         <View style={styles.lessonBody}>
           <View style={styles.lessonBadgeRow}>
-            <View style={styles.lessonBadge}>
-              <Text style={styles.lessonBadgeText}>{lessonBadge}</Text>
-            </View>
-            {isLessonCompleted && (
-              <View style={styles.lessonDoneChip}>
-                <MaterialIcons name="check-circle" size={14} color={palette.success} />
-                <Text style={styles.lessonDoneText}>COMPLETADA</Text>
-              </View>
-            )}
+            <Text style={styles.lessonBadgeText}>
+              {lessonBadge}{lesson.duration ? ` · ${lesson.duration.toUpperCase()}` : ''}
+            </Text>
+            {isLessonCompleted && <Text style={styles.lessonDoneText}>VISTA ✓</Text>}
           </View>
-          <Text style={styles.lessonTitle}>{lesson.title}</Text>
-          {lesson.duration ? (
-            <Text style={styles.lessonMeta}>{lesson.duration}</Text>
-          ) : null}
+          <Text accessibilityRole="header" style={styles.lessonTitle}>{lesson.title}</Text>
         </View>
 
         <View style={styles.bodyPad}>
-        <GoldDivider inset label="LECCIÓN" />
 
         {/* ── Recursos de la lección (guías de Skool) ── */}
         {(lesson.resources ?? []).length > 0 && (
@@ -992,18 +983,14 @@ export default function LessonScreen() {
         {task ? (
           <View style={styles.taskCard}>
             {/* Task header */}
-            <View style={styles.taskHeader}>
-              <MaterialIcons name="stars" size={18} color={palette.goldText} />
-              <Text style={styles.taskHeaderLabel}>TAREA DE ESTA LECCIÓN</Text>
-              {taskSaved && !editing && (
-                <View style={styles.completedBadge}>
-                  <MaterialIcons name="check-circle" size={14} color={palette.success} />
-                  <Text style={styles.completedBadgeText}>Completada</Text>
-                </View>
-              )}
+            <View style={styles.taskYellow}>
+              <View style={styles.taskHeader}>
+                <Text style={styles.taskHeaderLabel}>TU TAREA</Text>
+                {taskSaved && !editing && <Text style={styles.completedBadgeText}>HECHA ✓</Text>}
+              </View>
+              <Text style={styles.taskTitle}>{task.title}</Text>
+              <Text style={styles.taskDesc}>{task.description}</Text>
             </View>
-            <Text style={styles.taskTitle}>{task.title}</Text>
-            <Text style={styles.taskDesc}>{task.description}</Text>
 
             {/* Form or completed view */}
             {taskSaved && !editing ? (
@@ -1056,8 +1043,7 @@ export default function LessonScreen() {
         {/* ── Personal Notes ── */}
         <View style={styles.notesCard}>
           <View style={styles.notesHeader}>
-            <MaterialIcons name="edit-note" size={18} color={palette.ash} />
-            <Text style={styles.notesTitle}>NOTAS PERSONALES</Text>
+            <Text style={styles.notesTitle}>TUS NOTAS</Text>
             {notesSaved && (
               <View style={styles.notesSavedBadge}>
                 <MaterialIcons name="check" size={12} color={palette.success} />
@@ -1112,7 +1098,7 @@ export default function LessonScreen() {
             <Text style={styles.completeHint}>Completa la tarea para avanzar</Text>
           )}
           <PrimaryButton
-            label={isLessonCompleted ? 'LECCIÓN COMPLETADA ✓' : 'COMPLETAR LECCIÓN'}
+            label={isLessonCompleted ? 'LECCIÓN VISTA ✓' : 'MARCAR COMO VISTA'}
             icon={isLessonCompleted ? 'check-circle' : 'arrow-forward'}
             onPress={handleCompleteLesson}
             disabled={!canComplete || isLessonCompleted}
@@ -1218,7 +1204,7 @@ const styles = StyleSheet.create({
 
   // Lesson info (below the banner)
   lessonBody: {
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingHorizontal: 20,
     paddingTop: spacing.xl,
   },
@@ -1227,44 +1213,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  lessonBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: palette.goldLight,
-    borderColor: palette.lineGold,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-  },
   lessonBadgeText: {
     color: palette.goldText,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
+    fontWeight: '700',
     letterSpacing: 1,
   },
-  lessonDoneChip: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-  },
   lessonDoneText: {
-    color: palette.success,
-    fontFamily: Fonts.mono,
+    color: palette.ash,
+    fontFamily: Fonts.display,
     fontSize: 11,
+    fontWeight: '700',
     letterSpacing: 1,
   },
   lessonTitle: {
     color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 19,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    lineHeight: 25,
-    textTransform: 'uppercase',
-  },
-  lessonMeta: {
-    ...typography.mono,
-    color: palette.ash,
+    fontFamily: Fonts.displayRegular,
+    fontSize: 30,
+    fontWeight: '400',
+    lineHeight: 33,
   },
 
   // Body (everything below lesson info — restores horizontal padding + spacing)
@@ -1281,11 +1249,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     minHeight: 56,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-    borderRadius: radii.md,
-    backgroundColor: palette.goldGlow,
+    borderTopWidth: 1,
+    borderTopColor: palette.line,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.line,
   },
   resourceCopy: { flex: 1, gap: 2, minWidth: 0 },
   resourceTitle: {
@@ -1299,11 +1266,13 @@ const styles = StyleSheet.create({
 
   // Task card
   taskCard: {
-    borderColor: palette.gold,
-    borderRadius: radii.md,
-    borderWidth: 1.5,
-    gap: spacing.md,
-    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  taskYellow: {
+    backgroundColor: palette.gold,
+    borderRadius: 8,
+    gap: spacing.sm,
+    padding: 20,
   },
   taskHeader: {
     alignItems: 'center',
@@ -1311,32 +1280,32 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   taskHeaderLabel: {
-    ...typography.label,
-    color: palette.ash,
+    color: palette.ink,
     flex: 1,
-    letterSpacing: 1.5,
-  },
-  completedBadge: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   completedBadgeText: {
-    ...typography.label,
-    color: palette.success,
+    color: palette.ink,
+    fontFamily: Fonts.display,
     fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   taskTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    lineHeight: 22,
+    color: palette.ink,
+    fontFamily: Fonts.displayRegular,
+    fontSize: 20,
+    fontWeight: '400',
+    lineHeight: 24,
   },
   taskDesc: {
-    ...typography.body,
-    color: palette.ash,
+    color: palette.ink,
+    fontFamily: Fonts.sans,
+    fontSize: 15,
+    lineHeight: 22,
   },
 
   // Form
@@ -1454,10 +1423,8 @@ const styles = StyleSheet.create({
   // No task
   noTaskCard: {
     alignItems: 'center',
-    backgroundColor: palette.graphite,
-    borderRadius: radii.md,
     gap: spacing.sm,
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   noTaskText: {
     ...typography.body,
@@ -1480,14 +1447,14 @@ const styles = StyleSheet.create({
 
   // Next lesson teaser
   nextLessonTeaser: {
-    backgroundColor: alpha(palette.gold, '0F'),
-    borderColor: alpha(palette.gold, '44'),
-    borderLeftWidth: 3,
-    borderRadius: radii.sm,
-    borderWidth: 1,
+    borderTopColor: palette.line,
+    borderTopWidth: 1,
+    borderBottomColor: palette.line,
+    borderBottomWidth: 1,
     gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    minHeight: 64,
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
   },
   nextLessonLabel: {
     ...typography.label,
@@ -1510,11 +1477,7 @@ const styles = StyleSheet.create({
 
   // Personal notes
   notesCard: {
-    borderColor:   palette.lineSoft,
-    borderRadius:  radii.md,
-    borderWidth:   1,
-    gap:           spacing.sm,
-    padding:       spacing.lg,
+    gap: spacing.sm,
   },
   notesHeader: {
     alignItems:   'center',
@@ -1522,10 +1485,12 @@ const styles = StyleSheet.create({
     gap:           spacing.sm,
   },
   notesTitle: {
-    ...typography.label,
-    color:        palette.ash,
-    flex:         1,
-    letterSpacing: 1.5,
+    color: palette.smoke,
+    flex: 1,
+    fontFamily: Fonts.display,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   notesSavedBadge: {
     alignItems:   'center',
@@ -1539,16 +1504,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   notesInput: {
-    backgroundColor: palette.graphiteLight,
-    borderColor:     palette.lineSoft,
-    borderRadius:    radii.sm,
-    borderWidth:     1,
-    color:           palette.ivory,
-    fontFamily:      Fonts.sans,
-    fontSize:        14,
-    lineHeight:      22,
-    minHeight:       80,
-    paddingHorizontal: spacing.md,
+    borderBottomColor: palette.line,
+    borderBottomWidth: 1,
+    color: palette.ivory,
+    fontFamily: Fonts.sans,
+    fontSize: 16,
+    lineHeight: 24,
+    minHeight: 72,
     paddingVertical: spacing.sm,
     textAlignVertical: 'top',
   },
