@@ -944,14 +944,21 @@ export const ChatBubble = memo(function ChatBubble({
   role: 'mentor' | 'user';
   children: React.ReactNode;
 }) {
-  const textStyle = [styles.chatText, role === 'user' && styles.userChatText];
+  const short = role === 'mentor' && typeof children === 'string' && children.length <= 160 && !children.includes('\n');
+  const textStyle = [styles.chatText, short && styles.chatTextShort, role === 'user' && styles.userChatText];
   const reducedMotion = useReducedMotion();
   const bubbleStyle = [styles.chatBubble, role === 'user' ? styles.userBubble : styles.mentorBubble];
-  const content = typeof children === 'string' ? (
+  const body = typeof children === 'string' ? (
     <MarkdownText text={children} style={textStyle} />
   ) : (
     <Text style={textStyle}>{children}</Text>
   );
+  const content = role === 'user' ? (
+    <>
+      <Text style={styles.userLabel}>TÚ</Text>
+      {body}
+    </>
+  ) : body;
 
   if (reducedMotion) {
     return <View style={bubbleStyle}>{content}</View>;
@@ -1515,40 +1522,44 @@ const styles = StyleSheet.create({
   },
 
   // Chat
+  // Rediseño: la conversación es texto, no globos. Norman habla a la
+  // izquierda; tú, a la derecha, en el color de acento bajo un «TÚ».
   chatBubble: {
-    maxWidth: '86%',
-    padding: spacing.lg,
+    maxWidth: '88%',
+    paddingVertical: spacing.sm,
   },
   mentorBubble: {
     alignSelf: 'flex-start',
-    // Era un borde lateral dorado de 2px como acento — el anti-patrón
-    // "side-stripe" que el brief de diseño prohíbe. Fill tintado en su lugar,
-    // con los mismos tokens que ya usa el resto de la app para paneles con
-    // acento dorado (ver `belong` en comunidad/mensajes.tsx).
-    backgroundColor: palette.goldLight,
-    borderColor: palette.lineGold,
-    borderWidth: 1,
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-    borderBottomLeftRadius: 4,
-    borderBottomRightRadius: radii.md,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: palette.gold,
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-    borderBottomLeftRadius: radii.md,
-    borderBottomRightRadius: 4,
+    maxWidth: '80%',
+    alignItems: 'flex-end',
   },
   chatText: {
-    ...typography.body,
+    fontFamily: Fonts.sans,
+    fontSize: 17,
+    lineHeight: 27,
     color: palette.ivory,
-    lineHeight: 21,
+  },
+  // Mensajes cortos de Norman: en la voz display, como en el diseño.
+  chatTextShort: {
+    fontFamily: Fonts.displayRegular,
+    fontWeight: '400',
+    fontSize: 21,
+    lineHeight: 28,
   },
   userChatText: {
-    color: palette.ink,
-    fontFamily: Fonts.sansBold,
+    color: palette.goldText,
+    textAlign: 'right',
+  },
+  userLabel: {
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 1,
+    color: palette.smoke,
+    marginBottom: 6,
   },
   mdDivider: {
     backgroundColor: palette.line,

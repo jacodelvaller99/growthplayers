@@ -29,11 +29,9 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AppHeader,
   ChatBubble,
   MarkdownText,
   PremiumInput,
-  StatusPill,
   screen,
   useScreen,
 } from '@/components/polaris';
@@ -747,35 +745,31 @@ function MentorScreenInner() {
         overScrollMode="never"
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => { if (!jumpingRef.current) scrollToBottom(false); }}>
-        <AppHeader
-          title="NORMAN"
-          right={
-            <View style={styles.onlineBlock}>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  loadThreads();
-                  setShowThreads(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Ver historial de chats"
-                style={({ pressed }) => [styles.chatsBtn, pressed && styles.chatsBtnPressed]}>
-                <Text style={styles.chatsBtnText}>CHATS</Text>
-              </Pressable>
-              <View
-                accessibilityLiveRegion="polite"
-                accessibilityLabel={
-                  isStreaming ? 'Estado: respondiendo' : aiLive ? 'Estado: en línea' : 'Estado: modo demostración, respuestas simuladas'
-                }>
-                <StatusPill
-                  label={isStreaming ? 'RESPONDIENDO' : aiLive ? 'EN LÍNEA' : 'MODO DEMOSTRACIÓN'}
-                  tone={isStreaming || !aiLive ? 'muted' : 'success'}
-                  dot
-                />
-              </View>
-            </View>
-          }
-        />
+        <View style={styles.metaRow}>
+          <Text style={styles.metaTitle} accessibilityRole="header">NORMAN · MENTOR IA</Text>
+          <View style={styles.metaRight}>
+            <Text
+              style={[styles.metaStatus, !aiLive && styles.metaStatusDemo]}
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={
+                isStreaming ? 'Estado: respondiendo' : aiLive ? 'Estado: en línea' : 'Estado: modo demostración, respuestas simuladas'
+              }>
+              {isStreaming ? 'RESPONDIENDO' : aiLive ? 'EN LÍNEA' : 'DEMOSTRACIÓN'}
+            </Text>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                loadThreads();
+                setShowThreads(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Ver historial de chats"
+              hitSlop={8}
+              style={({ pressed }) => [styles.chatsBtn, pressed && styles.chatsBtnPressed]}>
+              <Text style={styles.chatsBtnText}>CHATS</Text>
+            </Pressable>
+          </View>
+        </View>
 
         {/* ── Divulgación de IA (persistente, requisito App Store) ──
             Compacta: una línea. Antes eran dos líneas + tarjeta de contexto +
@@ -828,8 +822,8 @@ function MentorScreenInner() {
                 accessibilityLabel={p.label}
                 onPress={() => handlePromptPress(p.label)}
                 style={promptPressStyle}>
-                <MaterialIcons name={p.icon} size={16} color={palette.goldText} />
                 <Text style={styles.promptText}>{p.label}</Text>
+                <MaterialIcons name="arrow-forward" size={18} color={palette.smoke} />
               </Pressable>
             ))}
           </View>
@@ -1016,9 +1010,9 @@ function MentorScreenInner() {
           ]}
           onPress={() => (isStreaming ? cancelStream() : submit())}>
           <MaterialIcons
-            name={isStreaming ? 'stop' : 'arrow-upward'}
-            size={22}
-            color={palette.black}
+            name={isStreaming ? 'stop' : 'arrow-forward'}
+            size={24}
+            color={palette.goldText}
           />
         </Pressable>
       </View>
@@ -1029,24 +1023,22 @@ function MentorScreenInner() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // Rediseño: cabecera de una línea
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    minHeight: 44,
+  },
+  metaTitle: { color: palette.goldText, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  metaRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.lg },
+  metaStatus: { color: palette.smoke, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  metaStatusDemo: { color: palette.goldText },
   content: {
     // paddingBottom is set dynamically via insets.bottom + 24
   },
-  onlineBlock: {
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  chatsBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-    minWidth: 64,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  chatsBtn: { minHeight: 44, justifyContent: 'center' },
   chatsBtnText: {
     fontFamily: Fonts.display,
     fontSize: 11,
@@ -1172,33 +1164,30 @@ const styles = StyleSheet.create({
 
   // Quick prompts
   promptGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    borderBottomColor: palette.line,
+    borderBottomWidth: 1,
+    marginTop: spacing.lg,
   },
   prompt: {
     alignItems: 'center',
-    borderColor: palette.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
+    borderTopColor: palette.line,
+    borderTopWidth: 1,
     flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    width: '48%',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+    minHeight: 56,
+    paddingVertical: spacing.md,
   },
   promptPressed: {
     backgroundColor: 'rgba(255, 200, 4, 0.08)',
     borderColor: palette.gold,
   },
   promptText: {
-    ...typography.label,
-    color: palette.ash,
+    color: palette.ivory,
     flex: 1,
-    flexWrap: 'wrap',
-    fontSize: 11,
-    lineHeight: 16,
+    fontFamily: Fonts.sans,
+    fontSize: 16,
+    lineHeight: 22,
   },
 
   // Load more
@@ -1231,16 +1220,14 @@ const styles = StyleSheet.create({
   // Typing bubble
   typingBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: palette.charcoal,
-    borderColor: palette.lineSoft,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    maxWidth: '86%',
-    padding: spacing.lg,
+    maxWidth: '88%',
+    paddingVertical: spacing.sm,
   },
   typingText: {
-    ...typography.body,
     color: palette.ivory,
+    fontFamily: Fonts.sans,
+    fontSize: 17,
+    lineHeight: 27,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -1248,7 +1235,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   dot: {
-    backgroundColor: palette.ash,
+    backgroundColor: palette.gold,
     borderRadius: 4,
     height: 8,
     width: 8,
@@ -1311,26 +1298,27 @@ const styles = StyleSheet.create({
   inputBar: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: palette.blackDeep,
-    borderTopColor: palette.line,
-    borderTopWidth: 1,
+    backgroundColor: palette.black,
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     width: '100%',
   },
   input: {
+    backgroundColor: 'transparent',
+    borderBottomColor: palette.line,
+    borderBottomWidth: 1,
+    borderRadius: 0,
+    borderWidth: 0,
     flex: 1,
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    fontFamily: Fonts.sans,
+    fontSize: 17,
+    minHeight: 52,
+    paddingHorizontal: 0,
   },
   sendButton: {
     alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,    // brand: near-sharp corner instead of pill
     height: 48,
     justifyContent: 'center',
     width: 48,
