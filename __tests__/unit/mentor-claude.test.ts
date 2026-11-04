@@ -59,12 +59,19 @@ describe('streamMentorResponse — Claude primario con ai-proxy', () => {
     expect(groqMock).not.toHaveBeenCalled();
   });
 
-  it('si Claude falla, cae a la cadena clásica (NVIDIA primero)', async () => {
+  it('si Claude falla, NO prueba otros proveedores (solo Anthropic)', async () => {
     anthropicMock.mockRejectedValue(new Error('AI proxy 503'));
-    nvidiaMock.mockResolvedValue('respuesta-nvidia');
-    const out = await streamMentorResponse(ctx, 'hola', [], () => {});
-    expect(out).toBe('respuesta-nvidia');
+    jest.useFakeTimers();
+    try {
+      const p = streamMentorResponse(ctx, 'hola', [], () => {});
+      await jest.advanceTimersByTimeAsync(60000);
+      await p;
+    } finally {
+      jest.useRealTimers();
+    }
     expect(anthropicMock).toHaveBeenCalledTimes(1);
+    expect(nvidiaMock).not.toHaveBeenCalled();
+    expect(groqMock).not.toHaveBeenCalled();
   });
 
   it('cancelación del usuario en Claude re-lanza sin seguir la cadena', async () => {

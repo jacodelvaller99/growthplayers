@@ -13,9 +13,7 @@
 
 import { ENV } from '@/app/config/env';
 import { streamAnthropic } from './anthropic';
-import { streamNvidia, type ChatMessage } from './nvidia';
-import { streamGroq } from './groq';
-import { streamOpenAI } from './openai';
+import type { ChatMessage } from './nvidia';
 
 // ─── Contexto cross-client que ve el copiloto ──────────────────────────────────
 
@@ -110,11 +108,11 @@ async function streamWithFallback(
   if (signal?.aborted) return '';
   const isAbort = (err: unknown) => signal?.aborted || (err as Error)?.name === 'AbortError';
 
-  // Claude → NVIDIA → Groq → OpenAI, todos vía ai-proxy: las claves son secrets
+  // Solo Claude (Anthropic), vía ai-proxy: las claves son secrets
   // del servidor (un EXPO_PUBLIC_* se inlinea en el bundle y se lee en
   // devtools). Sin proxy no existe ningún eslabón.
   if (ENV.aiProxyUrl) {
-    for (const stream of [streamAnthropic, streamNvidia, streamGroq, streamOpenAI]) {
+    for (const stream of [streamAnthropic]) {
       try { return await stream(messages, onChunk, signal); }
       catch (err) { if (isAbort(err)) throw err; /* sigue */ }
     }

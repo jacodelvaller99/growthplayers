@@ -126,7 +126,9 @@ Other domain state lives in dedicated hooks: `hooks/use-mentorship.tsx` (mentors
 
 ### AI Mentor — `lib/mentor.ts`
 
-Streaming chat with a **4-level fallback chain**:
+**Solo Anthropic (2026-11-04, decisión del dueño):** Norman, el copiloto del equipo y el internista usan únicamente Claude vía ai-proxy; si falla, simulación local honesta. NVIDIA/Groq/OpenAI se retiraron de las cadenas (en prod no tenían clave o tenían una equivocada y solo sumaban espera). Los módulos `lib/nvidia.ts`/`groq.ts`/`openai.ts` siguen en el repo (createStreamGuard vive en nvidia.ts). Whisper (transcripción) sigue usando `OPENAI_API_KEY`, que hoy contiene una clave de Groq → la transcripción falla hasta corregir ese secret.
+
+Histórico — Streaming chat with a **4-level fallback chain**:
 1. **Claude Sonnet 4.6** (`claude-sonnet-4-6`) — PRIMARY. Solo vía ai-proxy (la clave
    `ANTHROPIC_API_KEY` es secret del servidor; NO existe camino client-side — deliberado).
    Sin `EXPO_PUBLIC_AI_PROXY_URL`, este eslabón se salta.

@@ -1,12 +1,9 @@
 // ─── Mentor Polaris IA ────────────────────────────────────────────────────────
-// Orquesta: Claude Sonnet 4.6 (primario, vía ai-proxy) → NVIDIA NIM → Groq → OpenAI
+// Orquesta: Claude Sonnet 4.6 vía ai-proxy (único proveedor) → simulación local si falla
 // (dev simulation cuando no hay ningún proveedor configurado)
 
 import { ENV } from '@/app/config/env';
 import { streamAnthropic } from './anthropic';
-import { streamNvidia } from './nvidia';
-import { streamGroq } from './groq';
-import { streamOpenAI } from './openai';
 import type { CheckIn } from '@/types/lifeflow';
 import type { AssembledMentorMemory } from '@/lib/memoryLogic';
 import { ZONE_LABEL, type BodyZone } from '@/lib/bodyMapLogic';
@@ -824,11 +821,11 @@ export async function streamMentorResponse(
   // por clave de cada proveedor desapareció: o hay proxy (los cuatro existen) o
   // no lo hay (ya salimos arriba). NVIDIA tampoco necesita el gate de CORS —
   // la llamada la hace el servidor.
+  // Solo Anthropic (Claude): decisión del dueño. Los demás proveedores se
+  // retiraron de la cadena — sin clave o con clave equivocada, solo sumaban
+  // espera antes de cada respuesta.
   const chain: [string, typeof streamAnthropic][] = [
     ['Claude', streamAnthropic],
-    ['NVIDIA', streamNvidia],
-    ['Groq', streamGroq],
-    ['OpenAI', streamOpenAI],
   ];
 
   for (const [name, stream] of chain) {

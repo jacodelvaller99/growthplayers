@@ -20,9 +20,7 @@ import { ENV } from '@/app/config/env';
 import { supabase } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
 import { streamAnthropic } from './anthropic';
-import { streamNvidia, type ChatMessage } from './nvidia';
-import { streamGroq } from './groq';
-import { streamOpenAI } from './openai';
+import type { ChatMessage } from './nvidia';
 import {
   assembleEducationalContext,
   classifyLabValue,
@@ -307,9 +305,6 @@ export async function streamInternistResponse(
 
   const chain: Array<[string, boolean, () => Promise<string>]> = [
     ['anthropic', viaProxy, () => streamAnthropic(messages, sink, internal.signal)],
-    ['nvidia', viaProxy, () => streamNvidia(messages, sink, internal.signal)],
-    ['groq', viaProxy, () => streamGroq(messages, sink, internal.signal)],
-    ['openai', viaProxy, () => streamOpenAI(messages, sink, internal.signal)],
   ];
 
   for (const [name, enabled, run] of chain) {

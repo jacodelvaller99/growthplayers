@@ -63,38 +63,31 @@ const ctx: MentorContext = {
 beforeEach(() => {
   jest.clearAllMocks();
   setProxy(PROXY);
-  // Claude encabeza la cadena; estos tests cubren los tres eslabones de abajo.
-  anthropicMock.mockRejectedValue(new Error('AI proxy 503'));
 });
 
-describe('streamMentorResponse — fallback chain', () => {
-  it('usa NVIDIA cuando responde; no toca Groq/OpenAI', async () => {
-    nvidiaMock.mockResolvedValue('respuesta-nvidia');
-    const out = await streamMentorResponse(ctx, 'hola', [], () => {});
-    expect(out).toBe('respuesta-nvidia');
+// Decisión del dueño: Norman va SOLO con Anthropic. Si Claude falla no se
+// prueba ningún otro proveedor (cada intento sumaba espera): simulación local.
+describe('streamMentorResponse — solo Anthropic', () => {
+  it('si Claude falla no toca NVIDIA/Groq/OpenAI y cae a la simulación', async () => {
+    anthropicMock.mockRejectedValue(new Error('AI proxy 503'));
+    jest.useFakeTimers();
+    let out = '';
+    try {
+      const p = streamMentorResponse(ctx, 'hola', [], () => {});
+      await jest.advanceTimersByTimeAsync(60000); // la simulación teclea a 18ms/carácter
+      out = await p;
+    } finally {
+      jest.useRealTimers();
+    }
+    expect(out.length).toBeGreaterThan(0);
+    expect(nvidiaMock).not.toHaveBeenCalled();
     expect(groqMock).not.toHaveBeenCalled();
     expect(openaiMock).not.toHaveBeenCalled();
   });
 
-  it('si NVIDIA falla cae a Groq', async () => {
-    nvidiaMock.mockRejectedValue(new Error('NVIDIA API 500'));
-    groqMock.mockResolvedValue('respuesta-groq');
-    const out = await streamMentorResponse(ctx, 'hola', [], () => {});
-    expect(out).toBe('respuesta-groq');
-    expect(openaiMock).not.toHaveBeenCalled();
-  });
-
-  it('si NVIDIA y Groq fallan cae a OpenAI', async () => {
-    nvidiaMock.mockRejectedValue(new Error('boom'));
-    groqMock.mockRejectedValue(new Error('boom'));
-    openaiMock.mockResolvedValue('respuesta-openai');
-    const out = await streamMentorResponse(ctx, 'hola', [], () => {});
-    expect(out).toBe('respuesta-openai');
-  });
-
-  it('una cancelación del usuario NO sigue la cadena: re-lanza', async () => {
+  it('una cancelación del usuario re-lanza', async () => {
     const controller = new AbortController();
-    nvidiaMock.mockImplementation(async () => {
+    anthropicMock.mockImplementation(async () => {
       controller.abort();
       const err = new Error('aborted');
       err.name = 'AbortError';
@@ -103,8 +96,6 @@ describe('streamMentorResponse — fallback chain', () => {
     await expect(
       streamMentorResponse(ctx, 'hola', [], () => {}, controller.signal),
     ).rejects.toThrow();
-    expect(groqMock).not.toHaveBeenCalled();
-    expect(openaiMock).not.toHaveBeenCalled();
   });
 
   it('señal ya abortada → devuelve "" sin llamar a ningún proveedor', async () => {
@@ -112,18 +103,18 @@ describe('streamMentorResponse — fallback chain', () => {
     controller.abort();
     const out = await streamMentorResponse(ctx, 'hola', [], () => {}, controller.signal);
     expect(out).toBe('');
-    expect(nvidiaMock).not.toHaveBeenCalled();
+    expect(anthropicMock).not.toHaveBeenCalled();
   });
 
-  it('pasa el system prompt + historial reciente + mensaje al proveedor', async () => {
-    nvidiaMock.mockResolvedValue('ok');
+  it('pasa el system prompt + historial reciente + mensaje a Claude', async () => {
+    anthropicMock.mockResolvedValue('ok');
     await streamMentorResponse(
       ctx,
       '¿cómo cierro la semana?',
       [{ role: 'user', text: 'contexto previo' }],
       () => {},
     );
-    const messages = nvidiaMock.mock.calls[0][0] as { role: string; content: string }[];
+    const messages = anthropicMock.mock.calls[0][0] as { role: string; content: string }[];
     expect(messages[0].role).toBe('system');
     expect(messages.at(-1)).toEqual({ role: 'user', content: '¿cómo cierro la semana?' });
   });
