@@ -88,7 +88,7 @@ export function DesktopSidebar() {
         <MaterialIcons
           name={item.icon}
           size={20}
-          color={isActive ? palette.goldText : palette.muted}
+          color={isActive ? palette.goldText : palette.ash}
         />
         <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
           {item.label}
@@ -309,8 +309,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   navLabel: {
-    fontSize: 11,
-    color: palette.muted,
+    fontSize: 12,
+    color: palette.ash,
     letterSpacing: 1.5,
     fontFamily: Fonts.displayMedium,  // GrandisExtended-Medium
     fontWeight: '500',

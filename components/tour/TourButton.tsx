@@ -45,7 +45,9 @@ export function TourButton() {
     active; // el propio overlay ya trae su navegación — no duplicar el botón encima.
 
   // Sobre la tab bar real (oculta en desktop) + área segura; nunca encima de ella.
-  const bottom = (inTabs && !isDesktop ? TAB_BAR_BASE : 0) + insets.bottom + GAP;
+  // El panel del equipo en el teléfono también tiene barra abajo (Hoy…Más).
+  const withBottomBar = (inTabs || root === 'admin') && !isDesktop;
+  const bottom = (withBottomBar ? TAB_BAR_BASE : 0) + insets.bottom + GAP;
 
   return (
     <>
