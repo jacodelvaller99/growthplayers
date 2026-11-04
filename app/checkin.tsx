@@ -512,7 +512,7 @@ export default function CheckInScreen() {
         </Text>
         <View style={[styles.bigRow, isDesktop && styles.bigRowDesk]}>
           <Text style={[styles.big, isDesktop && styles.bigDesk]} accessibilityLiveRegion="polite">
-            {elegido ?? '·'}
+            {elegido ?? ''}
           </Text>
           <Text style={styles.bigWord}>{elegido ? paso.words[elegido - 1].toUpperCase() : 'ELIGE UNO'}</Text>
         </View>
@@ -549,7 +549,7 @@ export default function CheckInScreen() {
 
 /** «IR A RESPIRACIÓN» → «Ir a respiración». */
 function capitalizar(t: string) {
-  const lower = t.toLowerCase();
+  const lower = t.toLowerCase().replace(/norman/g, 'Norman');
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
@@ -568,8 +568,8 @@ const styles = StyleSheet.create({
   questionDesk: { fontSize: 72, lineHeight: 74, maxWidth: 680 },
   bigRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16 },
   bigRowDesk: { flexDirection: 'column', alignItems: 'flex-end', gap: 4 },
-  big: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 120, lineHeight: 120, color: palette.ink },
-  bigDesk: { fontSize: 280, lineHeight: 280 },
+  big: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 120, lineHeight: 120, minHeight: 120, color: palette.ink },
+  bigDesk: { fontSize: 280, lineHeight: 280, minHeight: 280 },
   bigWord: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ink },
   qBottom: { gap: 16 },
   qBottomDesk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 32 },

@@ -396,7 +396,8 @@ export default function DashboardScreen() {
           onPress={() => router.push(turno.route as never)}
         />
       }
-      footer={<ModeSwitch current="client" />}>
+      // En escritorio el interruptor ya vive en la barra lateral.
+      footer={isDesktop ? undefined : <ModeSwitch current="client" />}>
       <MilestoneToast milestone={milestone} />
       {!!anomalyLine && (
         <Fila label="NORMAN NOTÓ" value={anomalyLine} tone="warn" onPress={() => router.push('/(tabs)/mentor' as never)} />
@@ -423,7 +424,7 @@ export default function DashboardScreen() {
 
 /** «HACER MI CHECK-IN» → «Hacer mi check-in»: el turno viene en mayúsculas de la lógica. */
 function capitalize(verb: string) {
-  const lower = verb.toLowerCase();
+  const lower = verb.toLowerCase().replace(/norman/g, 'Norman');
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
