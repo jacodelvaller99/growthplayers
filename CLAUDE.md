@@ -376,12 +376,19 @@ externo) y de ahí sigue el flujo de registro/login normal de la app.
 
 **Rediseño 2026-11-04:** `public/landing.html` ahora es HTML escrito a mano
 (~30 KB) con el lenguaje del rediseño de la app — manual de marca, una idea
-por sección, estrella en vez de fotos, Tinta/Luz (sigue al sistema + botón).
+por sección. **El fondo animado original se conserva** (canvas `#wave`:
+estrellas, vórtice, estrella Polar, luz que sigue al puntero) — decisión del
+dueño: solo se rediseña el frente. Por eso la página es solo Tinta.
 Ya no embebe fuentes: carga `/fonts/GrandisExtended-*.ttf` y
 `/fonts/SourceSans.otf` desde `public/fonts/`. Se edita directo; **no** correr
 `scripts/landing/build.mjs`, que regeneraría el diseño anterior desde el
 Standalone del dueño y pisaría este. Vista local: config
 "Landing estática (public)" en `.claude/launch.json` (puerto 8093).
+
+**Ingreso de la app (2026-11-04):** bienvenida, entrar, crear cuenta, recuperar
+y nueva contraseña usan `components/auth/AccessFrame.tsx` (diseño "Acceso" del
+canvas): etiqueta arriba, titular Grandis 400, campos con línea, una sola acción
+abajo; en escritorio panel amarillo de marca a la izquierda.
 
 ### Wearables — `lib/wearables.ts`, `lib/wearablesNative.ts`, `app/perfil/wearables`
 

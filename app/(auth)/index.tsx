@@ -1,31 +1,10 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 
-import {
-  GoldDivider,
-  PolarisMark,
-  PremiumInput,
-  PressableScale,
-  PrimaryButton,
-  SecondaryButton,
-  screen,
-  useScreen,
-} from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { AccessField, AccessFrame, AccessLink, AccessNotice } from '@/components/auth/AccessFrame';
+import { PrimaryButton } from '@/components/polaris';
 import {
   RECOVERY_COOLDOWN_SEC,
   describeRecoveryError,
@@ -37,10 +16,7 @@ import { supabase } from '@/lib/supabase';
 type AuthMode = 'login' | 'register' | 'forgot';
 
 export default function AuthScreen() {
-  const sc = useScreen();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
   // Read optional mode param passed from the welcome screen
   const { mode: initialMode } = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<AuthMode>(
@@ -103,7 +79,7 @@ export default function AuthScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      setError('Ingresa tu email y contraseña.');
+      setError('Escribe tu correo y tu contraseña.');
       return;
     }
     await runAuthAction('auth.login', async () => {
@@ -114,9 +90,9 @@ export default function AuthScreen() {
       if (err) {
         const msg = err.message.toLowerCase();
         if (msg.includes('invalid') || msg.includes('credentials')) {
-          setError('Email o contraseña incorrectos.');
+          setError('Correo o contraseña incorrectos.');
         } else if (msg.includes('not confirmed') || msg.includes('email')) {
-          setError('Confirma tu email antes de ingresar. Revisa tu bandeja de entrada.');
+          setError('Confirma tu correo antes de entrar: revisa tu bandeja de entrada.');
         } else {
           setError(err.message);
         }
@@ -128,7 +104,7 @@ export default function AuthScreen() {
   const handleRegister = async () => {
     // El código es opcional: sin él se entra en plan Free (lo que anuncia /pricing).
     if (!email.trim() || !password.trim()) {
-      setError('Ingresa tu email y una contraseña.');
+      setError('Escribe tu correo y una contraseña.');
       return;
     }
     if (password.length < 6) {
@@ -180,13 +156,13 @@ export default function AuthScreen() {
         setError(err.message);
         return;
       }
-      setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu acceso.');
+      setSuccess('Cuenta creada. Revisa tu correo para confirmarla.');
     });
   };
 
   const handleForgot = async () => {
     if (!email.trim()) {
-      setError('Ingresa tu email.');
+      setError('Escribe tu correo.');
       return;
     }
     if (cooldown > 0) return;
@@ -222,282 +198,109 @@ export default function AuthScreen() {
     : mode === 'register' ? handleRegister
     : handleForgot;
 
-  return (
-    <KeyboardAvoidingView
-      style={sc.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}>
-      <ScrollView
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 32 }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
-
-        {/* ── Brand header ── */}
-        <View style={styles.header}>
-          <PolarisMark size={52} />
-          <Text style={styles.brand}>POLARIS GROWTH INSTITUTE</Text>
-          <Text style={styles.title}>
-            {mode === 'login'    ? 'BIENVENIDO\nDE VUELTA.'
-             : mode === 'register' ? 'ACTIVA TU\nCUENTA.'
-             : 'RECUPERA TU\nACCESO.'}
-          </Text>
-        </View>
-
-        {/* ── Mode switcher ── */}
-        {mode !== 'forgot' && (
-          <View style={styles.modeSwitcher}>
-            {/* flex:1 vive en el wrapper, no en PressableScale: su Animated.View
-                interno no hereda el flex del Pressable que envuelve (ver
-                PrimaryButton/SecondaryButton, mismo patrón) — sin este wrapper
-                los dos tabs colapsan a su ancho de texto en vez de repartir 50/50. */}
-            <View style={styles.modeTabWrap}>
-              <PressableScale
-                onPress={() => reset('login')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === 'login' }}
-                accessibilityLabel="Iniciar sesión"
-                style={[styles.modeTab, mode === 'login' && styles.modeTabActive]}>
-                <Text style={[styles.modeTabText, mode === 'login' && styles.modeTabTextActive]}>
-                  INICIAR SESIÓN
-                </Text>
-              </PressableScale>
-            </View>
-            <View style={styles.modeTabWrap}>
-              <PressableScale
-                onPress={() => reset('register')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === 'register' }}
-                accessibilityLabel="Registrarse"
-                style={[styles.modeTab, mode === 'register' && styles.modeTabActive]}>
-                <Text style={[styles.modeTabText, mode === 'register' && styles.modeTabTextActive]}>
-                  REGISTRARSE
-                </Text>
-              </PressableScale>
-            </View>
-          </View>
-        )}
-
-        <GoldDivider />
-
-        {/* ── Form fields ── */}
-        {/* key={mode}: remonta al cambiar de modo para que entering se dispare
-            de nuevo (login/registro/forgot muestran campos distintos). */}
-        <Animated.View
-          key={mode}
-          style={styles.form}
-          entering={reducedMotion ? undefined : FadeIn.duration(180)}>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>EMAIL</Text>
-            <PremiumInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@email.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="emailAddress"
-              autoComplete="email"
-              accessibilityLabel="Email"
-              returnKeyType={mode === 'forgot' ? 'send' : 'next'}
-              onSubmitEditing={mode === 'forgot' ? handleForgot : undefined}
+  // Enviado: el correo de recuperación salió. Pantalla propia, no un aviso
+  // escondido bajo el botón — es lo único que la persona tiene que hacer ahora.
+  if (mode === 'forgot' && success) {
+    return (
+      <AccessFrame
+        meta="RECUPERAR ACCESO"
+        star
+        title={'Revisa\ntu correo.'}
+        sub={success}
+        bottom={
+          <>
+            <PrimaryButton
+              label={loading ? 'ENVIANDO…' : cooldown > 0 ? `REENVIAR EN ${cooldown} S` : 'REENVIAR ENLACE'}
+              icon="arrow-forward"
+              onPress={submit}
+              disabled={loading || cooldown > 0}
             />
-          </View>
-          {mode !== 'forgot' && (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>CONTRASEÑA</Text>
-              <PremiumInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                secureTextEntry
-                textContentType={mode === 'register' ? 'newPassword' : 'password'}
-                autoComplete={mode === 'register' ? 'password-new' : 'password'}
-                accessibilityLabel="Contraseña"
-                returnKeyType={mode === 'register' ? 'next' : 'done'}
-                onSubmitEditing={mode === 'register' ? undefined : submit}
-              />
-            </View>
-          )}
-          {mode === 'register' && (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO (OPCIONAL)</Text>
-              <PremiumInput
-                value={accessCode}
-                onChangeText={(t) => setAccessCode(t.toUpperCase())}
-                placeholder="POLARIS-XXXX"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                autoComplete="off"
-                accessibilityLabel="Código de acceso"
-                returnKeyType="done"
-                onSubmitEditing={submit}
-              />
-              <Text style={styles.codeHint}>
-                Tu coach te entregó este código al inscribirte. Sin código entras con el plan Free.
-              </Text>
-            </View>
-          )}
-        </Animated.View>
+            <AccessLink label="Volver a entrar" onPress={() => reset('login')} />
+          </>
+        }>
+        {!!error && <AccessNotice tone="error">{error}</AccessNotice>}
+        <AccessNotice tone="ok">
+          ¿No llega? Revisa spam. Si sigue sin llegar, escribe a hola@polarisgrowthinstitute.com.
+        </AccessNotice>
+      </AccessFrame>
+    );
+  }
 
-        {/* ── Feedback ── */}
-        {!!error && (
-          <Animated.View
-            style={styles.feedbackBox}
-            entering={reducedMotion ? undefined : FadeIn.duration(180)}
-            accessibilityRole="alert" accessibilityLiveRegion="assertive">
-            {/* dangerText, no danger: el mensaje es texto a 13pt y necesita 4.5:1. */}
-            <MaterialIcons name="error-outline" size={16} color={palette.dangerText} />
-            <Text style={[styles.feedbackText, { color: palette.dangerText }]}>{error}</Text>
-          </Animated.View>
-        )}
-        {!!success && (
-          <Animated.View
-            style={styles.feedbackBox}
-            entering={reducedMotion ? undefined : FadeIn.duration(180)}
-            accessibilityRole="alert" accessibilityLiveRegion="polite">
-            <MaterialIcons name="check-circle-outline" size={16} color={palette.success} />
-            <Text style={[styles.feedbackText, { color: palette.success }]}>{success}</Text>
-          </Animated.View>
-        )}
+  const copy = {
+    login: { meta: 'POLARIS', right: undefined, title: 'Bienvenido\nde vuelta.', sub: undefined, cta: 'ENTRAR' },
+    register: { meta: 'CREAR CUENTA', right: '1 MIN', title: 'Empieza\nhoy.', sub: undefined, cta: 'CREAR CUENTA' },
+    forgot: {
+      meta: 'RECUPERAR ACCESO', right: undefined, title: 'Recupera\ntu acceso.',
+      sub: 'Te enviamos un enlace al correo.',
+      cta: cooldown > 0 ? `REENVIAR EN ${cooldown} S` : 'ENVIAR ENLACE',
+    },
+  }[mode];
 
-        {/* ── Primary CTA ── */}
-        <PrimaryButton
-          label={
-            loading       ? 'PROCESANDO...'
-            : mode === 'login'    ? 'ENTRAR AL PROTOCOLO'
-            : mode === 'register' ? 'CREAR CUENTA'
-            : cooldown > 0 ? `REENVIAR EN ${cooldown}s`
-            : 'ENVIAR ENLACE'
-          }
-          icon={loading ? 'hourglass-empty' : mode === 'forgot' ? 'mail' : 'arrow-forward'}
-          onPress={submit}
-          disabled={loading || (mode === 'forgot' && cooldown > 0)}
+  return (
+    <AccessFrame
+      meta={copy.meta}
+      metaRight={copy.right}
+      brand={mode === 'login'}
+      title={copy.title}
+      sub={copy.sub}
+      bottom={
+        <>
+          <PrimaryButton
+            label={loading ? 'UN MOMENTO…' : copy.cta}
+            icon="arrow-forward"
+            onPress={submit}
+            disabled={loading || (mode === 'forgot' && cooldown > 0)}
+          />
+          {mode === 'login' && <AccessLink lead="¿No tienes cuenta?" label="Créala" onPress={() => reset('register')} />}
+          {mode === 'register' && <AccessLink lead="¿Ya tienes cuenta?" label="Entra" onPress={() => reset('login')} />}
+          {mode === 'forgot' && <AccessLink label="Volver a entrar" onPress={() => reset('login')} />}
+        </>
+      }>
+      <AccessField
+        label="CORREO"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="tu@correo.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType="emailAddress"
+        autoComplete="email"
+        returnKeyType={mode === 'forgot' ? 'send' : 'next'}
+        onSubmitEditing={mode === 'forgot' ? handleForgot : undefined}
+      />
+      {mode !== 'forgot' && (
+        <AccessField
+          label={mode === 'register' ? 'CONTRASEÑA · 6 O MÁS' : 'CONTRASEÑA'}
+          secret
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          autoCapitalize="none"
+          textContentType={mode === 'register' ? 'newPassword' : 'password'}
+          autoComplete={mode === 'register' ? 'password-new' : 'password'}
+          returnKeyType={mode === 'register' ? 'next' : 'done'}
+          onSubmitEditing={mode === 'register' ? undefined : submit}
         />
-
-        {mode === 'forgot' && (
-          <Text style={styles.codeHint}>
-            Te llega un correo de Polaris con un enlace para crear una contraseña nueva.
-            Si no aparece en unos minutos, revisa spam. Si sigue sin llegar, escribe a
-            hola@polarisgrowthinstitute.com.
-          </Text>
-        )}
-
-        {/* ── Secondary links ── */}
-        {mode === 'login' && (
-          <Pressable
-            onPress={() => reset('forgot')}
-            accessibilityRole="button"
-            accessibilityLabel="¿Olvidaste tu contraseña? Recuperar acceso"
-            style={styles.linkWrap}>
-            <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
-          </Pressable>
-        )}
-        {mode === 'forgot' && (
-          <SecondaryButton label="VOLVER AL LOGIN" onPress={() => reset('login')} />
-        )}
-
-      </ScrollView>
-    </KeyboardAvoidingView>
+      )}
+      {mode === 'login' && (
+        <AccessLink label="Olvidé mi contraseña" align="end" onPress={() => reset('forgot')} />
+      )}
+      {mode === 'register' && (
+        <AccessField
+          label="CÓDIGO DE TU COACH · OPCIONAL"
+          value={accessCode}
+          onChangeText={(t) => setAccessCode(t.toUpperCase())}
+          placeholder="POLARIS-XXXX"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          autoComplete="off"
+          returnKeyType="done"
+          onSubmitEditing={submit}
+        />
+      )}
+      {!!error && <AccessNotice tone="error">{error}</AccessNotice>}
+      {!!success && <AccessNotice tone="ok">{success}</AccessNotice>}
+    </AccessFrame>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  brand: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 11,
-    letterSpacing: 2,
-  },
-  title: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 42,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 46,
-    textTransform: 'uppercase',
-  },
-
-  modeSwitcher: {
-    borderColor: palette.line,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-  },
-  modeTabWrap: {
-    flex: 1,
-  },
-  modeTab: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-    // 44 real, no 37: con solo paddingVertical el alto lo fijaba el texto de
-    // 11px y quedaba por debajo del minimo tactil. Son los CTA de entrada.
-    minHeight: 44,
-    paddingVertical: spacing.md,
-  },
-  modeTabActive: {
-    backgroundColor: palette.gold,
-  },
-  modeTabText: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  modeTabTextActive: {
-    color: palette.ink,
-  },
-
-  form: {
-    gap: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  field: {
-    gap: spacing.sm,
-  },
-  fieldLabel: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 11,
-  },
-
-  feedbackBox: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  feedbackText: {
-    ...typography.body,
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
-  codeHint: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    marginTop: 4,
-  },
-
-  linkWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,   // el enlace medía 22px de alto: imposible de acertar
-    marginTop: spacing.lg,
-  },
-  link: {
-    ...typography.body,
-    color: palette.smoke,
-    fontSize: 13,
-    textDecorationLine: 'underline',
-  },
-});

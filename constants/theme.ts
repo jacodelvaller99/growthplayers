@@ -55,6 +55,8 @@ export const palette = {
   // contraste, así que el fondo claro lo cambia a ámbar profundo. Para color:,
   // NUNCA para rellenos (ahí va palette.gold).
   goldText:       cv('--c-gold-text', '#FFC804'),
+  // Manual de marca: estrella decorativa en temas claros — gris, nunca amarilla.
+  starOnLight:    '#CFCFCF',
 
   // ── Text hierarchy — themeable ───────────────────────────────────────────────
   ivory:          cv('--c-text',       '#F4F4F4'),   // primary text
