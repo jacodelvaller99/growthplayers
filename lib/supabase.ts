@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, processLock } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import type { Database } from '@/types/supabase';
@@ -49,6 +49,11 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON, {
     // que la pantalla /(auth)/reset-password maneja. En nativo el deep-link va por
     // el scheme, no por hash de URL, así que se deja en false.
     detectSessionInUrl: Platform.OS === 'web',
+    // Candado por pestaña, no compartido entre pestañas. Con el candado del
+    // navegador (el predeterminado), una pestaña congelada en segundo plano
+    // dejaba el candado de la sesión tomado y TODA otra pestaña se quedaba en
+    // "Verificando acceso" sin hacer ni una petición — visto en producción.
+    lock: processLock,
   },
   realtime: {
     params: { eventsPerSecond: 2 },   // limit reconnect aggressiveness
