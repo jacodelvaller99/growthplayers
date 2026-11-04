@@ -144,7 +144,7 @@ export default function ContenidoScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>CONTENIDO</Text>
+        <Text style={s.title}>TEXTOS Y VIDEOS</Text>
       </View>
 
       {/* Privacy banner */}

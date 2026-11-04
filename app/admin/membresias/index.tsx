@@ -305,7 +305,7 @@ export default function MembresiasScreen() {
           <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
             <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
           </Pressable>
-          <Text style={s.title}>MEMBRESÍAS</Text>
+          <Text style={s.title}>DINERO</Text>
           <Pressable
             style={s.activateBtn}
             onPress={() => setActivateOpen(true)}

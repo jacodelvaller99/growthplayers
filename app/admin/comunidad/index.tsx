@@ -267,7 +267,7 @@ export default function AdminComunidadScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>MODERACIÓN</Text>
+        <Text style={s.title}>REPORTES DE LA COMUNIDAD</Text>
         <Text style={s.badge}>{items.length}</Text>
       </View>
 

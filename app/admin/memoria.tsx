@@ -68,7 +68,7 @@ export default function AdminMemoriaScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>MEMORIA</Text>
+        <Text style={s.title}>LO QUE NORMAN RECUERDA</Text>
         <View style={{ width: 36 }} />
       </View>
       <Text style={s.intro}>Prioriza a quién atender: loops abiertos, follow-up estancado y riesgo.</Text>

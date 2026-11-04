@@ -115,7 +115,7 @@ export default function AuditoriaScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>AUDITORÍA</Text>
+        <Text style={s.title}>HISTORIAL</Text>
         <Text style={s.badge}>{log.length}</Text>
       </View>
 

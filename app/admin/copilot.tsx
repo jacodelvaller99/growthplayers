@@ -99,7 +99,7 @@ export default function AdminCopilotScreen() {
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
         <View>
-          <Text style={s.title}>COPILOTO</Text>
+          <Text style={s.title}>PREGÚNTALE A LA IA</Text>
           <Text style={s.subtitle}>Decisiones del equipo · solo admin</Text>
         </View>
         <View style={{ width: 36 }} />

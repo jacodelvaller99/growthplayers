@@ -127,7 +127,7 @@ export default function AdminEjecucionScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>EJECUCIÓN</Text>
+        <Text style={s.title}>TAREAS DE LOS CLIENTES</Text>
         <View style={{ width: 36 }} />
       </View>
       <Text style={s.intro}>Operación del equipo: a quién intervenir, quién está retrasado, quién en caída.</Text>

@@ -213,7 +213,7 @@ export default function UsuariosScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>USUARIOS</Text>
+        <Text style={s.title}>CLIENTES</Text>
         <Pressable
           onPress={() => setCreateOpen(true)}
           style={s.createBtn}
@@ -228,8 +228,8 @@ export default function UsuariosScreen() {
       {/* Perfiles activos — roster completo para seguimiento (visible para todo admin) */}
       <View style={s.rosterCard}>
         <View style={{ flex: 1 }}>
-          <Text style={s.rosterEyebrow}>PERFILES ACTIVOS</Text>
-          <Text style={s.rosterHint}>Roster completo · seguimiento a todos</Text>
+          <Text style={s.rosterEyebrow}>TODOS TUS CLIENTES</Text>
+          <Text style={s.rosterHint}>Toca a alguien para ver su historia</Text>
         </View>
         <View style={s.rosterStats}>
           <View style={s.rosterStat}>

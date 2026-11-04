@@ -163,7 +163,7 @@ export default function InteligenciaScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>INTELIGENCIA ML</Text>
+        <Text style={s.title}>RIESGO Y COMPROMISO</Text>
         <Pressable
           style={[s.recalcBtn, recalcLoading && { opacity: 0.5 }]}
           onPress={handleRecalcAll}

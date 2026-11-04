@@ -162,7 +162,7 @@ export default function CodigosScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver"  hitSlop={8}>
           <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
         </Pressable>
-        <Text style={s.title}>CÓDIGOS DE ACCESO</Text>
+        <Text style={s.title}>INVITACIONES</Text>
       </View>
 
       {/* Last generated */}

@@ -45,6 +45,6 @@ describe('InteligenciaScreen (admin) — render smoke', () => {
     render(<InteligenciaScreen />);
     // Espera a que salga del loading y renderice las secciones pobladas
     // (CohortBar/AffinityBar/ChurnBlock/AtRiskRow) sin throw.
-    await waitFor(() => expect(screen.getByText('INTELIGENCIA ML')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('RIESGO Y COMPROMISO')).toBeTruthy());
   });
 });
