@@ -610,10 +610,13 @@ function block(selector: string, vars: Record<string, string>): string {
  *     capa de fondo, y vive aquí para no tocar ninguna pantalla)
  */
 export function buildThemeCSS(): string {
+  // Tinta es el fondo por defecto (negro real del manual): manda en :root
+  // hasta que el proveedor de tema marque <html data-theme>. Va PRIMERO: `:root`
+  // y `[data-theme="light"]` pesan lo mismo, así que si el bloque de Tinta
+  // quedaba después, pisaba a Luz y el modo claro salía mitad oscuro.
   const backdrops = (Object.keys(THEME_VARS) as BackdropId[])
+    .sort((a, b) => (a === 'tinta' ? -1 : b === 'tinta' ? 1 : 0))
     .map((id) =>
-      // Tinta es el fondo por defecto (negro real del manual): manda en :root
-      // hasta que el proveedor de tema marque <html data-theme>.
       block(id === 'tinta' ? ':root,[data-theme="tinta"]' : `[data-theme="${id}"]`, THEME_VARS[id]),
     )
     .join('');

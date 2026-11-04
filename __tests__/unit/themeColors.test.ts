@@ -122,6 +122,13 @@ describe('buildThemeCSS', () => {
     }
   });
 
+  it('el fondo por defecto (:root) va antes que los demás, para no pisar a Luz', () => {
+    // `:root` y `[data-theme="light"]` tienen la misma especificidad: gana el
+    // último. Si el bloque por defecto queda después, el modo claro se rompe.
+    expect(css.indexOf(':root,[data-theme="tinta"]')).toBeLessThan(css.indexOf('[data-theme="light"]{'));
+    expect(css.indexOf(':root,[data-signal="oro"]')).toBeLessThan(css.indexOf('[data-signal="ambar"]'));
+  });
+
   it('cada variable de fondo aparece en las cuatro variantes', () => {
     for (const key of Object.keys(THEME_VARS.dark)) {
       expect(css.split(key).length - 1).toBeGreaterThanOrEqual(BACKDROPS.length);
