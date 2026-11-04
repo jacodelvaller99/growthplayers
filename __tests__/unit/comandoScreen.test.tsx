@@ -20,7 +20,12 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('react-native-svg', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const RN = require('react-native');
-  return { __esModule: true, default: RN.View, Svg: RN.View, Circle: RN.View };
+  return { __esModule: true, default: RN.View, Svg: RN.View, Circle: RN.View, Path: RN.View, G: RN.View };
+});
+jest.mock('@/components/PolarisLogo', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+  return { PolarisLogo: RN.View };
 });
 jest.mock('@/components/AnimatedNumber', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports

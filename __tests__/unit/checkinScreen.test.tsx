@@ -78,9 +78,10 @@ describe('el check-in no contesta por el usuario', () => {
   it('abre sin valores puestos: no se puede guardar y no hay lectura', () => {
     mockIsDesktop = false;
     const { queryByText } = render(<CheckInScreen />);
-    // El boton dice cuánto falta, no "guardar".
-    expect(queryByText('FALTAN 4 POR MARCAR')).not.toBeNull();
-    expect(queryByText('GUARDAR CHECK-IN')).toBeNull();
+    // Una pregunta por pantalla: abre en la primera, sin respuesta elegida.
+    expect(queryByText('1 / 4 · ENERGÍA')).not.toBeNull();
+    expect(queryByText('ELIGE UNO')).not.toBeNull();
+    expect(queryByText('GUARDAR')).toBeNull();
     // Y la lectura de capacidad no existe hasta que existan los cuatro.
     expect(queryByText(/INDICE DE CAPACIDAD|ÍNDICE DE CAPACIDAD/)).toBeNull();
   });
