@@ -82,22 +82,6 @@ section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid rgba(255,255,255,.
 .step p{color:var(--text2)}
 @media (max-width:860px){.steps{grid-template-columns:1fr}}
 
-/* Cuatro cuerpos */
-.rows{border-top:1px solid var(--line)}
-.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:24px;align-items:baseline;padding:28px 0;border-bottom:1px solid var(--line)}
-.row p{color:var(--text2)}
-@media (max-width:700px){.row{grid-template-columns:1fr;gap:6px}}
-
-/* Arquetipos */
-.arcs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.arc{background:rgba(12,12,12,.86);border:1px solid var(--line);border-radius:12px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;min-height:240px}
-.arc .r{font-family:'Grandis',system-ui,sans-serif;font-size:13px;letter-spacing:.14em;color:var(--accent)}
-.arc p{color:var(--text2);margin-top:auto}
-.arc.now{background:#FFC804;border-color:#FFC804;color:#000}
-.arc.now .r,.arc.now p{color:#000}
-@media (max-width:980px){.arcs{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:560px){.arcs{grid-template-columns:1fr}.arc{min-height:0}}
-
 /* Norman */
 .norman{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(40px,6vw,96px);align-items:center}
 .phone{background:#000;border:1px solid #262626;border-radius:28px;padding:28px 24px 24px;max-width:390px;width:100%;justify-self:center;color:#F4F4F4;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
@@ -110,33 +94,6 @@ section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid rgba(255,255,255,.
 .phone .acts span:first-child{background:#FFC804;color:#000}
 .phone .acts span:last-child{border:1px solid #262626}
 .facts{display:flex;flex-direction:column;gap:24px}
-.fact{display:flex;gap:16px;align-items:flex-start}
-.fact svg{flex-shrink:0;width:18px;height:18px;margin-top:5px}
-.fact svg{color:var(--accent)}
-.fact p{color:var(--text2)}
-.fact b{color:var(--text);font-weight:600}
-@media (max-width:860px){.norman{grid-template-columns:1fr}}
-
-/* Para quién */
-.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.box{background:rgba(12,12,12,.7);border:1px solid var(--line);border-radius:12px;padding:32px 28px;display:flex;flex-direction:column;gap:18px}
-.box ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
-.box li{display:flex;gap:12px;color:var(--text2)}
-.box li::before{content:'';flex-shrink:0;width:8px;height:8px;border-radius:999px;background:var(--accent);margin-top:10px}
-.box.no li::before{background:transparent;border:1.5px solid var(--text3)}
-@media (max-width:760px){.two{grid-template-columns:1fr}}
-
-/* Planes */
-.plans{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.plan{border:1px solid var(--line);border-radius:12px;padding:36px 32px;display:flex;flex-direction:column;gap:20px;background:rgba(12,12,12,.86)}
-.plan .price{font-family:'Grandis',system-ui,sans-serif;font-size:clamp(36px,4vw,48px);line-height:1}
-.plan ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;color:var(--text2)}
-.plan li{display:flex;gap:12px}
-.plan li svg{flex-shrink:0;width:18px;height:18px;margin-top:3px}
-.plan .btn{margin-top:auto;align-self:flex-start}
-.plan.top{border:2px solid #FFC804}
-.fine{margin-top:24px;font-size:15px;color:var(--text3);max-width:52em}
-@media (max-width:760px){.plans{grid-template-columns:1fr}}
 
 /* Cierre */
 .closing{background:#FFC804;color:#000;border-top:0}
@@ -172,7 +129,6 @@ footer a:hover{color:var(--text)}
     <a class="brand" href="#inicio" aria-label="Polaris, inicio"><svg><use href="#star"/></svg>POLARIS</a>
     <nav class="links" aria-label="Secciones">
       <a href="#metodo">El método</a>
-      <a href="#protocolo">El protocolo</a>
       <a href="#norman">Norman</a>
       <a href="#acceso">Acceso</a>
     </nav>
@@ -184,7 +140,6 @@ footer a:hover{color:var(--text)}
   <div class="hero">
     <div class="wrap">
       <div class="hero-copy">
-        <span class="meta reveal">Protocolo Soberano · 90 días</span>
         <h1 class="reveal">Busca el estado, no el resultado.</h1>
         <p class="lead reveal">Un protocolo de 90 días para decidir desde un estado firme, no desde el ruido.</p>
         <div class="cta reveal">
@@ -198,45 +153,12 @@ footer a:hover{color:var(--text)}
   <section id="metodo">
     <div class="wrap">
       <div class="head reveal">
-        <span class="meta">El método</span>
         <h2>Tu día, en tres pasos.</h2>
       </div>
       <div class="steps">
-        <div class="step reveal"><span class="n">1</span><h3>Cuéntale cómo llegas.</h3><p>Un check-in de dos minutos: energía, claridad, presión y sueño.</p></div>
-        <div class="step reveal"><span class="n">2</span><h3>Recibe una sola instrucción.</h3><p>Norman te dice qué hacer hoy y por qué. Una cosa, no diez.</p></div>
-        <div class="step reveal"><span class="n">3</span><h3>Avanza un paso.</h3><p>Una lección y una tarea. Lo pequeño, todos los días.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <div class="head reveal">
-        <span class="meta">Cuatro cuerpos</span>
-        <h2>Te leemos completo.</h2>
-        <p class="lead">Lo que te frena casi nunca es estrategia. Es cómo estás por dentro.</p>
-      </div>
-      <div class="rows">
-        <div class="row reveal"><h3>Físico</h3><p>Sueño, energía, respiración y movimiento.</p></div>
-        <div class="row reveal"><h3>Mental</h3><p>Foco, atención y las historias que te cuentas.</p></div>
-        <div class="row reveal"><h3>Emocional</h3><p>Sentir, nombrar y soltar. Sin reprimir.</p></div>
-        <div class="row reveal"><h3>Energético</h3><p>Propósito, presencia y acciones alineadas.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="protocolo">
-    <div class="wrap">
-      <div class="head reveal">
-        <span class="meta">El protocolo</span>
-        <h2>Cuatro etapas. Noventa días.</h2>
-        <p class="lead">El protocolo se recorre, no se lee. Cada etapa es una forma de operar.</p>
-      </div>
-      <div class="arcs">
-        <div class="arc now reveal"><span class="r">I</span><h3>El Guerrero</h3><p>Mira sus miedos de frente y toma el mando.</p></div>
-        <div class="arc reveal"><span class="r">II</span><h3>El Pontífice</h3><p>Deja de perseguir el rendimiento y aprende a entrar en flow.</p></div>
-        <div class="arc reveal"><span class="r">III</span><h3>El Mercader</h3><p>Tiempo, relaciones y prosperidad, sin perder el centro.</p></div>
-        <div class="arc reveal"><span class="r">IV</span><h3>El Mago</h3><p>Opera desde el estado y lo pone al servicio de otros.</p></div>
+        <div class="step reveal"><span class="n">1</span><h3>Cuéntale cómo llegas.</h3><p>Dos minutos: energía, claridad y sueño.</p></div>
+        <div class="step reveal"><span class="n">2</span><h3>Recibe una sola instrucción.</h3><p>Una cosa para hoy, no diez.</p></div>
+        <div class="step reveal"><span class="n">3</span><h3>Avanza un paso.</h3><p>Lo pequeño, todos los días.</p></div>
       </div>
     </div>
   </section>
@@ -244,13 +166,10 @@ footer a:hover{color:var(--text)}
   <section id="norman">
     <div class="wrap norman">
       <div class="facts">
-        <div class="head reveal" style="margin-bottom:8px">
-          <span class="meta">Norman IA</span>
-          <h2>Recuerda lo que dijiste.</h2>
+        <div class="head reveal" style="margin-bottom:0">
+          <h2>Norman recuerda lo que dijiste.</h2>
+          <p class="lead">Un mentor de inteligencia artificial que te acompaña con tus datos. Y una persona real, cada semana.</p>
         </div>
-        <div class="fact reveal"><svg aria-hidden="true"><use href="#star"/></svg><p><b>Es inteligencia artificial, y lo dice.</b> Te acompaña con lo que registras, no con frases bonitas.</p></div>
-        <div class="fact reveal"><svg aria-hidden="true"><use href="#star"/></svg><p><b>Lee tu reloj.</b> WHOOP, Oura, Apple Salud y Health Connect le dicen cómo dormiste.</p></div>
-        <div class="fact reveal"><svg aria-hidden="true"><use href="#star"/></svg><p><b>Una persona te acompaña.</b> Sesión semanal en vivo con tu mentor.</p></div>
       </div>
       <div class="phone reveal" role="img" aria-label="Ejemplo de conversación con Norman en la app">
         <span class="meta">Norman · mentor IA</span>
@@ -262,69 +181,9 @@ footer a:hover{color:var(--text)}
     </div>
   </section>
 
-  <section>
-    <div class="wrap">
-      <div class="head reveal">
-        <span class="meta">Para quién es</span>
-        <h2>Método, no improvisación.</h2>
-      </div>
-      <div class="two">
-        <div class="box reveal">
-          <h3>Es para ti si…</h3>
-          <ul>
-            <li>Ya tienes resultados afuera y sientes el costo por dentro.</li>
-            <li>Quieres un método, no motivación de un día.</li>
-            <li>Valoras la ciencia y la práctica, sin promesas mágicas.</li>
-          </ul>
-        </div>
-        <div class="box no reveal">
-          <h3>Lo que no es</h3>
-          <ul>
-            <li>No es atención médica ni reemplaza a tu médico.</li>
-            <li>No es terapia. En una crisis, busca ayuda profesional.</li>
-            <li>No promete resultados. Te acompaña con honestidad.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="acceso">
-    <div class="wrap">
-      <div class="head reveal">
-        <span class="meta">Acceso</span>
-        <h2>Empieza gratis. Sigue cuando quieras.</h2>
-      </div>
-      <div class="plans">
-        <div class="plan reveal">
-          <span class="meta">Operador</span>
-          <span class="price">Gratis</span>
-          <ul>
-            <li><svg aria-hidden="true"><use href="#check"/></svg>Check-in diario y tu Norte</li>
-            <li><svg aria-hidden="true"><use href="#check"/></svg>Norman en modo esencial</li>
-            <li><svg aria-hidden="true"><use href="#check"/></svg>Respiración y meditación</li>
-          </ul>
-          <a class="btn btn-line" href="/welcome">Crear cuenta</a>
-        </div>
-        <div class="plan top reveal">
-          <span class="meta">Soberano</span>
-          <span class="price">Protocolo completo</span>
-          <ul>
-            <li><svg aria-hidden="true"><use href="#check"/></svg>Los módulos del protocolo, completos</li>
-            <li><svg aria-hidden="true"><use href="#check"/></svg>Norman con memoria</li>
-            <li><svg aria-hidden="true"><use href="#check"/></svg>Tu reloj conectado</li>
-            <li><svg aria-hidden="true"><use href="#check"/></svg>Mentoría 1 a 1 y sesiones en vivo</li>
-          </ul>
-          <a class="btn btn-gold" href="mailto:ncapuozzo@polarisgrowthinstitute.com?subject=Quiero%20agendar%20mi%20sesi%C3%B3n%20de%20claridad">Agenda tu sesión<svg aria-hidden="true"><use href="#arrow"/></svg></a>
-        </div>
-      </div>
-      <p class="fine reveal">En iOS, Android y web. El precio se ve dentro de la app o con un asesor. Sin permanencia. Pedimos permiso antes de usar cualquier dato.</p>
-    </div>
-  </section>
-
-  <section class="closing">
+  <section class="closing" id="acceso">
     <div class="wrap row2">
-      <h2 class="reveal">El equilibrio entre lo que eres y lo que puedes ser.</h2>
+      <h2 class="reveal">Empieza gratis. Sigue cuando quieras.</h2>
       <a class="btn reveal" href="/welcome">Entrar a Polaris<svg aria-hidden="true"><use href="#arrow"/></svg></a>
     </div>
   </section>
