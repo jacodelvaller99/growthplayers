@@ -569,7 +569,7 @@ function WebRing({ progress, color, label }: { progress: number; color: string; 
           // @ts-ignore
           xmlns="http://www.w3.org/1999/xhtml"
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <span style={{ color: palette.ivory, fontFamily: 'SpaceMono_400Regular, monospace', fontSize: 18, letterSpacing: 1, textAlign: 'center' }}>
+          <span style={{ color: palette.ivory, fontFamily: Fonts.display, fontSize: 18, letterSpacing: 1, textAlign: 'center' }}>
             {label}
           </span>
         </div>
