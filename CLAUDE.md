@@ -90,7 +90,7 @@ app/
   _layout.tsx          # Root: fonts, auth guard, ThemeProvider, ErrorBoundary, DesktopSidebar
   (auth)/              # Login / register / welcome — redirected to when unauthenticated
   (onboarding)/        # Profile wizard + CONSENT GATE (términos/privacidad/salud) — redirected to when !onboardingCompleted
-  (tabs)/              # Main app: comando, norte, programas, mentor, progreso
+  (tabs)/              # Barra (2026-11-04): HOY (comando) · NORMAN (mentor) · PROGRESO · YO (yo: perfil + cuenta); norte y programas son rutas ocultas (href:null)
   bienestar/           # Wellness hub (see "Wellness integral system" below):
                        #   prácticas:           binaurales, meditacion, respiracion, sueno, diario, biblioteca
                        #   sistema integral:    habitos, ayuno, nutricion, cuerpo, suplementacion, biometrics

@@ -28,7 +28,7 @@ interface NavItem {
 interface NavGroup { title: string; items: NavItem[] }
 const NAV_DOMAINS: NavGroup[] = [
   { title: 'COMANDO', items: [
-    { label: 'INICIO',   icon: 'radar',         route: '/(tabs)/comando', match: 'comando' },
+    { label: 'HOY',      icon: 'radar',         route: '/(tabs)/comando', match: 'comando' },
     { label: 'CHECK-IN', icon: 'monitor-heart', route: '/checkin',        match: 'checkin' },
     { label: 'MI NORTE', icon: 'explore',       route: '/(tabs)/norte',   match: 'norte'   },
   ] },
@@ -38,7 +38,7 @@ const NAV_DOMAINS: NavGroup[] = [
     { label: 'PROGRESO', icon: 'insights',    route: '/(tabs)/progreso',  match: 'progreso'  },
   ] },
   { title: 'NORMAN IA', items: [
-    { label: 'MENTOR', icon: 'chat-bubble-outline', route: '/(tabs)/mentor', match: 'mentor' },
+    { label: 'NORMAN', icon: 'chat-bubble-outline', route: '/(tabs)/mentor', match: 'mentor' },
   ] },
   { title: 'RECUPERACIÓN', items: [
     // El destino se titula BIENESTAR en su propia pantalla y en la barra del
@@ -46,6 +46,7 @@ const NAV_DOMAINS: NavGroup[] = [
     // el único sitio de la interfaz donde alguien lo lee, y solo en escritorio.
     // El mismo lugar tenía dos nombres según el tamaño de la ventana.
     { label: 'BIENESTAR', icon: 'spa', route: '/bienestar', match: 'bienestar' },
+    { label: 'YO',        icon: 'person-outline', route: '/(tabs)/yo', match: 'yo' },
   ] },
 ];
 

@@ -1,4 +1,3 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { BlurView } from 'expo-blur';
 import { Redirect, Tabs, useSegments } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
@@ -14,49 +13,30 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { analytics } from '@/lib/analytics';
 
-type TabIcon = React.ComponentProps<typeof MaterialIcons>['name'];
-
 /**
- * Custom tab bar icon with:
- * - 20px icon (spec: 20px, stroke mono)
- * - 2px gold line indicator above the icon when active
- * - Active: ivory icon; Inactive: #555 (muted)
+ * Barra de abajo del rediseño: solo texto, en la letra de marca. La pestaña
+ * activa va en el color de acento con una línea corta encima. Cuatro destinos
+ * (decisión del dueño, 2026-11-04): Hoy, Norman, Progreso y Yo. Norte y
+ * Programa siguen siendo rutas — se abren desde Hoy y desde Yo.
  */
-function TabBarIcon({
-  color,
-  name,
-  focused,
-}: {
-  color: string;
-  name: TabIcon;
-  focused: boolean;
-}) {
+function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   return (
     <View style={tabStyles.wrap}>
       {focused && <View style={tabStyles.indicator} />}
-      <MaterialIcons name={name} size={20} color={focused ? palette.ivory : palette.smoke} />
+      <Text
+        numberOfLines={1}
+        maxFontSizeMultiplier={CHROME_MAX_SCALE}
+        style={[tabStyles.label, { color: focused ? palette.goldText : palette.smoke }]}>
+        {label}
+      </Text>
     </View>
   );
 }
 
 const tabStyles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 2,
-    width: 52,
-    // 24, no 44: la zona pulsable es la pestaña entera (55px), no el ícono, y
-    // react-navigation solo le da 28 al contenedor del ícono.
-    minHeight: 24,
-  },
-  indicator: {
-    position: 'absolute',
-    top: 0,
-    width: 20,
-    height: 2,
-    backgroundColor: palette.gold,
-    borderRadius: 1,
-  },
+  wrap: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingHorizontal: 4 },
+  indicator: { position: 'absolute', top: 0, width: 20, height: 2, backgroundColor: palette.gold, borderRadius: 1 },
+  label: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, letterSpacing: 1 },
 });
 
 export function BottomNavigation() {
@@ -71,7 +51,7 @@ export function BottomNavigation() {
   // Y 70, no 60: react-navigation pone 5+5 de padding dentro de cada botón
   // (no se puede pisar) y reserva 28 al ícono; con 60 a la etiqueta le
   // quedaban 5px y "Inicio", "Norte"… salían cortadas en el celular.
-  const tabBarHeight = 70 + insets.bottom;
+  const tabBarHeight = 60 + insets.bottom;
 
   return (
     <Tabs
@@ -86,14 +66,8 @@ export function BottomNavigation() {
         // («PROGRA», «PERFI»). En caja normal caben las 5 a 375pt.
         // maxFontSizeMultiplier: la barra tiene alto fijo (60 + safe area);
         // Dynamic Type escala hasta 1.3× sin romperla.
-        tabBarLabel: ({ color, children }) => (
-          <Text
-            numberOfLines={1}
-            maxFontSizeMultiplier={CHROME_MAX_SCALE}
-            style={{ fontFamily: Fonts.displayMedium, fontSize: 11, letterSpacing: 0.2, marginTop: 2, color }}>
-            {children}
-          </Text>
-        ),
+        tabBarShowLabel: false,
+        tabBarIconStyle: { width: '100%', height: 44 },
         // Chrome estructural con material (audit "Fluidez Polaris" §Fase 5):
         // antes backgroundColor opaco. El fondo semi-transparente + blur da
         // jerarquía de peso — el contenido que scrollea debajo se insinúa en
@@ -120,39 +94,22 @@ export function BottomNavigation() {
       }}>
       <Tabs.Screen
         name="comando"
-        options={{
-          title: 'Inicio',
-          tabBarIcon: ({ color, focused }) => <TabBarIcon name="home" color={color} focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="norte"
-        options={{
-          title: 'Norte',
-          tabBarIcon: ({ color, focused }) => <TabBarIcon name="explore" color={color} focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="programas"
-        options={{
-          title: 'Programa',
-          tabBarIcon: ({ color, focused }) => <TabBarIcon name="menu-book" color={color} focused={focused} />,
-        }}
+        options={{ title: 'Hoy', tabBarIcon: ({ focused }) => <TabLabel label="HOY" focused={focused} /> }}
       />
       <Tabs.Screen
         name="mentor"
-        options={{
-          title: 'Mentor',
-          tabBarIcon: ({ color, focused }) => <TabBarIcon name="chat-bubble-outline" color={color} focused={focused} />,
-        }}
+        options={{ title: 'Norman', tabBarIcon: ({ focused }) => <TabLabel label="NORMAN" focused={focused} /> }}
       />
       <Tabs.Screen
         name="progreso"
-        options={{
-          title: 'Progreso',
-          tabBarIcon: ({ color, focused }) => <TabBarIcon name="insights" color={color} focused={focused} />,
-        }}
+        options={{ title: 'Progreso', tabBarIcon: ({ focused }) => <TabLabel label="PROGRESO" focused={focused} /> }}
       />
+      <Tabs.Screen
+        name="yo"
+        options={{ title: 'Yo', tabBarIcon: ({ focused }) => <TabLabel label="YO" focused={focused} /> }}
+      />
+      <Tabs.Screen name="norte" options={{ href: null, title: 'Norte' }} />
+      <Tabs.Screen name="programas" options={{ href: null, title: 'Programa' }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
