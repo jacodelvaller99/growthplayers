@@ -346,7 +346,7 @@ export default function MembresiasScreen() {
         </View>
 
         {/* List */}
-        <GoldDivider inset label={`${filterStatus.toUpperCase()} (${displayed.length})`} />
+        <GoldDivider inset label={`${(STATUS_FILTERS.find((f) => f.value === filterStatus)?.label ?? filterStatus).toUpperCase()} (${displayed.length})`} />
         <PremiumCard style={s.card}>
           {loading ? (
             <ActivityIndicator color={palette.goldText} style={{ padding: spacing.xl }} />
@@ -369,26 +369,29 @@ export default function MembresiasScreen() {
                   <Text style={s.memberMetaSub}>por {m.activated_by ?? 'admin'}</Text>
                 </View>
 
-                {/* Row actions (only for active) — icon-only: el texto en 4 pills
-                    era el ruido que había que quitar; el icono + accessibilityLabel
-                    mantiene la acción clara, y 44×44 sigue siendo el target completo. */}
+                {/* Acciones por fila (solo activas): ícono + palabra corta, para que se
+                    entienda sin adivinar qué hace cada flecha. */}
                 {m.status === 'active' && (
                   <View style={s.rowActions}>
                     {getTiersAbove(m.product).length > 0 && (
                       <Pressable style={s.rowBtn} onPress={() => openAction(m, 'upgrade')} accessibilityRole="button" accessibilityLabel={`Subir de nivel a ${m.user_name ?? 'usuario'}`}>
                         <MaterialIcons name="arrow-upward" size={16} color={palette.goldText} />
+                        <Text style={s.rowBtnText}>Subir</Text>
                       </Pressable>
                     )}
                     {getTiersBelow(m.product).length > 0 && (
                       <Pressable style={s.rowBtn} onPress={() => openAction(m, 'downgrade')} accessibilityRole="button" accessibilityLabel={`Bajar de nivel a ${m.user_name ?? 'usuario'}`}>
                         <MaterialIcons name="arrow-downward" size={16} color={palette.ash} />
+                        <Text style={s.rowBtnText}>Bajar</Text>
                       </Pressable>
                     )}
                     <Pressable style={s.rowBtn} onPress={() => openAction(m, 'extend')} accessibilityRole="button" accessibilityLabel={`Extender membresía de ${m.user_name ?? 'usuario'}`}>
                       <MaterialIcons name="schedule" size={16} color={palette.ash} />
+                      <Text style={s.rowBtnText}>Más tiempo</Text>
                     </Pressable>
                     <Pressable style={s.rowBtn} onPress={() => openAction(m, 'cancel')} accessibilityRole="button" accessibilityLabel={`Cancelar membresía de ${m.user_name ?? 'usuario'}`}>
                       <MaterialIcons name="cancel" size={16} color={palette.danger} />
+                      <Text style={s.rowBtnText}>Cancelar</Text>
                     </Pressable>
                   </View>
                 )}
@@ -718,20 +721,19 @@ const s = StyleSheet.create({
   memberMetaSub: { ...typography.caption, color: palette.smoke, fontSize: 9, opacity: 0.7 },
   rowActions:  { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   rowBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
     borderColor: palette.line,
     borderWidth: 1,
     borderRadius: radii.sm,
-    // Icono solo, sin label de texto -- 4 pills con "SUBIR"/"BAJAR"/"EXTENDER"/
-    // "CANCELAR" era el ruido a resolver. El accessibilityLabel de cada botón
-    // sigue siendo la etiqueta real. 44x44 completo: no es un botón cualquiera
-    // -- SUBIR, BAJAR y CANCELAR cambian el nivel de suscripción de una
-    // persona; el coste de un toque errado aquí no es volver atrás, es
-    // tocarle la facturación a alguien.
-    width: 44,
-    height: 44,
+    // Ícono + palabra: una flecha sola obligaba a adivinar. Alto 44 completo:
+    // subir, bajar y cancelar tocan la facturación de una persona.
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
   },
+  rowBtnText: { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
   toastContainer: {
     position: 'absolute',
     bottom: 100,
