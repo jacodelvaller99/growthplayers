@@ -218,7 +218,7 @@ export default function MissionControl() {
       <View style={s.header}>
         <View>
           <Text style={s.headerEyebrow}>POLARIS GROWTH INSTITUTE</Text>
-          <Text style={s.headerTitle}>CUADRO DE MANDO</Text>
+          <Text style={s.headerTitle}>QUIÉN PODRÍA IRSE</Text>
           <Text style={s.headerSub}>
             Colombia {colombiaTime} · actualizado hace {lastSyncAt ? Math.max(0, Math.floor((now.getTime() - lastSyncAt.getTime()) / 1000)) : 0}s
           </Text>

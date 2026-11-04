@@ -222,7 +222,7 @@ export default function AdminPlaudScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
-        <Text style={styles.title}>PLAUD</Text>
+        <Text style={styles.title}>GRABACIONES</Text>
         <View style={{ width: 40 }} />
       </View>
 
