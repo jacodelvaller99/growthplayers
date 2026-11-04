@@ -5,20 +5,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 
-import {
-  DangerButton,
-  GoldDivider,
-  PremiumCard,
-  PremiumInput,
-  PrimaryButton,
-  SecondaryButton,
-} from '@/components/polaris';
-import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { PrimaryButton } from '@/components/polaris';
+import { POLARIS_MODULES } from '@/data/modules';
+import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useStaffRole } from '@/hooks/useIsAdmin';
 import { MyMentorCard } from '@/components/MyMentorCard';
 import { Fila, Pantalla } from '@/components/pantalla';
+import { AccessField } from '@/components/auth/AccessFrame';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { protocolSnapshot } from '@/lib/protocolSnapshot';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -27,7 +20,6 @@ import {
   scheduleCheckinReminder,
   cancelReminders,
 } from '@/services/notifications';
-import type { NorthStar } from '@/types/lifeflow';
 
 // ─── Legal links (in-app policy screens) ───────────────────────────────────
 const LEGAL_LINKS: {
@@ -53,7 +45,7 @@ export default function ProgresoScreen() {
   const router = useRouter();
   const {
     state,
-    updateProfile, updateNorthStar,
+    updateProfile,
     resetOnboarding, clearData, signOut,
     deleteAccount, exportData,
   } = useLifeFlow();
@@ -86,9 +78,7 @@ export default function ProgresoScreen() {
   const [exporting, setExporting] = useState(false);
   const [name, setName] = useState(state.profile.name);
   const [role, setRole] = useState(state.profile.role);
-  const [north, setNorth] = useState<NorthStar>(state.northStar);
   const [notificationsOn, setNotificationsOn] = useState(false);
-  const [savingNorth, setSavingNorth] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Check if notifications are already scheduled
@@ -186,12 +176,6 @@ export default function ProgresoScreen() {
     }
   };
 
-  const saveNorth = async () => {
-    setSavingNorth(true);
-    await updateNorthStar(north);
-    setSavingNorth(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
 
   // Guard anti-doble-tap: updateProfile es async → evita doble submit del perfil.
   const handleSaveProfile = async () => {
@@ -353,206 +337,88 @@ export default function ProgresoScreen() {
   };
   const modulosHechos = archetypes.filter((a) => a.earned).length;
 
+  // Tu cuenta, en la misma gramática que el resto: etiqueta pequeña, campos
+  // sobre una línea, filas. Mi Norte ya no se edita aquí — tiene su pantalla.
   const ajustesBlock = (
-    <>
-      {/* ── Edit Profile ── */}
-      <GoldDivider label="EDITAR PERFIL" />
-      <PremiumCard style={styles.form}>
-        <PremiumInput
-          value={name}
-          onChangeText={setName}
-          placeholder="NOMBRE"
-          accessibilityLabel="Nombre de perfil"
-          returnKeyType="next"
-        />
-        <PremiumInput
-          value={role}
-          onChangeText={setRole}
-          placeholder="ROL / TITULO"
-          accessibilityLabel="Rol o título"
-          returnKeyType="done"
-        />
-        <PrimaryButton
-          label={savingProfile ? 'GUARDANDO...' : 'GUARDAR PERFIL'}
-          icon="check"
-          onPress={handleSaveProfile}
-          disabled={savingProfile}
-        />
-      </PremiumCard>
+    <View style={styles.cuenta}>
+      <Text style={styles.cuentaLabel}>TU PERFIL</Text>
+      <AccessField label="NOMBRE" value={name} onChangeText={setName} returnKeyType="next" />
+      <AccessField label="QUÉ HACES" value={role} onChangeText={setRole} placeholder="Fundadora, abogado…" returnKeyType="done" />
+      <PrimaryButton
+        label={savingProfile ? 'GUARDANDO…' : 'GUARDAR PERFIL'}
+        icon="check"
+        onPress={handleSaveProfile}
+        disabled={savingProfile}
+      />
 
-      {/* ── Mi Norte ── */}
-      <GoldDivider label="MI NORTE" />
-      <PremiumCard style={styles.form}>
-        <View style={styles.northField}>
-          <Text style={styles.northLabel}>PROPÓSITO PRINCIPAL</Text>
-          <PremiumInput
-            value={north.purpose}
-            onChangeText={(purpose) => setNorth({ ...north, purpose })}
-            placeholder="¿Por qué operas a este nivel?"
-            multiline
-            style={styles.textarea}
-            accessibilityLabel="Propósito principal"
-          />
-        </View>
-        <View style={styles.northField}>
-          <Text style={styles.northLabel}>DECLARACIÓN DE IDENTIDAD</Text>
-          <PremiumInput
-            value={north.identity}
-            onChangeText={(identity) => setNorth({ ...north, identity })}
-            placeholder="Soy alguien que..."
-            multiline
-            style={styles.textarea}
-            accessibilityLabel="Declaración de identidad"
-          />
-        </View>
-        <View style={styles.northField}>
-          <Text style={styles.northLabel}>RECORDATORIO DIARIO</Text>
-          <PremiumInput
-            value={north.dailyReminder}
-            onChangeText={(dailyReminder) => setNorth({ ...north, dailyReminder })}
-            placeholder="La frase que te ancla cada mañana..."
-            multiline
-            style={styles.textarea}
-            accessibilityLabel="Recordatorio diario"
-          />
-        </View>
-        <PrimaryButton
-          label={savingNorth ? 'GUARDANDO...' : 'GUARDAR NORTE'}
-          icon="explore"
-          onPress={saveNorth}
-          disabled={savingNorth}
-        />
-      </PremiumCard>
-
-      {/* ── Notificaciones ── */}
-      <GoldDivider label="NOTIFICACIONES Y PRIVACIDAD" />
-      <PremiumCard style={styles.settingsCard}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>RECORDATORIO DIARIO</Text>
-            <Text style={styles.settingMeta}>Check-in a las 7:00 AM</Text>
+      <Text style={[styles.cuentaLabel, styles.cuentaGap]}>AVISOS Y DATOS</Text>
+      <View>
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleText}>
+            <Text style={styles.toggleTitle}>Recordarme el check-in</Text>
+            <Text style={styles.toggleMeta}>Cada día a las 7:00</Text>
           </View>
           <Switch
             value={notificationsOn}
             onValueChange={toggleNotifications}
             trackColor={{ false: palette.charcoal, true: palette.gold }}
             thumbColor={notificationsOn ? palette.ink : palette.ash}
+            accessibilityLabel="Recordarme el check-in"
           />
         </View>
-        <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.md }]}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>ANÁLISIS DE COMPORTAMIENTO</Text>
-            <Text style={styles.settingMeta}>
-              Permite a Polaris personalizar recomendaciones con IA. Tus datos nunca se venden.
-            </Text>
+        <View style={[styles.toggleRow, styles.toggleRowLast]}>
+          <View style={styles.toggleText}>
+            <Text style={styles.toggleTitle}>Usar mis datos para mejorar</Text>
+            <Text style={styles.toggleMeta}>Personaliza lo que Polaris te recomienda. Tus datos nunca se venden.</Text>
           </View>
           <Switch
             value={mlConsent}
             onValueChange={handleMlConsentToggle}
             trackColor={{ false: palette.charcoal, true: palette.gold }}
             thumbColor={mlConsent ? palette.ink : palette.ash}
+            accessibilityLabel="Usar mis datos para mejorar"
           />
         </View>
-      </PremiumCard>
+      </View>
 
-      {/* ── Privacidad y Datos (GDPR) ── */}
-      <GoldDivider label="PRIVACIDAD Y DATOS" />
-      <PremiumCard style={styles.gdprCard}>
-        <Text style={styles.gdprIntro}>
-          Tienes derecho a acceder, exportar y eliminar todos tus datos personales en cualquier momento (RGPD / GDPR).
-        </Text>
+      <View style={styles.cuentaGap}>
+        <Fila label="MI NORTE" value="Editar" onPress={() => router.push('/(tabs)/norte' as never)} />
+        <Fila
+          label="MIS DATOS"
+          value={exporting ? 'Preparando…' : 'Descargar todo'}
+          onPress={exporting ? undefined : handleExport}
+        />
+        {LEGAL_LINKS.map((link) => (
+          <Fila
+            key={link.route}
+            label={link.title.toUpperCase()}
+            value="Leer"
+            onPress={() => router.push(link.route as never)}
+          />
+        ))}
+        {isStaff && (
+          <Fila label="EQUIPO" value={staffBtnLabel} onPress={() => router.push('/admin' as never)} />
+        )}
+        <Fila label="SESIÓN" value="Cerrar sesión" onPress={handleSignOut} last />
+      </View>
 
-        {/* Export */}
-        <Pressable
-          style={[styles.gdprBtn, exporting && { opacity: 0.6 }]}
-          onPress={handleExport}
-          disabled={exporting}
-          accessibilityLabel="Exportar mis datos">
-          <MaterialIcons name="download" size={18} color={palette.goldText} />
-          <View style={styles.gdprBtnBody}>
-            <Text style={styles.gdprBtnTitle}>{exporting ? 'EXPORTANDO...' : 'EXPORTAR MIS DATOS'}</Text>
-            <Text style={styles.gdprBtnMeta}>JSON con todo tu historial · check-ins, conversaciones, lecciones</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
+      <View style={styles.cuentaQuiet}>
+        <Pressable onPress={resetOnboarding} accessibilityRole="button" style={styles.quietLink}>
+          <Text style={styles.quietText}>Repetir la bienvenida</Text>
         </Pressable>
-
-        {/* Delete account */}
+        <Pressable onPress={clear} accessibilityRole="button" style={styles.quietLink}>
+          <Text style={styles.quietText}>Borrar los datos de este dispositivo</Text>
+        </Pressable>
         <Pressable
-          style={[styles.gdprDeleteBtn, deleting && { opacity: 0.6 }]}
           onPress={handleDeleteAccount}
           disabled={deleting}
-          accessibilityLabel="Eliminar cuenta">
-          <MaterialIcons name="delete-forever" size={18} color={palette.danger} />
-          <View style={styles.gdprBtnBody}>
-            <Text style={styles.gdprDeleteTitle}>{deleting ? 'ELIMINANDO...' : 'ELIMINAR CUENTA'}</Text>
-            <Text style={styles.gdprBtnMeta}>Elimina tu cuenta y todos los datos de forma permanente</Text>
-          </View>
-        </Pressable>
-      </PremiumCard>
-
-      {/* ── Legal ── */}
-      <GoldDivider label="LEGAL" />
-      <PremiumCard style={styles.gdprCard}>
-        {LEGAL_LINKS.map((link) => (
-          <Pressable
-            key={link.route}
-            style={styles.gdprBtn}
-            onPress={() => router.push(link.route as never)}
-            accessibilityRole="button"
-            accessibilityLabel={link.title}>
-            <MaterialIcons name={link.icon} size={18} color={palette.goldText} />
-            <View style={styles.gdprBtnBody}>
-              <Text style={styles.gdprBtnTitle}>{link.title}</Text>
-              <Text style={styles.gdprBtnMeta}>{link.meta}</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-          </Pressable>
-        ))}
-      </PremiumCard>
-
-      {/* ── Sistema ── */}
-      <GoldDivider label="SISTEMA" />
-      <PremiumCard style={styles.systemCard}>
-        <View style={styles.systemInfo}>
-          <Text style={styles.systemLabel}>PROGRAMA ACTIVO</Text>
-          <Text style={styles.systemValue}>Protocolo Soberano</Text>
-          <Text style={styles.systemMeta}>
-            Módulo {ACTIVE_MODULE.order} — {ACTIVE_MODULE.title}
-          </Text>
-        </View>
-        <SecondaryButton
-          label="REINICIAR ONBOARDING"
-          icon="restart-alt"
-          onPress={resetOnboarding}
-        />
-        <Pressable
-          onPress={handleSignOut}
-          style={styles.signOutBtn}
           accessibilityRole="button"
-          accessibilityLabel="Cerrar sesión">
-          <MaterialIcons name="logout" size={18} color={palette.danger} />
-          <Text style={styles.signOutText}>CERRAR SESIÓN</Text>
+          accessibilityLabel="Eliminar mi cuenta y todos mis datos"
+          style={styles.quietLink}>
+          <Text style={styles.dangerText}>{deleting ? 'Eliminando…' : 'Eliminar mi cuenta'}</Text>
         </Pressable>
-        <DangerButton
-          label="LIMPIAR DATOS LOCALES"
-          icon="delete-outline"
-          onPress={clear}
-        />
-      </PremiumCard>
-
-      {/* ── Staff Access (admins Y mentores — read from profiles.is_admin/is_mentor) ── */}
-      {isStaff && (
-        <Pressable
-          style={styles.adminBtn}
-          onPress={() => router.push('/admin' as never)}
-          accessibilityRole="button"
-          accessibilityLabel={staffBtnLabel}>
-          <MaterialIcons name="dashboard-customize" size={16} color={palette.goldText} />
-          <Text style={styles.adminBtnText}>{staffBtnLabel}</Text>
-        </Pressable>
-      )}
-
-    </>
+      </View>
+    </View>
   );
 
   return (
@@ -638,6 +504,21 @@ function Calendario({ checkIns }: { checkIns: { date: string }[] }) {
 
 
 const styles = StyleSheet.create({
+  cuenta: { gap: spacing.lg },
+  cuentaLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
+  cuentaGap: { marginTop: spacing.lg },
+  toggleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 64, paddingVertical: 14,
+    borderTopWidth: 1, borderTopColor: palette.line,
+  },
+  toggleRowLast: { borderBottomWidth: 1, borderBottomColor: palette.line },
+  toggleText: { flex: 1, gap: 2 },
+  toggleTitle: { fontFamily: Fonts.sans, fontSize: 16, color: palette.ivory },
+  toggleMeta: { fontFamily: Fonts.sans, fontSize: 13, lineHeight: 18, color: palette.smoke },
+  cuentaQuiet: { marginTop: spacing.md, alignItems: 'flex-start' },
+  quietLink: { minHeight: 44, justifyContent: 'center' },
+  quietText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
+  dangerText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.dangerText },
   // ── Rediseño ──
   cal: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, maxWidth: 380 },
   calCell: { width: '14.2857%', padding: 3 },
@@ -656,165 +537,12 @@ const styles = StyleSheet.create({
   // Achievements
 
 
-  // Form
-  form: {
-    gap: spacing.md,
-  },
-
-  // Norte fields
-  northField: {
-    gap: spacing.sm,
-  },
-  northLabel: {
-    ...typography.label,
-    color: palette.ash,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  textarea: {
-    minHeight: 80,
-    paddingTop: spacing.sm,
-    textAlignVertical: 'top',
-  },
-
-  // Settings card
-  settingsCard: {
-    gap: spacing.md,
-  },
-  settingRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  settingInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  settingTitle: {
-    ...typography.label,
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  settingMeta: {
-    ...typography.mono,
-    color: palette.smoke,
-  },
-
-  // Sign out
-  signOutBtn: {
-    alignItems: 'center',
-    borderColor: palette.danger,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  signOutText: {
-    ...typography.label,
-    color: palette.danger,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 2,
-  },
 
 
 
-  // System
-  systemCard: {
-    gap: spacing.md,
-  },
-  systemInfo: {
-    gap: spacing.xs,
-    paddingBottom: spacing.sm,
-    borderBottomColor: palette.lineSoft,
-    borderBottomWidth: 1,
-  },
-  systemLabel: {
-    ...typography.label,
-    color: palette.ash,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  systemValue: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  systemMeta: {
-    ...typography.mono,
-    color: palette.smoke,
-  },
-  // GDPR section
-  gdprCard: {
-    gap: spacing.md,
-  },
-  gdprIntro: {
-    ...typography.caption,
-    color: palette.smoke,
-    lineHeight: 18,
-    fontSize: 11,
-  },
-  gdprBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    minHeight: 60,
-  },
-  gdprBtnBody: {
-    flex: 1,
-    gap: 2,
-  },
-  gdprBtnTitle: {
-    ...typography.label,
-    color: palette.goldText,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  gdprBtnMeta: {
-    ...typography.caption,
-    color: palette.smoke,
-    fontSize: 11,
-  },
-  gdprDeleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: alpha(palette.danger, '55'),
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    minHeight: 60,
-  },
-  gdprDeleteTitle: {
-    ...typography.label,
-    color: palette.danger,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
+
+
+
 
   // Version
   versionText: {
@@ -827,26 +555,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 
-  // Admin access button — ghost style, only rendered when is_admin === true
-  adminBtn: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    borderColor: 'rgba(255,200,4,0.25)',
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2,
-  },
-  adminBtnText: {
-    fontFamily: Fonts.sans,
-    color: palette.goldText,
-    fontSize: 12,
-    letterSpacing: 1,
-  },
 });
 
 
