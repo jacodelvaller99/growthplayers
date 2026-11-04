@@ -25,14 +25,13 @@ jest.mock('@/hooks/use-app-mode', () => ({
 import AparienciaScreen from '@/app/perfil/apariencia';
 
 describe('Apariencia — pocas decisiones a la vista', () => {
-  it('web: claro/oscuro arriba, las paletas plegadas hasta pedirlas', () => {
+  it('web: solo los dos fondos del manual (Tinta y Luz), sin paletas extra', () => {
     mockCanToggle = true;
     render(<AparienciaScreen />);
     fireEvent.press(screen.getByLabelText('Claro'));
     expect(mockSetMode).toHaveBeenCalledWith('light');
     expect(screen.queryByText('Pizarra')).toBeNull();
-    fireEvent.press(screen.getByText('Más paletas'));
-    expect(screen.getByText('Pizarra')).toBeTruthy();
+    expect(screen.queryByText('Más paletas')).toBeNull();
   });
 
   it('app nativa: no muestra controles de color que no funcionan', () => {

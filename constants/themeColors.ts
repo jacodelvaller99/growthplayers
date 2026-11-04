@@ -334,11 +334,14 @@ export const SIGNAL_VARS: Record<SignalId, Record<string, string>> = {
     '--c-line-gold':        'rgba(255,200,4,0.30)',
     '--c-line-gold-subtle': 'rgba(255,200,4,0.15)',
     '--c-gold-text':        '#FFC804',
-    '--c-success':          '#52A878',
-    '--c-warning':          '#D4A017',
+    // Manual de marca: negro y amarillo planos. "Va bien" es gris, "atiende
+    // esto" es amarillo; el texto dice el estado. El rojo queda solo para
+    // lo irreversible (borrar, grabando).
+    '--c-success':          '#A3A3A3',
+    '--c-warning':          '#FFC804',
     '--c-danger':           '#D54F42',
     '--c-calm':             '#FFC804',   // sin voz aparte: recuperar también es oro
-    '--c-info':             '#5B9FD4',
+    '--c-info':             '#BDBDBD',
   },
   // ÁMBAR — el segundo oro del manual (#EDBA01) toma el mando. Menos neón, más
   // metal. Mismo matiz de marca, un paso más profundo.
@@ -498,8 +501,8 @@ export const LIGHT_SIGNAL_OVERRIDES: Record<SignalId, Record<string, string>> = 
   // ilegibles incluso como icono. Solo Semáforo estaba corregido porque fue la
   // única señal que se diseñó mirando el fondo claro.
   oro: {
-    '--c-info': '#215C87', '--c-gold-text': '#7A5600', '--c-calm': '#7A5600',
-    '--c-success': '#2F6647', '--c-warning': '#7D5810', '--c-danger': '#96341F',
+    '--c-info': '#3D3D3D', '--c-gold-text': '#7A5600', '--c-calm': '#7A5600',
+    '--c-success': '#5C5C5C', '--c-warning': '#7A5600', '--c-danger': '#96341F',
     '--c-gold-light': 'rgba(122,86,0,0.10)', '--c-gold-glow': 'rgba(122,86,0,0.06)',
     '--c-gold-muted': 'rgba(122,86,0,0.72)',
     '--c-line-gold': 'rgba(122,86,0,0.38)', '--c-line-gold-subtle': 'rgba(122,86,0,0.18)',

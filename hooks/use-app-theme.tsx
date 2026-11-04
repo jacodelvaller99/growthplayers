@@ -27,8 +27,6 @@ import { Platform } from 'react-native';
 
 import { injectBrandFont } from '@/constants/theme';
 import {
-  SIGNAL_VARS,
-  THEME_VARS,
   injectThemeVars,
   type BackdropId,
   type SignalId,
@@ -64,11 +62,13 @@ const AppThemeContext = createContext<AppThemeValue>({
 
 const isWeb = Platform.OS === 'web';
 
+// Manual de marca: solo Tinta (negro) y Luz (claro), con acento oro. Quien
+// tenía guardado otro fondo u otra señal vuelve a Tinta · Oro al abrir.
 function isBackdrop(v: string | null): v is BackdropId {
-  return v !== null && Object.prototype.hasOwnProperty.call(THEME_VARS, v);
+  return v === 'tinta' || v === 'light';
 }
 function isSignal(v: string | null): v is SignalId {
-  return v !== null && Object.prototype.hasOwnProperty.call(SIGNAL_VARS, v);
+  return v === 'oro';
 }
 
 function readStored<T extends string>(key: string, guard: (v: string | null) => v is T, fallback: T): T {

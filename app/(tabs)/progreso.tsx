@@ -1529,7 +1529,7 @@ export default function ProgresoScreen() {
             {/* Affinity bars */}
             <Text style={dnaStyles.sectionLabel}>AFINIDAD POR MÓDULO</Text>
             {[
-              { key: 'binaural',   label: 'Binaurales',  value: intelligence.affinity_binaural },
+              { key: 'binaural',   label: 'Sonidos',     value: intelligence.affinity_binaural },
               { key: 'meditation', label: 'Meditación',  value: intelligence.affinity_meditation },
               { key: 'breathing',  label: 'Respiración', value: intelligence.affinity_breathing },
               { key: 'lessons',    label: 'Lecciones',   value: intelligence.affinity_lessons },

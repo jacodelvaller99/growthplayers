@@ -151,12 +151,12 @@ export const Colors = {
 
 // ─── Polaris Typography ───────────────────────────────────────────────────────
 // Display/Headings: GrandisExtended (Manual de Marca Polaris — Orgánico Studio 2024)
-// Body:             Inter
+// Body:             Source Sans en web (escala de reemplazo del manual); Inter en nativo
 // Mono/Data:        Space Mono
 // Fallback chain:   GrandisExtended → Poppins → Arial (Manual de Marca, p.escala)
 export const Fonts = {
-  sans:            Platform.select({ web: "'Inter', sans-serif",                             default: 'Inter_400Regular'             }),
-  sansBold:        Platform.select({ web: "'Inter', sans-serif",                             default: 'Inter_700Bold'                }),
+  sans:            Platform.select({ web: "'Source Sans', 'Poppins', Arial, sans-serif",     default: 'Inter_400Regular'             }),
+  sansBold:        Platform.select({ web: "'Source Sans', 'Poppins', Arial, sans-serif",     default: 'Inter_700Bold'                }),
   display:         Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Bold'         }),
   displayMedium:   Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Medium'       }),
   displayRegular:  Platform.select({ web: "'GrandisExtended', 'Poppins', sans-serif",        default: 'GrandisExtended-Regular'      }),
@@ -199,7 +199,11 @@ export function injectBrandFont(): void {
         // swap, no block: antes de que cargue se ve Poppins/Arial, no un hueco.
         `font-weight:${weight};font-style:normal;font-display:swap}`,
     )
-    .join('');
+    .join('') +
+    // Texto corrido: Source Sans, de la escala de reemplazo del manual de marca.
+    // Variable (200–900): un archivo cubre regular y negrita.
+    `@font-face{font-family:'Source Sans';src:url('/fonts/SourceSans.otf') format('opentype');` +
+    `font-weight:200 900;font-style:normal;font-display:swap}`;
   document.head.appendChild(style);
 }
 

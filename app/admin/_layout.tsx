@@ -39,38 +39,49 @@ interface NavItem {
   route: string;
   label: string;
   icon: IconName;
-  group?: NavGroupKey;
 }
 
-// Tres grupos por lo que la persona VIENE A HACER, no por cómo está construido:
-// atender clientes (todos los días), administrar el negocio (de vez en cuando),
-// leer datos (cuando hay una pregunta). Antes eran 16 entradas en dos listas
-// sin nombre, con "Mission Control" y "Membresías" mezclados en la primera.
-type NavGroupKey = 'work' | 'business' | 'data';
-const NAV_GROUP_LABEL: Record<NavGroupKey, string> = {
-  work: 'CLIENTES',
-  business: 'NEGOCIO',
-  data: 'DATOS',
-};
+interface NavSection extends NavItem {
+  /** Pantallas que viven DENTRO de la sección: solo se ven cuando estás en ella. */
+  subs?: { route: string; label: string }[];
+}
 
-const NAV_ITEMS: NavItem[] = [
-  { route: '/admin',               label: 'Hoy',              icon: 'today',          group: 'work' },
-  { route: '/admin/usuarios',      label: 'Clientes',         icon: 'people',         group: 'work' },
-  { route: '/admin/copilot',       label: 'Copiloto IA',      icon: 'smart-toy',      group: 'work' },
-  { route: '/admin/plaud',         label: 'Grabaciones Plaud', icon: 'mic',           group: 'work' },
-  { route: '/admin/membresias',    label: 'Membresías',       icon: 'credit-card',    group: 'business' },
-  { route: '/admin/codigos',       label: 'Códigos de acceso', icon: 'vpn-key',       group: 'business' },
-  { route: '/admin/cursos',        label: 'Cursos',           icon: 'school',         group: 'business' },
-  { route: '/admin/contenido',     label: 'Contenido',        icon: 'article',        group: 'business' },
-  { route: '/admin/comunidad',     label: 'Moderación',       icon: 'flag',           group: 'business' },
-  { route: '/admin/mission-control', label: 'Retención',      icon: 'insights',       group: 'data' },
-  { route: '/admin/mentores/ejecucion', label: 'Ejecución',   icon: 'task-alt',       group: 'data' },
-  { route: '/admin/biometria',     label: 'Biométricos',      icon: 'monitor-heart',  group: 'data' },
-  { route: '/admin/memoria',       label: 'Memoria',          icon: 'memory',         group: 'data' },
-  { route: '/admin/inteligencia',  label: 'Inteligencia ML',  icon: 'psychology',     group: 'data' },
-  { route: '/admin/ranking',       label: 'Ranking',          icon: 'leaderboard',    group: 'data' },
-  { route: '/admin/auditoria',     label: 'Auditoría',        icon: 'history',        group: 'data' },
+// Cinco secciones, con palabras de todos los días. Antes eran 16 entradas con
+// nombres de cómo está construido ("Inteligencia ML", "Ejecución", "Memoria"):
+// había que leerlas todas para saber a dónde ir. Las demás pantallas siguen
+// existiendo; viven dentro de la sección a la que pertenecen.
+const NAV_SECTIONS: NavSection[] = [
+  { route: '/admin', label: 'Hoy', icon: 'today' },
+  {
+    route: '/admin/usuarios', label: 'Clientes', icon: 'people',
+    subs: [
+      { route: '/admin/mission-control',    label: 'Quién podría irse' },
+      { route: '/admin/mentores/ejecucion', label: 'Tareas de los clientes' },
+      { route: '/admin/biometria',          label: 'Cómo duermen (relojes)' },
+      { route: '/admin/memoria',            label: 'Lo que Norman recuerda' },
+      { route: '/admin/copilot',            label: 'Pregúntale a la IA' },
+      { route: '/admin/plaud',              label: 'Grabaciones' },
+      { route: '/admin/inteligencia',       label: 'Riesgo y compromiso' },
+      { route: '/admin/ranking',            label: 'Ranking' },
+    ],
+  },
+  {
+    route: '/admin/cursos', label: 'Contenido', icon: 'school',
+    subs: [
+      { route: '/admin/contenido', label: 'Textos y videos' },
+      { route: '/admin/codigos',   label: 'Invitaciones' },
+      { route: '/admin/comunidad', label: 'Reportes de la comunidad' },
+    ],
+  },
+  { route: '/admin/membresias', label: 'Dinero', icon: 'payments' },
+  { route: '/admin/auditoria',  label: 'Historial', icon: 'history' },
 ];
+
+/** Todas las pantallas del panel, en orden de menú (para la hoja "Más"). */
+const NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((sec) => [
+  { route: sec.route, label: sec.label, icon: sec.icon },
+  ...(sec.subs ?? []).map((sub) => ({ route: sub.route, label: sub.label, icon: sec.icon })),
+]);
 
 function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const pathname = usePathname();
@@ -82,11 +93,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
     if (route === '/admin') return pathname === '/admin';
     return pathname.startsWith(route);
   };
-
-  const groups = (Object.keys(NAV_GROUP_LABEL) as NavGroupKey[]).map((key) => ({
-    key,
-    items: NAV_ITEMS.filter((i) => i.group === key),
-  }));
+  const inSection = (sec: NavSection) => isActive(sec.route) || (sec.subs ?? []).some((sub) => isActive(sub.route));
 
   return (
     <View style={[
@@ -106,36 +113,39 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         accessibilityRole="button"
         accessibilityLabel={collapsed ? 'Expandir menú' : 'Contraer menú'}>
         <MaterialIcons name="dashboard-customize" size={20} color={palette.goldText} />
-        {!collapsed && <Text style={s.sidebarTitle}>POLARIS · PANEL</Text>}
+        {!collapsed && <Text style={s.sidebarTitle}>POLARIS · EQUIPO</Text>}
       </Pressable>
       {!collapsed && <View style={s.sidebarSwitch}><ModeSwitch current="staff" /></View>}
 
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-        {groups.map(group => (
-          <View key={group.key} style={s.navGroup}>
-            {!collapsed && <Text style={s.navGroupLabel}>{NAV_GROUP_LABEL[group.key]}</Text>}
-            {group.items.map(item => {
-              const active = isActive(item.route);
-              return (
-                <PressableScale
-                  key={item.route}
-                  style={[s.navItem, active && s.navItemActive]}
-                  onPress={() => router.push(item.route as never)}>
-                  <MaterialIcons
-                    name={item.icon}
-                    size={18}
-                    color={active ? palette.goldText : palette.ash}
-                  />
-                  {!collapsed && (
-                    <Text style={[s.navLabel, active && s.navLabelActive]}>
-                      {item.label}
-                    </Text>
-                  )}
-                </PressableScale>
-              );
-            })}
-          </View>
-        ))}
+        {NAV_SECTIONS.map((sec) => {
+          const open = inSection(sec);
+          return (
+            <View key={sec.route} style={s.navGroup}>
+              <PressableScale
+                style={[s.navItem, open && s.navItemActive]}
+                onPress={() => router.push(sec.route as never)}
+                accessibilityRole="link"
+                accessibilityLabel={sec.label}>
+                <MaterialIcons name={sec.icon} size={20} color={open ? palette.goldText : palette.ash} />
+                {!collapsed && <Text style={[s.navLabel, open && s.navLabelActive]}>{sec.label}</Text>}
+              </PressableScale>
+              {!collapsed && open && (sec.subs ?? []).map((sub) => {
+                const active = isActive(sub.route);
+                return (
+                  <Pressable
+                    key={sub.route}
+                    style={s.navSub}
+                    onPress={() => router.push(sub.route as never)}
+                    accessibilityRole="link"
+                    accessibilityLabel={sub.label}>
+                    <Text style={[s.navSubLabel, active && s.navLabelActive]}>{sub.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          );
+        })}
       </ScrollView>
 
       {/* Personalizar — mismo atajo que ya tiene DesktopSidebar del cliente
@@ -157,14 +167,9 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 }
 
 // ─── Barra inferior fija (móvil) ──────────────────────────────────────────────
-// El admin en móvil no tenía navegación persistente. 4 destinos clave + "Más"
-// (abre una hoja con todas las secciones). Bottom nav ≤5 ítems con label+icono.
-const BOTTOM_TABS: NavItem[] = [
-  { route: '/admin',                  label: 'Hoy',        icon: 'today' },
-  { route: '/admin/usuarios',         label: 'Clientes',   icon: 'people' },
-  { route: '/admin/membresias',       label: 'Membresías', icon: 'credit-card' },
-  { route: '/admin/mission-control',  label: 'Retención',  icon: 'insights' },
-];
+// Las mismas secciones del menú de escritorio + "Más" (hoja con todo el panel).
+// Bottom nav ≤5 ítems con label+icono.
+const BOTTOM_TABS: NavItem[] = NAV_SECTIONS.filter((sec) => sec.route !== '/admin/auditoria');
 
 function AdminBottomNav() {
   const pathname = usePathname();
@@ -175,14 +180,19 @@ function AdminBottomNav() {
 
   const isActive = (route: string) =>
     route === '/admin' ? pathname === '/admin' : pathname.startsWith(route);
-  const onMainTab = BOTTOM_TABS.some((t) => isActive(t.route));
+  // Una pestaña está encendida si estás en ella o en una pantalla de su sección.
+  const tabOn = (t: NavItem) => {
+    const sec = NAV_SECTIONS.find((x) => x.route === t.route);
+    return isActive(t.route) || (sec?.subs ?? []).some((sub) => isActive(sub.route));
+  };
+  const onMainTab = BOTTOM_TABS.some(tabOn);
 
   return (
     <>
       <View style={[s.bottomNav, { paddingBottom: Math.max(insets.bottom, spacing.xs) }]}>
         <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
         {BOTTOM_TABS.map((t) => {
-          const active = isActive(t.route);
+          const active = tabOn(t);
           return (
             <Pressable
               key={t.route}
@@ -210,7 +220,7 @@ function AdminBottomNav() {
           {/* onPress vacío absorbe el tap dentro de la hoja (no cierra) */}
           <Pressable style={[s.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}}>
             <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>SECCIONES DEL ADMIN</Text>
+            <Text style={s.sheetTitle}>TODO EL PANEL</Text>
             <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
               {NAV_ITEMS.map((item) => {
                 const active = isActive(item.route);
@@ -287,7 +297,7 @@ function StaffTopBar({ topInset, simple = false }: { topInset: number; simple?: 
       ) : (
         <>
           <MaterialIcons name="dashboard-customize" size={18} color={palette.goldText} />
-          <Text style={s.mentorBarTitle}>POLARIS · PANEL</Text>
+          <Text style={s.mentorBarTitle}>POLARIS · EQUIPO</Text>
         </>
       )}
       <ModeSwitch current="staff" />
@@ -513,16 +523,9 @@ const s = StyleSheet.create({
   simpleTabTextOn: { color: palette.ivory, fontWeight: '600' },
   simpleTabRule: { position: 'absolute', left: 0, right: 0, bottom: 4, height: 2, borderRadius: 1, backgroundColor: palette.gold },
   sidebarSwitch: { paddingHorizontal: spacing.xs, marginBottom: spacing.md },
-  navGroup: { marginBottom: spacing.md },
-  navGroupLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 10,
-    letterSpacing: 1.6,
-    paddingHorizontal: spacing.sm,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-  },
+  navGroup: { marginBottom: spacing.xs },
+  navSub: { minHeight: 36, justifyContent: 'center', paddingLeft: spacing.sm + 28, paddingRight: spacing.sm },
+  navSubLabel: { fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke },
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: alpha(palette.graphite, '99'),
@@ -598,7 +601,7 @@ const s = StyleSheet.create({
   },
   navLabel: {
     fontFamily: Fonts.sans,
-    fontSize: 13,
+    fontSize: 16,
     color: palette.ash,
   },
   navLabelActive: {

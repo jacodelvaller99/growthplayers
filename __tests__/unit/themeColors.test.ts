@@ -78,7 +78,10 @@ describe('EJE 2 · señales (SIGNAL_VARS)', () => {
     // derivado, y subió a #CF3D2E porque #C0392B no llegaba ni a 3:1 sobre la
     // superficie más elevada — ni siquiera como relleno o borde.
     expect(SIGNAL_VARS.oro['--c-gold']).toBe('#FFC804');       // Philippine Yellow
-    expect(SIGNAL_VARS.oro['--c-success']).toBe('#52A878');
+    // Manual de marca: sin verde ni ámbar. "Va bien" es gris; "atiende esto",
+    // el amarillo de la marca.
+    expect(SIGNAL_VARS.oro['--c-success']).toBe('#A3A3A3');
+    expect(SIGNAL_VARS.oro['--c-warning']).toBe('#FFC804');
   });
 
   it('ámbar cambia el acento al segundo oro del manual, no a un matiz inventado', () => {

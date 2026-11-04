@@ -131,9 +131,9 @@ type Block = {
 
 // Monochrome — spec: "Sin colores por categoría (todo monocromo excepto el gold CTA)"
 const BLOCKS: Block[] = [
-  { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'BINAURALES',  sub: 'enfoque y relajación', color: palette.ash, type: 'binaural'   },
-  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', sub: 'regula tu sistema',    color: palette.ash, type: 'breathing'  },
-  { route: '/bienestar/movimiento',  icon: 'directions-walk',  label: 'MOVIMIENTO',  sub: 'flows y circuitos',    color: palette.ash, type: 'movement'   },
+  { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'SONIDOS',     sub: 'para concentrarte o calmarte', color: palette.ash, type: 'binaural'   },
+  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', sub: 'baja el ritmo en 5 minutos',    color: palette.ash, type: 'breathing'  },
+  { route: '/bienestar/movimiento',  icon: 'directions-walk',  label: 'MOVIMIENTO',  sub: 'rutinas cortas para moverte',    color: palette.ash, type: 'movement'   },
   { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  sub: 'calma la mente',       color: palette.ash, type: 'meditation' },
   { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       sub: 'descansa mejor',       color: palette.ash, type: 'sleep'      },
   { route: '/bienestar/biblioteca',  icon: 'local-library',    label: 'BIBLIOTECA',  sub: 'audios y lecturas',    color: palette.ash, type: 'library'    },
@@ -160,18 +160,18 @@ const GROUPS: { id: string; label: string; items: HubItem[] }[] = [
     { route: '/bienestar/cuerpo',    icon: 'fitness-center', label: 'MEDIDAS',   sub: 'peso y medidas' },
   ] },
   { id: 'salud', label: 'SALUD', items: [
-    { route: '/bienestar/internista',     icon: 'medical-services', label: 'INTERNISTA',  sub: 'entiende tus exámenes' },
+    { route: '/bienestar/internista',     icon: 'medical-services', label: 'TU SALUD',    sub: 'pregunta qué significan tus exámenes' },
     { route: '/bienestar/ayuno',          icon: 'schedule',         label: 'AYUNO',       sub: 'temporizador y guía' },
     { route: '/bienestar/suplementacion', icon: 'medication',       label: 'SUPLEMENTOS', sub: 'dosis y horarios' },
   ] },
   { id: 'mente', label: 'MENTE', items: [
     fromBlock('/bienestar/diario'),
     fromBlock('/bienestar/biblioteca'),
-    { route: '/bienestar/consciencia', icon: 'psychology-alt', label: 'CONSCIENCIA', sub: 'revisión semanal' },
+    { route: '/bienestar/consciencia', icon: 'psychology-alt', label: 'TU CALMA',    sub: 'mide cada semana qué tan en paz estás' },
     { route: '/bienestar/comunidad',   icon: 'groups',         label: 'COMUNIDAD',   sub: 'el grupo del protocolo' },
     // Complementarias: menos evidencia — al final y dichas como tal.
-    { route: '/bienestar/tapping', icon: 'touch-app', label: 'TAPPING', sub: 'complementaria · EFT' },
-    { route: '/bienestar/grito',   icon: 'campaign',  label: 'GRITO',   sub: 'complementaria · descarga' },
+    { route: '/bienestar/tapping', icon: 'touch-app', label: 'TAPPING', sub: 'golpecitos para soltar tensión · opcional' },
+    { route: '/bienestar/grito',   icon: 'campaign',  label: 'GRITO',   sub: 'suelta lo que cargas · opcional' },
   ] },
 ];
 

@@ -125,7 +125,7 @@ const ALL_PROVIDERS: ProviderMeta[] = [
     subtitle:    'Garmin · Polar · Coros · Fitbit · Withings · Suunto +500',
     description: 'Una sola conexión para casi cualquier reloj o app de salud — sin importar la marca. Funciona también desde el navegador. Elige tu dispositivo y autoriza; tus métricas llegan a Norman automáticamente.',
     icon:        'watch',
-    metrics:     ['Sueño', 'HRV', 'FC Reposo', 'Recuperación'],
+    metrics:     ['Sueño', 'Corazón', 'Pulso en calma', 'Recuperación'],
   },
   {
     id:          'apple_health',
@@ -133,7 +133,7 @@ const ALL_PROVIDERS: ProviderMeta[] = [
     subtitle:    'Apple Watch + cualquier reloj compatible',
     description: 'Lee sueño, recuperación, HRV, FC y actividad de tu Apple Watch — y de cualquier reloj que sincronice con la app Salud (Garmin, Polar, Coros, Whoop, Oura, etc.).',
     icon:        'favorite',
-    metrics:     ['Sueño', 'HRV', 'FC Reposo', 'Actividad'],
+    metrics:     ['Sueño', 'Corazón', 'Pulso en calma', 'Actividad'],
     platform:    'ios',
   },
   {
@@ -142,7 +142,7 @@ const ALL_PROVIDERS: ProviderMeta[] = [
     subtitle:    'Galaxy · Fitbit · Garmin · Polar · Wear OS',
     description: 'Lee tus métricas desde Health Connect — el agregador de Android. Cualquier reloj o app de salud que escriba ahí queda disponible para Norman.',
     icon:        'health-and-safety',
-    metrics:     ['Sueño', 'HRV', 'FC Reposo', 'Pasos'],
+    metrics:     ['Sueño', 'Corazón', 'Pulso en calma', 'Pasos'],
     platform:    'android',
   },
   {
@@ -151,7 +151,7 @@ const ALL_PROVIDERS: ProviderMeta[] = [
     subtitle:    'Recovery · Strain · Sueño · HRV',
     description: 'Conecta tu WHOOP para obtener scores de recuperación, HRV y carga de entrenamiento que Norman usa para personalizar tu protocolo.',
     icon:        'watch',
-    metrics:     ['Recovery', 'HRV', 'Strain', 'Sueño'],
+    metrics:     ['Recuperación', 'Corazón', 'Esfuerzo', 'Sueño'],
   },
   {
     id:          'oura',
@@ -159,7 +159,7 @@ const ALL_PROVIDERS: ProviderMeta[] = [
     subtitle:    'Readiness · Sueño · FC · HRV',
     description: 'El anillo Oura mide readiness, calidad de sueño y frecuencia cardíaca en reposo con alta precisión para dispositivos de consumo.',
     icon:        'circle',
-    metrics:     ['Readiness', 'HRV', 'Sueño', 'FC Reposo'],
+    metrics:     ['Listo para el día', 'Corazón', 'Sueño', 'Pulso en calma'],
   },
   {
     id:          'polar',
@@ -167,7 +167,7 @@ const ALL_PROVIDERS: ProviderMeta[] = [
     subtitle:    'Sueño · Nightly Recharge · HRV',
     description: 'Conecta tu reloj Polar (AccessLink) para leer tu sueño y las métricas de recuperación nocturna que calibran tu protocolo.',
     icon:        'watch',
-    metrics:     ['Sueño', 'HRV', 'FC Reposo'],
+    metrics:     ['Sueño', 'Corazón', 'Pulso en calma'],
   },
   {
     id:          'strava',

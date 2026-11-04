@@ -27,7 +27,7 @@ interface Category {
 }
 
 const CATEGORIES: Category[] = [
-  { id: 'binaural',    label: 'BINAURALES',    icon: 'graphic-eq',       color: palette.ash, route: '/bienestar/binaurales'  },
+  { id: 'binaural',    label: 'SONIDOS',       icon: 'graphic-eq',       color: palette.ash, route: '/bienestar/binaurales'  },
   { id: 'breathing',   label: 'RESPIRACIÓN',   icon: 'air',              color: palette.ash, route: '/bienestar/respiracion' },
   { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: palette.ash, route: '/bienestar/meditacion'  },
   { id: 'sleep',       label: 'SUEÑO',         icon: 'bedtime',          color: palette.ash, route: '/bienestar/sueno'       },
