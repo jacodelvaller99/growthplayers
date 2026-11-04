@@ -360,7 +360,7 @@ listas para pegar), y correr la migración del backfill en el SQL Editor.
 
 ### Landing de presentación en la raíz del dominio (2026-09-08)
 
-`public/landing.html` (713 KB, HTML autónomo — fuentes Grandis embebidas, sin
+`public/landing.html` (HTML autónomo, sin
 dependencias externas) es lo que ve cualquiera que entre a
 `polarisgrowthinstitute.vercel.app/` sin sesión ni deep link. `vercel.json`
 reescribe `"/"` → `/landing.html` **antes** de la regla catch-all que manda
@@ -374,12 +374,14 @@ Los botones "Crear cuenta"/"Entrar al sistema" del landing apuntan a
 `/welcome` (ruta relativa, misma pestaña — es el mismo sitio, no un dominio
 externo) y de ahí sigue el flujo de registro/login normal de la app.
 
-**Fuente reproducible:** `scripts/landing/build.mjs` (+ `extra.html`,
-`extra.css`, `brand.css` en la misma carpeta) regenera `public/landing.html` a
-partir del Standalone que el dueño exporta desde su herramienta de diseño
-(`E:\...\POLARIS\Polaris - Landing Presentacion (Standalone).html`, fuera del
-repo). Para actualizar el landing: el dueño reexporta ese Standalone, se corre
-`node scripts/landing/build.mjs`, se commitea `public/landing.html`.
+**Rediseño 2026-11-04:** `public/landing.html` ahora es HTML escrito a mano
+(~30 KB) con el lenguaje del rediseño de la app — manual de marca, una idea
+por sección, estrella en vez de fotos, Tinta/Luz (sigue al sistema + botón).
+Ya no embebe fuentes: carga `/fonts/GrandisExtended-*.ttf` y
+`/fonts/SourceSans.otf` desde `public/fonts/`. Se edita directo; **no** correr
+`scripts/landing/build.mjs`, que regeneraría el diseño anterior desde el
+Standalone del dueño y pisaría este. Vista local: config
+"Landing estática (public)" en `.claude/launch.json` (puerto 8093).
 
 ### Wearables — `lib/wearables.ts`, `lib/wearablesNative.ts`, `app/perfil/wearables`
 
