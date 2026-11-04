@@ -14,33 +14,26 @@
 @font-face{font-family:'Source Sans';src:url('/fonts/SourceSans.otf') format('opentype');font-weight:200 900;font-display:swap}
 
 /* Manual de marca Polaris: negro y amarillo planos, Grandis para titulares,
-   Source Sans para el texto. Tinta (oscuro) por defecto; Luz si el sistema
-   o la persona lo piden. */
+   Source Sans para el texto. El fondo animado (estrellas, vórtice, estrella
+   Polar) es el de siempre; lo nuevo es el frente. */
 :root{
   --bg:#000000; --surface:#0C0C0C; --line:#262626;
   --text:#F4F4F4; --text2:#BDBDBD; --text3:#949494;
-  --accent:#FFC804; --star:#FFC804; --on-gold:#000000;
-}
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --bg:#E9E9E9; --surface:#FFFFFF; --line:#CFCFCF;
-    --text:#0F0F0F; --text2:#3D3D3D; --text3:#5C5C5C;
-    --accent:#8A6500; --star:#CFCFCF;
-  }
-}
-:root[data-theme="light"]{
-  --bg:#E9E9E9; --surface:#FFFFFF; --line:#CFCFCF;
-  --text:#0F0F0F; --text2:#3D3D3D; --text3:#5C5C5C;
-  --accent:#8A6500; --star:#CFCFCF;
+  --accent:#FFC804; --on-gold:#000000;
 }
 
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Source Sans',system-ui,sans-serif;font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{margin:0;background:#000;color:var(--text);font-family:'Source Sans',system-ui,sans-serif;font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 ::selection{background:#FFC804;color:#000}
 a{color:inherit}
 a:focus-visible,button:focus-visible{outline:2px solid #FFC804;outline-offset:3px;border-radius:8px}
 img,svg{display:block}
+.hero-photo{position:fixed;inset:0;background:#000;z-index:0}
+.hero-photo canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero-photo::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 70% at 50% 50%,transparent 55%,rgba(0,0,0,.75) 100%),linear-gradient(180deg,rgba(0,0,0,.25),transparent 30%,transparent 55%,rgba(0,0,0,.72) 100%);pointer-events:none}
+.spot{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(360px circle at var(--sx,50%) var(--sy,50%),rgba(255,200,4,.10),rgba(255,200,4,.03) 40%,transparent 70%)}
+header,main,footer{position:relative;z-index:2}
 .wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 24px}
 .meta{font-family:'Grandis',system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 h1,h2,h3{font-family:'Grandis',system-ui,sans-serif;font-weight:400;margin:0;text-wrap:balance;letter-spacing:-.01em}
@@ -61,7 +54,7 @@ p{margin:0}
 .btn svg{width:18px;height:18px}
 
 /* Cabecera */
-header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:10;background:rgba(0,0,0,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .bar{display:flex;align-items:center;gap:24px;min-height:72px}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-family:'Grandis',system-ui,sans-serif;font-size:14px;letter-spacing:.16em}
 .brand svg{width:26px;height:26px}
@@ -70,20 +63,16 @@ nav.links{display:flex;gap:28px;margin-left:auto}
 nav.links a{text-decoration:none;font-size:16px;color:var(--text2)}
 nav.links a:hover{color:var(--text)}
 .bar .btn{min-height:44px;padding:0 18px;font-size:12px}
-.theme{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--text2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-.theme svg{width:18px;height:18px}
 @media (max-width:860px){nav.links{display:none}.bar{gap:12px}.bar .brand{margin-right:auto}}
 
 /* Hero */
-.hero{position:relative;overflow:hidden;padding:clamp(72px,12vw,140px) 0 clamp(64px,10vw,120px)}
-.hero .star{position:absolute;right:-14vw;top:50%;transform:translateY(-50%);width:min(56vw,640px);height:min(56vw,640px);pointer-events:none;color:var(--star)}
+.hero{position:relative;min-height:calc(100svh - 72px);display:flex;align-items:flex-end;padding:clamp(72px,12vw,140px) 0 clamp(56px,9vh,104px)}
+.hero .wrap{width:100%}
 .hero-copy{position:relative;display:flex;flex-direction:column;gap:28px;max-width:760px}
 .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
-@media (max-width:1240px){.hero .star{opacity:.28}}
-@media (max-width:700px){.hero .star{right:-40vw;width:120vw;height:120vw}}
 
 /* Secciones */
-section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid var(--line)}
+section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.78))}
 .head{display:flex;flex-direction:column;gap:16px;margin-bottom:clamp(40px,6vw,64px);max-width:720px}
 
 /* Tres pasos */
@@ -101,7 +90,7 @@ section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid var(--line)}
 
 /* Arquetipos */
 .arcs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.arc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;min-height:240px}
+.arc{background:rgba(12,12,12,.86);border:1px solid var(--line);border-radius:12px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;min-height:240px}
 .arc .r{font-family:'Grandis',system-ui,sans-serif;font-size:13px;letter-spacing:.14em;color:var(--accent)}
 .arc p{color:var(--text2);margin-top:auto}
 .arc.now{background:#FFC804;border-color:#FFC804;color:#000}
@@ -130,7 +119,7 @@ section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid var(--line)}
 
 /* Para quién */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.box{border:1px solid var(--line);border-radius:12px;padding:32px 28px;display:flex;flex-direction:column;gap:18px}
+.box{background:rgba(12,12,12,.7);border:1px solid var(--line);border-radius:12px;padding:32px 28px;display:flex;flex-direction:column;gap:18px}
 .box ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
 .box li{display:flex;gap:12px;color:var(--text2)}
 .box li::before{content:'';flex-shrink:0;width:8px;height:8px;border-radius:999px;background:var(--accent);margin-top:10px}
@@ -139,7 +128,7 @@ section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid var(--line)}
 
 /* Planes */
 .plans{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.plan{border:1px solid var(--line);border-radius:12px;padding:36px 32px;display:flex;flex-direction:column;gap:20px;background:var(--surface)}
+.plan{border:1px solid var(--line);border-radius:12px;padding:36px 32px;display:flex;flex-direction:column;gap:20px;background:rgba(12,12,12,.86)}
 .plan .price{font-family:'Grandis',system-ui,sans-serif;font-size:clamp(36px,4vw,48px);line-height:1}
 .plan ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;color:var(--text2)}
 .plan li{display:flex;gap:12px}
@@ -156,7 +145,7 @@ section{padding:clamp(72px,10vw,120px) 0;border-top:1px solid var(--line)}
 .closing .btn{background:#000;color:#FFC804}
 .closing .btn:hover{background:#1a1a1a}
 
-footer{padding:40px 0;border-top:1px solid var(--line)}
+footer{padding:40px 0;border-top:1px solid var(--line);background:#000}
 footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;justify-content:space-between;font-size:15px;color:var(--text3)}
 footer nav{display:flex;gap:24px}
 footer a{text-decoration:none}
@@ -175,6 +164,9 @@ footer a:hover{color:var(--text)}
   <symbol id="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
+<div class="hero-photo" aria-hidden="true"><canvas id="wave"></canvas></div>
+<div class="spot" aria-hidden="true"></div>
+
 <header>
   <div class="wrap bar">
     <a class="brand" href="#inicio" aria-label="Polaris, inicio"><svg><use href="#star"/></svg>POLARIS</a>
@@ -184,16 +176,12 @@ footer a:hover{color:var(--text)}
       <a href="#norman">Norman</a>
       <a href="#acceso">Acceso</a>
     </nav>
-    <button class="theme" type="button" id="theme" aria-label="Cambiar entre claro y oscuro">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
-    </button>
     <a class="btn btn-line" href="/welcome">Ingresar</a>
   </div>
 </header>
 
 <main id="inicio">
   <div class="hero">
-    <svg class="star" aria-hidden="true"><use href="#star"/></svg>
     <div class="wrap">
       <div class="hero-copy">
         <span class="meta reveal">Protocolo Soberano · 90 días</span>
@@ -355,16 +343,6 @@ footer a:hover{color:var(--text)}
 
 <script>
 (function () {
-  // Tema: Tinta por defecto, Luz si el sistema lo pide o si la persona lo elige.
-  var root = document.documentElement;
-  try { var t = localStorage.getItem('polaris:landing-theme'); if (t) root.dataset.theme = t; } catch (e) {}
-  document.getElementById('theme').addEventListener('click', function () {
-    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
-    var next = dark ? 'light' : 'dark';
-    root.dataset.theme = next;
-    try { localStorage.setItem('polaris:landing-theme', next); } catch (e) {}
-  });
-
   // Aparición suave: el contenido ya es visible sin JS; esto solo anima.
   var els = document.querySelectorAll('.reveal');
   if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -375,6 +353,58 @@ footer a:hover{color:var(--text)}
     entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
   }, { rootMargin: '0px 0px -8% 0px' });
   els.forEach(function (el) { io.observe(el); });
+})();
+</script>
+<!-- Fondo animado original del landing (estrellas, vórtice, estrella Polar). -->
+<script>
+(function(){
+var c=document.getElementById('wave'),ctx=c.getContext('2d'),W,H,DPR,pts=[],stars=[],dust=[],shoot=[],t=0,mx=.5,my=.5,tx=.5,ty=.5,reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function size(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*DPR;c.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);build()}
+function build(){pts=[];stars=[];dust=[];var n=W<700?4000:W<1300?9000:14000;for(var i=0;i<n;i++){var v=(Math.random()*2-1);v=Math.sign(v)*Math.pow(Math.abs(v),.8);pts.push({u:Math.random(),v:v,s:.55+Math.random()*1.3,ph:Math.random()*6.283,sp:.7+Math.random()*.6})}for(var j=0;j<Math.floor(W*H/5200);j++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.1+.25,a:Math.random(),d:.3+Math.random()*.7,g:Math.random()<.12});for(var k=0;k<Math.floor(W*H/9000);k++)dust.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.12,vy:-.05-Math.random()*.12,r:Math.random()*1.6+.6,a:Math.random()*6.283})}
+function wave(x,tt){var k=x*6.283;return Math.sin(k*.9+tt*1.05)*.30+Math.sin(k*1.8-tt*.72+1.3)*.15+Math.sin(k*.45+tt*.42)*.22+Math.sin(k*3.1+tt*1.6)*.04}
+function thick(x,tt){var pulse=.5+.5*Math.sin(tt*.9);return (.10+.19*(.5+.5*Math.sin(x*6.283*1.1-tt*.62)))*(.85+.3*pulse)*(1-Math.pow(Math.abs(x-.5)*1.9,2)*.5)}
+function nebula(){var n1=ctx.createRadialGradient(W*(.22+(mx-.5)*.04),H*(.28+(my-.5)*.03),0,W*.22,H*.28,W*.42);n1.addColorStop(0,'rgba(60,40,120,.20)');n1.addColorStop(.5,'rgba(30,25,70,.10)');n1.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=n1;ctx.fillRect(0,0,W,H);
+var n2=ctx.createRadialGradient(W*(.8-(mx-.5)*.04),H*(.7-(my-.5)*.03),0,W*.8,H*.7,W*.4);n2.addColorStop(0,'rgba(120,80,20,.16)');n2.addColorStop(.6,'rgba(50,35,10,.06)');n2.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=n2;ctx.fillRect(0,0,W,H);
+var n3=ctx.createRadialGradient(W*.55,H*.1,0,W*.55,H*.1,W*.3);n3.addColorStop(0,'rgba(20,60,90,.14)');n3.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=n3;ctx.fillRect(0,0,W,H)}
+function spawnShoot(){if(shoot.length<2&&Math.random()<.006){var a=.6+Math.random()*.5;shoot.push({x:Math.random()*W*.8,y:Math.random()*H*.4,vx:Math.cos(a)*(9+Math.random()*6),vy:Math.sin(a)*(9+Math.random()*6),life:1})}}
+var vtx=document.createElement('canvas'),vctx=vtx.getContext('2d'),VS=900;
+function buildVortex(){vtx.width=vtx.height=VS;var cx=VS/2,cy=VS/2;vctx.clearRect(0,0,VS,VS);vctx.globalCompositeOperation='lighter';
+for(var arm=0;arm<3;arm++){for(var i=0;i<2600;i++){var f=i/2600,ang=arm*2.094+f*6.283*2.6,rad=28+f*(VS*.5-30),wob=Math.sin(f*40+arm)*6,x=cx+Math.cos(ang)*(rad+wob),y=cy+Math.sin(ang)*(rad+wob);var gold=1-f,a=(.06+.5*Math.pow(1-f,2.2))*(.6+.4*Math.random()),sz=1+Math.random()*3.2*(1-f*.5);
+var r=Math.round(255*(.8*gold+.45*(1-gold))),g=Math.round(255*(.62*gold+.6*(1-gold))),b=Math.round(255*(.05*gold+.95*(1-gold)));
+vctx.fillStyle='rgba('+r+','+g+','+b+','+a.toFixed(3)+')';vctx.beginPath();vctx.arc(x,y,sz,0,6.283);vctx.fill();
+if(Math.random()<.18){var jx=x+(Math.random()-.5)*26*(1+f),jy=y+(Math.random()-.5)*26*(1+f);vctx.fillStyle='rgba(255,255,255,'+(a*.35).toFixed(3)+')';vctx.fillRect(jx,jy,1,1)}}}
+for(var k=0;k<48;k++){var a0=Math.random()*6.283,r0=60+Math.random()*(VS*.42);vctx.strokeStyle='rgba(255,225,140,'+(.06+Math.random()*.12).toFixed(3)+')';vctx.lineWidth=.8;vctx.beginPath();vctx.arc(cx,cy,r0,a0,a0+.25+Math.random()*.6);vctx.stroke()}
+var hole=vctx.createRadialGradient(cx,cy,0,cx,cy,90);hole.addColorStop(0,'rgba(0,0,0,1)');hole.addColorStop(.55,'rgba(0,0,0,.95)');hole.addColorStop(1,'rgba(0,0,0,0)');vctx.globalCompositeOperation='source-over';vctx.fillStyle=hole;vctx.beginPath();vctx.arc(cx,cy,90,0,6.283);vctx.fill();
+vctx.globalCompositeOperation='lighter';var ring=vctx.createRadialGradient(cx,cy,40,cx,cy,74);ring.addColorStop(0,'rgba(255,200,4,0)');ring.addColorStop(.7,'rgba(255,215,90,.55)');ring.addColorStop(1,'rgba(255,200,4,0)');vctx.fillStyle=ring;vctx.beginPath();vctx.arc(cx,cy,74,0,6.283);vctx.fill()}
+buildVortex();
+function drawVortex(){var size=Math.max(W*.9,H*1.1),cx=W*.5+(mx-.5)*18,cy=-size*.22+(my-.5)*10,pulse=.86+.14*Math.sin(t*.7);
+ctx.save();ctx.globalCompositeOperation='lighter';var halo=ctx.createRadialGradient(cx,cy,0,cx,cy,size*.55);halo.addColorStop(0,'rgba(255,200,4,'+(.16*pulse).toFixed(3)+')');halo.addColorStop(.4,'rgba(120,110,200,'+(.07*pulse).toFixed(3)+')');halo.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=halo;ctx.fillRect(0,0,W,H);
+ctx.translate(cx,cy);ctx.rotate(t*.105);ctx.globalAlpha=pulse;ctx.drawImage(vtx,-size/2,-size/2,size,size);ctx.rotate(-t*.21);ctx.globalAlpha=pulse*.45;ctx.drawImage(vtx,-size*.42,-size*.42,size*.84,size*.84);ctx.restore()}
+function drawNorthStar(){var x=W*.5+(mx-.5)*6,y=H*.07+(my-.5)*4,tw=.8+.2*Math.sin(t*.9),r=W<700?1.6:2.2;
+ctx.save();ctx.globalCompositeOperation='lighter';
+var h=ctx.createRadialGradient(x,y,0,x,y,r*12);h.addColorStop(0,'rgba(255,235,170,'+(.16*tw).toFixed(3)+')');h.addColorStop(.4,'rgba(255,210,80,'+(.04*tw).toFixed(3)+')');h.addColorStop(1,'rgba(255,200,4,0)');ctx.fillStyle=h;ctx.fillRect(x-r*12,y-r*12,r*24,r*24);
+var tail=ctx.createLinearGradient(x,y,x,y+r*22);tail.addColorStop(0,'rgba(255,240,200,'+(.35*tw).toFixed(3)+')');tail.addColorStop(1,'rgba(255,220,120,0)');ctx.strokeStyle=tail;ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+r*22);ctx.stroke();
+ctx.strokeStyle='rgba(255,240,200,'+(.22*tw).toFixed(3)+')';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(x-r*5,y);ctx.lineTo(x+r*5,y);ctx.stroke();
+ctx.fillStyle='rgba(255,250,235,'+(.95*tw).toFixed(3)+')';ctx.beginPath();ctx.arc(x,y,r*.55,0,6.283);ctx.fill();ctx.restore()}
+function draw(){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+mx+=(tx-mx)*.04;my+=(ty-my)*.04;
+nebula();drawVortex();drawNorthStar();
+var i,s;for(i=0;i<stars.length;i++){s=stars[i];var tw=.3+.7*Math.abs(Math.sin(t*.9*s.d+s.a*6.283)),sx=s.x+(mx-.5)*14*s.d,sy=s.y+(my-.5)*10*s.d;if(s.g){ctx.fillStyle='rgba(255,210,60,'+(tw*.9)+')';ctx.fillRect(sx-s.r*1.8,sy,s.r*4.6,.6);ctx.fillRect(sx,sy-s.r*1.8,.6,s.r*4.6)}ctx.fillStyle=s.g?'rgba(255,220,90,'+(tw*.95)+')':'rgba(255,255,255,'+(tw*.6)+')';ctx.fillRect(sx,sy,s.r,s.r)}
+for(i=0;i<dust.length;i++){var d=dust[i];d.x+=d.vx+Math.sin(t+d.a)*.08;d.y+=d.vy;if(d.y<-4){d.y=H+4;d.x=Math.random()*W}var da=.12+.18*Math.abs(Math.sin(t*.7+d.a));ctx.fillStyle='rgba(255,200,4,'+da.toFixed(3)+')';ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,6.283);ctx.fill()}
+spawnShoot();for(i=shoot.length-1;i>=0;i--){var sh=shoot[i];sh.x+=sh.vx;sh.y+=sh.vy;sh.life-=.018;if(sh.life<=0||sh.x>W||sh.y>H){shoot.splice(i,1);continue}var g=ctx.createLinearGradient(sh.x-sh.vx*9,sh.y-sh.vy*9,sh.x,sh.y);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(255,240,180,'+(sh.life*.9)+')');ctx.strokeStyle=g;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(sh.x-sh.vx*9,sh.y-sh.vy*9);ctx.lineTo(sh.x,sh.y);ctx.stroke()}
+var cy=H*(.50+(my-.5)*.05),amp=H*.36,ox=(mx-.5)*.08;
+ctx.globalCompositeOperation='lighter';
+var core=wave(.5,t)*amp,glow=ctx.createRadialGradient(W*.5,cy+core,0,W*.5,cy+core,W*.34);glow.addColorStop(0,'rgba(255,200,4,.12)');glow.addColorStop(.5,'rgba(255,160,40,.04)');glow.addColorStop(1,'rgba(255,200,4,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+var rings=3;for(i=0;i<rings;i++){var ph=(t*.28+i/rings)%1,rr=ph*W*.55,ra=(1-ph)*(1-ph)*.09;ctx.strokeStyle='rgba(255,200,4,'+ra.toFixed(3)+')';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(W*.5,cy+core,rr,rr*.42,0,0,6.283);ctx.stroke()}
+for(i=0;i<pts.length;i++){var p=pts[i],u=(p.u+t*.028*p.sp)%1,x=u*W,mid=wave(u+ox,t),th=thick(u,t),env=Math.exp(-p.v*p.v*2.4),y=cy+(mid+p.v*th+Math.sin(t*2.2+p.ph)*.014)*amp,near=Math.max(0,1-Math.abs(p.v)),gold=near*near*near,edge=Math.pow(Math.abs(p.v),1.5);
+var r=Math.round(255*(.55+.45*gold-.25*edge)),g2=Math.round(255*(.55+.24*gold-.15*edge)),b=Math.round(255*(.55-.53*gold+.35*edge)),sz=p.s*(.8+.5*near);
+ctx.fillStyle='rgba('+r+','+g2+','+b+','+(env*(.18+.82*near)*.9).toFixed(3)+')';ctx.fillRect(x,y,sz,sz)}
+ctx.globalCompositeOperation='source-over';
+}
+function loop(){if(!reduced)t+=.0165;draw();requestAnimationFrame(loop)}
+var spot=document.querySelector('.spot');
+addEventListener('pointermove',function(e){tx=e.clientX/W;ty=e.clientY/H;spot.style.setProperty('--sx',e.clientX+'px');spot.style.setProperty('--sy',e.clientY+'px')});
+size();addEventListener('resize',size);loop();
 })();
 </script>
 </body>
