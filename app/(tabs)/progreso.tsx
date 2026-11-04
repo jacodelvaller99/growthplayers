@@ -561,8 +561,10 @@ export default function ProgresoScreen() {
       metaRight={`DÍA ${protocolDay} / 90`}
       title={checkinStreak > 0
         ? `${checkinStreak} ${checkinStreak === 1 ? 'día' : 'días'}\nseguido${checkinStreak === 1 ? '' : 's'}.`
-        : 'Tu racha\nempieza hoy.'}
-      sub={checkinStreak > 0 ? 'Cada cuadro amarillo es un día que apareciste.' : 'Haz tu check-in y aparece el primer cuadro.'}
+        : state.checkIns.length ? 'Retoma\nhoy.' : 'Tu racha\nempieza hoy.'}
+      sub={checkinStreak > 0 || state.checkIns.length
+        ? 'Cada cuadro amarillo es un día que apareciste.'
+        : 'Haz tu check-in y aparece el primer cuadro.'}
       hero={<Calendario checkIns={state.checkIns} />}
       footer={<Text style={styles.versionText}>Polaris OS v{appVersion}</Text>}>
       <Fila label="ENERGÍA" value={cifra('energy')} />
@@ -637,7 +639,7 @@ function Calendario({ checkIns }: { checkIns: { date: string }[] }) {
 
 const styles = StyleSheet.create({
   // ── Rediseño ──
-  cal: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, maxWidth: 528 },
+  cal: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, maxWidth: 380 },
   calCell: { width: '14.2857%', padding: 3 },
   calDay: { aspectRatio: 1, borderRadius: 4, backgroundColor: palette.charcoal },
   calDayOn: { backgroundColor: palette.gold },

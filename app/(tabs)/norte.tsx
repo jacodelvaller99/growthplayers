@@ -1,72 +1,49 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+/**
+ * Mi Norte — diseño del canvas: la frase grande, los valores debajo, y
+ * EDITAR arriba. Leer y editar son dos estados distintos: el Norte se lee
+ * casi siempre y se reescribe rara vez, así que la vista por defecto no es
+ * un formulario. Si todavía no hay Norte, se abre directo en edición.
+ */
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  AppHeader,
-  GoldAccentCard,
-  GoldDivider,
-  PremiumCard,
-  PremiumInput,
-  PrimaryButton,
-  StatusPill,
-  screen,
-  useScreen,
-} from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { AccessField, AccessNotice, useDecorStarColor } from '@/components/auth/AccessFrame';
+import { PolarisLogo } from '@/components/PolarisLogo';
+import { PrimaryButton } from '@/components/polaris';
+import { Fonts, palette, spacing } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { logSilentError } from '@/lib/observability';
 
 export default function NorteScreen() {
-  const sc = useScreen();
   const { isDesktop } = useBreakpoint();
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
+  const starColor = useDecorStarColor();
   const { state, updateNorthStar } = useLifeFlow();
-  const [purpose, setPurpose] = useState(state.northStar.purpose);
-  const [identity, setIdentity] = useState(state.northStar.identity);
-  const [dailyReminder, setDailyReminder] = useState(state.northStar.dailyReminder);
-  const [nonNegotiables, setNonNegotiables] = useState(
-    state.northStar.nonNegotiables.join('\n'),
-  );
+  const north = state.northStar;
 
-  const isNorteEmpty = !purpose.trim() && !identity.trim();
-  const [saved, setSaved] = useState(false);
-  // Guard anti-doble-tap: updateNorthStar es async → deshabilita durante la escritura.
+  const vacio = !north.purpose.trim() && !north.identity.trim();
+  const [editando, setEditando] = useState(vacio);
+  const [purpose, setPurpose] = useState(north.purpose);
+  const [identity, setIdentity] = useState(north.identity);
+  const [dailyReminder, setDailyReminder] = useState(north.dailyReminder);
+  const [valores, setValores] = useState(north.nonNegotiables.join('\n'));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [recienGuardado, setRecienGuardado] = useState(false);
 
-  // Toast "NORTE FIJADO EN EL SISTEMA" — mismo fade+translateY que MilestoneToast
-  // (components/narrative.tsx), que cita este toast como su origen. Antes
-  // aparecía con corte seco: era la única celebración del camino principal
-  // sin la animación que su propio descendiente ya tiene.
-  const reducedMotion = useReducedMotion();
-  const toastAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (!saved) return;
-    if (reducedMotion) {
-      toastAnim.setValue(1);
-      return;
-    }
-    toastAnim.setValue(0);
-    Animated.timing(toastAnim, {
-      toValue: 1,
-      duration: 420,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [saved, reducedMotion, toastAnim]);
-
-  // Norte completeness — 4 fields, each contributes 25%
-  const norteScore = [
-    purpose.trim().length > 0,
-    identity.trim().length > 0,
-    dailyReminder.trim().length > 0,
-    nonNegotiables.trim().length > 0,
-  ].filter(Boolean).length * 25;
+  const abrirEdicion = () => {
+    setPurpose(north.purpose);
+    setIdentity(north.identity);
+    setDailyReminder(north.dailyReminder);
+    setValores(north.nonNegotiables.join('\n'));
+    setSaveError(null);
+    setEditando(true);
+  };
 
   const save = async () => {
     if (saving) return;
@@ -77,16 +54,13 @@ export default function NorteScreen() {
         purpose,
         identity,
         dailyReminder,
-        nonNegotiables: nonNegotiables
-          .split('\n')
-          .map((item) => item.trim())
-          .filter(Boolean),
+        nonNegotiables: valores.split('\n').map((v) => v.trim()).filter(Boolean),
       });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setEditando(false);
+      setRecienGuardado(true);
+      setTimeout(() => setRecienGuardado(false), 3000);
     } catch (e) {
-      // Sin esto el rechazo quedaba sin manejar y el botón se re-habilitaba
-      // como si hubiera guardado — el usuario perdía su Norte en silencio.
+      // Sin esto el usuario perdía su Norte en silencio.
       logSilentError('norte.save', e);
       setSaveError('No se pudo guardar tu Norte. Revisa tu conexión e inténtalo de nuevo.');
     } finally {
@@ -94,581 +68,160 @@ export default function NorteScreen() {
     }
   };
 
-  // ── "Valores núcleo" chips (mobile) — backed by the same `nonNegotiables`
-  //    newline-string state so save() + desktop stay untouched. ──────────────
-  const values = nonNegotiables
-    .split('\n')
-    .map((v) => v.trim())
-    .filter(Boolean);
-  const [addingValue, setAddingValue] = useState(false);
-  const [valueDraft, setValueDraft] = useState('');
+  const meta = (
+    <View style={s.metaRow}>
+      <Text style={s.meta}>MI NORTE</Text>
+      {!editando && (
+        <Pressable onPress={abrirEdicion} accessibilityRole="button" accessibilityLabel="Editar mi Norte" hitSlop={8} style={s.metaBtn}>
+          <Text style={s.meta}>EDITAR</Text>
+        </Pressable>
+      )}
+    </View>
+  );
 
-  const removeValue = (index: number) => {
-    setNonNegotiables(values.filter((_, i) => i !== index).join('\n'));
-  };
-  const commitValue = () => {
-    const v = valueDraft.trim();
-    if (v) setNonNegotiables(values.length ? `${values.join('\n')}\n${v}` : v);
-    setValueDraft('');
-    setAddingValue(false);
-  };
-
-  // ── Desktop layout ────────────────────────────────────────────────────────
-  if (isDesktop) {
-    return (
-      <KeyboardAvoidingView style={sc.root} behavior="padding">
-        <ScrollView
-          contentContainerStyle={styles.contentDesktop}
-          showsVerticalScrollIndicator={false}
-          bounces
-          overScrollMode="never"
-          keyboardShouldPersistTaps="handled">
-          <AppHeader title="MI NORTE" />
-          <View style={styles.desktopGrid}>
-            {/* ── Left column: preview ── */}
-            <View style={styles.desktopLeft}>
-              <GoldAccentCard>
-                <View style={styles.northHeader}>
-                  <StatusPill label="DIRECCIÓN MAESTRA" dot />
-                  <Text style={[styles.norteScore, norteScore === 100 && styles.norteScoreFull]}>
-                    {norteScore}% DEFINIDO
-                  </Text>
-                </View>
-                <Text style={styles.purposeStatement}>
-                  {purpose || 'Define tu propósito principal'}
-                </Text>
-                <Text style={styles.identityStatement}>
-                  {identity || 'Define tu identidad'}
-                </Text>
-              </GoldAccentCard>
-
-              {state.northStar.dailyReminder ? (
-                <PremiumCard style={styles.reminderCard}>
-                  <Text style={styles.reminderLabel}>RECORDATORIO DIARIO</Text>
-                  <Text style={styles.reminderText}>{state.northStar.dailyReminder}</Text>
-                </PremiumCard>
-              ) : null}
-
-              {state.northStar.nonNegotiables.length > 0 && (
-                <>
-                  <GoldDivider label="NO NEGOCIABLES" />
-                  <View style={styles.ruleList}>
-                    {state.northStar.nonNegotiables.map((item, index) => (
-                      <PremiumCard key={`${item}-${index}`} style={styles.ruleCard}>
-                        <Text style={styles.ruleIndex}>
-                          {String(index + 1).padStart(2, '0')}
-                        </Text>
-                        <Text style={styles.ruleText}>{item}</Text>
-                      </PremiumCard>
-                    ))}
-                  </View>
-                </>
-              )}
-            </View>
-
-            {/* ── Right column: edit form ── */}
-            <View style={styles.desktopRight}>
-              <GoldDivider label="EDITAR NORTE" />
-              <PremiumCard style={styles.form}>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>PROPÓSITO PRINCIPAL</Text>
-                  <Text style={styles.guideQuestion}>
-                    ¿Qué tiene que haber pasado en estos 90 días para que Polaris haya valido la pena?
-                  </Text>
-                  <PremiumInput
-                    value={purpose}
-                    onChangeText={setPurpose}
-                    multiline
-                    style={styles.textArea}
-                    placeholder="Describe el resultado, no la intención…"
-                    accessibilityLabel="Propósito principal"
-                  />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>DECLARACIÓN DE IDENTIDAD</Text>
-                  <PremiumInput
-                    value={identity}
-                    onChangeText={setIdentity}
-                    multiline
-                    style={styles.textArea}
-                    placeholder="Soy alguien que..."
-                    accessibilityLabel="Declaración de identidad"
-                  />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>NO NEGOCIABLES · UNO POR LÍNEA</Text>
-                  {!nonNegotiables.trim() && (
-                    <View style={styles.promptSuggestions}>
-                      {['Mi salud es primero', 'No trabajo los domingos', 'Tiempo con familia intocable', 'Sin deudas por consumo'].map((s) => (
-                        <Pressable
-                          key={s}
-                          onPress={() => setNonNegotiables((prev) => prev ? `${prev}\n${s}` : s)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Añadir no-negociable: ${s}`}
-                          style={({ pressed }) => [styles.suggestionPill, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
-                          <Text style={styles.suggestionText}>+ {s}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                  <PremiumInput
-                    value={nonNegotiables}
-                    onChangeText={setNonNegotiables}
-                    multiline
-                    style={styles.textAreaLarge}
-                    placeholder="Primer principio&#10;Segundo principio&#10;..."
-                    accessibilityLabel="No negociables"
-                  />
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>RECORDATORIO DIARIO</Text>
-                  <PremiumInput
-                    value={dailyReminder}
-                    onChangeText={setDailyReminder}
-                    multiline
-                    style={styles.textArea}
-                    placeholder="La frase que te ancla cada mañana..."
-                    accessibilityLabel="Recordatorio diario"
-                  />
-                </View>
-                <PrimaryButton
-                  label={saved ? 'NORTE DECLARADO ✓' : saving ? 'GUARDANDO...' : 'GUARDAR NORTE'}
-                  icon={saved ? 'check-circle' : 'check'}
-                  onPress={save}
-                  disabled={saving}
-                />
-                {saved ? (
-                  <Text style={styles.savedToast}>
-                    Declarado. El protocolo ahora opera hacia este norte.
-                  </Text>
-                ) : null}
-                {saveError ? (
-                  <Text
-                    style={styles.saveError}
-                    accessibilityLiveRegion="polite"
-                    accessibilityRole="alert">
-                    {saveError}
-                  </Text>
-                ) : null}
-              </PremiumCard>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  // ── Mobile / tablet layout ────────────────────────────────────────────────
-  return (
-    <KeyboardAvoidingView
-      style={sc.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
-    <ScrollView
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
-      showsVerticalScrollIndicator={false}
-      bounces
-      overScrollMode="never"
-      keyboardShouldPersistTaps="handled">
-      {/* Es una pestaña: sin botón atrás. Vacío no redirige al onboarding —
-          las preguntas están justo debajo. */}
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle}>MI NORTE</Text>
-          <Text style={styles.headerSub}>
-            {isNorteEmpty ? 'Empieza por la primera pregunta.' : 'Hacia dónde vas en estos 90 días.'}
-          </Text>
-        </View>
+  const lectura = (
+    <>
+      <View style={s.star}>
+        <PolarisLogo size={isDesktop ? 64 : 44} color={starColor} />
       </View>
-
-      {/* ── Dirección maestra ── */}
-      <GoldDivider label="DIRECCIÓN MAESTRA" />
-      {/* La pregunta que convierte un deseo vago en un propósito evaluable:
-          obliga a describir el resultado, no la intención. */}
-      <Text style={styles.guideQuestion}>
-        ¿Qué tiene que haber pasado en estos 90 días para que Polaris haya valido la pena?
+      <Text accessibilityRole="header" style={[s.purpose, isDesktop && s.purposeDesk]}>
+        {north.purpose.trim() || north.identity.trim()}
       </Text>
-      <PremiumInput
-        value={purpose}
-        onChangeText={setPurpose}
-        multiline
-        style={styles.textArea}
-        placeholder="Describe el resultado, no la intención…"
-        accessibilityLabel="Dirección maestra"
-      />
+      {!!north.purpose.trim() && !!north.identity.trim() && (
+        <Text style={[s.identity, isDesktop && s.identityDesk]}>{north.identity}</Text>
+      )}
+      {recienGuardado && <Text style={s.saved} accessibilityLiveRegion="polite">Norte guardado.</Text>}
 
-      {/* ── Declaración de identidad ── */}
-      <GoldDivider label="DECLARACIÓN DE IDENTIDAD" />
-      <PremiumInput
-        value={identity}
-        onChangeText={setIdentity}
-        style={styles.input}
-        placeholder="Soy el tipo de persona que…"
-        accessibilityLabel="Declaración de identidad"
-      />
+      {(north.nonNegotiables.length > 0 || !!north.dailyReminder.trim()) && (
+        <View style={[s.list, isDesktop && s.listDesk]}>
+          {north.nonNegotiables.map((v, i) => (
+            <View key={`${v}-${i}`} style={[s.item, i === 0 && s.itemFirst]}>
+              <PolarisLogo size={isDesktop ? 14 : 12} color={palette.goldText} />
+              <Text style={s.itemText}>{v}</Text>
+            </View>
+          ))}
+          {!!north.dailyReminder.trim() && (
+            <View style={[s.item, north.nonNegotiables.length === 0 && s.itemFirst]}>
+              <Text style={s.itemLabel}>CADA MAÑANA</Text>
+              <Text style={[s.itemText, s.itemReminder]}>{north.dailyReminder}</Text>
+            </View>
+          )}
+        </View>
+      )}
+    </>
+  );
 
-      {/* ── Valores núcleo (chips) ── */}
-      <GoldDivider label="VALORES NÚCLEO" />
-      <View style={styles.chipWrap}>
-        {values.map((v, i) => (
-          <Pressable
-            key={`${v}-${i}`}
-            onPress={() => removeValue(i)}
-            accessibilityRole="button"
-            accessibilityLabel={`Quitar ${v}`}
-            style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
-            <Text style={styles.chipText}>{v}</Text>
-            <MaterialIcons name="close" size={13} color={palette.ink} />
-          </Pressable>
-        ))}
-        {addingValue ? (
-          <View style={styles.chipInput}>
-            <TextInput
-              value={valueDraft}
-              onChangeText={setValueDraft}
-              onSubmitEditing={commitValue}
-              onBlur={commitValue}
-              autoFocus
-              returnKeyType="done"
-              placeholder="Valor…"
-              placeholderTextColor={palette.smoke}
-              selectionColor={palette.gold}
-              style={styles.chipInputText}
-              accessibilityLabel="Nuevo valor núcleo"
-            />
-          </View>
-        ) : (
-          <Pressable
-            onPress={() => setAddingValue(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Añadir valor núcleo"
-            style={({ pressed }) => [styles.chipAdd, pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] }]}>
-            <MaterialIcons name="add" size={14} color={palette.ash} />
-            <Text style={styles.chipAddText}>Añadir</Text>
+  const edicion = (
+    <>
+      <Text accessibilityRole="header" style={[s.editTitle, isDesktop && s.editTitleDesk]}>
+        {vacio ? '¿Hacia dónde\nvas?' : 'Tu Norte.'}
+      </Text>
+      <Text style={s.editSub}>
+        Lo que escribas aquí es lo que Norman te recuerda cuando dudas.
+      </Text>
+      <View style={s.fields}>
+        <AccessField
+          label="EN 90 DÍAS HABRÁ VALIDO LA PENA SI…"
+          value={purpose}
+          onChangeText={setPurpose}
+          multiline
+          placeholder="Describe el resultado, no la intención"
+        />
+        <AccessField
+          label="QUIÉN ERES"
+          value={identity}
+          onChangeText={setIdentity}
+          placeholder="Soy el tipo de persona que…"
+        />
+        <AccessField
+          label="TUS VALORES · UNO POR LÍNEA"
+          value={valores}
+          onChangeText={setValores}
+          multiline
+          placeholder={'Verdad\nConstancia'}
+        />
+        <AccessField
+          label="LA FRASE DE CADA MAÑANA"
+          value={dailyReminder}
+          onChangeText={setDailyReminder}
+          multiline
+          placeholder="La frase que te ancla"
+        />
+        {!!saveError && <AccessNotice tone="error">{saveError}</AccessNotice>}
+      </View>
+      <View style={s.actions}>
+        <PrimaryButton
+          label={saving ? 'GUARDANDO…' : 'GUARDAR MI NORTE'}
+          icon="arrow-forward"
+          onPress={save}
+          disabled={saving || (!purpose.trim() && !identity.trim())}
+        />
+        {!vacio && (
+          <Pressable onPress={() => setEditando(false)} accessibilityRole="button" style={s.cancel}>
+            <Text style={s.cancelText}>Cancelar</Text>
           </Pressable>
         )}
       </View>
+    </>
+  );
 
-      {/* ── Recordatorio diario ── */}
-      <GoldDivider label="RECORDATORIO DIARIO" />
-      <PremiumInput
-        value={dailyReminder}
-        onChangeText={setDailyReminder}
-        multiline
-        style={styles.textArea}
-        placeholder="La frase que te ancla cada mañana…"
-        accessibilityLabel="Recordatorio diario"
-      />
-
-      <PrimaryButton
-        label={saved ? 'NORTE DECLARADO' : saving ? 'GUARDANDO...' : 'GUARDAR NORTE'}
-        icon={saved ? 'check-circle' : 'explore'}
-        onPress={save}
-        disabled={saving}
-      />
-      {saveError ? (
-        <Text
-          style={styles.saveError}
-          accessibilityLiveRegion="polite"
-          accessibilityRole="alert">
-          {saveError}
-        </Text>
-      ) : null}
-    </ScrollView>
-
-    {/* ── Toast: NORTE FIJADO EN EL SISTEMA ── */}
-    {saved ? (
-      <Animated.View
-        style={[
-          styles.toast,
-          {
-            bottom: insets.bottom + 24,
-            opacity: toastAnim,
-            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
-          },
+  return (
+    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={[
+          s.content,
+          isDesktop ? s.contentDesk : { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 32 },
         ]}
-        pointerEvents="none"
-        accessibilityLiveRegion="polite"
-        accessibilityRole="alert">
-        <MaterialIcons name="check" size={16} color={palette.ink} />
-        <Text style={styles.toastText}>NORTE FIJADO EN EL SISTEMA</Text>
-      </Animated.View>
-    ) : null}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        <Animated.View key={editando ? 'edit' : 'read'} entering={reduced ? undefined : FadeIn.duration(200)} style={[s.inner, isDesktop && s.innerDesk]}>
+          {meta}
+          {editando ? edicion : lectura}
+        </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  // Header (mobile) — title · sub
-  header: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  headerCopy: {
-    flex: 1,
-    gap: 6,
-  },
-  headerTitle: {
-    ...typography.title,
-    color: palette.ivory,
-  },
-  headerSub: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-  },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: palette.black },
+  content: { flexGrow: 1, paddingHorizontal: spacing.lg },
+  contentDesk: { paddingHorizontal: 72, paddingTop: 48, paddingBottom: 72 },
+  inner: { width: '100%', maxWidth: 560, alignSelf: 'center' },
+  innerDesk: { maxWidth: 1128 },
 
-  // Single-line field (identity)
-  input: {
-    minHeight: 52,
-  },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
+  metaBtn: { minHeight: 44, justifyContent: 'center' },
+  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
 
-  // Valores núcleo — chips
-  chipWrap: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+  star: { marginTop: 32, marginLeft: -2 },
+  purpose: {
+    marginTop: 24, fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 29, lineHeight: 34,
+    color: palette.ivory, maxWidth: 820,
   },
-  chip: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.pill,
-    flexDirection: 'row',
-    gap: 6,
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-  },
-  chipText: {
-    color: palette.ink,
-    fontFamily: Fonts.display,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  chipAdd: { alignItems: 'center',
-    borderColor: palette.lineHard,
-    borderRadius: radii.pill,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: spacing.md, minHeight: 44, justifyContent: 'center' },
-  chipAddText: {
-    color: palette.ash,
-    fontFamily: Fonts.display,
-    fontSize: 12,
-    letterSpacing: 0.5,
-  },
-  chipInput: {
-    alignItems: 'center',
-    borderColor: palette.lineGold,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 44,
-    minWidth: 120,
-    paddingHorizontal: spacing.md,
-  },
-  chipInputText: {
-    color: palette.ivory,
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    minWidth: 90,
-    paddingVertical: 0,
-  },
+  purposeDesk: { fontSize: 48, lineHeight: 55 },
+  identity: { marginTop: 20, fontFamily: Fonts.sans, fontSize: 17, lineHeight: 26, color: palette.ash, maxWidth: 560 },
+  identityDesk: { fontSize: 18, lineHeight: 28 },
+  saved: { marginTop: 16, fontFamily: Fonts.sans, fontSize: 15, color: palette.goldText },
 
-  // Toast — "NORTE FIJADO EN EL SISTEMA"
-  toast: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    position: 'absolute',
+  list: { marginTop: 48, maxWidth: 560 },
+  listDesk: { marginTop: 72 },
+  item: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: palette.line, flexWrap: 'wrap',
   },
-  toastText: {
-    ...typography.label,
-    color: palette.ink,
-    fontSize: 11,
-  },
+  itemFirst: { borderTopWidth: 1, borderTopColor: palette.line },
+  itemText: { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, color: palette.ivory, flexShrink: 1 },
+  itemLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
+  itemReminder: { color: palette.ash },
 
-  // Desktop layout
-  contentDesktop: {
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 1200,
-    paddingHorizontal: 40,
-    paddingTop: 32,
-    paddingBottom: 60,
-    gap: 24,
+  editTitle: {
+    marginTop: 40, fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 37, color: palette.ivory,
   },
-  desktopGrid: {
-    flexDirection: 'row',
-    gap: 32,
-    alignItems: 'flex-start',
-  },
-  desktopLeft: {
-    flex: 1,
-    gap: 16,
-  },
-  desktopRight: {
-    flex: 1,
-    gap: 16,
-  },
-
-  // North header
-  northHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  norteScore: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  norteScoreFull: {
-    color: palette.goldText,
-  },
-
-  // Purpose display
-  purposeStatement: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    lineHeight: 28,
-    textTransform: 'uppercase',
-  },
-  identityStatement: {
-    ...typography.body,
-    color: palette.ash,
-  },
-
-  // Daily reminder
-  reminderCard: {
-    gap: spacing.sm,
-  },
-  reminderLabel: {
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase' as const,
-    lineHeight: 15,
-  },
-  reminderText: {
-    ...typography.body,
-    color: palette.ivoryDim,
-    fontStyle: 'italic',
-  },
-
-  savedToast: {
-    color: palette.goldText,
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  saveError: {
-    color: palette.danger,
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: spacing.sm,
-  },
-
-  // Non-negotiables
-  ruleList: {
-    gap: spacing.sm,
-  },
-  ruleCard: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  ruleIndex: {
-    color: palette.smoke,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    lineHeight: 22,
-    minWidth: 22,
-  },
-  ruleText: {
-    ...typography.section,
-    color: palette.ivory,
-    flex: 1,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'none',
-  },
-
-  // Edit form
-  form: {
-    gap: spacing.lg,
-  },
-  fieldGroup: {
-    gap: spacing.sm,
-  },
-  // La pregunta guía del propósito — caja baja a propósito: es una pregunta
-  // que se lee, no un rótulo que grita.
-  guideQuestion: {
-    ...typography.body,
-    color: palette.smoke,
-    fontSize: 13,
-    lineHeight: 19,
-    fontStyle: 'italic' as const,
-  },
-  fieldLabel: {
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase' as const,
-    lineHeight: 15,
-  },
-  textArea: {
-    minHeight: 78,
-    paddingTop: spacing.md,
-    textAlignVertical: 'top',
-  },
-  textAreaLarge: {
-    minHeight: 110,
-    paddingTop: spacing.md,
-    textAlignVertical: 'top',
-  },
-
-  // Non-negotiables suggestion pills
-  promptSuggestions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  suggestionPill: {
-    backgroundColor: 'rgba(201,160,0,0.08)',
-    borderColor: alpha(palette.gold, '44'),
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  suggestionText: {
-    color: palette.goldText,
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    lineHeight: 16,
-  },
+  editTitleDesk: { fontSize: 56, lineHeight: 60 },
+  editSub: { marginTop: 16, fontFamily: Fonts.sans, fontSize: 17, lineHeight: 26, color: palette.ash, maxWidth: 420 },
+  fields: { marginTop: 40, gap: spacing.lg, maxWidth: 560 },
+  actions: { marginTop: 40, gap: spacing.xs, maxWidth: 560 },
+  cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  cancelText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
 });
