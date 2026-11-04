@@ -149,8 +149,8 @@ export function BottomNavigation() {
       <Tabs.Screen
         name="progreso"
         options={{
-          title: 'Perfil',
-          tabBarIcon: ({ color, focused }) => <TabBarIcon name="person-outline" color={color} focused={focused} />,
+          title: 'Progreso',
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="insights" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen name="explore" options={{ href: null }} />

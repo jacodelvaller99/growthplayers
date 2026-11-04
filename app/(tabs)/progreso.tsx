@@ -2,54 +2,32 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
-import Svg, { Circle, Path, Polyline } from 'react-native-svg';
-import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import Constants from 'expo-constants';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HeroPanel, LensTabs } from '@/components/focus-deck';
 import {
-  AppHeader,
   DangerButton,
   GoldDivider,
-  MetricCard,
   PremiumCard,
   PremiumInput,
   PrimaryButton,
-  ProgressCard,
   SecondaryButton,
-  WeeklySparkline,
-  screen,
-  useScreen,
 } from '@/components/polaris';
-import { AnimatedNumber } from '@/components/AnimatedNumber';
-import EmptyState from '@/components/EmptyState';
 import { ACTIVE_MODULE, POLARIS_MODULES } from '@/data/modules';
-import { DURATION_HOUSE, EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useStaffRole } from '@/hooks/useIsAdmin';
 import { MyMentorCard } from '@/components/MyMentorCard';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { Fila, Pantalla } from '@/components/pantalla';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { arcForDay, buildHistoria, GLOSS } from '@/lib/narrativeLogic';
-import { ArcHeader, BaselineNote, GlossToggle } from '@/components/narrative';
 import { protocolSnapshot } from '@/lib/protocolSnapshot';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useUserIntelligence } from '@/hooks/useUserIntelligence';
-import { useWellnessStore } from '@/store/wellnessStore';
-import { calcSovereignDelta } from '@/lib/utils';
 import {
   requestNotificationPermissions,
   scheduleCheckinReminder,
   cancelReminders,
 } from '@/services/notifications';
 import type { NorthStar } from '@/types/lifeflow';
-import { ENV } from '@/app/config/env';
-import { purchasesAvailable } from '@/lib/subscription';
-
-// iOS v1 sin compras (regla 3.1.1): el CTA del plan lleva al canje del código.
-const IOS_CODE_ONLY = Platform.OS === 'ios' && !purchasesAvailable(Platform.OS, ENV);
 
 // ─── Legal links (in-app policy screens) ───────────────────────────────────
 const LEGAL_LINKS: {
@@ -65,448 +43,23 @@ const LEGAL_LINKS: {
 
 // ─── Streak Calendar Component (42-day heatmap) ────────────────────────────
 
-/**
- * Visual 42-day (6-week) heatmap grid.
- * Gold cell = check-in done that day.
- * Today has a gold ring indicator.
- * Future days are fully hidden (opacity 0 — they exist for grid alignment only).
- */
-function StreakCalendar({ checkIns }: { checkIns: Array<{ date: string }> }) {
-  const { days, checkinCount, checkinPct } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().slice(0, 10);
 
-    // Align to Monday start of the current week
-    const dow = today.getDay(); // 0=Sun, 1=Mon ...
-    const daysFromMon = (dow + 6) % 7; // Mon=0 ... Sun=6
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - daysFromMon);
 
-    // Go back 5 more weeks from the Monday of this week
-    const start = new Date(startOfWeek);
-    start.setDate(start.getDate() - 35);
 
-    const checkinSet = new Set(checkIns.map((c) => c.date.slice(0, 10)));
 
-    // Count check-ins in the last 30 calendar days (backwards from today)
-    let cnt30 = 0;
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      if (checkinSet.has(d.toISOString().slice(0, 10))) cnt30++;
-    }
 
-    const gridDays: {
-      dateStr: string;
-      hasCheckin: boolean;
-      isToday: boolean;
-      isFuture: boolean;
-    }[] = [];
-
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const dateStr = d.toISOString().slice(0, 10);
-      gridDays.push({
-        dateStr,
-        hasCheckin: checkinSet.has(dateStr),
-        isToday: dateStr === todayStr,
-        isFuture: d > today,
-      });
-    }
-
-    return {
-      days: gridDays,
-      checkinCount: cnt30,
-      checkinPct: Math.round((cnt30 / 30) * 100),
-    };
-  }, [checkIns]);
-
-  const weeks: (typeof days)[] = [];
-  for (let i = 0; i < 6; i++) {
-    weeks.push(days.slice(i * 7, (i + 1) * 7));
-  }
-
-  return (
-    <PremiumCard style={calStyles.wrap}>
-      {/* Header row */}
-      <View style={calStyles.header}>
-        <Text style={calStyles.title}>RACHA · ÚLTIMOS 42 DÍAS</Text>
-        <View style={calStyles.statRow}>
-          <AnimatedNumber value={checkinCount} style={calStyles.statNum} />
-          <Text style={calStyles.statLabel}>/ 30 días  ·  {checkinPct}%</Text>
-        </View>
-      </View>
-
-      {/* Day-of-week labels: Mon … Sun */}
-      <View style={calStyles.labelRow}>
-        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-          <Text key={d} style={calStyles.dayLabel}>{d}</Text>
-        ))}
-      </View>
-
-      {/* 6-week grid. Cada fila es UN nodo de accesibilidad (42 celdas sueltas
-          sin texto serían 42 paradas de lector de pantalla sin información
-          real) — agrupa el patrón visual en un resumen por semana. */}
-      {weeks.map((week, wi) => {
-        const weekCheckins = week.filter((d) => d.hasCheckin).length;
-        return (
-          <View
-            key={wi}
-            style={calStyles.weekRow}
-            accessible
-            accessibilityLabel={`Semana ${wi + 1}: ${weekCheckins} de 7 días con check-in`}>
-            {week.map((day) => (
-              <View
-                key={day.dateStr}
-                style={[
-                  calStyles.cell,
-                  day.hasCheckin && calStyles.cellActive,
-                  day.isToday && !day.hasCheckin && calStyles.cellToday,
-                  day.isFuture && calStyles.cellFuture,
-                ]}
-              />
-            ))}
-          </View>
-        );
-      })}
-
-      {/* Legend */}
-      <View style={calStyles.legend}>
-        <View style={[calStyles.legendDot, { backgroundColor: palette.charcoal }]} />
-        <Text style={calStyles.legendText}>Sin check-in</Text>
-        <View style={[calStyles.legendDot, { backgroundColor: palette.gold }]} />
-        <Text style={calStyles.legendText}>Check-in</Text>
-      </View>
-    </PremiumCard>
-  );
-}
-
-const calStyles = StyleSheet.create({
-  // Superficie (fondo/borde/radio/padding) viene de PremiumCard — aquí solo
-  // el espaciado interno propio de este layout.
-  wrap: {
-    gap: spacing.sm,
-  },
-  header: {
-    alignItems:     'center',
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    marginBottom:    spacing.xs,
-  },
-  title: {
-    color:        palette.gold,
-    fontFamily:   Fonts.mono,
-    fontSize:     11,
-    letterSpacing: 2,
-  },
-  statRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-  },
-  statNum: {
-    color:       palette.ivory,
-    fontFamily:  Fonts.display,
-    fontSize:    18,
-    fontWeight:  '800',
-    lineHeight:  22,
-  },
-  statLabel: {
-    color:      palette.ash,
-    fontFamily: Fonts.mono,
-    fontSize:   11,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    gap:           4,
-    marginBottom:  2,
-  },
-  dayLabel: {
-    color:     palette.smoke,
-    flex:      1,
-    fontFamily: Fonts.mono,
-    fontSize:   11,
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-  weekRow: {
-    flexDirection: 'row',
-    gap:           4,
-  },
-  cell: {
-    backgroundColor: palette.charcoal,
-    borderRadius:    3,
-    flex:            1,
-    aspectRatio:     1,
-    opacity:         0.5,
-  },
-  cellActive: {
-    backgroundColor: palette.gold,
-    opacity:         1,
-  },
-  cellToday: {
-    borderColor: palette.gold,
-    borderWidth: 1.5,
-    opacity:     0.9,
-  },
-  cellFuture: {
-    opacity: 0.15,
-  },
-  legend: {
-    alignItems:    'center',
-    flexDirection: 'row',
-    gap:            spacing.sm,
-    marginTop:      spacing.xs,
-  },
-  legendDot: {
-    borderRadius: 2,
-    height:       8,
-    width:        8,
-  },
-  legendText: {
-    color:       palette.smoke,
-    fontFamily:  Fonts.mono,
-    fontSize:    11,
-    letterSpacing: 0.5,
-    marginRight:  spacing.sm,
-  },
-});
-
-// ─── Mini Sparkline (line + filled area, SVG — cross-platform) ──────────────
-function MiniSparkline({
-  data,
-  width = 300,
-  height = 64,
-  color = palette.gold,
-  showDots = false,
-}: {
-  data: number[];
-  width?: number;
-  height?: number;
-  color?: string;
-  showDots?: boolean;
-}) {
-  // Entrada animada — misma firma de barrido de la casa que WeeklySparkline
-  // (700ms, EASING_HOUSE), así el sparkline "casero" deja de ser el único
-  // estático de la pantalla. Hooks antes del early-return de abajo.
-  const reducedMotion = useReducedMotion();
-  const progress = useSharedValue(reducedMotion ? 1 : 0);
-
-  useEffect(() => {
-    if (reducedMotion) { progress.value = 1; return; }
-    progress.value = withTiming(1, { duration: DURATION_HOUSE.sweep, easing: Easing.bezier(...EASING_HOUSE) });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reducedMotion]);
-
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * 6 }],
-  }));
-
-  if (data.length < 2) {
-    return <View style={{ height }} />;
-  }
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const span = max - min || 1;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - 6 - ((v - min) / span) * (height - 12);
-    return { x, y };
-  });
-  const linePoints = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const areaPath =
-    `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} ` +
-    pts.slice(1).map((p) => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') +
-    ` L${width},${height} L0,${height} Z`;
-
-  return (
-    <Animated.View style={animStyle}>
-      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-        <Path d={areaPath} fill={color} fillOpacity={0.14} />
-        <Polyline
-          points={linePoints}
-          fill="none"
-          stroke={color}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {showDots && pts.map((p, i) => (
-          <Circle key={i} cx={p.x} cy={p.y} r={2.5} fill={color} />
-        ))}
-      </Svg>
-    </Animated.View>
-  );
-}
-
-// ─── Score Ring (circular progress, SVG) ────────────────────────────────────
-// Trazo animado con el mismo patrón que el Dial de comando.tsx: withTiming +
-// AnimatedCircle vía useAnimatedProps. No se consolida en un único Dial
-// compartido aquí — eso es trabajo de Fase C sobre archivo compartido.
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-function ScoreRing({
-  value,
-  max,
-  size = 92,
-  stroke = 7,
-  display,
-  sub,
-}: {
-  value: number;
-  max: number;
-  size?: number;
-  stroke?: number;
-  display: string;
-  sub?: string;
-}) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const pct = Math.max(0, Math.min(1, max > 0 ? value / max : 0));
-
-  const reducedMotion = useReducedMotion();
-  const progress = useSharedValue(reducedMotion ? pct : 0);
-
-  useEffect(() => {
-    if (reducedMotion) { progress.value = pct; return; }
-    progress.value = withTiming(pct, { duration: DURATION_HOUSE.sweep, easing: Easing.bezier(...EASING_HOUSE) });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pct, reducedMotion]);
-
-  const dashProps = useAnimatedProps(() => ({
-    strokeDashoffset: c * (1 - progress.value),
-  }));
-
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={palette.charcoal} strokeWidth={stroke} />
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={palette.gold}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          animatedProps={dashProps}
-        />
-      </Svg>
-      <Text style={ringStyles.value}>{display}</Text>
-      {sub ? <Text style={ringStyles.sub}>{sub}</Text> : null}
-    </View>
-  );
-}
-
-const ringStyles = StyleSheet.create({
-  value: {
-    color: palette.goldText,
-    fontFamily: Fonts.display,
-    fontSize: 26,
-    fontWeight: '800',
-    lineHeight: 30,
-  },
-  sub: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    marginTop: 2,
-  },
-});
-
-// ─── Weekly Metric Card (icon + label + avg + trend + sparkline) ────────────
-function WeeklyMetricCard({
-  label,
-  icon,
-  data,
-  avg,
-  unit = '/10',
-  trendPct,
-  trendUp,
-  color = palette.gold,
-}: {
-  label: string;
-  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  data: number[];
-  avg: string;
-  unit?: string;
-  /** Magnitud del cambio, sin signo — la dirección de la flecha la decide
-   *  `trendUp` (ya trae la polaridad correcta de la métrica), nunca el signo
-   *  crudo: "Carga sistema" es mejor cuando BAJA, así que su flecha sube con
-   *  loadTrend negativo. Derivarla del signo crudo aquí desalinearía esa
-   *  tarjeta de las otras 3, que sí coinciden signo=dirección. */
-  trendPct?: number;
-  trendUp?: boolean;
-  color?: string;
-}) {
-  return (
-    <View style={wmStyles.card}>
-      <View style={wmStyles.head}>
-        <MaterialIcons name={icon} size={16} color={palette.goldText} />
-        <Text style={wmStyles.label}>{label}</Text>
-      </View>
-      <View style={wmStyles.valueRow}>
-        <Text style={wmStyles.value}>{avg}</Text>
-        <Text style={wmStyles.unit}>{unit}</Text>
-        {trendPct != null ? (
-          <Text style={[wmStyles.trend, { color: trendUp === false ? palette.ash : palette.success }]}>
-            {trendUp ? '▲' : '▼'} {Math.abs(trendPct)}%
-          </Text>
-        ) : null}
-      </View>
-      <View style={wmStyles.spark}>
-        <MiniSparkline data={data} width={140} height={34} color={color} />
-      </View>
-    </View>
-  );
-}
-
-const wmStyles = StyleSheet.create({
-  card: {
-    backgroundColor: palette.graphite,
-    borderColor: palette.line,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    width: '47.8%',
-    flexGrow: 1,
-    gap: 8,
-  },
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  label: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    flex: 1,
-  },
-  valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  value: { fontFamily: Fonts.display, color: palette.ivory, fontSize: 24, fontWeight: '700' },
-  unit: { ...typography.mono, color: palette.ash },
-  trend: { ...typography.mono, marginLeft: 'auto' },
-  spark: { height: 34, marginTop: 2 },
-});
 
 export default function ProgresoScreen() {
-  const sc = useScreen();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const {
-    state, averages,
+    state,
     updateProfile, updateNorthStar,
     resetOnboarding, clearData, signOut,
     deleteAccount, exportData,
-    userId,
   } = useLifeFlow();
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
-  const { intelligence, topAffinity, engagementTier } = useUserIntelligence(userId);
   const subscription = useSubscription();
 
   // ── Staff flags (robustos + cacheados — ver hooks/useIsAdmin) ───────────────
@@ -527,18 +80,7 @@ export default function ProgresoScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const wellnessTier = useWellnessStore((s) => s.user.subscriptionTier);
 
-  /** Subscription badge derived from Supabase Realtime-synced state */
-  const subTier   = subscription.tier;
-  const subColor  = subscription.tierInfo.color;
-  const subLabel  = subscription.tierInfo.name.toUpperCase();
-  const subIcon: React.ComponentProps<typeof MaterialIcons>['name'] =
-    subTier === 'growthplayers' ? 'groups'
-    : subTier === 'polaris'       ? 'explore'
-    : subTier === 'premium_plus'  ? 'diamond'
-    : subTier === 'premium'       ? 'workspace-premium'
-    : 'lock-open';
 
   const [deleting, setDeleting]   = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -565,26 +107,7 @@ export default function ProgresoScreen() {
   const wellnessBreathing  = wellnessSessions.filter((s) => s.type === 'breathing').length;
   const wellnessBinaural   = wellnessSessions.filter((s) => s.type === 'binaural').length;
 
-  // Wellness stats
-  const totalWellnessMinutes = Math.round(
-    wellnessSessions.reduce((acc, s) => acc + ((s.durationSeconds ?? 0) / 60), 0)
-  );
 
-  const wellnessStreak = useMemo(() => {
-    if (!wellnessSessions.length) return 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let streak = 0;
-    const day = new Date(today);
-    while (streak < 365) {
-      const dayStr = day.toISOString().slice(0, 10);
-      const hasSession = wellnessSessions.some((s) => s.completedAt?.startsWith(dayStr));
-      if (!hasSession) break;
-      streak++;
-      day.setDate(day.getDate() - 1);
-    }
-    return streak;
-  }, [wellnessSessions]);
 
   // Día, racha, score y línea base: la MISMA función que Comando
   // (lib/protocolSnapshot) — antes cada pantalla daba su propio número.
@@ -597,64 +120,12 @@ export default function ProgresoScreen() {
     now: new Date(),
   }), [state.protocolStartDate, state.checkIns, state.completedLessons, state.completedTasks, wellnessMeditation, wellnessBreathing, wellnessBinaural]);
   const protocolDay = snap.protocolDay;
-  const protocolProgress = Math.min(Math.round((protocolDay / 90) * 100), 100);
   const checkinStreak = snap.streak;
   /** Sin lecturas el score no mide nada — ver el comentario en su render. */
   const sinLecturas = !snap.hasReadings;
-  const score = snap.score ?? 0;
 
-  // Sovereign delta — progreso vs línea base propia (acompaña al score absoluto).
-  const sovereignDelta = useMemo(() => calcSovereignDelta(state.checkIns), [state.checkIns]);
-  const baselineNote = (
-    <BaselineNote delta={sovereignDelta} baselineDay={snap.baselineDay} hasReadings={snap.hasReadings} />
-  );
 
-  // Last 7 check-ins for sparklines.
-  // Sin datos NO se rellena con ceros: una línea plana en cero se lee como
-  // "tu energía es cero", no como "aún no hay datos". Se muestra EmptyState.
-  const last7 = state.checkIns.slice(-7);
-  const hasCheckIns = last7.length > 0;
-  const energyValues = last7.map((c) => c.energy);
-  const clarityValues = last7.map((c) => c.clarity);
 
-  // ── Design analytics: real chronological series from check-ins ──────────────
-  // state.checkIns is ordered newest-first; reverse a recent slice to chronological.
-  const analytics = useMemo(() => {
-    const recent = (n: number) => state.checkIns.slice(0, n).slice().reverse();
-
-    // Daily "estado" score 0–100 from the same formula that drives the Sovereign Score
-    const estado = (c: { energy: number; clarity: number; stress: number; sleep: number }) =>
-      Math.round(((c.energy + c.clarity + (10 - c.stress) + c.sleep) / 4) * 10);
-
-    const last14 = recent(14);
-    const score14 = last14.map(estado);
-    const week = recent(7);
-
-    const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-    // % change between the first and second half of the series (rounded)
-    const pctTrend = (xs: number[]) => {
-      if (xs.length < 2) return null;
-      const half = Math.max(1, Math.floor(xs.length / 2));
-      const first = avg(xs.slice(0, half));
-      const last = avg(xs.slice(-half));
-      if (first === 0) return null;
-      return Math.round(((last - first) / first) * 100);
-    };
-
-    return {
-      score14,
-      scoreDelta: score14.length >= 2 ? score14[score14.length - 1] - score14[0] : 0,
-      energy:    week.map((c) => c.energy),
-      clarity:   week.map((c) => c.clarity),
-      load:      week.map((c) => c.stress),
-      coherence: week.map((c) => Math.round((c.energy + c.clarity) / 2)),
-      energyTrend:    pctTrend(week.map((c) => c.energy)),
-      clarityTrend:   pctTrend(week.map((c) => c.clarity)),
-      loadTrend:      pctTrend(week.map((c) => c.stress)),
-      coherenceTrend: pctTrend(week.map((c) => Math.round((c.energy + c.clarity) / 2))),
-      hasWeek: week.length >= 2,
-    };
-  }, [state.checkIns]);
 
   // SIN VITRINA DE TROFEOS. Aqui vivia un array de ocho fichas de 22% de ancho
   // que se rellenaban de oro macizo al ganarse, con iconos de copa, estrellas y
@@ -696,52 +167,8 @@ export default function ProgresoScreen() {
       });
   }, [state.completedLessons]);
 
-  // Modules ring — completed modules vs total + active module progress (real data)
-  const moduleProgress = useMemo(() => {
-    const completed = state.completedLessons ?? [];
-    const totalModules = POLARIS_MODULES.length;
-    const completedModules = POLARIS_MODULES.filter(
-      (m) => m.lessons.length > 0 && m.lessons.every((l) => completed.includes(l.id)),
-    ).length;
-    const activeLessons = ACTIVE_MODULE.lessons.length;
-    const activeDone = ACTIVE_MODULE.lessons.filter((l) => completed.includes(l.id)).length;
-    const activePct = activeLessons > 0 ? Math.round((activeDone / activeLessons) * 100) : 0;
-    const locked = Math.max(0, totalModules - completedModules - 1);
-    return { totalModules, completedModules, activePct, locked };
-  }, [state.completedLessons]);
 
-  // Las palabras del usuario, para que el arco lo cite en vez de hablarle a
-  // cualquiera. Objeto estable: se recalcula solo si cambia lo que escribio.
-  const arcoSuyas = useMemo(
-    () => ({
-      painPoint: state.profile.painPoint,
-      purpose: state.northStar.purpose,
-      identity: state.northStar.identity,
-    }),
-    [state.profile.painPoint, state.northStar.purpose, state.northStar.identity],
-  );
 
-  // Transformation narrative
-  // La historia vive en lib/narrativeLogic (buildHistoria) — la MISMA voz que
-  // Perfil y el perfil de cliente. Aquí se muestra compacta (sin el capítulo
-  // EL ARCO, que el ArcHeader de arriba ya pinta, y a máximo 3 líneas).
-  const narrativeBlock = useMemo(() => {
-    return buildHistoria({
-      protocolDay,
-      painPoint: state.profile.painPoint,
-      purpose: state.northStar.purpose,
-      identity: state.northStar.identity,
-      completedLessonCount: (state.completedLessons ?? []).length,
-      taskCount: Object.keys(state.completedTasks ?? {}).length,
-      checkInsCount: state.checkIns.length,
-      avgEnergy: averages.energy ?? 0,
-      archetypesEarned: archetypes.filter((a) => a.earned).map((a) => a.name),
-      daysSinceLastCheckIn: snap.daysSinceLastReading,
-    })
-      .filter((c) => c.label !== 'EL ARCO')
-      .map((c) => c.text)
-      .slice(0, 3);
-  }, [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, state.completedLessons, state.completedTasks, state.checkIns.length, averages.energy, archetypes, snap.daysSinceLastReading]);
 
   const toggleNotifications = async (value: boolean) => {
     if (value) {
@@ -905,801 +332,29 @@ export default function ProgresoScreen() {
   };
 
   // ── Desktop (≥1200px) layout ─────────────────────────────────────────────────
-  if (sc.isDesktop) {
-    return (
-      <KeyboardAvoidingView
-        style={sc.root}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}>
-        <ScrollView
-          contentContainerStyle={[deskStyles.contentDesktop, { paddingTop: insets.top + 32 }]}
-          showsVerticalScrollIndicator={false}
-          bounces
-          overScrollMode="never"
-          keyboardShouldPersistTaps="handled">
+  // ── PROGRESO (rediseño) ─────────────────────────────────────────────────────
+  // Una pregunta: ¿estoy apareciendo? La racha en grande, seis semanas de
+  // check-ins y dos cifras que se mueven. Todo lo de la cuenta queda plegado
+  // abajo, en el mismo sitio, con las mismas funciones.
+  const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
+  const ordenados = [...state.checkIns].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const media = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null);
+  const ultimos = ordenados.slice(0, 7);
+  const anteriores = ordenados.slice(7, 14);
+  const cifra = (key: 'energy' | 'clarity') => {
+    const ahora = media(ultimos.map((c) => c[key]));
+    const antes = media(anteriores.map((c) => c[key]));
+    if (ahora === null) return 'Sin lecturas aún';
+    const base = `${ahora.toFixed(1).replace('.', ',')} de 10`;
+    if (antes === null) return base;
+    const d = ahora - antes;
+    if (Math.abs(d) < 0.05) return `${base} · igual`;
+    return `${base} · ${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1).replace('.', ',')}`;
+  };
+  const modulosHechos = archetypes.filter((a) => a.earned).length;
 
-          {/* ── ZONA 1: héroe consolidado — paridad con móvil ──────────────
-              Antes: AppHeader → SovereignScore (su propia PremiumCard) →
-              SovereignDeltaTag → narrativeCard suelto. Cuatro superficies
-              para una sola lectura, y SovereignScore metida en HeroPanel
-              habría sido caja-dentro-de-caja (PremiumCard dentro del panel
-              dorado). Se porta la MISMA composición sin marco que ya usa
-              móvil (líneas ~1166-1229) — no se reescribe, se reusa. */}
-          {/* La pestaña se llama «Perfil» (la ruta sigue siendo progreso). */}
-          <AppHeader title="PERFIL" />
-          <MyMentorCard style={styles.myMentor} />
-          <HeroPanel>
-            <View style={styles.scoreCard}>
-              <View style={styles.scoreTopRow}>
-                <View>
-                  <GlossToggle label="SCORE SOBERANO" gloss={GLOSS.score} labelStyle={styles.scoreEyebrow} />
-                  <View style={styles.scoreNumberRow}>
-                    {sinLecturas ? (
-                      <Text style={styles.scoreNumber}>—</Text>
-                    ) : (
-                      <AnimatedNumber value={score} style={styles.scoreNumber} />
-                    )}
-                    {analytics.scoreDelta !== 0 && (
-                      <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
-                        {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              </View>
-              {analytics.score14.length >= 2 && (
-                <View style={styles.scoreSpark}>
-                  <Text style={styles.scoreCaption}>ÚLTIMOS 14 DÍAS</Text>
-                  <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
-                </View>
-              )}
-              {baselineNote}
-            </View>
-
-            <Pressable
-              style={shareStyles.row}
-              onPress={() => router.push('/perfil' as never)}
-              accessibilityRole="button"
-              accessibilityLabel="Ver y compartir tarjeta soberana">
-              <MaterialIcons name="share" size={16} color={palette.goldText} />
-              <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
-              <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-            </Pressable>
-
-            {/* El arco FUERA del condicional: `narrativeBlock` exige identidad
-                con día>=7, o lecciones, o tareas, así que el usuario de los días
-                1 a 6 no veía dónde estaba — justo cuando más importa. */}
-            <View style={styles.narrativeCard}>
-              <ArcHeader
-                arc={arcForDay(protocolDay, arcoSuyas, snap.daysSinceLastReading)}
-                explain
-                compact={narrativeBlock.length > 0}
-              />
-              {narrativeBlock.length > 0 && (
-                <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-              )}
-              {narrativeBlock.map((line, i) => (
-                <Text key={i} style={styles.narrativeLine}>{line}</Text>
-              ))}
-            </View>
-          </HeroPanel>
-
-          {/* ── ZONA 2: Middle two-column row ── */}
-          <View style={deskStyles.desktopMiddle}>
-
-            {/* Left column */}
-            <View style={deskStyles.desktopLeft}>
-              <GoldDivider label="MÉTRICAS DEL SISTEMA" />
-              <View style={styles.grid}>
-                <MetricCard
-                  label="Racha"
-                  value={`${checkinStreak}`}
-                  meta="dias seguidos"
-                  icon="local-fire-department"
-                />
-                <MetricCard
-                  label="Check-ins"
-                  value={`${state.checkIns.length}`}
-                  meta="completados"
-                  icon="fact-check"
-                />
-                <MetricCard
-                  label="Lecciones"
-                  value={`${(state.completedLessons ?? []).length}`}
-                  meta="completadas"
-                  icon="menu-book"
-                />
-                <MetricCard
-                  label="Días"
-                  value={`${protocolDay}`}
-                  meta="protocolo"
-                  icon="calendar-today"
-                />
-              </View>
-
-              <GoldDivider label="BIOMETRÍA PROMEDIO (7D)" />
-              <PremiumCard style={styles.sparklineCard}>
-                {hasCheckIns ? (
-                  <>
-                    <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.goldText} />
-                    <View style={styles.sparklineDivider} />
-                    <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
-                  </>
-                ) : (
-                  <EmptyState
-                    icon="show-chart"
-                    title="Tu biometría empieza hoy"
-                    body="Haz tu primer check-in y aquí verás cómo se mueven tu energía y tu claridad."
-                    actionLabel="HACER CHECK-IN"
-                    onAction={() => router.push('/checkin')}
-                  />
-                )}
-              </PremiumCard>
-
-
-              <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
-      <Text style={styles.glossLine}>{GLOSS.archetypes}</Text>
-              <View style={styles.archetypeList}>
-                {archetypes.map((arch) => (
-                  <PremiumCard
-                    key={arch.id}
-                    style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
-                    <MaterialIcons
-                      // Sin condecoracion: `military-tech` es la misma medalla que se quito del
-                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
-                      // de comprobado, no con un galardon.
-                      name={arch.earned ? 'check-circle-outline' : 'lock'}
-                      size={18}
-                      color={arch.earned ? palette.goldText : palette.smoke}
-                    />
-                    <View style={styles.archetypeCopy}>
-                      <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
-                        {arch.name}
-                      </Text>
-                      <Text style={styles.archetypeProgress}>
-                        {arch.earned
-                          ? 'ARQUETIPO CONQUISTADO'
-                          : `${arch.completedCount}/${arch.totalLessons} LECCIONES`}
-                      </Text>
-                    </View>
-                    {arch.earned && (
-                      <View style={styles.archetypeCheck}>
-                        <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
-                      </View>
-                    )}
-                  </PremiumCard>
-                ))}
-              </View>
-            </View>
-
-            {/* Right column */}
-            <View style={deskStyles.desktopRight}>
-              <GoldDivider label="PROTOCOLO" />
-              <ProgressCard
-                label="Progreso · Protocolo Soberano 90D"
-                value={`${protocolProgress}% · ${protocolDay}/90`}
-                progress={protocolProgress}
-              />
-
-              {/* Profile edit */}
-              <PremiumCard style={styles.form}>
-                <PremiumInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="NOMBRE"
-                  accessibilityLabel="Nombre de perfil"
-                  returnKeyType="next"
-                />
-                <PremiumInput
-                  value={role}
-                  onChangeText={setRole}
-                  placeholder="ROL / TITULO"
-                  accessibilityLabel="Rol o título"
-                  returnKeyType="done"
-                />
-                <PrimaryButton
-                  label={savingProfile ? 'GUARDANDO...' : 'GUARDAR PERFIL'}
-                  icon="check"
-                  onPress={handleSaveProfile}
-                  disabled={savingProfile}
-                />
-              </PremiumCard>
-
-              {/* Subscription tier badge */}
-              <PremiumCard style={[styles.tierCard, {
-                borderColor: subscription.isExpiringSoon
-                  ? alpha(palette.warning, '88')
-                  : subColor + '55',
-              }]}>
-                <View style={[styles.tierIconBox, { backgroundColor: subColor + '22' }]}>
-                  <MaterialIcons name={subIcon} size={22} color={subColor} />
-                </View>
-                <View style={styles.tierBody}>
-                  <Text style={styles.tierLabel}>PLAN ACTIVO</Text>
-                  <Text style={[styles.tierName, { color: subColor }]}>{subLabel}</Text>
-                  {subscription.isExpiringSoon && subscription.expiresAt ? (
-                    <Text style={[styles.tierSub, { color: palette.warning }]}>
-                      ⚠ Expira {new Date(subscription.expiresAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
-                    </Text>
-                  ) : subTier === 'free' ? (
-                    <Text style={styles.tierSub}>{IOS_CODE_ONLY ? 'Tu Navegador te entrega el código que abre el Protocolo completo' : 'Actualiza a Premium para desbloquear todo el contenido'}</Text>
-                  ) : (
-                    <Text style={styles.tierSub}>{subscription.tierInfo.description}</Text>
-                  )}
-                </View>
-                {subTier === 'free' && (
-                  <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)} accessibilityRole="button" accessibilityLabel={IOS_CODE_ONLY ? 'Ingresar código de acceso' : 'Actualizar plan'}>
-                    <Text style={styles.tierUpgradeText}>{IOS_CODE_ONLY ? 'CÓDIGO' : 'UPGRADE'}</Text>
-                  </Pressable>
-                )}
-              </PremiumCard>
-
-              {isStaff && (
-                <Pressable
-                  style={styles.adminBtn}
-                  onPress={() => router.push('/admin' as never)}
-                  accessibilityLabel={staffBtnLabel}>
-                  <MaterialIcons name="dashboard-customize" size={16} color={palette.goldText} />
-                  <Text style={styles.adminBtnText}>{staffBtnLabel}</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-
-          {/* ── ZONA 3: Bottom full-width account section ── */}
-          <View style={deskStyles.desktopBottom}>
-            <GoldDivider label="CUENTA" />
-            <View style={deskStyles.desktopAccountGrid}>
-              {/* Notificaciones */}
-              <PremiumCard style={[styles.settingsCard, deskStyles.desktopAccountCard]}>
-                <View style={styles.settingRow}>
-                  <View style={styles.settingInfo}>
-                    <Text style={styles.settingTitle}>RECORDATORIO DIARIO</Text>
-                    <Text style={styles.settingMeta}>Check-in a las 7:00 AM</Text>
-                  </View>
-                  <Switch
-                    value={notificationsOn}
-                    onValueChange={toggleNotifications}
-                    trackColor={{ false: palette.charcoal, true: palette.gold }}
-                    thumbColor={notificationsOn ? palette.ink : palette.ash}
-                  />
-                </View>
-                <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.md }]}>
-                  <View style={styles.settingInfo}>
-                    <Text style={styles.settingTitle}>ANÁLISIS DE COMPORTAMIENTO</Text>
-                    <Text style={styles.settingMeta}>
-                      Permite a Polaris personalizar recomendaciones con IA. Tus datos nunca se venden.
-                    </Text>
-                  </View>
-                  <Switch
-                    value={mlConsent}
-                    onValueChange={handleMlConsentToggle}
-                    trackColor={{ false: palette.charcoal, true: palette.gold }}
-                    thumbColor={mlConsent ? palette.ink : palette.ash}
-                  />
-                </View>
-              </PremiumCard>
-
-              {/* Export / Sign out / Danger zone */}
-              <PremiumCard style={[styles.gdprCard, deskStyles.desktopAccountCard]}>
-                <Text style={styles.gdprIntro}>
-                  Tienes derecho a acceder, exportar y eliminar todos tus datos personales en cualquier momento (RGPD / GDPR).
-                </Text>
-                <Pressable
-                  style={[styles.gdprBtn, exporting && { opacity: 0.6 }]}
-                  onPress={handleExport}
-                  disabled={exporting}
-                  accessibilityLabel="Exportar mis datos">
-                  <MaterialIcons name="download" size={18} color={palette.goldText} />
-                  <View style={styles.gdprBtnBody}>
-                    <Text style={styles.gdprBtnTitle}>{exporting ? 'EXPORTANDO...' : 'EXPORTAR MIS DATOS'}</Text>
-                    <Text style={styles.gdprBtnMeta}>JSON con todo tu historial · check-ins, conversaciones, lecciones</Text>
-                  </View>
-                  <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-                </Pressable>
-                <Pressable
-                  style={styles.signOutBtn}
-                  onPress={handleSignOut}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cerrar sesión">
-                  <MaterialIcons name="logout" size={18} color={palette.danger} />
-                  <Text style={styles.signOutText}>CERRAR SESIÓN</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.gdprDeleteBtn, deleting && { opacity: 0.6 }]}
-                  onPress={handleDeleteAccount}
-                  disabled={deleting}
-                  accessibilityLabel="Eliminar cuenta">
-                  <MaterialIcons name="delete-forever" size={18} color={palette.danger} />
-                  <View style={styles.gdprBtnBody}>
-                    <Text style={styles.gdprDeleteTitle}>{deleting ? 'ELIMINANDO...' : 'ELIMINAR CUENTA'}</Text>
-                    <Text style={styles.gdprBtnMeta}>Elimina tu cuenta y todos los datos de forma permanente</Text>
-                  </View>
-                </Pressable>
-              </PremiumCard>
-
-              {/* Legal */}
-              <PremiumCard style={[styles.gdprCard, deskStyles.desktopAccountCard]}>
-                <Text style={styles.gdprIntro}>
-                  Documentos legales de Polaris Growth Institute.
-                </Text>
-                {LEGAL_LINKS.map((link) => (
-                  <Pressable
-                    key={link.route}
-                    style={styles.gdprBtn}
-                    onPress={() => router.push(link.route as never)}
-                    accessibilityRole="button"
-                    accessibilityLabel={link.title}>
-                    <MaterialIcons name={link.icon} size={18} color={palette.goldText} />
-                    <View style={styles.gdprBtnBody}>
-                      <Text style={styles.gdprBtnTitle}>{link.title}</Text>
-                      <Text style={styles.gdprBtnMeta}>{link.meta}</Text>
-                    </View>
-                    <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-                  </Pressable>
-                ))}
-              </PremiumCard>
-            </View>
-          </View>
-
-          {/* Version footer */}
-          <Text style={styles.versionText}>
-            Polaris OS v{appVersion}
-          </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  // ── Mobile / Tablet layout (original) ────────────────────────────────────────
-  return (
-    <KeyboardAvoidingView
-      style={sc.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}>
-    <ScrollView
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
-      showsVerticalScrollIndicator={false}
-      bounces
-      overScrollMode="never"
-      keyboardShouldPersistTaps="handled">
-
-      {/* El título coincide con la pestaña («Perfil»); la ruta sigue siendo progreso. */}
-      <Text style={styles.scoreEyebrow} accessibilityRole="header">PERFIL</Text>
-      {/* ── Profile header (avatar · name · día de protocolo · racha) ── */}
-      <View style={styles.profileHeader}>
-        <View style={styles.profileAvatar}>
-          <Text style={styles.profileAvatarText}>{state.profile.name.slice(0, 2).toUpperCase()}</Text>
-        </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{state.profile.name.toUpperCase()}</Text>
-          <Text style={styles.profileDay}>DÍA {protocolDay} DE PROTOCOLO</Text>
-        </View>
-        <View style={styles.streakChip}>
-          <MaterialIcons name="local-fire-department" size={14} color={palette.goldText} />
-          <Text style={styles.streakChipText}>{checkinStreak}</Text>
-        </View>
-      </View>
-
-      <MyMentorCard style={styles.myMentor} />
-
-      {/* ── HÉROE CONSOLIDADO ──────────────────────────────────────────────
-          Score, compartir y tu historia eran tres tarjetas apiladas. En el
-          diseño aprobado comparten UNA superficie: el número, su tendencia y lo
-          que significa se leen juntos porque son la misma lectura. */}
-      <HeroPanel>
-      {/* ── Score Soberano + 14-day trend ── */}
-        <View style={styles.scoreCard}>
-          <View style={styles.scoreTopRow}>
-            <View>
-              <GlossToggle label="SCORE SOBERANO" gloss={GLOSS.score} labelStyle={styles.scoreEyebrow} />
-              <View style={styles.scoreNumberRow}>
-                {/* Sin una sola lectura el score no mide nada: los 25 puntos que
-                    salían el día 1 venían del `stress ?? 5` de arriba, con el
-                    término invertido. Comando ya lo resolvió así; esta pestaña
-                    se quedó con el número inventado. */}
-                {sinLecturas ? (
-                  <Text style={styles.scoreNumber}>—</Text>
-                ) : (
-                  <AnimatedNumber value={score} style={styles.scoreNumber} />
-                )}
-                {analytics.scoreDelta !== 0 && (
-                  <Text style={[styles.scoreTrend, { color: analytics.scoreDelta >= 0 ? palette.success : palette.ash }]}>
-                    {analytics.scoreDelta >= 0 ? '▲' : '▼'} {Math.abs(analytics.scoreDelta)}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
-          {analytics.score14.length >= 2 && (
-            <View style={styles.scoreSpark}>
-              {/* «ÚLTIMOS 14 DÍAS» estaba arriba, etiquetando el número — que es
-                  VITALICIO y no baja. El mismo copy falso que ya se corrigió en
-                  Comando, vivo aquí. Baja a la gráfica, que sí son 14 días. */}
-              <Text style={styles.scoreCaption}>ÚLTIMOS 14 DÍAS</Text>
-              <MiniSparkline data={analytics.score14} width={300} height={70} showDots />
-            </View>
-          )}
-          {baselineNote}
-        </View>
-
-        {/* ── Share profile CTA ── */}
-        <Pressable
-          style={shareStyles.row}
-          onPress={() => router.push('/perfil' as never)}
-          accessibilityRole="button"
-          accessibilityLabel="Ver y compartir tarjeta soberana">
-          <MaterialIcons name="share" size={16} color={palette.goldText} />
-          <Text style={shareStyles.label}>VER TARJETA SOBERANA</Text>
-          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-        </Pressable>
-
-        {/* ── Transformation Narrative ── */}
-        {/* `compact` SOLO cuando hay historia debajo: encima de tres párrafos
-            de "TU HISTORIA" la frase del arco diría lo mismo una cuarta vez,
-            pero sin ellos no hay nada que repetir y el usuario del día 3 se
-            quedaba sin ver su propia frase en esta pantalla. La tarjeta ya no
-            cuelga de `narrativeBlock`: dónde estás no depende de cuánta historia
-            haya que contar. */}
-        <View style={styles.narrativeCard}>
-          <ArcHeader
-            arc={arcForDay(protocolDay, arcoSuyas, snap.daysSinceLastReading)}
-            explain
-            compact={narrativeBlock.length > 0}
-          />
-          {narrativeBlock.length > 0 && (
-            <Text style={styles.narrativeLabel}>TU HISTORIA</Text>
-          )}
-          {narrativeBlock.map((line, i) => (
-            <Text key={i} style={styles.narrativeLine}>{line}</Text>
-          ))}
-        </View>
-
-      </HeroPanel>
-
-      {/* ── LENTES ────────────────────────────────────────────────────────
-          Antes: 15 secciones apiladas. Para ver tus arquetipos había que bajar
-          por los ajustes de notificaciones. Las secciones NO se han reescrito
-          —son las mismas— pero ahora eliges por dónde entrar. */}
-      <LensTabs
-        lenses={[
-          { id: 'avance', label: 'AVANCE', render: () => (<>
-      {/* ── Protocol Progress ── */}
-      <ProgressCard
-        label="Progreso · Protocolo Soberano 90D"
-        value={`${protocolProgress}% · ${protocolDay}/90`}
-        progress={protocolProgress}
-      />
-
-      {/* ── Módulos (ring + progreso del módulo activo) ── */}
-      <GoldDivider label="MÓDULOS" />
-      <PremiumCard style={styles.modulesCard}>
-        <ScoreRing
-          value={moduleProgress.completedModules}
-          max={moduleProgress.totalModules}
-          size={92}
-          stroke={7}
-          display={`${moduleProgress.completedModules}`}
-          sub={`de ${moduleProgress.totalModules}`}
-        />
-        <View style={styles.modulesBody}>
-          <Text style={styles.modulesTitle}>{ACTIVE_MODULE.title} · {moduleProgress.activePct}%</Text>
-          <View style={styles.modulesTrack}>
-            <View style={[styles.modulesFill, { width: `${moduleProgress.activePct}%` }]} />
-          </View>
-          <Text style={styles.modulesMeta}>1 ACTIVO · {moduleProgress.locked} BLOQUEADOS</Text>
-        </View>
-      </PremiumCard>
-
-      {/* ── 42-Day Streak Heatmap ── */}
-      {state.checkIns.length > 0 && (
-        <StreakCalendar checkIns={state.checkIns} />
-      )}
-
-          </>) },
-          { id: 'senal', label: 'SEÑAL', render: () => (<>
-      {/* ── Promedios de la semana (sparkline metric cards) ── */}
-      {analytics.hasWeek ? (
-        <>
-          <GoldDivider label="PROMEDIOS DE LA SEMANA" />
-          <View style={styles.grid}>
-            <WeeklyMetricCard
-              label="Energía"
-              icon="bolt"
-              data={analytics.energy}
-              avg={(averages.energy ?? 0).toFixed(1)}
-              trendPct={analytics.energyTrend ?? undefined}
-              trendUp={analytics.energyTrend == null ? undefined : analytics.energyTrend >= 0}
-            />
-            <WeeklyMetricCard
-              label="Claridad"
-              icon="center-focus-strong"
-              data={analytics.clarity}
-              avg={(averages.clarity ?? 0).toFixed(1)}
-              trendPct={analytics.clarityTrend ?? undefined}
-              trendUp={analytics.clarityTrend == null ? undefined : analytics.clarityTrend >= 0}
-            />
-            <WeeklyMetricCard
-              label="Carga sistema"
-              icon="thermostat"
-              data={analytics.load}
-              avg={(averages.stress ?? 0).toFixed(1)}
-              trendPct={analytics.loadTrend ?? undefined}
-              trendUp={analytics.loadTrend == null ? undefined : analytics.loadTrend < 0}
-            />
-            <WeeklyMetricCard
-              label="Coherencia"
-              icon="favorite"
-              data={analytics.coherence}
-              avg={(((averages.energy ?? 0) + (averages.clarity ?? 0)) / 2).toFixed(1)}
-              trendPct={analytics.coherenceTrend ?? undefined}
-              trendUp={analytics.coherenceTrend == null ? undefined : analytics.coherenceTrend >= 0}
-            />
-          </View>
-        </>
-      ) : (
-        <>
-          {/* Fallback: metric grid when there is not enough check-in history yet */}
-          <View style={styles.grid}>
-            <MetricCard
-              label="Racha"
-              value={`${checkinStreak}`}
-              meta="dias seguidos"
-              icon="local-fire-department"
-            />
-            <MetricCard
-              label="Energia"
-              value={averages.energy ? `${averages.energy}` : '--'}
-              meta="promedio /10"
-              icon="bolt"
-            />
-            <MetricCard
-              label="Claridad"
-              value={averages.clarity ? `${averages.clarity}` : '--'}
-              meta="promedio /10"
-              icon="center-focus-strong"
-            />
-            <MetricCard
-              label="Check-ins"
-              value={`${state.checkIns.length}`}
-              meta="completados"
-              icon="fact-check"
-            />
-          </View>
-        </>
-      )}
-
-      {/* ── Biometría promedio (7D) — antes solo vivía en la rama desktop con
-          WeeklySparkline (entrada animada); el móvil se quedaba con los
-          MiniSparkline de arriba. Misma tarjeta, mismos datos, en las dos
-          plataformas. ── */}
-      <GoldDivider label="BIOMETRÍA PROMEDIO (7D)" />
-      <PremiumCard style={styles.sparklineCard}>
-        {hasCheckIns ? (
-          <>
-            <WeeklySparkline label="ENERGÍA" values={energyValues} color={palette.goldText} />
-            <View style={styles.sparklineDivider} />
-            <WeeklySparkline label="CLARIDAD" values={clarityValues} color={palette.success} />
-          </>
-        ) : (
-          <EmptyState
-            icon="show-chart"
-            title="Tu biometría empieza hoy"
-            body="Haz tu primer check-in y aquí verás cómo se mueven tu energía y tu claridad."
-            actionLabel="HACER CHECK-IN"
-            onAction={() => router.push('/checkin')}
-          />
-        )}
-      </PremiumCard>
-
-      {/* ── Intelligence DNA Dashboard ── */}
-      {intelligence.engagement_score > 0 && (
-        <>
-          <GoldDivider label="ADN DE COMPORTAMIENTO" />
-          <PremiumCard style={dnaStyles.card}>
-            {/* Cohort badge */}
-            {intelligence.cohort_label && (
-              <View style={dnaStyles.cohortRow}>
-                <MaterialIcons name="group" size={14} color={palette.goldText} />
-                <Text style={dnaStyles.cohortLabel}>
-                  PERFIL: {intelligence.cohort_label.replace(/_/g, ' ').toUpperCase()}
-                </Text>
-                <View style={[dnaStyles.tierBadge, {
-                  backgroundColor:
-                    engagementTier === 'excellent' ? palette.goldLight
-                    : engagementTier === 'good' ? palette.successMuted
-                    : 'rgba(120,120,120,0.15)',
-                }]}>
-                  <Text style={[dnaStyles.tierText, {
-                    color: engagementTier === 'excellent' ? palette.gold : engagementTier === 'good' ? palette.success : palette.smoke,
-                  }]}>{engagementTier.toUpperCase()}</Text>
-                </View>
-              </View>
-            )}
-
-            {/* Engagement gauge */}
-            <View style={dnaStyles.gaugeRow}>
-              <Text style={dnaStyles.gaugeLabel}>ENGAGEMENT</Text>
-              <View style={dnaStyles.gaugeTrack}>
-                <View style={[dnaStyles.gaugeFill, { width: `${intelligence.engagement_score}%` as unknown as number }]} />
-              </View>
-              <Text style={dnaStyles.gaugeValue}>{intelligence.engagement_score}/100</Text>
-            </View>
-
-            {/* Affinity bars */}
-            <Text style={dnaStyles.sectionLabel}>AFINIDAD POR MÓDULO</Text>
-            {[
-              { key: 'binaural',   label: 'Sonidos',     value: intelligence.affinity_binaural },
-              { key: 'meditation', label: 'Meditación',  value: intelligence.affinity_meditation },
-              { key: 'breathing',  label: 'Respiración', value: intelligence.affinity_breathing },
-              { key: 'lessons',    label: 'Lecciones',   value: intelligence.affinity_lessons },
-              { key: 'mentor',     label: 'Mentor IA',   value: intelligence.affinity_mentor },
-              { key: 'journaling', label: 'Diario',      value: intelligence.affinity_journaling },
-            ].map((af) => (
-              <View key={af.key} style={dnaStyles.affinityRow}>
-                <Text style={[dnaStyles.affinityLabel, topAffinity === af.key && { color: palette.goldText }]}>
-                  {af.label}{topAffinity === af.key ? ' ★' : ''}
-                </Text>
-                <View style={dnaStyles.affinityTrack}>
-                  <View style={[
-                    dnaStyles.affinityFill,
-                    { width: `${Math.round(af.value * 100)}%` as unknown as number },
-                    topAffinity === af.key && { backgroundColor: palette.gold },
-                  ]} />
-                </View>
-                <Text style={dnaStyles.affinityPct}>{Math.round(af.value * 100)}%</Text>
-              </View>
-            ))}
-
-            {/* Churn risk (only if not low) */}
-            {intelligence.churn_risk_label !== 'low' && (
-              <View style={dnaStyles.riskRow}>
-                <MaterialIcons
-                  name="warning-amber"
-                  size={13}
-                  color={intelligence.churn_risk_label === 'critical' ? palette.danger : palette.goldText}
-                />
-                <Text style={[dnaStyles.riskText, intelligence.churn_risk_label === 'critical' && { color: palette.danger }]}>
-                  Riesgo de abandono: {intelligence.churn_risk_label.toUpperCase()}
-                  {'  — Habla con Norman para retomar tu impulso.'}
-                </Text>
-              </View>
-            )}
-          </PremiumCard>
-        </>
-      )}
-
-      {/* ── Mi Bienestar ── */}
-      <GoldDivider label="MI BIENESTAR" />
-
-      {/* Tier badge — Supabase Realtime-synced */}
-      <PremiumCard style={[styles.tierCard, {
-        borderColor: subscription.isExpiringSoon
-          ? alpha(palette.warning, '88')
-          : subColor + '55',
-      }]}>
-        <View style={[styles.tierIconBox, { backgroundColor: subColor + '22' }]}>
-          <MaterialIcons name={subIcon} size={22} color={subColor} />
-        </View>
-        <View style={styles.tierBody}>
-          <Text style={styles.tierLabel}>PLAN ACTIVO</Text>
-          <Text style={[styles.tierName, { color: subColor }]}>{subLabel}</Text>
-          {subscription.isExpiringSoon && subscription.expiresAt ? (
-            <Text style={[styles.tierSub, { color: palette.warning }]}>
-              ⚠ Expira {new Date(subscription.expiresAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
-            </Text>
-          ) : subTier === 'free' ? (
-            <Text style={styles.tierSub}>{IOS_CODE_ONLY ? 'Tu Navegador te entrega el código que abre el Protocolo completo' : 'Actualiza a Premium para desbloquear todo el contenido'}</Text>
-          ) : (
-            <Text style={styles.tierSub}>{subscription.tierInfo.description}</Text>
-          )}
-        </View>
-        {subTier === 'free' && (
-          <Pressable style={styles.tierUpgradeBtn} onPress={() => router.push('/pricing' as never)}>
-            <Text style={styles.tierUpgradeText}>{IOS_CODE_ONLY ? 'CÓDIGO' : 'UPGRADE'}</Text>
-          </Pressable>
-        )}
-      </PremiumCard>
-
-      {/* Wellness stats */}
-      <View style={styles.grid}>
-        <MetricCard
-          label="Sesiones"
-          value={`${wellnessSessions.length}`}
-          meta="totales"
-          icon="self-improvement"
-        />
-        <MetricCard
-          label="Minutos"
-          value={`${totalWellnessMinutes}`}
-          meta="acumulados"
-          icon="timer"
-        />
-        <MetricCard
-          label="Racha"
-          value={`${wellnessStreak}`}
-          meta="días wellness"
-          icon="local-fire-department"
-        />
-        <MetricCard
-          label="Meditación"
-          value={`${wellnessMeditation}`}
-          meta="sesiones"
-          icon="spa"
-        />
-      </View>
-
-      {/* B2B CTA */}
-      <PremiumCard style={styles.b2bCard}>
-        <View style={styles.b2bHeader}>
-          <View style={[styles.b2bIconBox, { backgroundColor: alpha(palette.gold, '22') }]}>
-            <MaterialIcons name="business" size={24} color={palette.goldText} />
-          </View>
-          <View style={styles.b2bTextCol}>
-            <Text style={styles.b2bTitle}>POLARIS PARA TU EMPRESA</Text>
-            <Text style={styles.b2bSub}>Lleva el bienestar a todo tu equipo</Text>
-          </View>
-        </View>
-        <Text style={styles.b2bBody}>
-          Acceso corporativo, dashboard de métricas de equipo, y programas de bienestar personalizados para organizaciones.
-        </Text>
-        <View style={styles.b2bFeatures}>
-          {['Dashboard de equipo', 'Licencias múltiples', 'Soporte prioritario'].map((f) => (
-            <View key={f} style={styles.b2bFeatureRow}>
-              <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
-              <Text style={styles.b2bFeatureText}>{f}</Text>
-            </View>
-          ))}
-        </View>
-        <Pressable
-          style={styles.b2bBtn}
-          onPress={() => Linking.openURL('mailto:info@polarisgrowthinstitute.com?subject=Polaris%20para%20mi%20empresa')}
-          accessibilityRole="button"
-          accessibilityLabel="Solicitar información de Polaris para tu empresa">
-          <MaterialIcons name="arrow-forward" size={16} color={palette.ink} />
-          <Text style={styles.b2bBtnText}>SOLICITAR INFORMACIÓN</Text>
-        </Pressable>
-      </PremiumCard>
-
-          </>) },
-          { id: 'logros', label: 'LOGROS', render: () => (<>
-      {/* ── Archetype badges ── */}
-      <GoldDivider label="ARQUETIPOS DESBLOQUEADOS" />
-      <Text style={styles.glossLine}>{GLOSS.archetypes}</Text>
-      <View style={styles.archetypeList}>
-        {archetypes.map((arch) => (
-          <PremiumCard
-            key={arch.id}
-            style={[styles.archetypeRow, arch.earned && styles.archetypeRowEarned]}>
-            <MaterialIcons
-              // Sin condecoracion: `military-tech` es la misma medalla que se quito del
-                      // hito por nombre. Un arquetipo desbloqueado se dice con una marca
-                      // de comprobado, no con un galardon.
-                      name={arch.earned ? 'check-circle-outline' : 'lock'}
-              size={18}
-              color={arch.earned ? palette.goldText : palette.smoke}
-            />
-            <View style={styles.archetypeCopy}>
-              <Text style={[styles.archetypeName, arch.earned && styles.archetypeNameEarned]}>
-                {arch.name}
-              </Text>
-              <Text style={styles.archetypeProgress}>
-                {arch.earned
-                  ? 'ARQUETIPO CONQUISTADO'
-                  : `${arch.completedCount}/${arch.totalLessons} LECCIONES`}
-              </Text>
-            </View>
-            {arch.earned && (
-              <View style={styles.archetypeCheck}>
-                <MaterialIcons name="check-circle" size={20} color={palette.goldText} />
-              </View>
-            )}
-          </PremiumCard>
-        ))}
-      </View>
-
-          </>) },
-          { id: 'ajustes', label: 'AJUSTES', render: () => (<>
+  const ajustesBlock = (
+    <>
       {/* ── Edit Profile ── */}
       <GoldDivider label="EDITAR PERFIL" />
       <PremiumCard style={styles.form}>
@@ -1897,237 +552,107 @@ export default function ProgresoScreen() {
         </Pressable>
       )}
 
-          </>) },
-        ]}
-      />
+    </>
+  );
 
-      {/* ── Version footer ── */}
-      <Text style={styles.versionText}>
-        Polaris OS v{appVersion}
-      </Text>
-    </ScrollView>
-    </KeyboardAvoidingView>
+  return (
+    <Pantalla
+      meta="PROGRESO"
+      metaRight={`DÍA ${protocolDay} / 90`}
+      title={checkinStreak > 0
+        ? `${checkinStreak} ${checkinStreak === 1 ? 'día' : 'días'}\nseguido${checkinStreak === 1 ? '' : 's'}.`
+        : 'Tu racha\nempieza hoy.'}
+      sub={checkinStreak > 0 ? 'Cada cuadro amarillo es un día que apareciste.' : 'Haz tu check-in y aparece el primer cuadro.'}
+      hero={<Calendario checkIns={state.checkIns} />}
+      footer={<Text style={styles.versionText}>Polaris OS v{appVersion}</Text>}>
+      <Fila label="ENERGÍA" value={cifra('energy')} />
+      <Fila label="CLARIDAD" value={cifra('clarity')} />
+      <Fila
+        label="PUNTAJE"
+        value={sinLecturas ? 'Aparece con tu primer check-in' : `${snap.score} · ${snap.tier}`}
+        onPress={() => router.push('/perfil' as never)}
+      />
+      <Fila
+        label="ARQUETIPOS"
+        value={`${modulosHechos} de ${archetypes.length} desbloqueados`}
+        onPress={() => router.push('/(tabs)/programas' as never)}
+      />
+      <Fila
+        label="TU PLAN"
+        value={subscription.tierInfo.name}
+        onPress={subscription.tier === 'free' ? () => router.push('/pricing' as never) : undefined}
+      />
+      <Fila
+        label="TU CUENTA"
+        value={ajustesAbiertos ? 'Ocultar' : 'Perfil, Norte, avisos y privacidad'}
+        onPress={() => setAjustesAbiertos((v) => !v)}
+        last
+      />
+      {ajustesAbiertos && <View style={styles.ajustes}>{ajustesBlock}</View>}
+      <View style={styles.mentorWrap}>
+        <MyMentorCard />
+      </View>
+    </Pantalla>
   );
 }
 
+/** Seis semanas de check-ins, de lunes a domingo. Hoy lleva contorno. */
+function Calendario({ checkIns }: { checkIns: { date: string }[] }) {
+  const dias = useMemo(() => {
+    const clave = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7) - 35);
+    const hechos = new Set(checkIns.map((c) => c.date.slice(0, 10)));
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(lunes);
+      d.setDate(lunes.getDate() + i);
+      return { key: clave(d), on: hechos.has(clave(d)), hoy: +d === +hoy, futuro: d > hoy };
+    });
+  }, [checkIns]);
+  const hechos30 = dias.filter((d) => d.on).length;
+  return (
+    <View
+      style={styles.cal}
+      accessible
+      accessibilityLabel={`Calendario de las últimas seis semanas: ${hechos30} días con check-in`}>
+      {dias.map((d) => (
+        <View key={d.key} style={styles.calCell}>
+          <View
+            style={[
+              styles.calDay,
+              d.on && styles.calDayOn,
+              d.futuro && styles.calDayFuture,
+              d.hoy && styles.calDayToday,
+            ]}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+
 const styles = StyleSheet.create({
-  // Transformation narrative
-  // Sin marco: vive dentro del panel del héroe (ver HeroPanel).
-  narrativeCard: {
-    borderRadius: 8,
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  narrativeLabel: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 2,
-  },
-  narrativeLine: {
-    color: palette.ash,
-    fontFamily: Fonts.sans,
-    // Es la historia del usuario, no un pie de tabla: `body` (14/22).
-    fontSize: 14,
-    lineHeight: 22,
-  },
+  // ── Rediseño ──
+  cal: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, maxWidth: 528 },
+  calCell: { width: '14.2857%', padding: 3 },
+  calDay: { aspectRatio: 1, borderRadius: 4, backgroundColor: palette.charcoal },
+  calDayOn: { backgroundColor: palette.gold },
+  calDayFuture: { opacity: 0.35 },
+  calDayToday: { borderWidth: 2, borderColor: palette.ivory },
+  ajustes: { marginTop: spacing.lg },
+  mentorWrap: { marginTop: spacing.xl },
 
-  // Profile header (design: avatar · name · día de protocolo · racha chip)
-  myMentor: { marginBottom: spacing.lg },
-  profileHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  profileAvatar: {
-    alignItems: 'center',
-    backgroundColor: palette.goldLight,
-    borderColor: palette.lineGold,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 56,
-    justifyContent: 'center',
-    width: 56,
-  },
-  profileAvatarText: {
-    color: palette.goldText,
-    fontFamily: Fonts.display,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  profileInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  profileName: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  profileDay: {
-    ...typography.mono,
-    color: palette.goldText,
-    fontSize: 11,
-    letterSpacing: 1.2,
-  },
-  streakChip: {
-    alignItems: 'center',
-    backgroundColor: palette.goldLight,
-    borderColor: palette.lineGold,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
-  streakChipText: {
-    color: palette.goldText,
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    fontWeight: '700',
-  },
 
-  // Score Soberano trend card
-  scoreCard: {
-    gap: spacing.md,
-  },
-  scoreTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  scoreEyebrow: {
-    ...typography.label,
-    color: palette.ash,
-  },
-  glossLine: {
-    ...typography.caption,
-    color: palette.ash,
-  },
-  scoreNumberRow: {
-    alignItems: 'baseline',
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: spacing.xs,
-  },
-  scoreNumber: {
-    ...typography.numeric,
-    color: palette.goldText,
-    fontSize: 46,
-    fontWeight: '800',
-    letterSpacing: -1,
-    lineHeight: 50,
-  },
-  scoreTrend: {
-    ...typography.mono,
-    fontSize: 13,
-  },
-  scoreCaption: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    letterSpacing: 1,
-    textAlign: 'right',
-  },
-  scoreSpark: {
-    height: 70,
-    marginTop: spacing.xs,
-  },
 
-  // Modules ring card
-  modulesCard: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
-  modulesBody: {
-    flex: 1,
-    gap: spacing.sm,
-  },
-  modulesTitle: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  modulesTrack: {
-    backgroundColor: palette.charcoal,
-    borderRadius: radii.xs,
-    height: 3,
-    overflow: 'hidden',
-  },
-  modulesFill: {
-    backgroundColor: palette.gold,
-    height: '100%',
-  },
-  modulesMeta: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    letterSpacing: 0.5,
-  },
 
-  // Grid
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
 
-  // Sparklines
-  sparklineCard: {
-    gap: spacing.xl,
-  },
-  sparklineDivider: {
-    backgroundColor: palette.lineSoft,
-    height: 1,
-  },
 
   // Achievements
 
-  // Archetype badges
-  archetypeList: {
-    gap: spacing.sm,
-  },
-  archetypeRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.md,
-    opacity: 0.5,
-  },
-  archetypeRowEarned: {
-    opacity: 1,
-    borderColor: alpha(palette.gold, '55'),
-  },
-  archetypeCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  archetypeName: {
-    color: palette.smoke,
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  archetypeNameEarned: {
-    color: palette.ivory,
-  },
-  archetypeProgress: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-  },
-  archetypeCheck: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
   // Form
   form: {
@@ -2200,128 +725,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // Tier badge
-  tierCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  tierIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  tierBody: {
-    flex: 1,
-    gap: 2,
-  },
-  tierLabel: {
-    ...typography.label,
-    color: palette.ash,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  tierName: {
-    fontFamily: Fonts.display,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  tierSub: {
-    ...typography.caption,
-    color: palette.smoke,
-    fontSize: 11,
-  },
-  tierUpgradeBtn: {
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  tierUpgradeText: {
-    ...typography.label,
-    color: palette.ink,
-    fontSize: 11,
-    fontWeight: '700',
-  },
 
-  // B2B card
-  b2bCard: {
-    gap: spacing.md,
-    borderColor: alpha(palette.gold, '44'),
-    marginBottom: spacing.lg,
-  },
-  b2bHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  b2bIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  b2bTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  b2bTitle: {
-    ...typography.section,
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 12,
-    letterSpacing: 2,
-  },
-  b2bSub: {
-    ...typography.caption,
-    color: palette.smoke,
-    fontSize: 11,
-  },
-  b2bBody: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  b2bFeatures: {
-    gap: spacing.sm,
-  },
-  b2bFeatureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  b2bFeatureText: {
-    ...typography.caption,
-    color: palette.ash,
-    fontSize: 11,
-  },
-  b2bBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    minHeight: 48,
-  },
-  b2bBtnText: {
-    ...typography.label,
-    color: palette.ink,
-    fontWeight: '700',
-    fontSize: 11,
-  },
 
   // System
   systemCard: {
@@ -2443,186 +847,5 @@ const styles = StyleSheet.create({
   },
 });
 
-// ─── Share row ────────────────────────────────────────────────────────────────
-const shareStyles = StyleSheet.create({
-  row: {
-    alignItems:      'center',
-    borderColor:     alpha(palette.gold, '44'),
-    borderRadius:    radii.sm,
-    borderWidth:     1,
-    flexDirection:   'row',
-    gap:             spacing.sm,
-    justifyContent:  'center',
-    paddingHorizontal: spacing.lg,
-    minHeight:       44,
-    backgroundColor: 'rgba(179,141,60,0.05)',
-  },
-  label: {
-    color:       palette.gold,
-    flex:        1,
-    fontFamily:  Fonts.mono,
-    fontSize:    11,
-    letterSpacing: 2,
-    textAlign:   'center',
-  },
-});
 
-// ─── Desktop layout styles ───────────────────────────────────────────────────
-const deskStyles = StyleSheet.create({
-  contentDesktop: {
-    alignSelf:        'center' as const,
-    width:            '100%'  as const,
-    maxWidth:         1200,
-    paddingHorizontal: 40,
-    paddingTop:       32,
-    paddingBottom:    60,
-    gap:              24,
-  },
-  desktopMiddle: {
-    flexDirection: 'row',
-    gap:           24,
-    alignItems:    'flex-start',
-  },
-  desktopLeft: {
-    flex: 3,
-    gap:  16,
-  },
-  desktopRight: {
-    flex: 2,
-    gap:  16,
-  },
-  desktopBottom: {
-    gap: 16,
-  },
-  desktopAccountGrid: {
-    flexDirection: 'row',
-    flexWrap:      'wrap',
-    gap:           16,
-  },
-  desktopAccountCard: {
-    flex:     1,
-    minWidth: 280,
-  },
-});
 
-// ─── DNA Dashboard styles ─────────────────────────────────────────────────────
-const dnaStyles = StyleSheet.create({
-  card: {
-    gap: spacing.md,
-  },
-  cohortRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  cohortLabel: {
-    ...typography.label,
-    color: palette.ash,
-    flex: 1,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  tierBadge: {
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  tierText: {
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  gaugeRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  gaugeLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1.5,
-    width: 90,
-  },
-  gaugeTrack: {
-    backgroundColor: palette.charcoal,
-    borderRadius: 2,
-    flex: 1,
-    height: 8,
-    overflow: 'hidden',
-  },
-  gaugeFill: {
-    backgroundColor: palette.gold,
-    borderRadius: 2,
-    height: 8,
-  },
-  gaugeValue: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-    textAlign: 'right',
-    width: 44,
-  },
-  sectionLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 2,
-    marginBottom: 2,
-    marginTop: spacing.sm,
-  },
-  affinityRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  affinityLabel: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 11,
-    width: 82,
-  },
-  affinityTrack: {
-    backgroundColor: palette.charcoal,
-    borderRadius: 2,
-    flex: 1,
-    height: 6,
-    overflow: 'hidden',
-  },
-  affinityFill: {
-    backgroundColor: palette.lineSoft,
-    borderRadius: 2,
-    height: 6,
-  },
-  affinityPct: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    textAlign: 'right',
-    width: 32,
-  },
-  riskRow: {
-    alignItems: 'center',
-    backgroundColor: alpha(palette.gold, '0F'),
-    borderColor: alpha(palette.gold, '4D'),
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  riskText: {
-    ...typography.body,
-    color: palette.goldText,
-    flex: 1,
-    fontSize: 11,
-  },
-});
