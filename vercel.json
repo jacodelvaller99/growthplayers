@@ -93,6 +93,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/cuestionario", "destination": "/cuestionario.html" },
     { "source": "/(.*)", "destination": "/app.html" }
   ]
 }
