@@ -319,12 +319,14 @@ function MeditationPlayer({
 
 export default function MeditacionScreen() {
   const { focus: focusParam } = useLocalSearchParams<{ focus?: string | string[] }>();
-  const { saveWellnessSession, state, latestCheckIn } = useLifeFlow();
-  // Si la saturación viene alta, la pantalla lo dice con el dato.
-  const stressReading = latestCheckIn?.stress ?? null;
+  const { saveWellnessSession, state, todayCheckIn } = useLifeFlow();
+  // Si la presión de HOY viene alta, la pantalla lo dice con el dato — en la
+  // escala que la persona respondió (1–5; se guarda ×2) y con su palabra.
+  const stressReading = todayCheckIn?.stress ?? null;
+  const pressureAnswer = stressReading !== null ? Math.max(1, Math.min(5, Math.round(stressReading / 2))) : null;
   const introLine =
-    stressReading !== null && stressReading >= 7
-      ? `Tu estrés está en ${stressReading}/10 en tu check-in. Diez minutos aquí ayudan. Usa audífonos.`
+    pressureAnswer !== null && pressureAnswer >= 4
+      ? `Hoy marcaste tu presión en ${pressureAnswer} de 5. Diez minutos aquí ayudan. Usa audífonos.`
       : 'Unos minutos en los que no se te pide nada. Usa audífonos.';
   const [active, setActive] = useState<MeditationSession | null>(null);
   const [openCat, setOpenCat] = useState<string | null>(null);

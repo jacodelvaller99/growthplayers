@@ -45,7 +45,8 @@ function Opcion({
     <Pressable
       onPress={onPress}
       accessibilityRole="radio"
-      accessibilityState={{ selected: active }}
+      accessibilityState={{ checked: active }}
+      aria-checked={active}
       accessibilityLabel={note ? `${name}. ${note}` : name}
       style={({ pressed }) => [s.row, last && s.rowLast, pressed && { opacity: 0.7 }]}>
       <View style={s.rowText}>

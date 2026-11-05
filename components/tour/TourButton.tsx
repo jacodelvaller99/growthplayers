@@ -64,7 +64,11 @@ export function TourButton() {
   // Hoy / Clientes del equipo llevan el botón en su propia cabecera en el
   // teléfono (TourHeaderButton): flotando tapaba «Necesitan atención primero».
   const boardRoute = root === 'admin' && (segments.length === 1 || ['index', 'clientes'].includes(segments[1] ?? ''));
+  // En el teléfono, fuera de las pantallas con barra abajo, no hay dónde
+  // acoplarlo: arriba a la derecha tapaba la línea de meta («MÓDULO 1 DE 9»).
+  const sinBarra = !isDesktop && !(inTabs || root === 'admin');
   const hidden =
+    sinBarra ||
     (boardRoute && !isDesktop) ||
     HIDDEN_ROOTS.has(root) ||
     HIDDEN_ROUTES.has(root) ||
