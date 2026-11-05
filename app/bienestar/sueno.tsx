@@ -56,8 +56,11 @@ export default function SuenoScreen() {
   const engine = useBinauralEngine();
   // La pantalla abre con TU lectura (y dice de dónde sale); sin lectura no se
   // inventa un dato.
-  const { latestCheckIn } = useLifeFlow();
-  const sleepReading = latestCheckIn?.sleep ?? null;
+  // Solo el check-in de HOY habla de anoche. Se guarda en 1–10 (respuesta ×2);
+  // la persona respondió de 1 a 5, así que se le devuelve en su escala.
+  const { todayCheckIn } = useLifeFlow();
+  const sleepReading = todayCheckIn?.sleep ?? null;
+  const sleepAnswer = sleepReading !== null ? Math.max(1, Math.min(5, Math.round(sleepReading / 2))) : null;
 
   // Propuesta: si dormiste mal o es de madrugada, lo corto; si no, el descanso guiado.
   const hour = new Date().getHours();
@@ -67,7 +70,7 @@ export default function SuenoScreen() {
   const rest = SLEEP_ITEMS.filter((i) => i.id !== suggested.id);
 
   const sub = sleepReading !== null
-    ? `Anoche: ${sleepReading}/10 en tu check-in. Elige una, apaga la pantalla y escucha.`
+    ? `Anoche dormiste ${sleepAnswer} de 5, según tu check-in de hoy. Elige una, apaga la pantalla y escucha.`
     : 'Elige una, apaga la pantalla y escucha.';
 
   function handlePlay(item: SleepItem) {

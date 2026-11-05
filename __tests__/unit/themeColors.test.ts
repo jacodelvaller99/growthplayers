@@ -169,10 +169,11 @@ describe('alpha()', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const web = require('@/constants/themeColors');
       expect(web.alpha('var(--c-gold)', '44')).toBe(
-        'color-mix(in srgb, var(--c-gold) 27%, transparent)',   // 0x44 = 68/255 ≈ 27%
+        // Envuelto en var(): react-native-web descarta los colores que no empiezan por `var(`.
+        'var(--polaris-alpha, color-mix(in srgb, var(--c-gold) 27%, transparent))',   // 0x44 = 68/255 ≈ 27%
       );
       expect(web.alpha('var(--c-danger)', '55')).toBe(
-        'color-mix(in srgb, var(--c-danger) 33%, transparent)', // 0x55 = 85/255 ≈ 33%
+        'var(--polaris-alpha, color-mix(in srgb, var(--c-danger) 33%, transparent))', // 0x55 = 85/255 ≈ 33%
       );
     });
   });

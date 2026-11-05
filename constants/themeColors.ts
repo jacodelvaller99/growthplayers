@@ -592,7 +592,12 @@ export const cv = (varName: string, nativeHex: string): string =>
 export function alpha(color: string, hexAlpha: string): string {
   if (Platform.OS !== 'web') return color + hexAlpha;
   const pct = Math.round((parseInt(hexAlpha, 16) / 255) * 100);
-  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+  // react-native-web descarta en silencio cualquier color que no reconoce
+  // (isWebColor solo deja pasar los que EMPIEZAN por `var(`): un color-mix
+  // desnudo desaparecía y el elemento quedaba invisible. Se envuelve en una
+  // var inexistente cuyo valor de respaldo es la mezcla — el navegador usa el
+  // respaldo y RNW lo deja pasar.
+  return `var(--polaris-alpha, color-mix(in srgb, ${color} ${pct}%, transparent))`;
 }
 
 function block(selector: string, vars: Record<string, string>): string {
