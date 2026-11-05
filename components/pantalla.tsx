@@ -59,15 +59,14 @@ export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, 
     else router.replace((segments[0] === 'bienestar' && segments.length > 1 ? '/bienestar' : '/(tabs)/yo') as never);
   };
   const back = onBack === false ? null : onBack ?? (esPestana || !router ? null : volverPorDefecto);
-  // GrandisExtended es ancha: una palabra de 10+ letras a 64 px no cabe en la
-  // columna del titular y se partía (Mentoría, Suplementos). Se baja un escalón.
+  // Escala de la landing (polarisgrowthinstitute.vercel.app): titulares
+  // enormes. GrandisExtended es ancha: una palabra larga baja un escalón para
+  // no partirse (Suplementos, Respiración).
   const longest = Math.max(...title.split(/\s+/).map((w) => w.length));
-  const size = isDesktop ? (longest > 9 ? 52 : 64) : (longest > 10 ? 34 : 40);
+  const size = isDesktop ? (longest > 12 ? 64 : 88) : (longest > 8 ? 38 : 48);
 
   const head = (
-    // Sin tarjeta a la derecha el titular toma todo el ancho: con 420 fijo,
-    // «Suplementos» a 64 px se partía en dos.
-    <View style={isDesktop ? (hero ? s.headDesk : s.headDeskFull) : undefined}>
+    <View style={isDesktop ? s.headDeskFull : undefined}>
       <Text accessibilityRole="header" style={[s.title, { fontSize: size, lineHeight: Math.round(size * 1.04) }]}>
         {title}
       </Text>
@@ -102,10 +101,11 @@ export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, 
         </View>
 
         {isDesktop ? (
-          <View style={s.deskTop}>
+          <>
             {head}
+            {/* Como la banda amarilla de la landing: a todo el ancho. */}
             {!!hero && <View style={s.heroDesk}>{hero}</View>}
-          </View>
+          </>
         ) : (
           <>
             {head}
@@ -204,14 +204,12 @@ const s = StyleSheet.create({
   meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
   back: { width: 44, height: 44, marginLeft: -10, marginBottom: 8, alignItems: 'center', justifyContent: 'center' },
 
-  title: { marginTop: 40, fontFamily: Fonts.displayRegular, fontWeight: '400', color: palette.ivory, letterSpacing: -0.3 },
-  sub: { marginTop: 20, fontFamily: Fonts.sans, fontSize: 17, lineHeight: 26, color: palette.ash, maxWidth: 340 },
-  subDesk: { fontSize: 18, lineHeight: 28, maxWidth: 400 },
+  title: { marginTop: 40, fontFamily: Fonts.displayRegular, fontWeight: '400', color: palette.ivory, letterSpacing: -1 },
+  sub: { marginTop: 20, fontFamily: Fonts.sans, fontSize: 18, lineHeight: 27, color: palette.ash, maxWidth: 360 },
+  subDesk: { fontSize: 21, lineHeight: 32, maxWidth: 640 },
 
-  deskTop: { flexDirection: 'row', gap: 48, alignItems: 'flex-start', justifyContent: 'space-between' },
-  headDesk: { flexShrink: 1, flexBasis: 420 },
   headDeskFull: { flex: 1 },
-  heroDesk: { marginTop: 56, flexBasis: 528, flexShrink: 1 },
+  heroDesk: { marginTop: 56 },
   heroMob: { marginTop: 32 },
 
   rows: { marginTop: 32 },
@@ -219,18 +217,18 @@ const s = StyleSheet.create({
   footer: { marginTop: 32 },
 
   oro: {
-    minHeight: 168, borderRadius: 8, backgroundColor: palette.gold, padding: 22,
-    justifyContent: 'space-between', gap: 20,
+    minHeight: 220, borderRadius: 8, backgroundColor: palette.gold, padding: 24,
+    justifyContent: 'space-between', gap: 24,
   },
-  oroDesk: { minHeight: 300, padding: 32 },
+  oroDesk: { minHeight: 280, paddingHorizontal: 56, paddingVertical: 48 },
   oroPressed: { opacity: 0.92 },
   oroMeta: { flexDirection: 'row', justifyContent: 'space-between' },
   oroMetaText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink },
   oroBottom: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 },
   oroText: { flex: 1, gap: 8 },
-  oroTitle: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 26, lineHeight: 29, color: palette.ink },
-  oroTitleDesk: { fontSize: 40, lineHeight: 43 },
-  oroDetail: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 21, color: palette.ink },
+  oroTitle: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 37, letterSpacing: -0.5, color: palette.ink },
+  oroTitleDesk: { fontSize: 56, lineHeight: 60, letterSpacing: -1 },
+  oroDetail: { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 23, color: palette.ink, maxWidth: 560 },
 
   fila: {
     minHeight: 56, paddingVertical: 16, borderTopWidth: 1, borderTopColor: palette.line,

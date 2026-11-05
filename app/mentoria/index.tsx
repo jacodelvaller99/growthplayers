@@ -31,6 +31,7 @@ import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { MyMentorCard } from '@/components/MyMentorCard';
 import { Fonts, palette, spacing } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useMentorship, type SessionNote, type ActionItem, type SessionDraft } from '@/hooks/use-mentorship';
 import {
   MENTORSHIP_PROGRAM,
@@ -215,15 +216,16 @@ export default function MentoriaScreen() {
         onBack={volver}
         meta="MENTORÍA"
         metaRight={`SEMANA ${weekNum} DE ${TOTAL_WEEKS}`}
-        // Dos líneas cortas: «Tu sesión de / esta semana.» se partía palabra a
-        // palabra en la columna estrecha del héroe de escritorio.
-        title={'Tu sesión\nsemanal.'}
+        // Lenguaje de la landing: la cifra que importa, enorme. La semana ES
+        // el titular; el foco de la semana, la frase de abajo.
+        title={`Semana ${weekNum}\nde ${TOTAL_WEEKS}.`}
         sub={week.focus}
         hero={busy || writing ? undefined : (
           <TarjetaOro
-            meta={`SEMANA ${weekNum}`}
+            meta="PASO 1 · TU SESIÓN"
             metaRight={weekRangeLabel(weekNum)}
-            title="Escribir notas de la sesión"
+            title={'Escribe lo que\ntrabajaste hoy.'}
+            detail="Tu mentor y Norman lo leen para armar tu plan de la semana."
             onPress={() => { setNoteWeek(weekNum); setWriting(true); }}
           />
         )}
@@ -231,12 +233,15 @@ export default function MentoriaScreen() {
         {!!m.recordingError && <Text style={s.error}>{m.recordingError}</Text>}
         {work}
 
+        {/* ── La ruta de 12 semanas, a la vista ── */}
+        <Ruta weekNum={weekNum} completed={completedWeeks} />
+
         {/* ── Plan de acción ── */}
-        <Fila
-          label="PLAN DE ACCIÓN"
-          value={m.plan.length === 0
-            ? 'Aún no hay acciones'
-            : pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'pendiente' : 'pendientes'}` : 'Todo hecho'}
+        <Seccion
+          paso="PASO 2 · TU PLAN"
+          titulo={m.plan.length === 0
+            ? 'Aún no hay\nacciones.'
+            : pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'acción\npendiente.' : 'acciones\npendientes.'}` : 'Todo\nhecho.'}
         />
         <View style={s.block}>
           {m.plan.map((it) => (
@@ -273,8 +278,9 @@ export default function MentoriaScreen() {
         </View>
 
         {/* ── Próxima sesión y semanas ── */}
+        <Seccion paso="PASO 3 · LO QUE SIGUE" titulo={siguiente ? `Semana ${siguiente}.` : 'Cierre del\nprograma.'} />
         {siguiente && (
-          <Fila label="PRÓXIMA SESIÓN" value={`Semana ${siguiente} · ${weekRangeLabel(siguiente)}`} />
+          <Fila label="PRÓXIMA SESIÓN" value={weekRangeLabel(siguiente)} />
         )}
         <Fila
           label="SEMANAS"
@@ -320,6 +326,37 @@ export default function MentoriaScreen() {
 }
 
 // ─── Piezas ────────────────────────────────────────────────────────────────────
+
+/** Encabezado de sección a escala de la landing: paso en amarillo + titular grande. */
+function Seccion({ paso, titulo }: { paso: string; titulo: string }) {
+  const { isDesktop } = useBreakpoint();
+  return (
+    <View style={s.seccion}>
+      <Text style={s.paso}>{paso}</Text>
+      <Text accessibilityRole="header" style={[s.seccionTitulo, isDesktop && s.seccionTituloDesk]}>{titulo}</Text>
+    </View>
+  );
+}
+
+/** Las 12 semanas como una barra: amarillo = con nota, borde = esta semana. */
+function Ruta({ weekNum, completed }: { weekNum: number; completed: Set<number> }) {
+  return (
+    <View
+      style={s.ruta}
+      accessible
+      accessibilityLabel={`Semana ${weekNum} de ${TOTAL_WEEKS}. ${completed.size} semanas con nota.`}>
+      <View style={s.rutaBar}>
+        {MENTORSHIP_PROGRAM.map((w) => (
+          <View
+            key={w.week}
+            style={[s.rutaSeg, completed.has(w.week) && s.rutaSegOn, w.week === weekNum && s.rutaSegNow]}
+          />
+        ))}
+      </View>
+      <Text style={s.note}>{completed.size} de {TOTAL_WEEKS} semanas con nota · el borde blanco es esta semana.</Text>
+    </View>
+  );
+}
 
 /** Botón principal dentro de un bloque. Deshabilitado = neutro, nunca oro pálido. */
 function Boton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
@@ -504,4 +541,15 @@ const s = StyleSheet.create({
 
   noteRow: { gap: spacing.xs, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: palette.line },
   noteHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+
+  seccion: { paddingTop: 56, paddingBottom: spacing.md, gap: spacing.md },
+  paso: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1.5, color: palette.goldText },
+  seccionTitulo: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 38, letterSpacing: -0.5, color: palette.ivory },
+  seccionTituloDesk: { fontSize: 56, lineHeight: 60, letterSpacing: -1 },
+
+  ruta: { gap: spacing.sm, paddingTop: spacing.xl },
+  rutaBar: { flexDirection: 'row', gap: 4 },
+  rutaSeg: { flex: 1, height: 14, borderRadius: 2, backgroundColor: palette.charcoal, borderWidth: 1, borderColor: palette.smoke },
+  rutaSegOn: { backgroundColor: palette.gold, borderColor: palette.gold },
+  rutaSegNow: { borderWidth: 2, borderColor: palette.ivory },
 });
