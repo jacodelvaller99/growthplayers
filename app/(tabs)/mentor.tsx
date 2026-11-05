@@ -752,7 +752,7 @@ function MentorScreenInner() {
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => { if (!jumpingRef.current) scrollToBottom(false); }}>
         <View style={styles.metaRow}>
-          <Text style={styles.metaTitle} accessibilityRole="header">NORMAN · IA</Text>
+          <Text style={styles.metaTitle} accessibilityRole="header">NORMAN · MENTOR IA</Text>
           <View style={styles.metaRight}>
             <Text
               style={[styles.metaStatus, !aiLive && styles.metaStatusDemo]}
@@ -818,7 +818,7 @@ function MentorScreenInner() {
                 onPress={() => handlePromptPress(p.label)}
                 style={promptPressStyle}>
                 <Text style={styles.promptText}>{p.label}</Text>
-                <MaterialIcons name="arrow-forward" size={18} color={palette.smoke} />
+                <MaterialIcons name="arrow-forward" size={18} color={palette.goldText} />
               </Pressable>
             ))}
           </View>
@@ -1039,7 +1039,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   // N-6: el oro se gana — en esta pantalla solo la flecha de enviar lo lleva.
-  metaTitle: { color: palette.ash, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  metaTitle: { color: palette.goldText, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   metaRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.lg },
   metaStatus: { color: palette.smoke, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   metaStatusDemo: { color: palette.ash },
@@ -1234,11 +1234,13 @@ const styles = StyleSheet.create({
     maxWidth: '88%',
     paddingVertical: spacing.sm,
   },
+  // Igual que ChatBubble de Norman: la respuesta no cambia de voz al terminar.
   typingText: {
     color: palette.ivory,
-    fontFamily: Fonts.sans,
-    fontSize: 17,
-    lineHeight: 27,
+    fontFamily: Fonts.displayRegular,
+    fontWeight: '400',
+    fontSize: 20,
+    lineHeight: 28,
   },
   dotsRow: {
     flexDirection: 'row',

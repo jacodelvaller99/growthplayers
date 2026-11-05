@@ -1538,22 +1538,25 @@ const styles = StyleSheet.create({
   mentorBubble: {
     alignSelf: 'flex-start',
   },
+  // Modelo del canvas (Norman.dc.html), pedido por el dueño: sin globos.
+  // Norman habla en Grandis Regular grande; tú, a la derecha, en amarillo.
   userBubble: {
     alignSelf: 'flex-end',
-    maxWidth: '80%',
+    maxWidth: '78%',
     alignItems: 'flex-end',
-    backgroundColor: palette.charcoal,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
   },
   chatText: {
-    fontFamily: Fonts.sans,
-    fontSize: 17,
-    lineHeight: 27,
+    fontFamily: Fonts.displayRegular,
+    fontWeight: '400',
+    fontSize: 20,
+    lineHeight: 28,
     color: palette.ivory,
   },
-  // Lo que dice el usuario no gasta el oro: texto normal sobre una burbuja.
   userChatText: {
+    fontFamily: Fonts.sans,
+    fontSize: 17,
+    lineHeight: 25,
+    color: palette.goldText,
     textAlign: 'right',
   },
   userLabel: {
