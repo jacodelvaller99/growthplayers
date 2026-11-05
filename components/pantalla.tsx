@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter, useSegments } from 'expo-router';
 
 import { PolarisLogo } from '@/components/PolarisLogo';
 import { Fonts, palette, spacing } from '@/constants/theme';
@@ -27,8 +28,11 @@ type PantallaProps = {
   children?: ReactNode;
   /** Algo pequeño bajo todo (p.ej. el interruptor del staff). */
   footer?: ReactNode;
-  /** Flecha de volver, para las pantallas que NO son una de las 4 pestañas. */
-  onBack?: () => void;
+  /**
+   * Flecha de volver. Por defecto aparece sola en toda pantalla que NO es una
+   * de las 4 pestañas (Hoy, Norman, Progreso, Yo); `false` la oculta.
+   */
+  onBack?: (() => void) | false;
 };
 
 /** Alto del botón flotante de Norman (48) + su margen (16) + aire (32). */
@@ -38,10 +42,27 @@ export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, 
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
   const reduced = useReducedMotion();
-  const size = isDesktop ? 64 : 40;
+  // Los tests de pantalla mockean expo-router a medias: sin el hook, sin flecha.
+  const router = typeof useRouter === 'function' ? useRouter() : null;
+  const segments = (typeof useSegments === 'function' ? useSegments() : []) as string[];
+  const esPestana = segments[0] === '(tabs)' && ['comando', 'mentor', 'progreso', 'yo'].includes(segments[1] ?? '');
+  // Sin historial (enlace directo, PWA recién abierta) `back()` no hace nada:
+  // se cae al lugar natural de donde se viene.
+  const volverPorDefecto = () => {
+    if (!router) return;
+    if (router.canGoBack?.()) router.back();
+    else router.replace((segments[0] === 'bienestar' && segments.length > 1 ? '/bienestar' : '/(tabs)/yo') as never);
+  };
+  const back = onBack === false ? null : onBack ?? (esPestana || !router ? null : volverPorDefecto);
+  // GrandisExtended es ancha: una palabra de 10+ letras a 64 px no cabe en la
+  // columna del titular y se partía (Mentoría, Suplementos). Se baja un escalón.
+  const longest = Math.max(...title.split(/\s+/).map((w) => w.length));
+  const size = isDesktop ? (longest > 9 ? 52 : 64) : (longest > 10 ? 34 : 40);
 
   const head = (
-    <View style={isDesktop ? s.headDesk : undefined}>
+    // Sin tarjeta a la derecha el titular toma todo el ancho: con 420 fijo,
+    // «Suplementos» a 64 px se partía en dos.
+    <View style={isDesktop ? (hero ? s.headDesk : s.headDeskFull) : undefined}>
       <Text accessibilityRole="header" style={[s.title, { fontSize: size, lineHeight: Math.round(size * 1.04) }]}>
         {title}
       </Text>
@@ -60,9 +81,9 @@ export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, 
       ]}
       showsVerticalScrollIndicator={false}>
       <Animated.View entering={reduced ? undefined : FadeIn.duration(240)} style={s.inner}>
-        {!!onBack && (
+        {!!back && (
           <Pressable
-            onPress={onBack}
+            onPress={back}
             accessibilityRole="button"
             accessibilityLabel="Volver"
             hitSlop={8}
@@ -184,6 +205,7 @@ const s = StyleSheet.create({
 
   deskTop: { flexDirection: 'row', gap: 48, alignItems: 'flex-start', justifyContent: 'space-between' },
   headDesk: { flexShrink: 1, flexBasis: 420 },
+  headDeskFull: { flex: 1 },
   heroDesk: { marginTop: 56, flexBasis: 528, flexShrink: 1 },
   heroMob: { marginTop: 32 },
 
