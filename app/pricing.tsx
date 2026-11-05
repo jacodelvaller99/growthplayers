@@ -1,26 +1,22 @@
 /**
- * CMI LifeFlow — Pricing / Planes
- *
- * Shows all available plans with features.
- * Free and premium tiers displayed with access code CTA.
+ * Tu plan / acceso — gramática `Pantalla`: el plan que tienes primero, una fila
+ * para escribir al asesor, los otros planes plegados y el canje de código.
+ * Una sola acción amarilla como máximo.
  */
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Linking,
   Platform,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, PressableScale, SecondaryButton, useScreen } from '@/components/polaris';
+import { Fila, Pantalla } from '@/components/pantalla';
+import { PressableScale } from '@/components/polaris';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from '@/constants/subscriptions';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -42,91 +38,70 @@ const PRICING_TIERS: SubscriptionTier[] = ['free', 'premium', 'premium_plus'];
 /** Orden de profundidad: el orden de declaración de SUBSCRIPTION_TIERS. */
 const tierRank = (t: string) => Object.keys(SUBSCRIPTION_TIERS).indexOf(t);
 
-// ─── Plan Card ────────────────────────────────────────────────────────────────
+// ─── Plan (fila plegable) ─────────────────────────────────────────────────────
 
-function PlanCard({
+/** Un plan que no es el tuyo: nombre → precio; al tocarlo, lo que incluye. */
+function PlanRow({
   tier,
-  isActive,
   primary,
   price,
-  priceIsNote,
   ctaLabel,
   onPressCta,
 }: {
   tier: SubscriptionTier;
-  isActive: boolean;
   /** La única acción amarilla de la pantalla. Las demás van en contorno gris. */
   primary?: boolean;
   price: string;
-  /** El "precio" es una indicación (p. ej. dónde se activa), no un número. */
-  priceIsNote?: boolean;
   ctaLabel?: string;
   onPressCta?: () => void;
 }) {
   const info = SUBSCRIPTION_TIERS[tier];
-  // El amarillo se gana: los planes van en neutro (el tuyo en ivory, los demás
-  // en gris). Antes cada plan llevaba su color de tier y el más brillante era
-  // un plan que el usuario no necesitaba.
-  const tone = isActive ? palette.ivory : palette.ash;
-
+  const [open, setOpen] = useState(false);
   return (
-    <PremiumCard
-      style={[
-        s.planCard,
-        isActive && { backgroundColor: palette.graphiteLight },
-      ]}>
-      <View style={s.planHeader}>
-        <Text style={[s.planName, { color: tone }]}>{info.name.toUpperCase()}</Text>
-        {isActive && (
-          <View style={s.activePill}>
-            <Text style={s.activePillText}>TU PLAN</Text>
-          </View>
-        )}
-      </View>
-      <Text style={priceIsNote ? s.planPriceNote : [s.planPrice, { color: tone }]}>{price}</Text>
-      <Text style={s.planDesc}>{info.description}</Text>
-      <View style={s.featureList}>
-        {info.features.map((feat, i) => (
-          <View key={i} style={s.featureRow}>
-            <MaterialIcons name="check" size={14} color={palette.smoke} />
-            <Text style={s.featureText}>{feat}</Text>
-          </View>
-        ))}
-      </View>
-      {/* Sin esto la única vía de conversión de la pantalla era un código que el
-          usuario ya debía poseer. free no lleva CTA: se activa solo al crear la
-          cuenta, no hay acción real que ofrecer ahí. */}
-      {!isActive && ctaLabel && onPressCta && (
-        <PressableScale
-          haptic
-          style={[s.planCta, primary ? s.planCtaPrimary : s.planCtaSecondary]}
-          onPress={onPressCta}
-          accessibilityRole="button"
-          accessibilityLabel={ctaLabel}>
-          {/* ink (constante) sobre el relleno gold; en contorno, ivory del tema. */}
-          <Text style={[s.planCtaText, { color: primary ? palette.ink : palette.ivory }]}>
-            {ctaLabel}
-          </Text>
-        </PressableScale>
+    <View>
+      <Fila label={info.name.toUpperCase()} value={open ? 'Cerrar' : price} onPress={() => setOpen((o) => !o)} />
+      {open && (
+        <View style={s.planBody}>
+          <Text style={s.planDesc}>{info.description}.</Text>
+          {info.features.map((feat) => (
+            <Text key={feat} style={s.featureText}>{feat}</Text>
+          ))}
+          <Text style={s.planPriceNote}>{price}</Text>
+          {/* free no lleva CTA: se activa solo al crear la cuenta. */}
+          {ctaLabel && onPressCta && (
+            <PressableScale
+              haptic
+              style={[s.planCta, primary ? s.planCtaPrimary : s.planCtaSecondary]}
+              onPress={onPressCta}
+              accessibilityRole="button"
+              accessibilityLabel={ctaLabel}>
+              {/* ink (constante) sobre el relleno gold; en contorno, ivory del tema. */}
+              <Text style={[s.planCtaText, { color: primary ? palette.ink : palette.ivory }]}>
+                {ctaLabel}
+              </Text>
+            </PressableScale>
+          )}
+        </View>
       )}
-    </PremiumCard>
+    </View>
   );
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PricingScreen() {
-  const sc = useScreen();
   const router   = useRouter();
-  const insets   = useSafeAreaInsets();
   const { state, userId, refreshTier } = useLifeFlow();
 
-  const currentTier = state.subscriptionTier ?? 'free';
+  const currentTier = (state.subscriptionTier ?? 'free') as SubscriptionTier;
+  const currentInfo = SUBSCRIPTION_TIERS[currentTier] ?? SUBSCRIPTION_TIERS.free;
 
   const [code,    setCode]    = useState('');
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState<string | null>(null);
   const [resultOk, setResultOk] = useState(false);
+  // Quien ya paga no necesita ver los planes de abajo desplegados.
+  const [showOthers, setShowOthers] = useState(currentTier === 'free');
 
   // Precio real de RevenueCat cuando está disponible (nativo). Sin esto premium
   // no mostraba ningún precio — la única vía de conversión era un código que el
@@ -169,260 +144,146 @@ export default function PricingScreen() {
     }
   };
 
+  // Los demás planes, de menor a mayor. Nunca se le recomienda uno inferior.
+  let primaryTaken = false;
+  const others = IOS_CODE_ONLY ? [] : PRICING_TIERS.filter((t) => t !== currentTier).map((tier) => {
+    const isLower = tierRank(tier) < tierRank(currentTier);
+    // free no tiene precio de tienda — es un hecho fijo.
+    // premium: el precio real solo existe en la tienda (RevenueCat, nativo).
+    //   En web no se puede comprar: se dice cómo, sin botón amarillo.
+    // premium_plus es a medida — se coordina con un asesor.
+    const pricing: { price: string; ctaLabel?: string; onPressCta?: () => void } =
+      tier === 'premium'
+        ? Platform.OS === 'web'
+          ? { price: 'Se activa desde la app de iOS o Android' }
+          : {
+              price: premiumPrice
+                ? `Desde ${premiumPrice}`
+                : `El precio de tu país aparece en ${Platform.OS === 'ios' ? 'la App Store' : 'Google Play'} al suscribirte`,
+              ctaLabel: 'SUSCRIBIRME',
+              onPressCta: () => router.push('/paywall' as never),
+            }
+        : tier === 'premium_plus'
+        ? {
+            price: 'A medida, con un asesor',
+            ctaLabel: 'HABLAR CON UN ASESOR',
+            onPressCta: () =>
+              Linking.openURL(`mailto:${ADVISOR_EMAIL}?subject=${encodeURIComponent('Quiero saber más de Premium Plus')}`),
+          }
+        : { price: 'Gratis' };
+    const props = isLower ? { price: pricing.price } : pricing;
+    const primary = !!props.ctaLabel && !primaryTaken;
+    if (primary) primaryTaken = true;
+    return <PlanRow key={tier} tier={tier} primary={primary} {...props} />;
+  });
+  // El canje solo va en amarillo si no hay otra acción amarilla en pantalla.
+  const codePrimary = !primaryTaken;
+
+  const title = IOS_CODE_ONLY
+    ? 'Tu acceso llega con tu código.'
+    : currentTier === 'free'
+    ? 'Tienes el plan Gratis.'
+    : `Tienes ${currentInfo.name}.`;
+  const sub = IOS_CODE_ONLY
+    ? 'El Protocolo completo se abre con el código que te entrega tu Navegador al inscribirte. Ingrésalo abajo y se activa al momento.'
+    : currentTier === 'free'
+    ? Platform.OS === 'web'
+      ? 'La suscripción se activa desde la app de iOS o Android. Si tienes un código de acceso, canjéalo aquí abajo.'
+      : 'Cada plan abre una capa del Método Polaris. Se activa al momento y puedes cambiar cuando lo necesites.'
+    : 'Está activo. Si quieres más acompañamiento, escribe a tu asesor.';
+
   return (
-    <ScrollView
-      style={sc.root}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + spacing.lg }]}
-      showsVerticalScrollIndicator={false}>
-
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title}>{IOS_CODE_ONLY ? 'TU ACCESO' : 'PLANES Y ACCESO'}</Text>
-        </View>
-      </View>
-
-      {IOS_CODE_ONLY ? (
-        <PremiumCard style={s.heroCard}>
-          <Text style={s.heroEyebrow}>ACCESO</Text>
-          <Text style={s.heroTitle}>Tu acceso llega{'\n'}con tu código.</Text>
-          <Text style={s.heroBody}>
-            El Protocolo completo se abre con el código que te entrega tu Navegador al
-            inscribirte. Ingrésalo abajo y se activa al momento.
-          </Text>
-        </PremiumCard>
-      ) : (
-        <>
-      {/* Hero */}
-      <PremiumCard style={s.heroCard}>
-        {currentTier !== 'free' ? (
+    <Pantalla meta={IOS_CODE_ONLY ? 'TU ACCESO' : 'TU PLAN'} title={title} sub={sub}>
+      <View style={s.col}>
+        {!IOS_CODE_ONLY && (
           <>
-            <Text style={s.heroTitle}>Tu plan:{'\n'}{SUBSCRIPTION_TIERS[currentTier as SubscriptionTier]?.name ?? currentTier}.</Text>
-            <Text style={s.heroBody}>
-              Está activo. Si quieres más acompañamiento, escribe a tu asesor.
-            </Text>
-            <Pressable
+            <View style={s.current}>
+              {currentInfo.features.map((feat) => (
+                <Text key={feat} style={s.currentFeature}>{feat}</Text>
+              ))}
+            </View>
+            <Fila
+              label="ESCRIBIR A MI ASESOR"
+              value="Correo"
               onPress={() => Linking.openURL(`mailto:${ADVISOR_EMAIL}?subject=${encodeURIComponent('Sobre mi plan Polaris')}`)}
-              accessibilityRole="link"
-              style={s.advisorLink}>
-              <Text style={s.advisorLinkText}>Escribir a mi asesor →</Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <Text style={s.heroTitle}>Elige la profundidad{'\n'}que te sirve hoy.</Text>
-            <Text style={s.heroBody}>
-              {Platform.OS === 'web'
-                ? 'La suscripción se activa desde la app de iOS o Android. Si tienes un código de acceso, canjéalo aquí abajo.'
-                : 'Cada plan abre una capa del Método Polaris. El acceso se activa al momento y puedes cambiar de plan cuando lo necesites.'}
-            </Text>
+            />
+            {others.length > 0 && (
+              <Fila
+                label="OTROS PLANES"
+                value={showOthers ? 'Ocultar' : `Ver ${others.length}`}
+                onPress={() => setShowOthers((v) => !v)}
+                last={!showOthers}
+              />
+            )}
+            {showOthers && <View style={s.others}>{others}</View>}
           </>
         )}
-      </PremiumCard>
 
-      {/* Plans */}
-      <GoldDivider label="PLANES DISPONIBLES" />
-      <View style={s.planList}>
-        {/* Quien ya paga ve su plan primero; el resto, de menor a mayor.
-            Nunca se le recomienda uno inferior. */}
-        {(() => { let primaryTaken = false; return [...PRICING_TIERS]
-          .sort((a, b) => Number(b === currentTier) - Number(a === currentTier))
-          .map((tier) => {
-          const isLower = tierRank(tier) < tierRank(currentTier);
-          // free no tiene precio de tienda — es un hecho fijo.
-          // premium: el precio real solo existe en la tienda (RevenueCat, nativo).
-          //   En web no se puede comprar: se dice cómo, sin botón amarillo.
-          // premium_plus es a medida — se coordina con un asesor.
-          const pricing =
-            tier === 'premium'
-              ? Platform.OS === 'web'
-                ? { price: 'Se activa desde la app de iOS o Android', priceIsNote: true }
-                : {
-                    price: premiumPrice
-                      ? `Desde ${premiumPrice}`
-                      : `El precio de tu país aparece en ${Platform.OS === 'ios' ? 'la App Store' : 'Google Play'} al suscribirte`,
-                    ctaLabel: 'SUSCRIBIRME',
-                    onPressCta: () => router.push('/paywall' as never),
-                  }
-              : tier === 'premium_plus'
-              ? {
-                  price: 'A medida, con un asesor',
-                  ctaLabel: 'HABLAR CON UN ASESOR',
-                  onPressCta: () =>
-                    Linking.openURL(`mailto:${ADVISOR_EMAIL}?subject=${encodeURIComponent('Quiero saber más de Premium Plus')}`),
-                }
-              : { price: 'Gratis' };
-          const props = isLower ? { price: pricing.price, priceIsNote: pricing.priceIsNote } : pricing;
-          const hasCta = currentTier !== tier && 'ctaLabel' in props && !!props.ctaLabel;
-          const primary = hasCta && !primaryTaken;
-          if (primary) primaryTaken = true;
-          return (
-            <PlanCard
-              key={tier}
-              tier={tier}
-              isActive={currentTier === tier}
-              primary={primary}
-              {...props}
+        {/* Access code */}
+        <View style={s.codeBlock}>
+          <Text style={s.codeLabel}>¿TIENES UN CÓDIGO DE ACCESO?</Text>
+          <Text style={s.codeBody}>
+            Si recibiste un código de Polaris Growth Institute, ingrésalo aquí para activar tu plan.
+          </Text>
+          <View style={s.codeInputRow}>
+            <TextInput
+              style={s.codeInput}
+              placeholder="XXXX-XXXX"
+              placeholderTextColor={palette.smoke}
+              value={code}
+              onChangeText={t => { setCode(t.toUpperCase()); setResult(null); }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleRedeem}
+              maxLength={20}
+              accessibilityLabel="Código de acceso"
             />
-          );
-        }); })()}
-      </View>
-        </>
-      )}
-
-      {/* Access code */}
-      <GoldDivider label="TENGO UN CÓDIGO DE ACCESO" />
-      <PremiumCard style={s.codeCard}>
-        <Text style={s.codeTitle}>Canjear código</Text>
-        <Text style={s.codeBody}>
-          Si recibiste un código de acceso de Polaris Growth Institute,
-          ingrésalo aquí para activar tu plan.
-        </Text>
-        <View style={s.codeInputRow}>
-          <TextInput
-            style={s.codeInput}
-            placeholder="XXXX-XXXX"
-            placeholderTextColor={palette.smoke}
-            value={code}
-            onChangeText={t => { setCode(t.toUpperCase()); setResult(null); }}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            returnKeyType="done"
-            onSubmitEditing={handleRedeem}
-            maxLength={20}
-            accessibilityLabel="Código de acceso"
-          />
-          <PressableScale
-            style={[s.codeBtn, (loading || !code.trim()) && { opacity: 0.4 }]}
-            onPress={handleRedeem}
-            disabled={loading || !code.trim()}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: loading || !code.trim() }}
-            accessibilityLabel="Canjear código">
-            <Text style={s.codeBtnText}>{loading ? '...' : 'CANJEAR'}</Text>
-          </PressableScale>
-        </View>
-        {result ? (
-          <View
-            style={[s.resultBanner, { backgroundColor: resultOk ? palette.successMuted : palette.dangerMuted }]}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="assertive">
-            <Text style={[s.resultText, { color: resultOk ? palette.success : palette.danger }]}>
-              {result}
-            </Text>
+            <PressableScale
+              style={[s.codeBtn, codePrimary ? s.planCtaPrimary : s.planCtaSecondary, (loading || !code.trim()) && { opacity: 0.4 }]}
+              onPress={handleRedeem}
+              disabled={loading || !code.trim()}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: loading || !code.trim() }}
+              accessibilityLabel="Canjear código">
+              <Text style={[s.codeBtnText, { color: codePrimary ? palette.ink : palette.ivory }]}>{loading ? '...' : 'CANJEAR'}</Text>
+            </PressableScale>
           </View>
-        ) : null}
-      </PremiumCard>
+          {result ? (
+            <View
+              style={[s.resultBanner, { backgroundColor: resultOk ? palette.successMuted : palette.dangerMuted }]}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="assertive">
+              <Text style={[s.resultText, { color: resultOk ? palette.success : palette.danger }]}>
+                {result}
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
-      {/* Contact */}
-      <View style={s.contact}>
-        <Text style={s.contactText}>
-          ¿Necesitas ayuda con tu acceso? Contacta a tu asesor de Polaris Growth Institute.
-        </Text>
+        {IOS_CODE_ONLY && (
+          <Text style={s.contactText}>
+            ¿Necesitas ayuda con tu acceso? Contacta a tu asesor de Polaris Growth Institute.
+          </Text>
+        )}
       </View>
-
-      <SecondaryButton label="VOLVER" onPress={() => router.back()} />
-      {/* Holgura sobre el FAB del tour (48 + 16 de margen): sin ella tapaba VOLVER. */}
-      <View style={{ height: insets.bottom + spacing.xxxl + spacing.xl }} />
-    </ScrollView>
+    </Pantalla>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  backBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 44,
-    minHeight: 44,
-    padding: spacing.sm,
-    backgroundColor: palette.graphite,
-    borderColor: palette.lineSoft,
-    borderWidth: 1,
-    borderRadius: radii.sm,
-  },
-  title: {
-    fontFamily: Fonts.display,
-    fontSize: 20,
-    fontWeight: '700',
-    color: palette.ivory,
-    letterSpacing: 2,
-  },
+  col: { maxWidth: 640, width: '100%' },
 
-  heroCard: { gap: spacing.md },
-  heroEyebrow: { ...typography.label, color: palette.ash },
-  heroTitle: {
-    fontFamily: Fonts.display,
-    fontSize: 26,
-    color: palette.ivory,
-    letterSpacing: 1.5,
-    lineHeight: 34,
-  },
-  heroBody: {
-    ...typography.body,
-    color: palette.ash,
-    lineHeight: 22,
-  },
-  advisorLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  advisorLinkText: { ...typography.body, color: palette.ivory },
+  current: { gap: spacing.sm, marginBottom: spacing.xl },
+  currentFeature: { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, color: palette.ivory },
 
-  planList: { gap: spacing.md },
-  planCard: { gap: spacing.md, overflow: 'visible' },
-  planHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  planName: {
-    fontFamily: Fonts.display,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 2,
-    flex: 1,
-  },
-  activePill: {
-    backgroundColor: palette.successMuted,
-    borderColor: palette.success,
-    borderWidth: 1,
-    borderRadius: radii.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  activePillText: {
-    fontFamily: Fonts.sansBold,
-    fontSize: 11,
-    color: palette.success,
-    fontWeight: '700',
-  },
-  planPrice: {
-    fontFamily: Fonts.display,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  planPriceNote: { ...typography.body, fontSize: 13, color: palette.smoke },
-  planDesc: { ...typography.body, color: palette.ash },
-  featureList: { gap: spacing.sm },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  featureText: {
-    ...typography.body,
-    color: palette.ivory,
-    fontSize: 13,
-    flex: 1,
-  },
+  others: { borderBottomWidth: 1, borderBottomColor: palette.line },
+  planBody: { gap: spacing.sm, paddingBottom: spacing.lg },
+  planDesc: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ash },
+  featureText: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ivory },
+  planPriceNote: { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.smoke },
   planCta: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -437,9 +298,9 @@ const s = StyleSheet.create({
     fontSize: 11,
   },
 
-  codeCard: { gap: spacing.md },
-  codeTitle: { ...typography.section, color: palette.ivory },
-  codeBody: { ...typography.body, color: palette.ash, lineHeight: 20 },
+  codeBlock: { gap: spacing.md, marginTop: spacing.xxl },
+  codeLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
+  codeBody: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ash },
   codeInputRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -462,7 +323,6 @@ const s = StyleSheet.create({
     height: 52,
   },
   codeBtn: {
-    backgroundColor: palette.gold,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
@@ -473,7 +333,6 @@ const s = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 11,
     fontWeight: '700',
-    color: palette.ink,
     letterSpacing: 2,
   },
   resultBanner: {
@@ -486,15 +345,11 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  contact: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
   contactText: {
-    ...typography.body,
+    marginTop: spacing.xl,
+    fontFamily: Fonts.sans,
     color: palette.smoke,
-    textAlign: 'center',
     lineHeight: 20,
-    fontSize: 12,
+    fontSize: 14,
   },
 });

@@ -101,7 +101,7 @@ export default function SuenoScreen() {
           meta="PARA ESTA NOCHE"
           metaRight={`${suggested.minutes} MIN`}
           title={suggested.label.charAt(0) + suggested.label.slice(1).toLowerCase()}
-          detail={`${suggested.title}, ${suggested.minutes}\u00A0min.`}
+          detail={`${suggested.title}.`}
           onPress={() => handlePlay(suggested)}
           accessibilityLabel={`Empezar: ${suggested.title}, ${suggested.minutes} minutos`}
         />

@@ -236,7 +236,8 @@ const styles = StyleSheet.create({
   },
   heroSub: { marginTop: 10, fontFamily: Fonts.sans, fontSize: 16, lineHeight: 23, color: palette.ink },
   ticks: { flexDirection: 'row', gap: 6, marginTop: 28 },
-  tick: { flex: 1, height: 6, borderRadius: 999, backgroundColor: alpha(palette.ink, '40') },
+  // Pendiente: tinta al 55 % (~3,9:1 sobre oro, WCAG 1.4.11). Al 25 % se perdía.
+  tick: { flex: 1, height: 6, borderRadius: 999, backgroundColor: alpha(palette.ink, '8C') },
   heroBtn: {
     marginTop: 24, height: 52, borderRadius: 10, backgroundColor: palette.ink,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

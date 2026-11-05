@@ -37,20 +37,22 @@ interface Emotion {
   advice: string;
 }
 
+// Ronda 3: sustantivos, no adjetivos en masculino. Mismos ids que antes (1:1),
+// así que lo ya guardado se lee igual. Orden alfabético: nada es un ranking.
 const EMOTIONS: Emotion[] = [
-  { hz: 1002, name: 'Abrumado',    advice: 'Escribe todo lo pendiente y elige solo una cosa para hoy.' },
-  { hz: 1001, name: 'Agradecido',  advice: 'Dilo en voz alta o escríbeselo a alguien. Así dura más.' },
-  { hz: 100,  name: 'Ansioso',     advice: 'Respira lento unos minutos. Nombra qué te preocupa. Da un paso pequeño.' },
-  { hz: 50,   name: 'Cansado',     advice: 'Tu cuerpo pide pausa. Duerme antes hoy y baja el ritmo.' },
-  { hz: 310,  name: 'Con energía', advice: 'Aprovéchala: elige una cosa que te importa y muévete.' },
-  { hz: 540,  name: 'Contento',    advice: 'Compártelo. Fíjate qué lo hizo posible.' },
-  { hz: 400,  name: 'Enfocado',    advice: 'Protege ese rato: avisos fuera y una sola tarea.' },
-  { hz: 150,  name: 'Enojado',     advice: 'Muévete fuerte un rato. El enojo avisa de algo: ¿qué límite se cruzó?' },
-  { hz: 500,  name: 'Querido',     advice: 'Dale las gracias a quien te hizo sentir así.' },
-  { hz: 200,  name: 'Seguro',      advice: 'Buen momento para decidir lo que venías aplazando.' },
-  { hz: 1003, name: 'Solo',        advice: 'Escríbele hoy a alguien de confianza. Un mensaje basta.' },
-  { hz: 600,  name: 'Tranquilo',   advice: 'Quédate un rato aquí. No hace falta resolver nada.' },
-  { hz: 75,   name: 'Triste',      advice: 'Permite sentirlo sin pelear con ello. Escribir ayuda.' },
+  { hz: 1002, name: 'Agobio',    advice: 'Escribe todo lo pendiente y elige solo una cosa para hoy.' },
+  { hz: 540,  name: 'Alegría',   advice: 'Compártela. Fíjate qué la hizo posible.' },
+  { hz: 100,  name: 'Ansiedad',  advice: 'Respira lento unos minutos. Nombra qué te preocupa. Da un paso pequeño.' },
+  { hz: 600,  name: 'Calma',     advice: 'Quédate un rato aquí. No hace falta resolver nada.' },
+  { hz: 50,   name: 'Cansancio', advice: 'Tu cuerpo pide pausa. Duerme antes hoy y baja el ritmo.' },
+  { hz: 500,  name: 'Cariño',    advice: 'Dale las gracias a quien te hizo sentir así.' },
+  { hz: 310,  name: 'Energía',   advice: 'Aprovéchala: elige una cosa que te importa y muévete.' },
+  { hz: 400,  name: 'Enfoque',   advice: 'Protege ese rato: avisos fuera y una sola tarea.' },
+  { hz: 150,  name: 'Enojo',     advice: 'Muévete fuerte un rato. El enojo avisa de algo: ¿qué límite se cruzó?' },
+  { hz: 1001, name: 'Gratitud',  advice: 'Dilo en voz alta o escríbeselo a alguien. Así dura más.' },
+  { hz: 200,  name: 'Seguridad', advice: 'Buen momento para decidir lo que venías aplazando.' },
+  { hz: 1003, name: 'Soledad',   advice: 'Escríbele hoy a alguien de confianza. Un mensaje basta.' },
+  { hz: 75,   name: 'Tristeza',  advice: 'Permite sentirla sin pelear con ella. Escribir ayuda.' },
 ];
 
 /** Ids de la escala vieja → la emoción cotidiana más cercana (para semanas ya guardadas). */
@@ -149,7 +151,8 @@ export default function ConscienciaScreen() {
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: on }}
                 accessibilityLabel={e.name}>
-                <Text style={[s.cellText, on && s.cellTextOn]} numberOfLines={2}>{e.name}</Text>
+                <MaterialIcons name={on ? 'check-box' : 'check-box-outline-blank'} size={20} color={on ? palette.goldText : palette.smoke} />
+                <Text style={[s.cellText, on && s.cellTextOn]} numberOfLines={1}>{e.name}</Text>
               </Pressable>
             </View>
           );
@@ -192,15 +195,15 @@ const s = StyleSheet.create({
   // 3 columnas fijas: mismo ancho en todas las celdas, nada desalineado.
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   cellWrap: { width: '33.333%', padding: 4 },
+  // Sin borde (ronda 3): casilla + palabra, como las filas de Suplementos.
   cell: {
-    minHeight: 52, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineHard,
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6, paddingVertical: 8,
+    minHeight: 48, borderRadius: radii.sm, flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 8, paddingVertical: 8,
   },
-  // Marcada: borde fuerte + superficie + negrita, legible en los dos temas. El amarillo
-  // queda para el botón de guardar.
-  cellOn: { backgroundColor: palette.charcoal, borderColor: palette.ivory, borderWidth: 2 },
+  // Marcada: superficie + casilla llena + negrita. El amarillo queda para guardar.
+  cellOn: { backgroundColor: palette.charcoal },
   pressed: { opacity: 0.8 },
-  cellText: { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 18, color: palette.ivory, textAlign: 'center' },
+  cellText: { flexShrink: 1, fontFamily: Fonts.sans, fontSize: 15, lineHeight: 20, color: palette.ivory },
   cellTextOn: { fontWeight: '700' },
 
   advice: { marginTop: spacing.lg, fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ash },

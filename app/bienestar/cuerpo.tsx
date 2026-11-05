@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { db2 } from '@/lib/supabase';
+import { logSilentError } from '@/lib/observability';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import { Fila, Pantalla } from '@/components/pantalla';
@@ -103,6 +104,7 @@ export default function CuerpoScreen() {
   const [extras, setExtras]   = useState<Record<ExtraKey, string>>(EMPTY_EXTRAS);
   const [history, setHistory] = useState<Measurement[]>([]);
   const [saving, setSaving]   = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const setExtra = (key: ExtraKey, val: string) =>
     setExtras(prev => ({ ...prev, [key]: val }));
@@ -138,14 +140,16 @@ export default function CuerpoScreen() {
 
   const saveMeasurement = async () => {
     if (!weightNum || !heightNum) return;
+    if (!userId) { setSaveError('No hay una sesión abierta: inicia sesión para guardar.'); return; }
     setSaving(true);
+    setSaveError(null);
     // numérico o null para cada medida opcional
     const num = (v: string) => {
       const n = parseFloat(v);
       return Number.isFinite(n) ? n : null;
     };
     try {
-      await db2.bodyMeasurements().insert({
+      const { error } = await db2.bodyMeasurements().insert({
         user_id:          userId,
         weight_kg:        weightNum,
         height_cm:        heightNum,
@@ -158,11 +162,15 @@ export default function CuerpoScreen() {
         body_fat_percent: num(extras.body_fat_percent),
         muscle_mass_kg:   num(extras.muscle_mass_kg),
       });
+      if (error) throw error;
       setWeight('');
       setHeight('');
       setExtras(EMPTY_EXTRAS);
       loadHistory();
-    } catch { /* tabla/columna puede no existir aún */ }
+    } catch (e) {
+      logSilentError('medidas.save', e);
+      setSaveError('No se pudo guardar. Inténtalo de nuevo.');
+    }
     setSaving(false);
   };
 
@@ -187,8 +195,6 @@ export default function CuerpoScreen() {
                   value={weight}
                   onChangeText={setWeight}
                   keyboardType="decimal-pad"
-                  placeholder="kg"
-                  placeholderTextColor={palette.ink}
                   accessibilityLabel="Peso en kilogramos"
                 />
               </View>
@@ -199,8 +205,6 @@ export default function CuerpoScreen() {
                   value={height}
                   onChangeText={setHeight}
                   keyboardType="decimal-pad"
-                  placeholder="cm"
-                  placeholderTextColor={palette.ink}
                   accessibilityLabel="Altura en centímetros"
                 />
               </View>
@@ -214,7 +218,9 @@ export default function CuerpoScreen() {
               style={[styles.oroBtn, !canSave && styles.oroBtnOff]}>
               <Text style={[styles.oroBtnText, !canSave && styles.oroBtnTextOff]}>{saving ? 'GUARDANDO…' : 'GUARDAR'}</Text>
             </Pressable>
-            {!weightNum || !heightNum ? (
+            {saveError ? (
+              <Text style={styles.oroHint} accessibilityRole="alert">{saveError}</Text>
+            ) : !weightNum || !heightNum ? (
               <Text style={styles.oroHint}>Escribe peso y altura para guardar.</Text>
             ) : null}
           </View>
@@ -271,8 +277,8 @@ const styles = StyleSheet.create({
   oroLabel:   { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink, marginBottom: 6 },
   oroInput:   { minHeight: 52, borderBottomWidth: 2, borderBottomColor: palette.ink, color: palette.ink, fontFamily: Fonts.displayRegular, fontSize: 28 },
   oroBtn:     { minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center' },
-  // Deshabilitado: solo contorno, sin relleno lavado (antes, oliva sobre amarillo).
-  oroBtnOff:  { backgroundColor: 'transparent', borderWidth: 1, borderColor: palette.ink },
+  // Deshabilitado: contorno y texto de tinta al 40 % — se lee apagado, no activo.
+  oroBtnOff:  { backgroundColor: 'transparent', borderWidth: 1, borderColor: palette.ink, opacity: 0.4 },
   oroBtnTextOff: { color: palette.ink },
   oroBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 2, color: palette.gold },
   oroHint:    { fontFamily: Fonts.sans, fontSize: 14, color: palette.ink },

@@ -94,7 +94,7 @@ export default function NutricionScreen() {
   });
   const [savedProfile, setSavedProfile] = useState<{ diet: string | null; calories: number | null } | null>(null);
 
-  // Plan de nutrición del nutriólogo: es un ENLACE (PDF o imagen), no una subida.
+  // Plan de nutrición del nutricionista: es un ENLACE (PDF o imagen), no una subida.
   const [planUrl, setPlanUrl] = useState('');
   const [nutritionistName, setNutritionistName] = useState('');
   const [savedPlanUrl, setSavedPlanUrl] = useState<string | null>(null);
@@ -258,7 +258,7 @@ export default function NutricionScreen() {
       <Pantalla
         meta="BIENESTAR · CUERPO"
         title="Nutrición"
-        sub="Cuéntanos cómo comes y guarda el plan de tu nutriólogo."
+        sub="Cuéntanos cómo comes y guarda el plan de tu nutricionista."
         hero={savedPlanUrl ? (
           <TarjetaOro
             meta="TU PLAN"
@@ -277,8 +277,8 @@ export default function NutricionScreen() {
         {/* Sin plan, la tarjeta ya es «cómo comes»: la fila no la repite. */}
         {!!savedPlanUrl && <Fila label="CÓMO COMES" value={profileValue} onPress={() => setStep(1)} />}
         <Fila
-          label="TU PLAN DEL NUTRIÓLOGO"
-          value={savedPlanUrl ? (savedNutritionist ? `Guardado · ${savedNutritionist}` : 'Guardado') : 'Pega el enlace de tu plan'}
+          label="TU PLAN"
+          value={savedPlanUrl ? (savedNutritionist ? `Guardado · ${savedNutritionist}` : 'Guardado') : 'Pegar enlace'}
           onPress={() => setPlanOpen(o => !o)}
           last={!planOpen}
         />
@@ -298,14 +298,14 @@ export default function NutricionScreen() {
               keyboardType="url"
               accessibilityLabel="Enlace del plan de nutrición"
             />
-            <Text style={styles.inputLabel}>NUTRIÓLOGO (OPCIONAL)</Text>
+            <Text style={styles.inputLabel}>NUTRICIONISTA (OPCIONAL)</Text>
             <TextInput
               style={styles.input}
               value={nutritionistName}
               onChangeText={setNutritionistName}
               placeholder="Nombre del profesional"
               placeholderTextColor={palette.smoke}
-              accessibilityLabel="Nombre del nutriólogo (opcional)"
+              accessibilityLabel="Nombre del nutricionista (opcional)"
             />
             <Pressable
               onPress={savePlan}

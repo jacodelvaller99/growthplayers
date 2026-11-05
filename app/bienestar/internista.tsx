@@ -24,7 +24,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, MarkdownText, PremiumCard, useScreen } from '@/components/polaris';
+import { Pantalla } from '@/components/pantalla';
+import { MarkdownText, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import {
@@ -44,6 +45,13 @@ const QUICK_PROMPTS = [
 ];
 
 const STORAGE_KEY = 'internist:consent:v1';
+
+const CONSENT_POINTS = [
+  'Te enseña en general; no dice qué tienes tú.',
+  'Dice de dónde sale cada dato médico.',
+  'Ante una señal de alarma, siempre te manda al médico.',
+  'Tus datos son tuyos; puedes borrar todo cuando quieras.',
+];
 
 function InternistaScreenInner() {
   const sc = useScreen();
@@ -178,14 +186,8 @@ function InternistaScreenInner() {
 
   if (!consent) {
     return (
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
-        showsVerticalScrollIndicator={false}>
-        {header}
-        <GoldDivider label="ANTES DE EMPEZAR" />
-        <PremiumCard style={{ gap: spacing.md }}>
-          <Text style={s.consentTitle}>Cómo es este internista</Text>
+      <Pantalla meta="INTERNISTA" title="Antes de empezar." sub="Asistente con IA · no es un médico.">
+        <View style={s.consentBlock}>
           <Text style={s.consentBody}>
             Es una inteligencia artificial que te enseña. Te explica qué significan los
             resultados de tus exámenes y qué se sabe sobre hábitos de vida, citando
@@ -205,31 +207,30 @@ function InternistaScreenInner() {
             conversación</Text>. Tus exámenes médicos viven en almacenamiento privado y
             solo los compartes con el coach si lo activas explícitamente más adelante.
           </Text>
-          <View style={s.consentBullets}>
-            <Text style={s.consentBullet}>• Te enseña en general; no dice qué tienes tú.</Text>
-            <Text style={s.consentBullet}>• Dice de dónde sale cada dato médico.</Text>
-            <Text style={s.consentBullet}>• Ante una señal de alarma, siempre te manda al médico.</Text>
-            <Text style={s.consentBullet}>• Tus datos son tuyos; puedes borrar todo cuando quieras.</Text>
-          </View>
-          <Text style={s.consentBullet}>
-            Guías que consulta: USPSTF, NIH/MedlinePlus, Mayo Clinic, ACLM, Cochrane, entre otras.
-          </Text>
-          <Pressable
-            onPress={acceptConsent}
-            style={s.consentBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Entiendo y acepto, activar el internista educativo">
-            <Text style={s.consentBtnText}>ENTIENDO Y ACEPTO</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Ahora no, volver"
-            style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={s.consentSkip}>Ahora no</Text>
-          </Pressable>
-        </PremiumCard>
-      </ScrollView>
+        </View>
+        <View style={s.consentBullets}>
+          {CONSENT_POINTS.map((b, i) => (
+            <Text key={b} style={[s.consentBullet, i === CONSENT_POINTS.length - 1 && s.consentBulletLast]}>{b}</Text>
+          ))}
+        </View>
+        <Text style={s.consentSources}>
+          Guías que consulta: USPSTF, NIH/MedlinePlus, Mayo Clinic, ACLM, Cochrane, entre otras.
+        </Text>
+        <Pressable
+          onPress={acceptConsent}
+          style={s.consentBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Entiendo y acepto, activar el internista educativo">
+          <Text style={s.consentBtnText}>ENTIENDO Y ACEPTO</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Ahora no, volver"
+          style={s.consentSkipBtn}>
+          <Text style={s.consentSkip}>Ahora no</Text>
+        </Pressable>
+      </Pantalla>
     );
   }
 
@@ -332,7 +333,7 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: palette.ivory, fontSize: 18, textAlign: 'center' },
-  subtitle: { ...typography.caption, color: palette.smoke, fontSize: 11, textAlign: 'center' },
+  subtitle: { ...typography.caption, color: palette.ash, fontSize: 12, textAlign: 'center' },
 
   disclaimerBar: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -342,7 +343,7 @@ const s = StyleSheet.create({
   },
   disclaimerText: {
     flex: 1, ...typography.caption, color: palette.goldText,
-    fontSize: 11, letterSpacing: 0.4,
+    fontSize: 12, letterSpacing: 0.4,
   },
 
   intro: { marginBottom: spacing.md },
@@ -407,27 +408,27 @@ const s = StyleSheet.create({
   },
 
   // ── Consent gate ───────────────────────────────────────────────────────────
-  consentTitle: {
-    fontFamily: Fonts.display, color: palette.ivory,
-    fontSize: 18, letterSpacing: 0.5, marginBottom: spacing.xs,
+  consentBlock: { gap: spacing.md, maxWidth: 640 },
+  consentBody: { fontFamily: Fonts.sans, color: palette.ash, fontSize: 15, lineHeight: 23 },
+  consentEmph: { color: palette.ivory, fontFamily: Fonts.sansBold },
+  consentBullets: { marginTop: spacing.xl, maxWidth: 640 },
+  consentBullet: {
+    fontFamily: Fonts.sans, color: palette.ivory, fontSize: 16, lineHeight: 22,
+    paddingVertical: 14, borderTopWidth: 1, borderTopColor: palette.line,
   },
-  consentBody: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 21 },
-  consentEmph: { color: palette.goldText, fontFamily: Fonts.sansBold },
-  consentBullets: { gap: spacing.xs, marginTop: spacing.xs },
-  consentBullet: { ...typography.caption, color: palette.ash, fontSize: 12 },
+  consentBulletLast: { borderBottomWidth: 1, borderBottomColor: palette.line },
+  consentSources: { marginTop: spacing.md, fontFamily: Fonts.sans, color: palette.smoke, fontSize: 13, lineHeight: 19, maxWidth: 640 },
   consentBtn: {
-    marginTop: spacing.md, backgroundColor: palette.gold,
+    marginTop: spacing.xl, backgroundColor: palette.gold, maxWidth: 640, width: '100%',
     paddingVertical: spacing.md, borderRadius: radii.sm,
-    alignItems: 'center', justifyContent: 'center', minHeight: 48,
+    alignItems: 'center', justifyContent: 'center', minHeight: 52,
   },
   consentBtnText: {
-    fontFamily: Fonts.display, color: palette.ink,
+    fontFamily: Fonts.display, fontWeight: '700', color: palette.ink,
     fontSize: 13, letterSpacing: 1.2,
   },
-  consentSkip: {
-    textAlign: 'center', ...typography.caption,
-    color: palette.smoke, fontSize: 12, paddingTop: spacing.sm,
-  },
+  consentSkipBtn: { minHeight: 44, maxWidth: 640, width: '100%', justifyContent: 'center', alignItems: 'center', marginTop: spacing.sm },
+  consentSkip: { textAlign: 'center', fontFamily: Fonts.sans, color: palette.ash, fontSize: 15 },
 });
 
 

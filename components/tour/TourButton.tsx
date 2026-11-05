@@ -24,6 +24,8 @@ const HIDDEN_PREFIXES = ['bienestar'];
 /** Debe coincidir con `tabBarHeight` de app/(tabs)/_layout.tsx (60 + insets.bottom). */
 const TAB_BAR_BASE = 60;
 const GAP = 16;
+/** Botón montado sobre la barra de pestañas (móvil). */
+const DOCK = 36;
 
 export function TourButton() {
   const segments = useSegments() as string[];
@@ -68,7 +70,12 @@ export function TourButton() {
   // Sobre la tab bar real (oculta en desktop) + área segura; nunca encima de ella.
   // El panel del equipo en el teléfono también tiene barra abajo (Hoy…Más).
   const withBottomBar = (inTabs || root === 'admin') && !isDesktop;
-  const bottom = (withBottomBar ? TAB_BAR_BASE : 0) + insets.bottom + GAP;
+  // Con barra abajo: montado sobre el borde superior de la barra, en el centro
+  // (el hueco entre la 2ª y la 3ª pestaña). Quieto ya no tapa la flecha de
+  // las filas, que viven en el borde derecho; solo pisa 18 px del centro.
+  const bottom = withBottomBar
+    ? TAB_BAR_BASE + insets.bottom - DOCK / 2
+    : insets.bottom + GAP;
 
   return (
     <>
@@ -78,7 +85,9 @@ export function TourButton() {
           onPress={start}
           accessibilityRole="button"
           accessibilityLabel="Norman te explica esta pantalla"
-          style={[s.btn, !isDesktop && s.btnMobile, { bottom }]}>
+          // 36 + 4·2 = 44 px de objetivo táctil.
+          hitSlop={withBottomBar ? 4 : undefined}
+          style={[s.btn, !isDesktop && s.btnMobile, withBottomBar && s.btnDock, { bottom }]}>
           <MaterialIcons name="auto-awesome" size={isDesktop ? 20 : 18} color={palette.ash} />
         </Pressable>
       )}
@@ -109,4 +118,8 @@ const s = StyleSheet.create({
   },
   // Móvil: más chico y pegado al gutter de 16 px, para tapar lo mínimo.
   btnMobile: { width: 40, height: 40, borderRadius: 20, right: 16 },
+  btnDock: {
+    width: DOCK, height: DOCK, borderRadius: DOCK / 2,
+    right: undefined, left: '50%', marginLeft: -DOCK / 2,
+  },
 });

@@ -51,10 +51,15 @@ export default function ProgresoScreen() {
   // tarjeta TU HISTORIA. Y el cruce de un hito lo reconoce `MilestoneToast`,
   // que es sobrio y cita las palabras del usuario.
 
-  const ordenados = [...state.checkIns].sort((a, b) => (a.date < b.date ? 1 : -1));
+  // Solo cuentan los check-ins desde el día 1 del protocolo: el día 1 no hay
+  // «semana pasada» que comparar (antes salía «2,4 más que la semana pasada»).
+  const inicio = claveInicio(state.protocolStartDate);
+  const ordenados = state.checkIns
+    .filter((c) => c.date.slice(0, 10) >= inicio)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
   const media = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null);
   const ultimos = ordenados.slice(0, 7);
-  const anteriores = ordenados.slice(7, 14);
+  const anteriores = protocolDay > 7 ? ordenados.slice(7, 14) : [];
   const coma = (n: number) => n.toFixed(1).replace('.', ',').replace(',0', '');
   // El check-in pregunta de 1 a 5 y guarda ×2. Aquí se muestra en la escala
   // que el usuario USÓ: nunca eligió un «10».
@@ -73,7 +78,7 @@ export default function ProgresoScreen() {
   const modulosTotal = modulosNumerados().length;
   const hoyClave = claveDia(new Date());
   const hechoHoy = state.checkIns.some((c) => c.date.slice(0, 10) === hoyClave);
-  const calendario = <Calendario checkIns={state.checkIns} />;
+  const calendario = <Calendario checkIns={state.checkIns} inicio={inicio} />;
 
   return (
     <Pantalla
@@ -88,7 +93,8 @@ export default function ProgresoScreen() {
         <TarjetaOro
           meta="CHECK-IN"
           metaRight="2 MIN"
-          title="Hacer mi check-in"
+          // U+2011: guion que no se parte («check- / in» en el teléfono).
+          title="Hacer mi check‑in"
           onPress={() => router.push('/checkin' as never)}
         />
       )}>
@@ -108,10 +114,19 @@ export default function ProgresoScreen() {
 const claveDia = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+/** Clave local del día 1; '' (todo cuenta) si la fecha no es válida. */
+const claveInicio = (iso: string | null | undefined) => {
+  const d = new Date(iso ?? '');
+  return Number.isFinite(d.getTime()) ? claveDia(d) : '';
+};
+
 const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-/** Seis semanas de check-ins, de lunes a domingo. Hoy lleva contorno. */
-function Calendario({ checkIns }: { checkIns: { date: string }[] }) {
+/**
+ * Seis semanas de check-ins, de lunes a domingo. Hoy lleva contorno. Los días
+ * antes del día 1 no son del protocolo: van vacíos y atenuados, como el futuro.
+ */
+function Calendario({ checkIns, inicio }: { checkIns: { date: string }[]; inicio: string }) {
   const dias = useMemo(() => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -121,9 +136,11 @@ function Calendario({ checkIns }: { checkIns: { date: string }[] }) {
     return Array.from({ length: 42 }, (_, i) => {
       const d = new Date(lunes);
       d.setDate(lunes.getDate() + i);
-      return { key: claveDia(d), on: hechos.has(claveDia(d)), hoy: +d === +hoy, futuro: d > hoy };
+      const key = claveDia(d);
+      const antes = key < inicio;
+      return { key, on: !antes && hechos.has(key), hoy: +d === +hoy, futuro: d > hoy || antes };
     });
-  }, [checkIns]);
+  }, [checkIns, inicio]);
   const hechos30 = dias.filter((d) => d.on).length;
   return (
     <View

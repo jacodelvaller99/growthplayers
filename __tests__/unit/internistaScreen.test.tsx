@@ -43,9 +43,21 @@ jest.mock('@/components/polaris', () => {
     useScreen: () => ({ root: {}, content: {} }),
   };
 });
+// El consentimiento usa la gramática `Pantalla`; con Platform 'web' reanimated
+// pide `document`, así que se sustituye por un contenedor plano.
+jest.mock('@/components/pantalla', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const RN = require('react-native');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const R = require('react');
+  return {
+    Pantalla: ({ title, sub, children }: { title: string; sub?: string; children?: React.ReactNode }) =>
+      R.createElement(RN.View, null, R.createElement(RN.Text, null, title), sub ? R.createElement(RN.Text, null, sub) : null, children),
+  };
+});
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const InternistaScreen = require('@/app/bienestar/internista').default;
+const InternistaScreen =require('@/app/bienestar/internista').default;
 
 describe('InternistaScreen — render smoke', () => {
   it('renderiza (loading/consent gate) sin throw', () => {

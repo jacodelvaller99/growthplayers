@@ -24,7 +24,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SkoolVideo } from '@/components/SkoolVideo';
-import { AccessField } from '@/components/auth/AccessFrame';
 import { PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
 import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES } from '@/data/modules';
@@ -38,6 +37,14 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { withStepDone } from '@/lib/jornadaLogic';
 import type { TaskField } from '@/types/lifeflow';
+
+const NOTES_FIELD: TaskField = {
+  id: 'notes',
+  label: 'Tus notas',
+  type: 'textarea',
+  placeholder: '¿Qué te llevas de esta lección? ¿Qué aplicarás en las próximas 24 horas?',
+  required: false,
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,11 +68,13 @@ function TextAreaField({
   value,
   onChange,
   multiline = true,
+  onBlur,
 }: {
   field: TaskField;
   value: string;
   onChange: (v: string) => void;
   multiline?: boolean;
+  onBlur?: () => void;
 }) {
   const focused = useSharedValue(0);
   const animStyle = useAnimatedStyle(() => ({
@@ -106,7 +115,7 @@ function TextAreaField({
           placeholder={field.placeholder ?? ''}
           placeholderTextColor={palette.smoke}
           onFocus={() => { focused.value = withTiming(1, { duration: 200, easing: Easing.bezier(...EASING_HOUSE) }); }}
-          onBlur={() => { focused.value = withTiming(0, { duration: 200, easing: Easing.bezier(...EASING_HOUSE) }); }}
+          onBlur={() => { focused.value = withTiming(0, { duration: 200, easing: Easing.bezier(...EASING_HOUSE) }); onBlur?.(); }}
           textAlignVertical="top"
         />
       </Animated.View>
@@ -906,7 +915,7 @@ export default function LessonScreen() {
                 accessibilityRole="link"
                 accessibilityLabel={`Abrir ${r.title}`}
                 style={({ pressed }) => [styles.resourceRow, pressed && { opacity: 0.8 }]}>
-                <MaterialIcons name="description" size={18} color={palette.goldText} />
+                <MaterialIcons name="description" size={18} color={palette.ash} />
                 <View style={styles.resourceCopy}>
                   <Text style={styles.resourceTitle}>{r.title.toUpperCase()}</Text>
                   <Text style={styles.resourceSub}>
@@ -984,15 +993,12 @@ export default function LessonScreen() {
 
         {/* ── Personal Notes ── */}
         <View style={styles.notesCard}>
-          {/* Mismo campo que «Quién eres» en Norte: rótulo + línea que se
-              enciende al enfocar. Antes la pregunta parecía texto suelto. */}
-          <AccessField
-            label="TUS NOTAS"
-            multiline
+          {/* La misma caja que los campos de la tarea: una sola gramática de
+              campo por pantalla (la línea de AccessField casi no se veía). */}
+          <TextAreaField
+            field={NOTES_FIELD}
             value={lessonNotes}
-            onChangeText={setLessonNotes}
-            placeholder="¿Qué te llevas de esta lección? ¿Qué aplicarás en las próximas 24 horas?"
-            textAlignVertical="top"
+            onChange={setLessonNotes}
             onBlur={lessonNotes.trim().length > 0 ? handleSaveNotes : undefined}
           />
           {notesSaved && (
@@ -1194,7 +1200,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.2,
-    color: palette.goldText,
+    // Gris: la guía es secundaria; el oro queda para GUARDAR TAREA.
+    color: palette.ash,
   },
   resourceSub: { ...typography.caption, color: palette.smoke, fontSize: 11 },
 

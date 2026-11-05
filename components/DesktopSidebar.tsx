@@ -9,6 +9,7 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { PolarisLogo } from '@/components/PolarisLogo';
 import { ModeSwitch } from '@/components/ModeSwitch';
+import { useDecorStarColor } from '@/components/auth/AccessFrame';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -43,6 +44,8 @@ export function DesktopSidebar() {
   const pathname = usePathname();
   const { state } = useLifeFlow();
   const { mode, setMode, canToggle } = useAppTheme();
+  // Misma variable CSS que el resto de estrellas: sigue a `data-theme`.
+  const starColor = useDecorStarColor();
 
   // `?? 'U'` no atrapa `''` (perfil sin nombre aún, string vacío no es nullish):
   // `''[0]` da `undefined` y `.toUpperCase()` revienta el sidebar entero antes
@@ -83,7 +86,7 @@ export function DesktopSidebar() {
           etiquetas → velo gris oscuro en tema claro. */}
       {/* ── Logo oficial — Manual de Marca Polaris (Orgánico Studio 2024) ── */}
       <View style={styles.logoArea}>
-        <PolarisLogo variant="star" size={28} color={mode === 'light' ? palette.starOnLight : palette.gold} />
+        <PolarisLogo variant="star" size={28} color={starColor} />
         <View>
           <Text style={styles.logoText}>POLARIS</Text>
           <Text style={styles.logoSub}>GROWTH INSTITUTE</Text>

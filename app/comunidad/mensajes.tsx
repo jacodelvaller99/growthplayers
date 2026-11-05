@@ -154,13 +154,7 @@ export default function MensajesScreen() {
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <Text style={styles.meta}>MENSAJES</Text>
-        <Pressable
-          onPress={nuevo}
-          style={styles.newBtn}
-          accessibilityRole="button"
-          accessibilityLabel={ENV.socialSpacesEnabled ? 'Nuevo mensaje: elige a alguien de tu red' : 'Nuevo mensaje: elige a alguien desde la comunidad'}>
-          <Text style={styles.newBtnText}>Nuevo mensaje</Text>
-        </Pressable>
+        <View style={styles.backBtn} />
       </View>
 
       <View style={styles.column}>
@@ -172,6 +166,14 @@ export default function MensajesScreen() {
           {convos.length === 1 ? '1 persona en tu red.' : `${convos.length} personas en tu red.`}
         </Text>
       )}
+      {/* Dentro de la columna, bajo el titular: arriba a la derecha quedaba a ~1.000 px de las filas. */}
+      <Pressable
+        onPress={nuevo}
+        style={styles.newBtn}
+        accessibilityRole="button"
+        accessibilityLabel={ENV.socialSpacesEnabled ? 'Nuevo mensaje: elige a alguien de tu red' : 'Nuevo mensaje: elige a alguien desde la comunidad'}>
+        <Text style={styles.newBtnText}>Nuevo mensaje</Text>
+      </Pressable>
 
       {loading ? (
         <View style={styles.center}>
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
   column:      { flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' },
   headline:    { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 36, color: palette.ivory, letterSpacing: -0.3, marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.sm },
 
-  newBtn:      { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: 8, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  newBtn:      { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: 8, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginHorizontal: spacing.md, marginBottom: spacing.sm },
   newBtnText:  { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 14, color: palette.ink },
   belongText:  { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, lineHeight: 18, marginHorizontal: spacing.md, marginBottom: spacing.sm },
 

@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
   headline:        { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 36, color: palette.ivory, letterSpacing: -0.3, marginHorizontal: spacing.md, marginTop: spacing.md },
   headerLink:      { minHeight: 44, paddingHorizontal: spacing.sm, alignItems: 'center', justifyContent: 'center' },
   headerLinkText:  { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory },
-  whoReads:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, marginHorizontal: spacing.md, marginBottom: spacing.sm },
+  whoReads:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, marginHorizontal: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
   actionText:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ash },
 
   composeBox:      { flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, gap: 8, borderWidth: 1, borderColor: palette.line },

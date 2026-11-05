@@ -1,6 +1,6 @@
 /**
  * Render smoke test de «Tu calma» (antes Escala de Consciencia / Hawkins).
- * Grilla de emociones (3 columnas) + guardar la semana (calibración local). Sin "Hz".
+ * Grilla de emociones (3 columnas, sin borde) + guardar la semana (calibración local). Sin "Hz".
  * Monta sin throw. Platform=web para saltar haptics nativo.
  */
 import { render } from '@testing-library/react-native';
@@ -55,8 +55,12 @@ describe('ConscienciaScreen — render smoke', () => {
     const out = JSON.stringify(toJSON());
     expect(out).not.toMatch(/Hz/);
     expect(out).toContain('Tu calma');
-    expect(out).toContain('Triste');
-    expect(out).toContain('Tranquilo');
+    expect(out).toContain('Tristeza');
+    expect(out).toContain('Calma');
+    // Sustantivos neutros: nada de adjetivos en masculino.
+    for (const genero of ['Abrumado', 'Cansado', 'Enojado', 'Querido', 'Tranquilo', 'Triste"']) {
+      expect(out).not.toContain(genero);
+    }
     // Ya no es la escalera de Hawkins disfrazada.
     for (const viejo of ['Vergüenza', 'Neutralidad', 'Razón', 'Plenitud', 'Aflicción']) {
       expect(out).not.toContain(viejo);
@@ -64,8 +68,10 @@ describe('ConscienciaScreen — render smoke', () => {
   });
 
   it('una semana guardada con ids viejos se traduce sin perderse', () => {
-    // 75 Pena→Triste (se queda), 20 Vergüenza→Triste (dedup), 350 Aceptación→Tranquilo (600).
+    // 75 Pena→Tristeza (se queda), 20 Vergüenza→Tristeza (dedup), 350 Aceptación→Calma (600).
+    // Los ids de ronda 2 (adjetivos) son los mismos de ronda 3 (sustantivos): 1:1.
     expect(migrateMarked([20, 75, 350, 600])).toEqual([75, 600]);
     expect(migrateMarked([400, 9999])).toEqual([400]);
+    expect(migrateMarked([1001, 1002, 1003, 50, 500])).toEqual([1001, 1002, 1003, 50, 500]);
   });
 });

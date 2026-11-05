@@ -6,14 +6,14 @@
 export const SUBSCRIPTION_TIERS = {
   free: {
     id: 'free',
-    name: 'Free',
-    description: 'Acceso básico a Polaris',
+    name: 'Gratis',
+    description: 'Lo esencial de Polaris',
     color: '#888888',
     features: [
-      'Check-in diario',
-      'Mentor Norman IA',
+      'Registro diario de cómo estás',
+      'Norman, tu mentor con IA',
       'Módulo 1 completo',
-      'Binaurales básicos (3)',
+      '3 sonidos para concentrarte o descansar',
     ],
     limits: {
       // Sin tope real en el código (nadie lo lee — ver useSubscription.canAccessMentor,
@@ -27,16 +27,16 @@ export const SUBSCRIPTION_TIERS = {
   premium: {
     id: 'premium',
     name: 'Premium',
-    description: 'Experiencia completa de Polaris',
+    description: 'Polaris completo, a tu ritmo',
     color: '#FFC804',
     features: [
-      'Todo lo de Free',
-      'Mentor Norman ilimitado',
-      'Todos los módulos Polaris',
-      'Todos los binaurales',
+      'Todo lo del plan Gratis',
+      'Norman sin límite',
+      'Todos los módulos de Polaris',
+      'Todos los sonidos',
       'Respiración y meditación completas',
-      'Score Soberano + racha',
-      'Analytics personales',
+      'Puntaje y racha',
+      'Tus números',
     ],
     limits: {
       mentor_messages_per_day: -1,
@@ -47,14 +47,14 @@ export const SUBSCRIPTION_TIERS = {
   premium_plus: {
     id: 'premium_plus',
     name: 'Premium Plus',
-    description: 'LifeFlow + Polaris completo',
+    description: 'Todo Polaris, con acompañamiento',
     color: '#C0A060',
     features: [
       'Todo lo de Premium',
       'Curso Polaris completo (9 módulos)',
-      'Acompañamiento 1:1 (Magister)',
-      'Acceso anticipado a nuevas features',
-      'Soporte prioritario',
+      'Acompañamiento 1 a 1 con tu asesor',
+      'Lo nuevo antes que nadie',
+      'Te respondemos primero',
     ],
     limits: {
       mentor_messages_per_day: -1,
@@ -70,7 +70,7 @@ export const SUBSCRIPTION_TIERS = {
     color: '#4A90D9',
     features: [
       'Curso Polaris 9 módulos',
-      'Mentor con contexto Polaris',
+      'Norman conoce tu curso',
       'Comunidad Polaris',
     ],
     limits: {
@@ -85,7 +85,7 @@ export const SUBSCRIPTION_TIERS = {
     color: '#27AE60',
     features: [
       'Programa GrowthPlayers completo',
-      'Mentor con contexto GrowthPlayers',
+      'Norman conoce tu programa',
     ],
     limits: {
       growthplayers_access: true,
@@ -105,8 +105,8 @@ export const TIER_ORDER: SubscriptionTier[] = [
 ];
 
 export function getTierLabel(tier: SubscriptionTier | string | null | undefined): string {
-  if (!tier) return 'Free';
-  return (SUBSCRIPTION_TIERS as Record<string, { name: string }>)[tier]?.name ?? 'Free';
+  if (!tier) return 'Gratis';
+  return (SUBSCRIPTION_TIERS as Record<string, { name: string }>)[tier]?.name ?? 'Gratis';
 }
 
 export function getTierColor(tier: SubscriptionTier | string | null | undefined): string {

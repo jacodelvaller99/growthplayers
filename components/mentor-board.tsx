@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Fila } from '@/components/pantalla';
 import { useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -52,6 +53,8 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
   const [stage, setStage] = useState<BoardStage | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // Asignación de mentores: plegada bajo una fila para que Hoy tenga una sola tarea.
+  const [showFooter, setShowFooter] = useState(false);
   const isClients = view === 'clients';
 
   const load = useCallback(async () => {
@@ -178,7 +181,7 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
 
   const columns = (
     <View style={[s.columns, !sc.isDesktop && s.columnsWrap]}>
-      {STAGE_ORDER.map((st) => {
+      {STAGE_ORDER.filter((st) => board.counts[st] > 0 || stage === st).map((st) => {
         const on = stage === st;
         const preview = board.clients.find((c) => c.stage === st);
         return (
@@ -189,7 +192,7 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
             accessibilityState={{ selected: on }}
             accessibilityLabel={`${STAGE_COPY[st].title}: ${board.counts[st]}. ${on ? 'Quitar filtro' : 'Filtrar'}`}
             style={({ pressed }) => [s.column, !sc.isDesktop && s.columnHalf, on && s.columnOn, pressed && { opacity: 0.85 }]}>
-            <Text style={[s.columnCount, board.counts[st] === 0 && s.columnCountZero]}>{board.counts[st]}</Text>
+            <Text style={s.columnCount}>{board.counts[st]}</Text>
             <Text style={s.columnTitle}>{STAGE_COPY[st].title}</Text>
             <Text style={s.columnHint}>{STAGE_COPY[st].hint}</Text>
             {sc.isDesktop && preview && (
@@ -267,8 +270,19 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
         </>
       )}
       {rows}
-      {footer}
-      <View style={{ height: insets.bottom + spacing.xxl }} />
+      {!!footer && (
+        <View>
+          <Fila
+            label="MENTORES Y ASIGNACIÓN"
+            value={showFooter ? 'Ocultar' : 'Ver'}
+            onPress={() => setShowFooter((v) => !v)}
+            last={!showFooter}
+          />
+          {showFooter && <View style={{ paddingTop: spacing.lg }}>{footer}</View>}
+        </View>
+      )}
+      {/* En móvil, aire para el botón flotante del tour: sin él tapaba la última fila. */}
+      <View style={{ height: insets.bottom + (sc.isDesktop ? spacing.xxl : 96) }} />
     </ScrollView>
   );
 }
@@ -282,7 +296,8 @@ function Avatar({ name }: { name: string }) {
 }
 
 const STAGE_TONE: Record<BoardStage, string> = {
-  review: palette.goldText,
+  // El amarillo es solo del botón principal: las etapas van en la escala de grises.
+  review: palette.ivory,
   new: palette.ivory,
   silent: palette.ash,
   onPlan: palette.smoke,
@@ -322,7 +337,7 @@ const s = StyleSheet.create({
     padding: spacing.xl,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: palette.lineGold,
+    borderColor: palette.line,
     backgroundColor: palette.graphite,
   },
   bannerText: { ...typography.statement, color: palette.ivory },
@@ -357,9 +372,9 @@ const s = StyleSheet.create({
     minHeight: 36, paddingHorizontal: spacing.lg, borderRadius: 999,
     borderWidth: 1, borderColor: palette.line, alignItems: 'center', justifyContent: 'center',
   },
-  chipOn: { backgroundColor: palette.gold, borderColor: palette.gold },
+  chipOn: { backgroundColor: palette.graphiteLight, borderColor: palette.ivory },
   chipText: { ...typography.body, fontSize: 13, color: palette.ash },
-  chipTextOn: { color: palette.ink, fontWeight: '600' },
+  chipTextOn: { color: palette.ivory, fontWeight: '600' },
 
   columns: { flexDirection: 'row', gap: spacing.md },
   columnsWrap: { flexWrap: 'wrap' },
@@ -374,9 +389,8 @@ const s = StyleSheet.create({
     gap: 2,
   },
   columnHalf: { flexBasis: '46%', minHeight: 112 },
-  columnOn: { borderColor: palette.gold },
+  columnOn: { borderColor: palette.ivory },
   columnCount: { fontFamily: Fonts.display, fontWeight: '300', fontSize: 34, lineHeight: 40, color: palette.ivory },
-  columnCountZero: { color: palette.smoke },
   columnTitle: { ...typography.body, fontWeight: '600', color: palette.ivory, marginTop: spacing.xs },
   columnHint: { ...typography.caption, color: palette.ash },
   columnPreview: {
@@ -402,7 +416,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.lineSoft,
   },
-  rowActive: { borderColor: palette.lineGold, backgroundColor: palette.graphite },
+  rowActive: { borderColor: palette.line, backgroundColor: palette.graphite },
   rowName: { ...typography.body, fontWeight: '600', color: palette.ivory },
   rowReason: { ...typography.caption, color: palette.ash },
 

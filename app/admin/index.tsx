@@ -251,7 +251,7 @@ function FocusDeskScreen({ lensesOnly = false }: { lensesOnly?: boolean }) {
                     {c.openTasks} abiertas · {c.overdue} vencidas
                   </Text>
                 </View>
-                <Text style={mentorName ? s.assignChipGold : s.assignChipMuted} numberOfLines={1}>
+                <Text style={mentorName ? s.assignChipGold : s.assignChipMuted}>
                   {(mentorName ?? 'SIN MENTOR').toUpperCase()}
                 </Text>
                 <MaterialIcons name="chevron-right" size={18} color={palette.smoke} />
@@ -417,8 +417,8 @@ const s = StyleSheet.create({
   },
   assignName: { ...typography.section, color: palette.ivory, fontSize: 13, letterSpacing: 0.5 },
   assignSub: { ...typography.caption, color: palette.smoke, fontSize: 11, marginTop: 1 },
-  assignChipGold: { ...typography.label, color: palette.goldText, fontSize: 9, maxWidth: 100 },
-  assignChipMuted: { ...typography.label, color: palette.smoke, fontSize: 9, maxWidth: 100 },
+  assignChipGold: { ...typography.label, color: palette.ash, fontSize: 11 },
+  assignChipMuted: { ...typography.label, color: palette.smoke, fontSize: 11 },
 });
 
 const modal = StyleSheet.create({

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { db2 } from '@/lib/supabase';
+import { logSilentError } from '@/lib/observability';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { Pantalla } from '@/components/pantalla';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
@@ -67,7 +68,8 @@ export default function SuplementacionScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('energia');
   // Lo que TÚ tomas: presencia en el mapa = lo tomas. Sin dosis precargadas.
   const [mine, setMine] = useState<Mine>({});
-  const [saved, setSaved] = useState<Tab | null>(null);
+  // idle = sin cambios desde lo cargado; dirty = hay algo sin guardar.
+  const [status, setStatus] = useState<'idle' | 'dirty' | 'saved' | 'error' | 'nosession'>('idle');
   const [saving, setSaving] = useState(false);
 
   // Carga lo guardado (estructurado).
@@ -75,9 +77,10 @@ export default function SuplementacionScreen() {
     if (!userId) return;
     (async () => {
       try {
-        const { data } = await db2.supplements()
+        const { data, error } = await db2.supplements()
           .select('goal, supplements')
           .eq('user_id', userId);
+        if (error) throw error;
         if (!Array.isArray(data)) return;
         const next: Mine = {};
         for (const row of data as any[]) {
@@ -91,7 +94,7 @@ export default function SuplementacionScreen() {
           }
         }
         if (Object.keys(next).length) setMine(prev => ({ ...next, ...prev }));
-      } catch { /* tabla/columna puede no existir aún */ }
+      } catch (e) { logSilentError('suplementos.load', e); }
     })();
   }, [userId]);
 
@@ -105,7 +108,7 @@ export default function SuplementacionScreen() {
       }
       return { ...prev, [k]: { dose: '', timing: '' } };
     });
-    setSaved(null);
+    setStatus('dirty');
   };
 
   const setField = (name: string, field: 'dose' | 'timing', value: string) => {
@@ -113,39 +116,77 @@ export default function SuplementacionScreen() {
       const k = key(activeTab, name);
       return { ...prev, [k]: { ...(prev[k] ?? { dose: '', timing: '' }), [field]: value } };
     });
-    setSaved(null);
+    setStatus('dirty');
   };
 
   const saveStack = async () => {
-    // Solo lo marcado en esta pestaña; desmarcar todo y guardar = quitarlos.
-    const structured: StackItem[] = SUPPLEMENTS[activeTab]
-      .filter(s => mine[key(activeTab, s.name)])
-      .map(s => ({ name: s.name, ...mine[key(activeTab, s.name)], category: activeTab }));
+    if (!userId) { setStatus('nosession'); return; }
+    // Las tres pestañas en una sola escritura; desmarcar todo y guardar = quitarlos.
+    const now = new Date().toISOString();
+    const rows = TABS.map(({ id }) => {
+      const structured: StackItem[] = SUPPLEMENTS[id]
+        .filter(s => mine[key(id, s.name)])
+        .map(s => ({ name: s.name, ...mine[key(id, s.name)], category: id }));
+      return {
+        user_id:     userId,
+        goal:        id,
+        supplements: structured,
+        // legacy: mantiene el array de nombres por compatibilidad con lecturas viejas
+        stack:       structured.map(s => s.name),
+        updated_at:  now,
+      };
+    });
     setSaving(true);
-    if (userId) {
-      try {
-        await db2.supplements().upsert({
-          user_id:     userId,
-          goal:        activeTab,
-          supplements: structured,
-          // legacy: mantiene el array de nombres por compatibilidad con lecturas viejas
-          stack:       structured.map(s => s.name),
-          updated_at:  new Date().toISOString(),
-        }, { onConflict: 'user_id,goal' });
-      } catch { /* tabla puede no existir aún */ }
+    try {
+      const { error } = await db2.supplements().upsert(rows, { onConflict: 'user_id,goal' });
+      if (error) throw error;
+      setStatus('saved');
+    } catch (e) {
+      logSilentError('suplementos.save', e);
+      setStatus('error');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setSaved(activeTab);
   };
 
-  const count = SUPPLEMENTS[activeTab].filter(s => mine[key(activeTab, s.name)]).length;
+  const total = TABS.reduce((n, { id }) => n + SUPPLEMENTS[id].filter(s => mine[key(id, s.name)]).length, 0);
+  const off = saving || status === 'idle' || status === 'saved';
+  const label = saving ? 'GUARDANDO…'
+    : status === 'saved' ? 'GUARDADO'
+    : total === 0 ? 'GUARDAR (NINGUNO)'
+    : `GUARDAR ${total} ${total === 1 ? 'SUPLEMENTO' : 'SUPLEMENTOS'}`;
+  const hint = status === 'saved' ? `Guardado. ${total === 0 ? 'Ninguno marcado.' : `${total} en total.`}`
+    : status === 'error' ? 'No se pudo guardar. Inténtalo de nuevo.'
+    : status === 'nosession' ? 'No hay una sesión abierta: inicia sesión para guardar.'
+    : 'Tu dosis: la que te indicó tu médico.';
+  const alerta = status === 'error' || status === 'nosession';
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pantalla
         meta="BIENESTAR · SALUD"
         title="Suplementos"
-        sub="Marca lo que ya tomas y cuándo. Para tenerlo claro, no para empezar algo nuevo.">
+        sub="Marca lo que ya tomas y cuándo. Para tenerlo claro, no para empezar algo nuevo."
+        hero={
+          // La única acción amarilla, arriba: guarda las tres listas a la vez.
+          <View>
+            <Pressable
+              onPress={saveStack}
+              disabled={off}
+              style={[styles.saveBtn, off && styles.saveOff]}
+              accessibilityRole="button"
+              accessibilityLabel={label.toLowerCase()}
+              accessibilityState={{ disabled: off }}>
+              <Text style={[styles.saveText, off && styles.saveTextOff]}>{label}</Text>
+            </Pressable>
+            <Text
+              style={[styles.hint, alerta && styles.hintAlert]}
+              accessibilityRole={alerta ? 'alert' : undefined}
+              accessibilityLiveRegion="polite">
+              {hint}
+            </Text>
+          </View>
+        }>
         <Text style={styles.note}>
           Solo información educativa. Consulta a tu médico antes de tomar cualquier suplemento.
         </Text>
@@ -157,7 +198,7 @@ export default function SuplementacionScreen() {
             return (
               <Pressable
                 key={tab.id}
-                onPress={() => { setActiveTab(tab.id); setSaved(null); }}
+                onPress={() => setActiveTab(tab.id)}
                 style={[styles.tab, active && styles.tabActive]}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
@@ -216,21 +257,6 @@ export default function SuplementacionScreen() {
           );
         })}
 
-        <Pressable
-          onPress={saveStack}
-          disabled={saving}
-          style={[styles.saveBtn, saving && styles.saveOff]}
-          accessibilityRole="button"
-          accessibilityLabel="Guardar mis suplementos"
-          accessibilityState={{ disabled: saving }}>
-          <Text style={styles.saveText}>{saving ? 'GUARDANDO…' : 'GUARDAR MIS SUPLEMENTOS'}</Text>
-        </Pressable>
-        <Text style={styles.hint}>
-          {saved === activeTab
-            ? `Guardado. ${count === 0 ? 'Ninguno marcado.' : `${count} en esta lista.`}`
-            : 'Tu dosis: la que te indicó tu médico.'}
-        </Text>
-
         <Text style={styles.footnote}>
           Fuente: Oficina de Suplementos Dietéticos de los NIH (ods.od.nih.gov) y estudios en humanos publicados en PubMed.
         </Text>
@@ -262,8 +288,11 @@ const styles = StyleSheet.create({
   inputLabel:    { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke, marginTop: spacing.sm },
   input:         { minHeight: 44, borderBottomWidth: 1, borderBottomColor: palette.lineHard, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 16 },
 
-  saveBtn:       { marginTop: spacing.xl, minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
-  saveOff:       { opacity: 0.4 },
+  saveBtn:       { minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  // Deshabilitado: contorno gris y texto apagado (mismo patrón que Tu calma y Diario).
+  saveOff:       { backgroundColor: 'transparent', borderWidth: 1, borderColor: palette.lineHard },
+  saveTextOff:   { color: palette.smoke },
+  hintAlert:     { color: palette.dangerText },
   saveText:      { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 2, color: palette.ink },
   hint:          { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash, marginTop: spacing.sm },
 

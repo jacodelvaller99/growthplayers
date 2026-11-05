@@ -112,16 +112,11 @@ export const palette = {
   purpleDim:      'rgba(124, 92, 191, 0.27)',   // #7c5cbf44 — active/hover state
 };
 
-// Identity swatches for member avatars — CONSTANT across themes (an identity hue
-// must not shift with light/dark). Lives with the design tokens instead of being
-// hardcoded in the component. Curated muted tones that read on the dark canvas.
+// Avatares sin foto: UNA pareja neutra que sigue el tema (manual: negro/amarillo/
+// gris). Los tintes verde/azul/morado salían de marca y en claro daban ~2:1.
+// Contraste fg/bg: oscuro #AAAAAA/#181818 ≈ 8:1 · claro #3D3D3D/#F7F7F7 ≈ 10:1.
 export const avatarSwatches: { bg: string; fg: string }[] = [
-  { bg: 'rgba(255, 200, 4, 0.14)',  fg: '#E9B71E' }, // gold
-  { bg: 'rgba(82, 168, 120, 0.16)', fg: '#6FBF93' }, // green
-  { bg: 'rgba(61, 143, 192, 0.16)', fg: '#5BA6D0' }, // blue
-  { bg: 'rgba(124, 92, 191, 0.18)', fg: '#9B7FD0' }, // purple
-  { bg: 'rgba(212, 160, 23, 0.16)', fg: '#D9B24A' }, // amber
-  { bg: 'rgba(255, 255, 255, 0.07)', fg: '#C8C8C8' }, // slate
+  { bg: palette.graphiteLight, fg: palette.ash },
 ];
 
 export const Colors = {
