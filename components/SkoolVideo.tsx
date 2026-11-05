@@ -24,7 +24,7 @@ const SAVE_EVERY_MS = 15000;
 
 /**
  * API del reproductor de Vimeo por postMessage (la misma que usa player.js,
- * sin cargar la librería): al estar listo se suscribe a timeupdate/pause/ended
+ * sin cargar la librería): al cargar se suscribe a playProgress/pause/finish
  * y guarda cuánto vio la persona. Solo web; en nativo queda pendiente.
  */
 function useVimeoProgress(iframe: React.RefObject<HTMLIFrameElement | null>, vimeoId?: string, lessonId?: string) {
@@ -46,19 +46,28 @@ function useVimeoProgress(iframe: React.RefObject<HTMLIFrameElement | null>, vim
       let msg: { event?: string; data?: { seconds?: number; percent?: number; duration?: number } };
       try { msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
       if (msg.event === 'ready') {
-        ['timeupdate', 'pause', 'ended'].forEach((ev) => post('addEventListener', ev));
-      } else if (msg.event === 'timeupdate' && msg.data) {
+        subscribe();
+      } else if ((msg.event === 'playProgress' || msg.event === 'timeupdate') && msg.data) {
         const before = p.completed;
         p = nextProgress(p, { seconds: msg.data.seconds ?? 0, percent: msg.data.percent ?? 0, duration: msg.data.duration ?? 0 });
         dirty = true;
         if (p.completed && !before) flush();
-      } else if (msg.event === 'pause' || msg.event === 'ended') {
+      } else if (msg.event === 'pause' || msg.event === 'finish' || msg.event === 'ended') {
         flush();
       }
     };
+    // Este embed habla el protocolo clásico (playProgress/finish; verificado en
+    // vivo). Se pide en los dos dialectos y también al cargar el iframe, porque
+    // el «ready» puede llegar antes de que este efecto escuche.
+    const subscribe = () =>
+      ['playProgress', 'timeupdate', 'pause', 'finish', 'ended'].forEach((ev) => post('addEventListener', ev));
     window.addEventListener('message', onMessage);
+    const el = iframe.current;
+    el?.addEventListener('load', subscribe);
+    subscribe();
     const timer = setInterval(flush, SAVE_EVERY_MS);
     return () => {
+      el?.removeEventListener('load', subscribe);
       window.removeEventListener('message', onMessage);
       clearInterval(timer);
       flush();
