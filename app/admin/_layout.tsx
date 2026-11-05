@@ -60,6 +60,7 @@ interface NavSection extends NavItem {
 // existiendo; viven dentro de la sección a la que pertenecen.
 const NAV_SECTIONS: NavSection[] = [
   { route: '/admin', label: 'Hoy', icon: 'today' },
+  { route: '/admin/traccion', label: 'Tracción', icon: 'trending-up' },
   {
     route: '/admin/usuarios', label: 'Clientes', icon: 'people',
     subs: [
