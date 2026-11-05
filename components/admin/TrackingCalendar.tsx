@@ -6,7 +6,7 @@
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, palette, spacing } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -19,13 +19,13 @@ const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'O
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIAS_CORTO = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-type Data = { checkins: CheckinRow[]; lessons: EventRow[]; practices: PracticeRow[]; norman: EventRow[]; sessions: EventRow[]; videos: EventRow[] };
+export type TrackingData = { checkins: CheckinRow[]; lessons: EventRow[]; practices: PracticeRow[]; norman: EventRow[]; sessions: EventRow[]; videos: EventRow[] };
 
 async function q<T>(p: Promise<{ data: T[] | null }>): Promise<T[]> {
   try { return (await p).data ?? []; } catch { return []; }
 }
 
-async function fetchMonth(userId: string, year: number, month: number): Promise<Data> {
+async function fetchMonth(userId: string, year: number, month: number): Promise<TrackingData> {
   // Una semana de margen a cada lado (la grilla muestra días vecinos y la racha mira atrás).
   const from = new Date(year, month, 1 - 14), to = new Date(year, month + 1, 8);
   const f = from.toISOString(), t = to.toISOString();
@@ -51,18 +51,21 @@ async function fetchMonth(userId: string, year: number, month: number): Promise<
 const ANIMO = (v: number | null) => (v == null ? '—' : v >= 4 ? 'BIEN' : v >= 3 ? 'MEDIA' : 'BAJA');
 const fmt = (v: number | null, suf = '') => (v == null ? '—' : `${String(v).replace('.', ',')}${suf}`);
 
-export function TrackingCalendar({ userId }: { userId: string }) {
+/** `userId`: el mentor lo lee de Supabase. `local`: el cliente pasa sus propios datos (Progreso). */
+export function TrackingCalendar({ userId, local }: { userId?: string; local?: TrackingData }) {
   const { isDesktop } = useBreakpoint();
   const now = new Date();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
-  const [data, setData] = useState<Data | null>(null);
+  const [fetched, setData] = useState<TrackingData | null>(null);
+  const data = local ?? fetched;
 
   useEffect(() => {
+    if (local || !userId) return;
     let alive = true;
     setData(null);
     fetchMonth(userId, ym.y, ym.m).then((d) => { if (alive) setData(d); });
     return () => { alive = false; };
-  }, [userId, ym.y, ym.m]);
+  }, [userId, local, ym.y, ym.m]);
 
   const built = useMemo(
     () => (data ? buildTracking({ year: ym.y, month: ym.m, today: new Date(), ...data }) : null),
@@ -79,13 +82,18 @@ export function TrackingCalendar({ userId }: { userId: string }) {
 
   return (
     <View style={s.wrap}>
-      <View style={s.kpis}>
+      {/* Teléfono: fila deslizable compacta (como Traineeks); escritorio: todos a la vista. */}
+      <ScrollView
+        horizontal={!isDesktop}
+        scrollEnabled={!isDesktop}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[s.kpis, !isDesktop && s.kpisMob]}>
         <Kpi icon="sentiment-satisfied" big={ANIMO(k?.energy ?? null)} label={`Energía media ${fmt(k?.energy ?? null, '/5')}`} />
         <Kpi icon="speed" big={fmt(k?.stress ?? null, '/5')} label="Presión media" on={alerta === 'stress'} />
         <Kpi icon="event-available" big={String(k?.daysTracked ?? '—')} label="Días registrados" />
         <Kpi icon="timer" big={k?.practiceMin != null ? `${k.practiceMin} min` : '—'} label="Práctica media" />
         <Kpi icon="donut-large" big={fmt(k?.trackingPct ?? null, '%')} label="% de seguimiento" on={alerta === 'tracking'} />
-      </View>
+      </ScrollView>
 
       <View style={s.monthRow}>
         <Pressable onPress={() => move(-1)} style={s.navBtn} accessibilityRole="button" accessibilityLabel="Mes anterior">
@@ -120,8 +128,9 @@ export function TrackingCalendar({ userId }: { userId: string }) {
 }
 
 function Kpi({ icon, big, label, on }: { icon: React.ComponentProps<typeof MaterialIcons>['name']; big: string; label: string; on?: boolean }) {
+  const { isDesktop } = useBreakpoint();
   return (
-    <View style={[s.kpi, on && s.kpiOn]}>
+    <View style={[s.kpi, !isDesktop && s.kpiMob, on && s.kpiOn]}>
       <View style={s.kpiTop}>
         <MaterialIcons name={icon} size={18} color={on ? palette.ink : palette.goldText} />
         <Text style={[s.kpiBig, on && s.kpiInk]}>{big}</Text>
@@ -163,6 +172,8 @@ function Leyenda({ swatch, text }: { swatch: React.ReactNode; text: string }) {
 const s = StyleSheet.create({
   wrap: { gap: spacing.lg },
   kpis: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  kpisMob: { flexWrap: 'nowrap', paddingRight: spacing.lg },
+  kpiMob: { flexGrow: 0, flexBasis: 'auto', width: 132, minHeight: 76 },
   kpi: {
     flexGrow: 1, flexBasis: 150, minHeight: 84, padding: spacing.md, gap: 6, borderRadius: 14,
     borderWidth: 1, borderColor: palette.line, backgroundColor: palette.charcoal, justifyContent: 'center',

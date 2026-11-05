@@ -398,8 +398,8 @@ export default function DashboardScreen() {
           onPress={() => router.push(turno.route as never)}
         />
       }
-      // En escritorio el interruptor ya vive en la barra lateral.
-      footer={isDesktop ? undefined : <ModeSwitch current="client" />}>
+      // El interruptor CLIENTE/ADMIN vive arriba en Yo (teléfono) y en la barra lateral (escritorio).
+      >
       <MilestoneToast milestone={milestone} />
       {!!anomalyLine && (
         <Fila label="NORMAN NOTÓ" value={anomalyLine} tone="warn" onPress={() => router.push('/(tabs)/mentor' as never)} />

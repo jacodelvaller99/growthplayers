@@ -80,7 +80,7 @@ describe('el check-in no contesta por el usuario', () => {
     const { queryByText } = render(<CheckInScreen />);
     // Una pregunta por pantalla: abre en la primera, sin respuesta elegida.
     expect(queryByText('1 / 4 · ENERGÍA')).not.toBeNull();
-    expect(queryByText('ELIGE UNO')).not.toBeNull();
+    expect(queryByText('TOCA UN NÚMERO')).not.toBeNull();
     expect(queryByText('GUARDAR')).toBeNull();
     // Y la lectura de capacidad no existe hasta que existan los cuatro.
     expect(queryByText(/INDICE DE CAPACIDAD|ÍNDICE DE CAPACIDAD/)).toBeNull();

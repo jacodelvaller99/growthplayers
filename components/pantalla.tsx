@@ -33,6 +33,8 @@ type PantallaProps = {
    * de las 4 pestañas (Hoy, Norman, Progreso, Yo); `false` la oculta.
    */
   onBack?: (() => void) | false;
+  /** Cifra gigante en vez de titular (canvas: «19 días seguidos»). `title` queda como nombre accesible. */
+  cifra?: { n: string; label: string };
 };
 
 // Los tests de pantalla mockean expo-router a medias: si falta un hook, no hay flecha.
@@ -44,7 +46,7 @@ const useSegmentsSeguro: () => string[] =
 /** Alto del botón flotante de Norman (48) + su margen (16) + aire (32). */
 const FAB_CLEARANCE = 96;
 
-export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, onBack }: PantallaProps) {
+export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, onBack, cifra }: PantallaProps) {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
   const reduced = useReducedMotion();
@@ -67,9 +69,16 @@ export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, 
 
   const head = (
     <View style={isDesktop ? s.headDeskFull : undefined}>
-      <Text accessibilityRole="header" style={[s.title, { fontSize: size, lineHeight: Math.round(size * 1.04) }]}>
-        {title}
-      </Text>
+      {cifra ? (
+        <View style={s.cifraRow} accessible accessibilityRole="header" accessibilityLabel={title.split('\n').join(' ')}>
+          <Text style={[s.cifra, isDesktop && s.cifraDesk]}>{cifra.n}</Text>
+          <Text style={[s.cifraLabel, isDesktop && s.cifraLabelDesk]}>{cifra.label}</Text>
+        </View>
+      ) : (
+        <Text accessibilityRole="header" style={[s.title, { fontSize: size, lineHeight: Math.round(size * 1.04) }]}>
+          {title}
+        </Text>
+      )}
       {!!sub && <Text style={[s.sub, isDesktop && s.subDesk]}>{sub}</Text>}
     </View>
   );
@@ -200,11 +209,16 @@ const s = StyleSheet.create({
   inner: { width: '100%', maxWidth: 1128, alignSelf: 'center' },
 
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 24, gap: spacing.md },
-  // El meta va en gris: el amarillo se gana (es de la tarjeta de acción).
-  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
+  // Como el canvas: la línea de arriba (dónde estás) en el color de acento.
+  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
   back: { width: 44, height: 44, marginLeft: -10, marginBottom: 8, alignItems: 'center', justifyContent: 'center' },
 
   title: { marginTop: 40, fontFamily: Fonts.displayRegular, fontWeight: '400', color: palette.ivory, letterSpacing: -1 },
+  cifraRow: { marginTop: 32, flexDirection: 'row', alignItems: 'flex-end', gap: 14 },
+  cifra: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 120, lineHeight: 112, letterSpacing: -4, color: palette.ivory, fontVariant: ['tabular-nums'] },
+  cifraDesk: { fontSize: 180, lineHeight: 166 },
+  cifraLabel: { fontFamily: Fonts.sans, fontSize: 17, lineHeight: 23, color: palette.ash, paddingBottom: 10 },
+  cifraLabelDesk: { fontSize: 21, lineHeight: 28, paddingBottom: 16 },
   sub: { marginTop: 20, fontFamily: Fonts.sans, fontSize: 18, lineHeight: 27, color: palette.ash, maxWidth: 360 },
   subDesk: { fontSize: 21, lineHeight: 32, maxWidth: 640 },
 

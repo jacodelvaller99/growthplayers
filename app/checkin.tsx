@@ -10,7 +10,6 @@ import {
   PrimaryButton,
 } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
 import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -512,10 +511,10 @@ export default function CheckInScreen() {
           {paso.q}
         </Text>
         <View style={[styles.bigRow, isDesktop && styles.bigRowDesk]}>
-          <Text style={[styles.big, isDesktop && styles.bigDesk]} accessibilityLiveRegion="polite">
-            {elegido ?? ''}
+          <Text style={[styles.big, isDesktop && styles.bigDesk, elegido == null && styles.bigEmpty]} accessibilityLiveRegion="polite">
+            {elegido ?? '–'}
           </Text>
-          <Text style={styles.bigWord}>{elegido ? paso.words[elegido - 1].toUpperCase() : ''}</Text>
+          <Text style={styles.bigWord}>{elegido ? paso.words[elegido - 1].toUpperCase() : 'TOCA UN NÚMERO'}</Text>
         </View>
       </View>
 
@@ -523,7 +522,6 @@ export default function CheckInScreen() {
         {/* «ELIGE UNO» justo encima de los botones, y debajo qué significa cada
             punta: antes la escala se elegía a ciegas. */}
         <View style={[styles.scale, isDesktop && styles.scaleDesk]}>
-          <Text style={styles.scaleHint}>ELIGE UNO</Text>
           {opciones}
           <View style={styles.scaleEnds}>
             <Text style={styles.scaleEnd}>{`1 = ${paso.words[0].toLowerCase()}`}</Text>
@@ -580,23 +578,23 @@ const styles = StyleSheet.create({
   bigRowDesk: { flexDirection: 'column', alignItems: 'flex-end', gap: 4 },
   big: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 120, lineHeight: 120, minHeight: 120, color: palette.ink },
   bigDesk: { fontSize: 280, lineHeight: 280, minHeight: 280 },
+  bigEmpty: { opacity: 0.25 },
   bigWord: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ink },
   qBottom: { gap: 16 },
   qBottomDesk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 32 },
   scale: { gap: 8 },
   scaleDesk: { flex: 1 },
-  scaleHint: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink },
   scaleEnds: { flexDirection: 'row', justifyContent: 'space-between' },
   scaleEnd: { fontFamily: Fonts.sans, fontSize: 13, color: palette.ink },
   options: { flexDirection: 'row', gap: 10 },
   optionsDesk: { gap: 14 },
   option: {
-    flex: 1, minWidth: 56, height: 56, borderRadius: 8, borderWidth: 1.5, borderColor: palette.ink,
+    flex: 1, minWidth: 56, height: 58, borderRadius: 999, borderWidth: 1.5, borderColor: palette.ink,
     alignItems: 'center', justifyContent: 'center',
   },
   optionOn: { backgroundColor: palette.ink },
   optionPressed: { opacity: 0.6 },
-  optionN: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 18, color: palette.ink },
+  optionN: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 20, color: palette.ink },
   optionNOn: { color: palette.goldStatic },
   qActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   qActionsDesk: { minWidth: 360 },
@@ -608,8 +606,9 @@ const styles = StyleSheet.create({
   nextDesk: { height: 64 },
   // Deshabilitado = hueco hundido sin borde: velo de tinta al 8 % y texto de
   // tinta atenuado. El contorno al 40 % de opacidad se leía «mostaza roto».
-  nextOff: { backgroundColor: alpha(palette.ink, '14') },
-  nextTextOff: { color: alpha(palette.ink, '80') },
+  // Deshabilitado: el mismo botón negro, apagado. Sigue leyéndose como «el botón».
+  nextOff: { opacity: 0.28 },
+  nextTextOff: {},
   nextPressed: { opacity: 0.85 },
   nextText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, letterSpacing: 1, color: palette.goldStatic },
 

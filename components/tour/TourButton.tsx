@@ -66,7 +66,9 @@ export function TourButton() {
   const boardRoute = root === 'admin' && (segments.length === 1 || ['index', 'clientes'].includes(segments[1] ?? ''));
   // En el teléfono, fuera de las pantallas con barra abajo, no hay dónde
   // acoplarlo: arriba a la derecha tapaba la línea de meta («MÓDULO 1 DE 9»).
-  const sinBarra = !isDesktop && !(inTabs || root === 'admin');
+  // En el teléfono no flota en ninguna pantalla: tapaba filas y calendario.
+  // ponytail: la ayuda vive en escritorio; en el teléfono, en el tour del onboarding.
+  const sinBarra = !isDesktop;
   const hidden =
     sinBarra ||
     (boardRoute && !isDesktop) ||

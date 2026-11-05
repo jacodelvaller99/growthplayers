@@ -754,14 +754,6 @@ function MentorScreenInner() {
         <View style={styles.metaRow}>
           <Text style={styles.metaTitle} accessibilityRole="header">NORMAN · MENTOR IA</Text>
           <View style={styles.metaRight}>
-            <Text
-              style={[styles.metaStatus, !aiLive && styles.metaStatusDemo]}
-              accessibilityLiveRegion="polite"
-              accessibilityLabel={
-                isStreaming ? 'Estado: respondiendo' : aiLive ? 'Estado: en línea' : 'Estado: modo demostración, respuestas simuladas'
-              }>
-              {isStreaming ? 'RESPONDIENDO' : aiLive ? 'EN LÍNEA' : 'DEMOSTRACIÓN'}
-            </Text>
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -776,53 +768,6 @@ function MentorScreenInner() {
             </Pressable>
           </View>
         </View>
-
-        {/* ── Qué ve Norman: plegado por defecto ── */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Qué ve Norman"
-          accessibilityHint="Muestra qué datos tuyos recibe Norman"
-          accessibilityState={{ expanded: showBasis }}
-          onPress={() => setShowBasis((v) => !v)}
-          style={styles.basisToggle}>
-          <MaterialIcons name="visibility" size={13} color={palette.ash} />
-          <Text style={styles.basisToggleText}>QUÉ VE NORMAN</Text>
-          <MaterialIcons
-            name={showBasis ? 'expand-less' : 'expand-more'}
-            size={16}
-            color={palette.smoke}
-          />
-        </Pressable>
-        {showBasis ? (
-          <Animated.View
-            entering={reducedMotion ? undefined : FadeIn.duration(160).easing(Easing.bezier(...EASING_HOUSE))}
-            exiting={reducedMotion ? undefined : FadeOut.duration(120).easing(Easing.bezier(...EASING_HOUSE))}
-            style={styles.basisList}>
-            <Text style={styles.noCheckin}>
-              {todayCheckIn
-                ? `Hoy: energía ${todayCheckIn.energy}/10 · claridad ${todayCheckIn.clarity}/10 · estrés ${todayCheckIn.stress}/10`
-                : 'Aún no hay lectura de hoy.'}
-            </Text>
-            <BasisRows />
-          </Animated.View>
-        ) : null}
-
-        {/* ── Para empezar: solo con la conversación vacía, tres ideas ── */}
-        {!hasUserTurn && (
-          <View style={styles.promptGrid}>
-            {quickPrompts.slice(0, 3).map((p) => (
-              <Pressable
-                key={p.label}
-                accessibilityRole="button"
-                accessibilityLabel={p.label}
-                onPress={() => handlePromptPress(p.label)}
-                style={promptPressStyle}>
-                <Text style={styles.promptText}>{p.label}</Text>
-                <MaterialIcons name="arrow-forward" size={18} color={palette.goldText} />
-              </Pressable>
-            ))}
-          </View>
-        )}
 
         {/* ── Message Thread ── */}
         {displayMessages.length > 0 && (
@@ -872,6 +817,11 @@ function MentorScreenInner() {
               })}
               {isStreaming && <TypingBubble text={streamingText} />}
             </View>
+            {!isStreaming && !hasUserTurn && <View style={styles.promptGrid}>{quickPrompts.slice(0, 3).map((p) => (
+              <Pressable key={p.label} accessibilityRole="button" accessibilityLabel={p.label} onPress={() => handlePromptPress(p.label)} style={promptPressStyle}>
+                <Text style={styles.promptText}>{p.label}</Text>
+              </Pressable>
+            ))}</View>}
           </>
         )}
 
@@ -883,6 +833,21 @@ function MentorScreenInner() {
                 <ChatBubble role="mentor">{commitmentPrimer}</ChatBubble>
               ) : null}
             </View>
+        {/* ── Para empezar: solo con la conversación vacía, tres ideas ── */}
+        {!hasUserTurn && (
+          <View style={styles.promptGrid}>
+            {quickPrompts.slice(0, 3).map((p) => (
+              <Pressable
+                key={p.label}
+                accessibilityRole="button"
+                accessibilityLabel={p.label}
+                onPress={() => handlePromptPress(p.label)}
+                style={promptPressStyle}>
+                <Text style={styles.promptText}>{p.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
           </>
         )}
       </ScrollView>
@@ -907,6 +872,39 @@ function MentorScreenInner() {
               </Pressable>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.basisInSheet}>
+        {/* ── Qué ve Norman: plegado por defecto ── */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Qué ve Norman"
+                accessibilityHint="Muestra qué datos tuyos recibe Norman"
+                accessibilityState={{ expanded: showBasis }}
+                onPress={() => setShowBasis((v) => !v)}
+                style={styles.basisToggle}>
+                <MaterialIcons name="visibility" size={13} color={palette.ash} />
+                <Text style={styles.basisToggleText}>QUÉ VE NORMAN</Text>
+                <MaterialIcons
+                  name={showBasis ? 'expand-less' : 'expand-more'}
+                  size={16}
+                  color={palette.smoke}
+                />
+              </Pressable>
+              {showBasis ? (
+                <Animated.View
+                  entering={reducedMotion ? undefined : FadeIn.duration(160).easing(Easing.bezier(...EASING_HOUSE))}
+                  exiting={reducedMotion ? undefined : FadeOut.duration(120).easing(Easing.bezier(...EASING_HOUSE))}
+                  style={styles.basisList}>
+                  <Text style={styles.noCheckin}>
+                    {todayCheckIn
+                      ? `Hoy: energía ${todayCheckIn.energy}/10 · claridad ${todayCheckIn.clarity}/10 · estrés ${todayCheckIn.stress}/10`
+                      : 'Aún no hay lectura de hoy.'}
+                  </Text>
+                  <BasisRows />
+                </Animated.View>
+              ) : null}
+      
+      
+              </View>
               {threads.length === 0 ? (
                 <EmptyState
                   icon="chat-bubble-outline"
@@ -954,7 +952,7 @@ function MentorScreenInner() {
         accessibilityRole="text">
         <MaterialIcons name="smart-toy" size={14} color={palette.ash} />
         <Text style={styles.aiDisclosureText}>
-          Norman es un mentor de IA. No sustituye atención médica ni psicológica.
+          {aiLive ? 'Norman es un mentor de IA. No sustituye atención médica ni psicológica.' : 'Modo demostración: respuestas de ejemplo. Norman es un mentor de IA y no sustituye atención médica ni psicológica.'}
         </Text>
       </View>
 
@@ -1174,28 +1172,29 @@ const styles = StyleSheet.create({
   // Memory summary card
 
   // Quick prompts
+  // Canvas: respuestas de un toque como botones de contorno, no una lista.
   promptGrid: {
-    borderBottomColor: palette.line,
-    borderBottomWidth: 1,
-    marginTop: spacing.lg,
+    gap: 10,
+    marginTop: spacing.xl,
   },
   prompt: {
-    alignItems: 'center',
-    borderTopColor: palette.line,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between',
-    minHeight: 56,
-    paddingVertical: spacing.md,
+    alignSelf: 'flex-start',
+    borderColor: palette.lineHard,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    maxWidth: '100%',
+    minHeight: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
+  basisInSheet: { gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: palette.line },
   promptPressed: {
     backgroundColor: 'rgba(255, 200, 4, 0.08)',
     borderColor: palette.gold,
   },
   promptText: {
     color: palette.ivory,
-    flex: 1,
     fontFamily: Fonts.sans,
     fontSize: 16,
     lineHeight: 22,
