@@ -35,6 +35,12 @@ type PantallaProps = {
   onBack?: (() => void) | false;
 };
 
+// Los tests de pantalla mockean expo-router a medias: si falta un hook, no hay flecha.
+const useRouterSeguro: () => ReturnType<typeof useRouter> | null =
+  typeof useRouter === 'function' ? useRouter : () => null;
+const useSegmentsSeguro: () => string[] =
+  typeof useSegments === 'function' ? (useSegments as () => string[]) : () => [];
+
 /** Alto del botón flotante de Norman (48) + su margen (16) + aire (32). */
 const FAB_CLEARANCE = 96;
 
@@ -42,9 +48,8 @@ export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, 
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
   const reduced = useReducedMotion();
-  // Los tests de pantalla mockean expo-router a medias: sin el hook, sin flecha.
-  const router = typeof useRouter === 'function' ? useRouter() : null;
-  const segments = (typeof useSegments === 'function' ? useSegments() : []) as string[];
+  const router = useRouterSeguro();
+  const segments = useSegmentsSeguro() as string[];
   const esPestana = segments[0] === '(tabs)' && ['comando', 'mentor', 'progreso', 'yo'].includes(segments[1] ?? '');
   // Sin historial (enlace directo, PWA recién abierta) `back()` no hace nada:
   // se cae al lugar natural de donde se viene.
