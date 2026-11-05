@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
-import { Redirect, Tabs, useSegments } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import { Redirect, Tabs } from 'expo-router';
+import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,7 +10,6 @@ import { CHROME_MAX_SCALE, Colors, Fonts, palette } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { analytics } from '@/lib/analytics';
 
 /**
  * Barra de abajo del rediseño: solo texto, en la letra de marca. La pestaña
@@ -111,17 +110,7 @@ export function BottomNavigation() {
 
 export default function TabLayout() {
   const { isLoaded, isAuthenticated, state } = useLifeFlow();
-  const segments = useSegments();
-  const prevScreen = useRef<string | null>(null);
 
-  // Track tab screen views
-  useEffect(() => {
-    const screenName = segments[segments.length - 1] ?? 'unknown';
-    if (screenName !== prevScreen.current) {
-      prevScreen.current = screenName;
-      analytics.screenView(screenName);
-    }
-  }, [segments]);
 
   if (isLoaded && !isAuthenticated) {
     return <Redirect href={'/(auth)' as never} />;

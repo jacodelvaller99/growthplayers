@@ -72,6 +72,14 @@ export default function YoScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  // Medición de uso para el mentor: activa por defecto (parte del servicio).
+  const [usage, setUsage] = useState(state.profile.usageTracking !== false);
+  const handleUsageToggle = async (value: boolean) => {
+    setUsage(value);
+    await updateProfile({ ...state.profile, usageTracking: value });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
 
 
   const [deleting, setDeleting]   = useState(false);
@@ -321,6 +329,20 @@ export default function YoScreen() {
             thumbColor={notificationsOn ? palette.ink : palette.ash}
             {...SWITCH_WEB}
             accessibilityLabel="Recordarme el check-in"
+          />
+        </View>
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleText}>
+            <Text style={styles.toggleTitle}>Medir cómo uso la app</Text>
+            <Text style={styles.toggleMeta}>Pantallas, toques y tiempo. Solo lo ven tu mentor y el equipo Polaris.</Text>
+          </View>
+          <Switch
+            value={usage}
+            onValueChange={handleUsageToggle}
+            trackColor={{ false: palette.charcoal, true: palette.gold }}
+            thumbColor={usage ? palette.ink : palette.ash}
+            {...SWITCH_WEB}
+            accessibilityLabel="Medir cómo uso la app"
           />
         </View>
         <View style={[styles.toggleRow, styles.toggleRowLast]}>

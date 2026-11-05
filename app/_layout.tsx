@@ -3,7 +3,7 @@ import { SpaceMono_400Regular, useFonts as useSpaceMonoFonts } from '@expo-googl
 import { useFonts as useLocalFonts } from 'expo-font';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
@@ -50,7 +50,25 @@ SplashScreen.preventAutoHideAsync();
 // ─── Analytics initializer (inside LifeFlowProvider tree) ────────────────────
 function AnalyticsInitializer() {
   const { userId, state } = useLifeFlow();
-  useAnalytics({ userId, mlConsent: state.profile.mlConsent !== false });
+  const analytics = useAnalytics({ userId, mlConsent: state.profile.usageTracking !== false });
+  const pathname = usePathname();
+  // Cada pantalla (ruta completa) con el tiempo que se quedó en la anterior.
+  useEffect(() => { if (pathname) analytics.navigate(pathname); }, [pathname, analytics]);
+  // Web: cada toque en un botón, enlace, pestaña o interruptor, con su nombre.
+  // Nunca el texto que la persona escribe (los campos no son botones).
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.(
+        '[role="button"],[role="link"],[role="tab"],[role="switch"],[role="checkbox"],[role="radio"],a,button',
+      ) as HTMLElement | null;
+      if (!el) return;
+      const label = (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (label) analytics.tap(label, el.getAttribute('role') || el.tagName.toLowerCase());
+    };
+    document.addEventListener('click', onClick, { capture: true });
+    return () => document.removeEventListener('click', onClick, { capture: true });
+  }, [analytics]);
   return null;
 }
 

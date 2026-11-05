@@ -73,7 +73,7 @@ const LEGAL_ITEMS: { key: ConsentKey; label: string; summary: string; link: stri
 // Paso 2 — permisos de datos (obligatorios: sin ellos Norman IA no funciona).
 const DATA_ITEMS: { key: ConsentKey; label: string }[] = [
   { key: 'confrontation',    label: 'Norman IA puede confrontarme con datos registrados del sistema cuando mis acciones no coincidan con lo que declaré' },
-  { key: 'softwareLearning', label: 'Acepto el tratamiento de mis datos para el aprendizaje y mejora del software' },
+  { key: 'softwareLearning', label: 'Acepto que Polaris mida cómo uso la app (pantallas, toques y tiempo) para que mi mentor me acompañe mejor y para mejorar el servicio. Puedo apagarlo en Yo' },
   // Apple 5.1.2(i): permiso explícito, con nombre de los terceros, antes de enviar datos a IA externa.
   { key: 'aiSharing',        label: `Autorizo que mis mensajes y datos de uso se envíen a proveedores de IA de terceros (${AI_PROVIDERS_LABEL}) para que Norman IA funcione. Puedo retirarlo cuando quiera` },
 ];

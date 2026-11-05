@@ -112,6 +112,14 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    heading: '10.quater Medición de uso de la App',
+    body: [
+      'Para que su mentor pueda acompañarlo y para mejorar el servicio, medimos cómo usa la App: qué pantallas abre, cuánto tiempo permanece en cada una, qué botones toca y qué parte de los videos de las lecciones ve. Nunca registramos lo que escribe en campos de texto como parte de esta medición.',
+      'Esta información la ven únicamente su mentor asignado y el equipo de Polaris, y se conserva mientras su cuenta esté activa. Se elimina junto con su cuenta.',
+      'Puede apagar esta medición en cualquier momento desde Yo → Medir cómo uso la app, sin perder acceso a ninguna función.',
+    ],
+  },
+  {
     heading: '11. Menores de edad',
     body: [
       'La App no está dirigida a menores de 18 años y no recopilamos conscientemente sus datos. Si detectamos una cuenta de un menor, la eliminaremos.',

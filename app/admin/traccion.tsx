@@ -10,9 +10,19 @@ import { Fila, Pantalla } from '@/components/pantalla';
 import { Fonts, palette, spacing } from '@/constants/theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { fetchTraction, type Traction } from '@/lib/admin/traction';
+import { fetchWhoUses, type PersonUsage } from '@/lib/admin/whoUses';
+import { useRouter } from 'expo-router';
 
 const TIER: Record<string, string> = {
   free: 'Gratis', premium: 'Premium', premium_plus: 'Premium Plus', polaris: 'Polaris', growthplayers: 'Growth Players',
+};
+const hace = (iso: string | null) => {
+  if (!iso) return 'Nunca';
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (min < 2) return 'Ahora';
+  if (min < 60) return `Hace ${min} min`;
+  const h = Math.round(min / 60);
+  return h < 24 ? `Hace ${h} h` : `Hace ${Math.round(h / 24)} d`;
 };
 const pct = (v: number | null) => (v == null ? '—' : `${v}%`);
 const fecha = (k: string) => {
@@ -24,10 +34,13 @@ export default function TraccionScreen() {
   const { isDesktop } = useBreakpoint();
   const [t, setT] = useState<Traction | null>(null);
   const [error, setError] = useState(false);
+  const [people, setPeople] = useState<PersonUsage[] | null>(null);
+  const router = useRouter();
 
   const load = useCallback(() => {
     setError(false);
     fetchTraction().then(setT).catch(() => setError(true));
+    fetchWhoUses().then(setPeople).catch(() => setPeople([]));
   }, []);
   useEffect(load, [load]);
 
@@ -84,6 +97,24 @@ export default function TraccionScreen() {
         <Tile n={t.lessons30} label="LECCIONES TERMINADAS" />
         <Tile n={t.practices30} label="PRÁCTICAS DE BIENESTAR" />
       </View>
+
+      <View style={s.section}>
+        <Text style={s.label}>QUIÉN LA USA · ÚLTIMOS 7 DÍAS</Text>
+        {!people ? (
+          <ActivityIndicator color={palette.goldText} />
+        ) : people.length === 0 ? (
+          <Text style={s.note}>Aún no hay uso medido. La medición por persona empezó el 5 de noviembre de 2026.</Text>
+        ) : null}
+      </View>
+      {(people ?? []).map((p, i) => (
+        <Fila
+          key={p.userId}
+          label={p.name.toUpperCase()}
+          value={`${hace(p.lastSeen)} · ${p.minutes} min · ${p.taps} toques`}
+          onPress={() => router.push(`/admin/usuarios/${p.userId}?tab=client` as never)}
+          last={i === (people ?? []).length - 1}
+        />
+      ))}
 
       <View style={s.section}>
         <Text style={s.label}>PLANES · {t.paying} DE PAGO</Text>

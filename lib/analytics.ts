@@ -2,7 +2,9 @@
  * LifeFlow Analytics — Behavioral Tracker
  *
  * Singleton that batches events and flushes them to Supabase user_events.
- * Respects ml_consent: when false, track() is a no-op.
+ * Medición de uso = parte del servicio (decisión del dueño, 2026-11-05): mide a
+ * todos salvo que la persona la apague en Yo (`usageTracking === false`).
+ * ml_consent sigue siendo el opt-in de personalización con IA, NO gatea esto.
  * Designed for zero-latency UX: all writes happen in the background.
  */
 
@@ -43,7 +45,9 @@ export type EventType =
   | 'post_reaction'
   // Camino del héroe — Motor de Momentos (Fase 2)
   | 'hero_moment_shown'
-  | 'hero_moment_dismissed';
+  | 'hero_moment_dismissed'
+  | 'screen_leave'
+  | 'video_progress';
 
 interface QueuedEvent {
   event_type: EventType;
@@ -73,8 +77,10 @@ class PolarisAnalytics {
   private mlConsent: boolean = true;
   private queue: QueuedEvent[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly FLUSH_INTERVAL_MS = 10_000; // 10 seconds
-  private readonly FLUSH_THRESHOLD = 5;        // flush after 5 events
+  private readonly FLUSH_INTERVAL_MS = 5_000;  // 5 s: perder lo mínimo al cerrar la pestaña
+  private readonly FLUSH_THRESHOLD = 20;       // flush after 20 events
+  private lastIntelCall = 0;
+  private currentScreen: { name: string; since: number } | null = null;
 
   // ── Identity ────────────────────────────────────────────────────────────────
 
@@ -138,8 +144,10 @@ class PolarisAnalytics {
         const rows = batch.map((e) => ({ ...e, user_id: userId }));
         await intel.events().insert(rows);
 
-        // Trigger intelligence recalculation in the background
-        // (edge function is idempotent, no need to await)
+        // Recalcular inteligencia como mucho cada 5 min: con la medición
+        // completa llegan lotes cada pocos segundos.
+        if (Date.now() - this.lastIntelCall < 300_000) return;
+        this.lastIntelCall = Date.now();
         supabase.functions
           .invoke('calculate-intelligence', {
             body: { user_id: userId, trigger: 'event_batch' },
@@ -155,6 +163,21 @@ class PolarisAnalytics {
 
   screenView(screen: string, metadata?: Record<string, unknown>) {
     this.track('screen_view', metadata ?? {}, screen);
+  }
+
+  /** Cambio de pantalla: cierra la anterior con su tiempo y abre la nueva. */
+  navigate(screen: string) {
+    const now = Date.now();
+    const prev = this.currentScreen;
+    if (prev && prev.name === screen) return;
+    if (prev) this.track('screen_leave', { dwell_ms: now - prev.since }, prev.name);
+    this.currentScreen = { name: screen, since: now };
+    this.track('screen_view', {}, screen);
+  }
+
+  /** Toque en un botón o enlace (web: captura global en app/_layout). */
+  tap(label: string, role: string) {
+    this.track('button_tap', { label: label.slice(0, 80), role }, this.currentScreen?.name);
   }
 
   lessonStart(lessonId: string, moduleId: string) {
@@ -215,6 +238,9 @@ class PolarisAnalytics {
   }
 
   appBackground(sessionDurationMs: number) {
+    const prev = this.currentScreen;
+    if (prev) this.track('screen_leave', { dwell_ms: Date.now() - prev.since }, prev.name);
+    this.currentScreen = null;
     this.track('app_background', { session_duration_ms: sessionDurationMs });
     this.flush(); // Always flush on background to preserve data
   }

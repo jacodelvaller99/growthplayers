@@ -47,6 +47,8 @@ export type UserProfile = {
   role: string;
   /** Whether the user has consented to ML behavioral tracking (default: true) */
   mlConsent?: boolean;
+  /** Medición de uso para el mentor. Por defecto activa; `false` = la persona la apagó en Yo. */
+  usageTracking?: boolean;
   /** Expo push notification token */
   expoPushToken?: string | null;
   /**
