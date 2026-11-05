@@ -1,25 +1,15 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useScreen } from '@/components/polaris';
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import SafetyWarning from '@/components/SafetyWarning';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
-import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { BodyContextCard, PracticeClose } from './body-context';
@@ -38,17 +28,48 @@ function haptic(type: 'light' | 'medium' | 'success') {
   }
 }
 
-// ─── Orb geometry ─────────────────────────────────────────────────────────────
-// Design: outer rings 300px; orb scales between ~200 (idle) and 195–240 (active).
-// We use a fixed 200px base orb and drive expansion via Animated scale per phase.
-const ORB_BASE = 200;
-const RING_OUTER = 300;
-const RING_INNER = 240;
+// Nombres por intención: la técnica (4·7·8, caja, Wim Hof…) no le dice nada a
+// quien llega cansado. El patrón técnico vive en `description`, como detalle.
+const PURPOSE: Record<string, string> = {
+  '4-7-8': 'Para dormir',
+  'box': 'Para enfocarte',
+  'coherente': 'Para sostener el foco',
+  'wim-hof': 'Para activarte',
+  'fisiologica': 'Para calmarte ya',
+  'nadi-shodhana': 'Para ordenar la mente',
+  '2-1': 'Para bajar el ritmo',
+};
+const purpose = (t: BreathingTechnique) => PURPOSE[t.id] ?? t.subtitle;
+const minutesOf = (t: BreathingTechnique) =>
+  Math.max(1, Math.round((t.phases.reduce((a, p) => a + p.duration, 0) * t.cycles) / 60));
+
+/** La propuesta según la hora: noche → dormir, mañana → enfocarte, resto → calmarte ya. */
+function suggestedTech(): BreathingTechnique {
+  const h = new Date().getHours();
+  const id = h >= 20 || h < 5 ? '4-7-8' : h < 11 ? 'box' : 'fisiologica';
+  return BREATHING_TECHNIQUES.find((t) => t.id === id) ?? BREATHING_TECHNIQUES[0];
+}
+
+function AntesDeEmpezar({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel="Antes de empezar" style={s.antes}>
+        <Text style={s.antesLabel}>ANTES DE EMPEZAR</Text>
+        <MaterialIcons name={open ? 'expand-less' : 'expand-more'} size={20} color={palette.smoke} />
+      </Pressable>
+      {open && <View style={{ paddingBottom: 16 }}>{children}</View>}
+    </View>
+  );
+}
+
+const ORB = 220;
+
+type Mode = 'idle' | 'running' | 'paused' | 'done';
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function RespiracionScreen() {
-  const sc = useScreen();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { saveWellnessSession } = useLifeFlow();
@@ -58,68 +79,48 @@ export default function RespiracionScreen() {
     setElapsed: storeElapsed,
   } = useWellnessStore();
 
-  const [tech, setTech] = useState<BreathingTechnique>(BREATHING_TECHNIQUES[0]);
-  const [running, setRunning] = useState(false);
+  const [suggested] = useState(suggestedTech);
+  const [tech, setTech] = useState<BreathingTechnique>(suggested);
+  const [mode, setMode] = useState<Mode>('idle');
   const [phaseIdx, setPhaseIdx] = useState(0);
-  const [phaseLeft, setPhaseLeft] = useState(BREATHING_TECHNIQUES[0].phases[0].duration);
+  const [phaseLeft, setPhaseLeft] = useState(suggested.phases[0].duration);
   const [cycles, setCycles] = useState(0);
+  const [doneMinutes, setDoneMinutes] = useState(0);
 
+  const running = mode === 'running';
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const phaseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(0);
+  // Tiempo activo: acumulado de los tramos corridos (las pausas no cuentan).
+  const activeMsRef = useRef(0);
+  const resumedAtRef = useRef(0);
 
   const phases = tech.phases;
   const currentPhase = phases[phaseIdx];
-  const reducedMotion = useReducedMotion();
 
-  // Idle pulse when not running — el ejercicio guiado activo (animatePhase,
-  // abajo) es el ejercicio en sí y queda igual; esto es solo decoración
-  // mientras el usuario no ha empezado.
-  useEffect(() => {
-    if (running || reducedMotion) {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(1);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1.0, duration: 1800, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [running, reducedMotion, pulseAnim]);
+  const elapsedSecs = () =>
+    Math.round((activeMsRef.current + (resumedAtRef.current ? Date.now() - resumedAtRef.current : 0)) / 1000);
 
-  // Animate orb scale to the current phase target
-  const animatePhase = useCallback((idx: number) => {
-    const phase = phases[idx];
-    Animated.timing(scaleAnim, {
-      toValue: phase.scale,
-      duration: phase.duration * 1000,
-      useNativeDriver: true,
-    }).start();
-    haptic('light');
-  }, [phases, scaleAnim]);
+  // Lleva el círculo al tamaño de la fase. El movimiento ES el ejercicio guiado:
+  // no se apaga con reduced-motion (igual que antes).
+  const animateTo = useCallback((scale: number, secs: number) => {
+    Animated.timing(scaleAnim, { toValue: scale, duration: secs * 1000, useNativeDriver: true }).start();
+  }, [scaleAnim]);
 
-  // Phase countdown + advance (1s tick, mirrors design)
+  // Phase countdown + advance (1s tick)
   useEffect(() => {
     if (!running) return;
-
     phaseTickRef.current = setInterval(() => {
       setPhaseLeft((left) => {
         if (left > 1) return left - 1;
-        // advance to next phase
         const nextIdx = (phaseIdx + 1) % phases.length;
         if (nextIdx === 0) setCycles((c) => c + 1);
         setPhaseIdx(nextIdx);
-        animatePhase(nextIdx);
+        animateTo(phases[nextIdx].scale, phases[nextIdx].duration);
+        haptic('light');
         return phases[nextIdx].duration;
       });
     }, 1000);
-
     return () => {
       if (phaseTickRef.current) clearInterval(phaseTickRef.current);
     };
@@ -129,34 +130,47 @@ export default function RespiracionScreen() {
   // Total elapsed → wellness store (mini player)
   useEffect(() => {
     if (!running) return;
-    totalTimerRef.current = setInterval(() => {
-      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
-      storeElapsed(elapsed);
-    }, 1000);
+    totalTimerRef.current = setInterval(() => storeElapsed(elapsedSecs()), 1000);
     return () => { if (totalTimerRef.current) clearInterval(totalTimerRef.current); };
   }, [running, storeElapsed]);
 
-  const start = useCallback(() => {
-    setRunning(true);
+  const start = useCallback((t: BreathingTechnique) => {
+    setTech(t);
     setPhaseIdx(0);
-    setPhaseLeft(phases[0].duration);
+    setPhaseLeft(t.phases[0].duration);
     setCycles(0);
-    startTimeRef.current = Date.now();
+    activeMsRef.current = 0;
+    resumedAtRef.current = Date.now();
+    setMode('running');
     haptic('medium');
-    animatePhase(0);
-    const targetSecs = Math.round(
-      phases.reduce((acc, p) => acc + p.duration, 0) * tech.cycles,
-    );
-    storeStart({ type: 'breathing', sessionName: tech.title, targetSeconds: targetSecs });
-  }, [animatePhase, phases, tech.cycles, tech.title, storeStart]);
+    scaleAnim.setValue(1);
+    animateTo(t.phases[0].scale, t.phases[0].duration);
+    storeStart({ type: 'breathing', sessionName: t.title, targetSeconds: minutesOf(t) * 60 });
+  }, [animateTo, scaleAnim, storeStart]);
 
-  const stop = useCallback(async () => {
-    const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
-    setRunning(false);
+  const pause = useCallback(() => {
+    activeMsRef.current += Date.now() - resumedAtRef.current;
+    resumedAtRef.current = 0;
+    scaleAnim.stopAnimation();
+    setMode('paused');
+  }, [scaleAnim]);
+
+  const resume = useCallback(() => {
+    resumedAtRef.current = Date.now();
+    animateTo(currentPhase.scale, phaseLeft);
+    setMode('running');
+  }, [animateTo, currentPhase.scale, phaseLeft]);
+
+  const finish = useCallback(async () => {
+    const elapsed = elapsedSecs();
+    activeMsRef.current = 0;
+    resumedAtRef.current = 0;
     scaleAnim.stopAnimation();
     scaleAnim.setValue(1);
     storeStop();
     if (cycles > 0 && elapsed > 5) {
+      setDoneMinutes(Math.max(1, Math.round(elapsed / 60)));
+      setMode('done');
       await saveWellnessSession({
         type: 'breathing',
         sessionName: tech.title,
@@ -166,323 +180,136 @@ export default function RespiracionScreen() {
       });
       analytics.breathingComplete(tech.title, cycles, elapsed * 1000);
       haptic('success');
+    } else {
+      setMode('idle');
     }
   }, [cycles, saveWellnessSession, scaleAnim, storeStop, tech.id, tech.title]);
 
-  const selectTech = useCallback((t: BreathingTechnique) => {
-    // switching technique resets the session
-    if (running) {
-      setRunning(false);
-      scaleAnim.stopAnimation();
-      scaleAnim.setValue(1);
-      storeStop();
-    }
-    setTech(t);
-    setPhaseIdx(0);
-    setPhaseLeft(t.phases[0].duration);
-    setCycles(0);
-    haptic('light');
-  }, [running, scaleAnim, storeStop]);
+  // Al completar los ciclos de la técnica, termina sola.
+  useEffect(() => {
+    if (running && cycles >= tech.cycles) void finish();
+  }, [running, cycles, tech.cycles, finish]);
 
-  return (
-    <View style={sc.root}>
-      {/* Las prácticas son de los pocos momentos inmersivos donde la marca
-          permite color de fondo. Va FUERA del ScrollView y anclado al
-          viewport: dentro del `contentContainerStyle` (que es `maxWidth: 430`
-          centrado) se vería como una franja con costura contra el negro. */}
-      {/* Regular. Mismo verde que meditación: la misma familia de acto. */}
-      <Aura state="recuperado" weight={0.8} />
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 },
-        ]}
-        showsVerticalScrollIndicator={false}>
+  // ── Final ──────────────────────────────────────────────────────────────────
+  if (mode === 'done') {
+    return (
+      <Pantalla meta="BIENESTAR · CALMA" title="Hecho." sub={`${doneMinutes} min.`}>
+        <PracticeClose message="¿Cómo aterriza tu cuerpo ahora? Registrarlo es el dato que sí importa." />
+        <Fila label="VOLVER" value="Respiración" onPress={() => setMode('idle')} last />
+      </Pantalla>
+    );
+  }
 
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            accessibilityLabel="Volver"
-            accessibilityRole="button">
-            <MaterialIcons name="arrow-back" size={20} color={palette.ash} />
+  // ── Reproductor ────────────────────────────────────────────────────────────
+  if (mode === 'running' || mode === 'paused') {
+    return (
+      <View style={[s.player, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
+        <View style={s.playerTop}>
+          <Pressable onPress={() => void finish()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Terminar y volver">
+            <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
           </Pressable>
-          <Text style={styles.title}>RESPIRACIÓN</Text>
-          <View style={styles.backBtn} />
+          <Text style={s.playerMeta}>{purpose(tech).toUpperCase()}</Text>
+          <View style={s.backSpacer} />
         </View>
 
+        <View style={s.stage}>
+          <Animated.View style={[s.orb, { transform: [{ scale: scaleAnim }] }]} />
+          <View style={s.orbText} pointerEvents="none">
+            <Text style={s.orbPhase}>{currentPhase.label}</Text>
+            <Text style={s.orbCount} accessibilityLiveRegion="polite">{phaseLeft}</Text>
+          </View>
+        </View>
+
+        <Text style={s.pattern}>{tech.description}</Text>
+        {mode === 'paused' && (
+          <Text style={s.cycles}>{cycles} de {tech.cycles} ciclos</Text>
+        )}
+
+        <View style={s.controls}>
+          {mode === 'running' ? (
+            <Pressable onPress={pause} style={[s.btn, s.btnOutline]} accessibilityRole="button" accessibilityLabel="Pausa">
+              <Text style={s.btnTextOutline}>PAUSA</Text>
+            </Pressable>
+          ) : (
+            <>
+              <Pressable onPress={resume} style={[s.btn, s.btnGold]} accessibilityRole="button" accessibilityLabel="Seguir">
+                <Text style={s.btnTextGold}>SEGUIR</Text>
+              </Pressable>
+              <Pressable onPress={() => void finish()} style={[s.btn, s.btnOutline]} accessibilityRole="button" accessibilityLabel="Terminar">
+                <Text style={s.btnTextOutline}>TERMINAR</Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // ── Elegir ─────────────────────────────────────────────────────────────────
+  const rest = BREATHING_TECHNIQUES.filter((t) => t.id !== suggested.id);
+  return (
+    <Pantalla
+      meta="BIENESTAR · CALMA"
+      title="Respiración"
+      sub="Baja el ritmo en pocos minutos. Elige para qué."
+      hero={
+        <TarjetaOro
+          meta="PARA AHORA"
+          metaRight={`${minutesOf(suggested)} MIN`}
+          title={purpose(suggested)}
+          detail={suggested.description}
+          onPress={() => start(suggested)}
+          accessibilityLabel={`Empezar: ${purpose(suggested)}, ${minutesOf(suggested)} minutos`}
+        />
+      }>
+      {rest.map((t) => (
+        <Fila
+          key={t.id}
+          label={purpose(t).toUpperCase()}
+          value={`${minutesOf(t)} min`}
+          onPress={() => start(t)}
+        />
+      ))}
+      <AntesDeEmpezar>
         <SafetyWarning
           body="No realices estos ejercicios mientras conduces, en el agua, o de pie. Si estás embarazada, tienes epilepsia, problemas cardíacos o respiratorios, consulta a tu médico antes. Si sientes mareo intenso, detente."
         />
-
-        {/* Contexto biométrico del día (honesto, no en vivo) */}
-        {!running && (
-          <BodyContextCard frame="Respira para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
-        )}
-
-        {/* Orb */}
-        <View style={styles.orbStage}>
-          <View style={styles.ringOuter} />
-          <View style={styles.ringInner} />
-          <Animated.View
-            style={[
-              styles.orb,
-              { transform: [{ scale: running ? scaleAnim : pulseAnim }] },
-            ]}>
-            <View style={styles.orbInner} pointerEvents="none">
-              <Text style={styles.orbPhase}>{running ? currentPhase.label : 'LISTO'}</Text>
-              <Text style={styles.orbCount}>{running ? phaseLeft : '—'}</Text>
-            </View>
-          </Animated.View>
-        </View>
-
-        <Text style={styles.cyclesLabel}>CICLOS COMPLETADOS · {cycles}</Text>
-
-        {/* Technique chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-          style={styles.chipScroll}>
-          {BREATHING_TECHNIQUES.map((t) => {
-            const active = t.id === tech.id;
-            return (
-              <Pressable
-                key={t.id}
-                onPress={() => selectTech(t)}
-                style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
-                accessibilityRole="button"
-                accessibilityLabel={t.title}
-                accessibilityState={{ selected: active }}>
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.title}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* Detalle de la técnica seleccionada */}
-        {!running && (
-          <View style={styles.detail}>
-            <Text style={styles.detailBenefit}>{tech.benefit}</Text>
-            {tech.whenToUse && (
-              <Text style={styles.detailWhen}>
-                <Text style={styles.detailWhenLabel}>Cuándo: </Text>
-                {tech.whenToUse}
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* Primary action */}
-        <Pressable
-          onPress={() => (running ? stop() : start())}
-          style={[styles.cta, running ? styles.ctaOutline : styles.ctaGold]}
-          accessibilityRole="button"
-          accessibilityLabel={running ? 'Detener' : 'Comenzar sesión'}>
-          <MaterialIcons
-            name={running ? 'stop' : 'play-arrow'}
-            size={20}
-            color={running ? palette.goldText : palette.ink}
-          />
-          <Text style={[styles.ctaText, running ? styles.ctaTextOutline : styles.ctaTextGold]}>
-            {running ? 'DETENER' : 'COMENZAR SESIÓN'}
-          </Text>
-        </Pressable>
-
-        {/* Cierre: registrar cómo se siente tras una sesión real */}
-        {!running && cycles > 0 && (
-          <PracticeClose message="Sesión cerrada. ¿Cómo aterriza tu cuerpo ahora? Registrarlo es el dato que sí importa." />
-        )}
-      </ScrollView>
-    </View>
+      </AntesDeEmpezar>
+      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
+      <View style={s.context}>
+        <BodyContextCard frame="Respira para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
+      </View>
+    </Pantalla>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 430,
-    paddingHorizontal: spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.graphite,
-  },
-  title: {
-    ...typography.title,
-    color: palette.ivory,
-    fontSize: 18,
-  },
+const s = StyleSheet.create({
+  antes: { minHeight: 56, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  antesLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
+  context: { marginTop: spacing.xl },
 
-  // Orb stage
-  orbStage: {
-    width: RING_OUTER,
-    height: RING_OUTER,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  ringOuter: {
-    position: 'absolute',
-    width: RING_OUTER - 10,
-    height: RING_OUTER - 10,
-    borderRadius: (RING_OUTER - 10) / 2,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-    opacity: 0.4,
-  },
-  ringInner: {
-    position: 'absolute',
-    width: RING_INNER,
-    height: RING_INNER,
-    borderRadius: RING_INNER / 2,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-    opacity: 0.25,
-  },
-  orb: {
-    width: ORB_BASE,
-    height: ORB_BASE,
-    borderRadius: ORB_BASE / 2,
-    borderWidth: 1.5,
-    borderColor: palette.lineGold,
-    backgroundColor: palette.goldLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: palette.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 40,
-    elevation: 8,
-  },
-  orbInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orbPhase: {
-    fontFamily: Fonts.display,
-    color: palette.goldText,
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  orbCount: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 44,
-    fontWeight: '700',
-    marginTop: 6,
-  },
+  player: { flex: 1, backgroundColor: palette.black, paddingHorizontal: spacing.lg, alignItems: 'center' },
+  playerTop: { width: '100%', maxWidth: 680, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  backSpacer: { width: 44, height: 44 },
+  playerMeta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
 
-  cyclesLabel: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
+  stage: { flex: 1, minHeight: ORB * 1.5, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  // Círculo plano: borde visible en ambos temas, sin halo ni relleno teñido.
+  orb: { width: ORB, height: ORB, borderRadius: ORB / 2, borderWidth: 2, borderColor: palette.lineHard },
+  orbText: { position: 'absolute', alignItems: 'center' },
+  orbPhase: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, letterSpacing: 2, color: palette.ivory },
+  orbCount: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 72, lineHeight: 80, color: palette.ivory },
 
-  // Chips
-  chipScroll: {
-    flexGrow: 0,
-    marginBottom: spacing.lg,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  chip: {
-    minHeight: 44,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: {
-    backgroundColor: palette.gold,
-  },
-  chipInactive: {
-    backgroundColor: palette.goldLight,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-  },
-  chipText: {
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.goldMuted,
-  },
-  chipTextActive: {
-    color: palette.ink,
-    fontWeight: '700',
-  },
+  pattern: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ash, textAlign: 'center' },
+  cycles: { marginTop: spacing.sm, fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke, textAlign: 'center' },
 
-  // Detalle técnica
-  detail: {
-    marginBottom: spacing.lg,
-    gap: spacing.xs,
-  },
-  detailBenefit: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    lineHeight: 19,
-    color: palette.ash,
-  },
-  detailWhen: {
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    lineHeight: 18,
-    color: palette.goldMuted,
-  },
-  detailWhenLabel: {
-    fontWeight: '700',
-    color: palette.goldText,
-  },
-
-  // CTA
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    height: 52,
-    borderRadius: radii.sm,
-  },
-  ctaGold: {
-    backgroundColor: palette.gold,
-  },
-  ctaOutline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: palette.lineGold,
-  },
-  ctaText: {
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
-  ctaTextGold: { color: palette.ink },
-  ctaTextOutline: { color: palette.goldText },
+  controls: { width: '100%', maxWidth: 420, marginTop: spacing.xl, gap: spacing.sm },
+  btn: { height: 52, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
+  btnGold: { backgroundColor: palette.gold },
+  btnOutline: { borderWidth: 1, borderColor: palette.lineHard },
+  btnTextGold: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1.5, color: palette.ink },
+  btnTextOutline: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1.5, color: palette.ivory },
 });

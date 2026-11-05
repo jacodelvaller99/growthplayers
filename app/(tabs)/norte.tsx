@@ -4,6 +4,8 @@
  * casi siempre y se reescribe rara vez, así que la vista por defecto no es
  * un formulario. Si todavía no hay Norte, se abre directo en edición.
  */
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -23,7 +25,10 @@ export default function NorteScreen() {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const starColor = useDecorStarColor();
+  const router = useRouter();
   const { state, updateNorthStar } = useLifeFlow();
+  // Norte no es una de las 4 pestañas: sin flecha, en la PWA instalada no había salida.
+  const volver = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/yo' as never));
   const north = state.northStar;
 
   const vacio = !north.purpose.trim() && !north.identity.trim();
@@ -70,10 +75,15 @@ export default function NorteScreen() {
 
   const meta = (
     <View style={s.metaRow}>
-      <Text style={s.meta}>MI NORTE</Text>
+      <View style={s.metaLeft}>
+        <Pressable onPress={volver} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={s.back}>
+          <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
+        </Pressable>
+        <Text style={s.meta}>MI NORTE</Text>
+      </View>
       {!editando && (
-        <Pressable onPress={abrirEdicion} accessibilityRole="button" accessibilityLabel="Editar mi Norte" hitSlop={8} style={s.metaBtn}>
-          <Text style={s.meta}>EDITAR</Text>
+        <Pressable onPress={abrirEdicion} accessibilityRole="button" accessibilityLabel="Editar mi Norte" hitSlop={12} style={s.metaBtn}>
+          <Text style={s.metaAction}>EDITAR</Text>
         </Pressable>
       )}
     </View>
@@ -84,6 +94,7 @@ export default function NorteScreen() {
       <View style={s.star}>
         <PolarisLogo size={isDesktop ? 64 : 44} color={starColor} />
       </View>
+      <Text style={s.what}>Lo que quieres lograr en estos 90 días.</Text>
       <Text accessibilityRole="header" style={[s.purpose, isDesktop && s.purposeDesk]}>
         {north.purpose.trim() || north.identity.trim()}
       </Text>
@@ -96,7 +107,7 @@ export default function NorteScreen() {
         <View style={[s.list, isDesktop && s.listDesk]}>
           {north.nonNegotiables.map((v, i) => (
             <View key={`${v}-${i}`} style={[s.item, i === 0 && s.itemFirst]}>
-              <PolarisLogo size={isDesktop ? 14 : 12} color={palette.goldText} />
+              <View style={s.dash} />
               <Text style={s.itemText}>{v}</Text>
             </View>
           ))}
@@ -170,7 +181,7 @@ export default function NorteScreen() {
       <ScrollView
         contentContainerStyle={[
           s.content,
-          isDesktop ? s.contentDesk : { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 32 },
+          isDesktop ? s.contentDesk : { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 96 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
@@ -186,17 +197,23 @@ export default function NorteScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.black },
   content: { flexGrow: 1, paddingHorizontal: spacing.lg },
-  contentDesk: { paddingHorizontal: 72, paddingTop: 48, paddingBottom: 72 },
+  contentDesk: { paddingHorizontal: 72, paddingTop: 48, paddingBottom: 96 },
   inner: { width: '100%', maxWidth: 560, alignSelf: 'center' },
   innerDesk: { maxWidth: 1128 },
 
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
   metaBtn: { minHeight: 44, justifyContent: 'center' },
-  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
+  metaLeft: { flexDirection: 'row', alignItems: 'center' },
+  back: { width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' },
+  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
+  metaAction: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
+  what: { marginTop: 24, fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
+  // Raya, no estrella: cinco estrellas de viñeta diluían la estrella oficial.
+  dash: { width: 12, height: 2, backgroundColor: palette.smoke },
 
   star: { marginTop: 32, marginLeft: -2 },
   purpose: {
-    marginTop: 24, fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 29, lineHeight: 34,
+    marginTop: 12, fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 29, lineHeight: 34,
     color: palette.ivory, maxWidth: 820,
   },
   purposeDesk: { fontSize: 48, lineHeight: 55 },

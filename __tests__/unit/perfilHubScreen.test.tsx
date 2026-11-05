@@ -1,6 +1,6 @@
 /**
- * Render smoke test del Perfil Soberano hub (loop de pulido, iteración 33).
- * Score hero + tier + progreso + stats + arquetipos + nav rows + compartir.
+ * Render smoke test de /perfil (gramática del rediseño): titular con el día,
+ * una acción, filas y la historia.
  * Deja correr las utils puras de score. Monta sin throw. Platform=web.
  */
 import { render } from '@testing-library/react-native';
@@ -34,6 +34,7 @@ jest.mock('@/hooks/use-lifeflow', () => ({
     averages: { energy: 7, clarity: 6, stress: 4, sleep: 7 },
   }),
 }));
+jest.mock('@/components/PolarisLogo', () => ({ PolarisLogo: () => null }));
 jest.mock('@/components/polaris', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const RN = require('react-native');
@@ -56,6 +57,9 @@ const PerfilSoberanoScreen = require('@/app/perfil/index').default;
 
 describe('PerfilSoberanoScreen — render smoke', () => {
   it('score hero + progreso + stats + nav + compartir renderiza sin throw', () => {
-    expect(() => render(<PerfilSoberanoScreen />)).not.toThrow();
+    const { getByText, queryByText } = render(<PerfilSoberanoScreen />);
+    expect(getByText('Ana, vas en el día 1 de 90.')).toBeTruthy();
+    // Sin jerga en primer plano.
+    expect(queryByText(/score soberano/i)).toBeNull();
   });
 });

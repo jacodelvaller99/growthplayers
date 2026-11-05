@@ -56,6 +56,15 @@ interface Post {
   liked:         boolean;
 }
 
+/**
+ * "Norman" es el nombre de la IA. Un post firmado así sin más se lee como la IA
+ * participando del feed (o alguien suplantándola). Se presenta como lo que es:
+ * una cuenta del equipo, marcada.
+ */
+function isTeamAuthor(name: string): boolean {
+  return /^norman\b/i.test(name.trim());
+}
+
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 60)   return 'ahora';
@@ -332,18 +341,18 @@ export default function ComunidadScreen() {
           {ENV.socialSpacesEnabled && (
             <Pressable
               onPress={() => router.push('/comunidad' as never)}
-              style={styles.backBtn}
+              style={styles.headerLink}
               accessibilityRole="button"
               accessibilityLabel="Ir a El Círculo: eventos, espacios y conexiones">
-              <MaterialIcons name="workspaces" size={20} color={palette.goldText} />
+              <Text style={styles.headerLinkText}>Círculo</Text>
             </Pressable>
           )}
           <Pressable
             onPress={() => router.push('/comunidad/mensajes' as never)}
-            style={styles.backBtn}
+            style={styles.headerLink}
             accessibilityRole="button"
             accessibilityLabel="Mensajes directos">
-            <MaterialIcons name="forum" size={20} color={palette.goldText} />
+            <Text style={styles.headerLinkText}>Mensajes</Text>
           </Pressable>
         </View>
       ) : (
@@ -432,6 +441,8 @@ export default function ComunidadScreen() {
           </Pressable>
         )}
 
+        <Text style={styles.whoReads}>Comunidad de clientes Polaris · lo ven solo miembros</Text>
+
         {/* Input nuevo post */}
         <View style={styles.composeBox}>
           <TextInput
@@ -501,9 +512,16 @@ export default function ComunidadScreen() {
                 </View>
               )}
               <View style={styles.postHeader}>
-                <Avatar id={post.user_id} name={post.author_name} uri={post.author_avatar} size={36} />
+                <Avatar id={post.user_id} name={isTeamAuthor(post.author_name) ? 'Equipo Polaris' : post.author_name} uri={post.author_avatar} size={36} />
                 <View style={styles.postMeta}>
-                  <Text style={styles.postAuthor} numberOfLines={1}>{post.author_name}</Text>
+                  {isTeamAuthor(post.author_name) ? (
+                    <View style={styles.teamRow}>
+                      <Text style={styles.postAuthor} numberOfLines={1}>Equipo Polaris</Text>
+                      <Text style={styles.teamMark}>EQUIPO</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.postAuthor} numberOfLines={1}>{post.author_name}</Text>
+                  )}
                   <Text style={styles.postTime}>{timeAgo(post.created_at)}</Text>
                 </View>
                 {/* Menú de moderación / DM por post (no en tus propios posts) */}
@@ -540,7 +558,7 @@ export default function ComunidadScreen() {
                     style={styles.likeBtn}
                     accessibilityRole="button"
                     accessibilityLabel="Ver y escribir comentarios">
-                    <MaterialIcons name="mode-comment" size={16} color={palette.ash} />
+                    <Text style={styles.actionText}>Comentar</Text>
                   </Pressable>
                 )}
                 {post.user_id !== userId && (
@@ -548,8 +566,8 @@ export default function ComunidadScreen() {
                     onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: post.user_id, name: post.author_name } } as never)}
                     style={styles.likeBtn}
                     accessibilityRole="button"
-                    accessibilityLabel={`Enviar mensaje a ${post.author_name}`}>
-                    <MaterialIcons name="chat-bubble-outline" size={16} color={palette.ash} />
+                    accessibilityLabel={`Escribir un mensaje privado a ${post.author_name}`}>
+                    <Text style={styles.actionText}>Escribir</Text>
                   </Pressable>
                 )}
               </View>
@@ -653,7 +671,13 @@ const styles = StyleSheet.create({
   root:            { flex: 1, backgroundColor: palette.black },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:           { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+  title:           { fontFamily: Fonts.display, fontWeight: '700', fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+  headerLink:      { minHeight: 44, paddingHorizontal: spacing.sm, alignItems: 'center', justifyContent: 'center' },
+  headerLinkText:  { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory },
+  whoReads:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, marginHorizontal: spacing.md, marginBottom: spacing.sm },
+  teamRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  teamMark:        { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
+  actionText:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ash },
 
   composeBox:      { flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, gap: 8, borderWidth: 1, borderColor: palette.line },
   composeInput:    { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, minHeight: 44, maxHeight: 100, lineHeight: 20 },

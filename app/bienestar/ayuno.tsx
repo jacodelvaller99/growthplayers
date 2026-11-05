@@ -1,78 +1,73 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts, radii, EASING_HOUSE, DURATION_HOUSE } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { Dial, DialValue, HeroPanel } from '@/components/focus-deck';
-import { GoldDivider } from '@/components/polaris';
+import { palette, spacing, Fonts, radii } from '@/constants/theme';
 
+// Etapas en palabras llanas. Solo lo establecido; nada de "autofagia",
+// "Nobel" ni "recambio inmune" presentados como beneficio.
 const FASTING_STAGES = [
-  { h: [0,  4],  name: 'Digestión activa',   info: 'El cuerpo procesa los nutrientes. Insulina elevada.',           color: palette.smoke },
-  { h: [4,  8],  name: 'Post-absorción',      info: 'Glucosa se normaliza. El cuerpo empieza a usar glucógeno.',     color: palette.smoke },
-  // Gradiente de intensidad por opacidad sobre palette.gold — no un hex nuevo
-  // por etapa. A mayor duración del ayuno, más opaco (más "profundo") el oro.
-  { h: [8,  12], name: 'Estado de ayuno',     info: 'Glucógeno casi agotado. Transición hacia grasas.',             color: palette.goldDim },
-  { h: [12, 16], name: 'Cetosis temprana',    info: 'Producción de cetonas. Muchos reportan más claridad mental.',  color: alpha(palette.gold, '99') },
-  { h: [16, 20], name: 'Autofagia activa',    info: 'El reciclaje celular (autofagia) se intensifica. Mecanismo del Nobel 2016; evidencia en humanos aún en estudio.', color: alpha(palette.gold, 'B3') },
-  { h: [20, 24], name: 'Cetosis profunda',    info: 'Estudios pequeños reportan más hormona de crecimiento y menos inflamación.', color: alpha(palette.gold, 'CC') },
-  { h: [24, 48], name: 'Autofagia sostenida', info: 'Glucógeno agotado; el cuerpo recurre a la grasa. Autofagia sostenida (evidencia mayormente preclínica).', color: alpha(palette.gold, 'E6') },
-  { h: [48, 72], name: 'Cambio metabólico',   info: 'Modelos preclínicos sugieren recambio inmune; en humanos no está confirmado. Solo con supervisión.', color: palette.gold },
+  { h: [0,  4],  name: 'Digestión',          info: 'El cuerpo procesa lo que comiste.' },
+  { h: [4,  8],  name: 'Después de comer',   info: 'El azúcar en sangre vuelve a su nivel de base.' },
+  { h: [8,  12], name: 'En ayuno',           info: 'El cuerpo empieza a usar más grasa como energía.' },
+  { h: [12, 16], name: 'Ayuno nocturno largo', info: 'Sigue usando grasa como energía. Cada persona lo siente distinto.' },
+  { h: [16, 24], name: 'Ayuno largo',        info: 'Los beneficios extra en personas aún se estudian. Bebe agua.' },
+  { h: [24, 72], name: 'Ayuno prolongado',   info: 'Solo con supervisión médica. Si te mareas o te sientes mal, rómpelo.' },
 ];
 
-const PROTOCOLS = [
-  { label: '16:8',  targetHours: 16, description: 'El más popular. Ayuna 16h, come en ventana de 8h.' },
-  { label: '18:6',  targetHours: 18, description: 'Intermedio. Mayor autofagia y quema de grasa.' },
-  { label: '20:4',  targetHours: 20, description: 'Avanzado. Para quienes dominan el 18:6.' },
-  { label: '24h',   targetHours: 24, description: 'Un día completo. Solo para practicantes experimentados.' },
-  { label: '48h',   targetHours: 48, description: 'Ayuno prolongado. Autofagia profunda. Requiere experiencia.' },
-  { label: '72h',   targetHours: 72, description: 'Ayuno extendido. Solo con supervisión médica y mucha preparación.' },
+type Protocol = { label: string; targetHours: number; description: string };
+
+const PROTOCOLS: Protocol[] = [
+  { label: '16:8', targetHours: 16, description: 'Ayunas 16 h y comes en 8 h. El punto de partida.' },
+  { label: '18:6', targetHours: 18, description: 'Ayunas 18 h y comes en 6 h.' },
+  { label: '20:4', targetHours: 20, description: 'Ayunas 20 h y comes en 4 h. Cuando el 18:6 ya te es fácil.' },
 ];
 
-// ── Guía educativa: preparar, hidratar y romper el ayuno (refeeding) ──────────
+// Ayunos largos: detrás de una fila plegada, no al nivel del 16:8.
+const LONG_PROTOCOLS: Protocol[] = [
+  { label: '24 h', targetHours: 24, description: 'Un día completo. Con supervisión.' },
+  { label: '48 h', targetHours: 48, description: 'Solo con supervisión médica.' },
+  { label: '72 h', targetHours: 72, description: 'Solo con supervisión médica y preparación.' },
+];
+
+// ── Guía: preparar, hidratar y romper el ayuno ───────────────────────────────
 const GUIDE_SECTIONS = [
   {
-    icon: 'self-improvement' as const,
-    title: 'Preparar el cuerpo',
+    title: 'Antes',
     points: [
-      'Reduce azúcares y ultraprocesados 1–2 días antes para suavizar la transición.',
-      'Cena ligera la noche previa: proteína magra, vegetales y grasas buenas.',
-      'En ayunos largos (48h+) baja la intensidad del ejercicio y descansa bien.',
+      'Reduce azúcares y ultraprocesados 1–2 días antes.',
+      'Cena ligera la noche previa: proteína, vegetales y grasas buenas.',
+      'En ayunos largos baja la intensidad del ejercicio y descansa bien.',
     ],
   },
   {
-    icon: 'water-drop' as const,
-    title: 'Hidratación y electrolitos',
+    title: 'Durante',
     points: [
-      'Bebe agua de forma constante durante todo el ayuno.',
-      'Permitido: agua, café solo y té sin azúcar (no rompen el ayuno).',
-      'En 24h+ añade electrolitos (sodio, potasio, magnesio) para evitar mareo y fatiga.',
+      'Bebe agua durante todo el ayuno.',
+      'Puedes tomar agua, café solo y té sin azúcar.',
+      'Desde 24 h, añade electrolitos (sodio, potasio, magnesio) para evitar mareo.',
     ],
   },
   {
-    icon: 'restaurant' as const,
-    title: 'Cómo ROMPER el ayuno (refeeding)',
+    title: 'Al romperlo',
     points: [
-      'Rompe suave: caldo de huesos, proteína ligera o fruta de bajo índice glucémico.',
-      'Evita una comida copiosa o muy azucarada de golpe — puede causar malestar.',
-      'Mastica despacio y espera 30–60 min antes de una comida completa.',
-      'A mayor duración del ayuno, más gradual debe ser la reintroducción de alimentos.',
+      'Rompe suave: caldo, proteína ligera o fruta baja en azúcar.',
+      'Evita una comida muy grande o muy dulce de golpe.',
+      'Come despacio y espera 30–60 min antes de una comida completa.',
+      'Cuanto más largo el ayuno, más gradual la vuelta a comer.',
     ],
   },
 ];
@@ -86,48 +81,6 @@ const BREAKING_FOOD_SUGGESTIONS = [
   'Yogur / kéfir',
 ];
 
-// Selección de protocolo: hoy es un corte seco (el fondo cambia de golpe).
-// Un pequeño "pop" en el chip que se acaba de activar marca la transición sin
-// tocar color — evita interpolar `palette.gold`/`palette.line`, que en web
-// son `var(--c-*)` y romperían un interpolador de color (ver
-// themeVarInAnimation.test.ts).
-function ProtocolChip({ p, active, onPress }: { p: (typeof PROTOCOLS)[number]; active: boolean; onPress: () => void }) {
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    if (active && !reduced) {
-      scale.value = withSequence(
-        withTiming(1.04, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
-        withTiming(1, { duration: DURATION_HOUSE.selection / 2, easing: Easing.bezier(...EASING_HOUSE) }),
-      );
-    }
-  }, [active, reduced]);
-
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
-  return (
-    <Animated.View style={animStyle}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`Protocolo ${p.label}: ${p.description}`}
-        accessibilityState={{ selected: active }}
-        style={[styles.protocolRow, active && styles.protocolRowActive]}
-      >
-        <View style={styles.protocolLeft}>
-          <Text style={[styles.protocolLabel, active && { color: palette.ink }]}>
-            {p.label}
-          </Text>
-        </View>
-        <Text style={[styles.protocolDesc, active && { color: palette.ink }]}>
-          {p.description}
-        </Text>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
 function formatDuration(ms: number) {
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
@@ -136,15 +89,50 @@ function formatDuration(ms: number) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+/** Fila que se despliega (etapas, guía, ayunos largos). */
+function Plegable({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={label}
+        style={styles.plegable}>
+        <Text style={styles.plegableLabel}>{label.toUpperCase()}</Text>
+        <MaterialIcons name={open ? 'expand-less' : 'expand-more'} size={20} color={palette.smoke} />
+      </Pressable>
+      {open && <View style={styles.plegableBody}>{children}</View>}
+    </View>
+  );
+}
+
+function ProtocolRow({ p, active, onPress }: { p: Protocol; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityLabel={`${p.label}: ${p.description}`}
+      accessibilityState={{ selected: active }}
+      style={({ pressed }) => [styles.protocolRow, pressed && styles.pressed]}>
+      <Text style={[styles.protocolLabel, active && styles.protocolLabelActive]}>{p.label}</Text>
+      <Text style={styles.protocolDesc}>{p.description}</Text>
+      <View style={styles.protocolCheck}>
+        {active && <MaterialIcons name="check" size={20} color={palette.goldText} />}
+      </View>
+    </Pressable>
+  );
+}
+
 export default function AyunoScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
 
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
   const [breakingFood, setBreakingFood] = useState('');
-  const [selectedProtocol, setSelectedProtocol] = useState(PROTOCOLS[0]);
+  const [selectedProtocol, setSelectedProtocol] = useState<Protocol>(PROTOCOLS[0]);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0); // ms
@@ -152,7 +140,8 @@ export default function AyunoScreen() {
 
   const elapsedHours = elapsed / 3_600_000;
   const progress = Math.min(elapsedHours / selectedProtocol.targetHours, 1);
-  const currentStage = FASTING_STAGES.find(s => elapsedHours >= s.h[0] && elapsedHours < s.h[1]) ?? FASTING_STAGES[0];
+  const currentStage = FASTING_STAGES.find(s => elapsedHours >= s.h[0] && elapsedHours < s.h[1]) ?? FASTING_STAGES[FASTING_STAGES.length - 1];
+  const isLong = selectedProtocol.targetHours >= 24;
 
   useEffect(() => {
     if (startedAt) {
@@ -206,132 +195,87 @@ export default function AyunoScreen() {
   };
 
   const isActive = !!startedAt;
-  const ctaScale = useSharedValue(1);
-  const ctaAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+
+  // UNA acción arriba: empezar el protocolo elegido o, en curso, el reloj
+  // grande que se toca para terminar.
+  const hero = isActive ? (
+    <TarjetaOro
+      meta="EN CURSO"
+      metaRight={`META ${selectedProtocol.targetHours} H · ${(progress * 100).toFixed(0)}%`}
+      title={formatDuration(elapsed)}
+      detail={`${currentStage.name}. Toca para terminar el ayuno.`}
+      onPress={() => setShowBreakModal(true)}
+      accessibilityLabel={`Ayuno en curso: ${formatDuration(elapsed)}. Terminar ayuno`}
+    />
+  ) : (
+    <TarjetaOro
+      meta="EMPEZAR"
+      metaRight={selectedProtocol.label}
+      title={`Ayuno ${selectedProtocol.label}`}
+      detail={selectedProtocol.description}
+      onPress={() => setShowDisclaimer(true)}
+      accessibilityLabel={`Iniciar ayuno ${selectedProtocol.label}`}
+    />
+  );
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-        </Pressable>
-        <Text style={styles.title}>AYUNO</Text>
-        <View style={{ width: 38 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Timer central — el temporizador ES el estado protagonista cuando hay ayuno activo. */}
-        <HeroPanel>
-          {isActive ? (
-            <View style={styles.heroBody}>
-              <Text style={styles.timerLabel}>TIEMPO ACTIVO</Text>
-              {/* El reloj de ayuno — el Dial de la casa (mismo instrumento que
-                  el score de Comando). El arco toma el color de la etapa: a
-                  mayor profundidad del ayuno, más denso el oro. La barra
-                  horizontal que había aquí decía lo mismo con menos verdad
-                  visual: esto ES un temporizador circular. */}
-              <Dial pct={progress} size={148} stroke={8} tint={currentStage.color}>
-                <DialValue
-                  value={formatDuration(elapsed)}
-                  caption={`META ${selectedProtocol.targetHours}H · ${(progress * 100).toFixed(0)}%`}
-                />
-              </Dial>
-              {/* Etapa actual */}
-              <View style={[styles.stageChip, { borderColor: currentStage.color }]}>
-                <Text style={[styles.stageName, { color: currentStage.color }]}>{currentStage.name}</Text>
-              </View>
-              <Text style={styles.stageInfo}>{currentStage.info}</Text>
-            </View>
-          ) : (
-            <View style={styles.heroBody}>
-              <Text style={styles.timerLabel}>AYUNO</Text>
-              <Text style={styles.timerIdleText}>Sin ayuno activo</Text>
-              <Text style={styles.timerSub}>Selecciona un protocolo e inicia</Text>
-            </View>
-          )}
-        </HeroPanel>
-
-        {/* Protocolo selector */}
+    <>
+      <Pantalla
+        meta="BIENESTAR · SALUD"
+        title="Ayuno"
+        sub={isActive ? currentStage.info : 'Elige cuánto y empieza. Agua, café solo y té sin azúcar están permitidos.'}
+        hero={hero}
+        footer={<Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />}>
         {!isActive && (
-          <View style={styles.section}>
-            <GoldDivider label="PROTOCOLO" />
+          <View accessibilityRole="radiogroup">
             {PROTOCOLS.map(p => (
-              <ProtocolChip
-                key={p.label}
-                p={p}
-                active={selectedProtocol.label === p.label}
-                onPress={() => setSelectedProtocol(p)}
-              />
+              <ProtocolRow key={p.label} p={p} active={selectedProtocol.label === p.label} onPress={() => setSelectedProtocol(p)} />
             ))}
+            <Plegable label="Ayunos largos (con supervisión)">
+              {LONG_PROTOCOLS.map(p => (
+                <ProtocolRow key={p.label} p={p} active={selectedProtocol.label === p.label} onPress={() => setSelectedProtocol(p)} />
+              ))}
+            </Plegable>
           </View>
         )}
 
-        {/* Etapas científicas */}
-        <View style={styles.section}>
-          <GoldDivider label="ETAPAS DEL AYUNO" />
-          {FASTING_STAGES.map((s, i) => {
-            const reached = elapsedHours >= s.h[0];
+        <Plegable label="Qué pasa en el cuerpo">
+          {FASTING_STAGES.map((s) => {
+            const current = isActive && s === currentStage;
             return (
-              <View key={i} style={styles.stageRow}>
-                <View style={[styles.stageDot, { backgroundColor: reached ? s.color : palette.line }]} />
-                <View style={styles.stageContent}>
-                  <Text style={[styles.stageRowName, reached && { color: s.color }]}>
-                    {s.h[0]}h–{s.h[1]}h · {s.name}
-                  </Text>
-                  <Text style={styles.stageRowInfo}>{s.info}</Text>
-                </View>
+              <View key={s.name} style={styles.item}>
+                <Text style={[styles.itemTitle, current && styles.itemTitleCurrent]}>
+                  {s.h[0]}–{s.h[1]} h · {s.name}
+                </Text>
+                <Text style={styles.itemText}>{s.info}</Text>
               </View>
             );
           })}
-        </View>
+        </Plegable>
 
-        {/* GUÍA — preparar, hidratar y romper el ayuno */}
-        <View style={styles.section}>
-          <GoldDivider label="GUÍA" />
-          {GUIDE_SECTIONS.map((g, i) => (
-            <View key={i} style={styles.guideCard}>
-              <View style={styles.guideHeader}>
-                <MaterialIcons name={g.icon} size={18} color={palette.goldText} />
-                <Text style={styles.guideTitle}>{g.title}</Text>
-              </View>
-              {g.points.map((p, j) => (
-                <View key={j} style={styles.guidePointRow}>
-                  <View style={styles.guideBullet} />
-                  <Text style={styles.guidePointText}>{p}</Text>
-                </View>
+        <Plegable label="Antes, durante y al romperlo">
+          {GUIDE_SECTIONS.map((g) => (
+            <View key={g.title} style={styles.item}>
+              <Text style={styles.itemTitle}>{g.title}</Text>
+              {g.points.map((p) => (
+                <Text key={p} style={styles.itemText}>· {p}</Text>
               ))}
             </View>
           ))}
-        </View>
+        </Plegable>
+        <View style={styles.lastLine} />
+      </Pantalla>
 
-        {/* Botón de acción */}
-        <Animated.View style={ctaAnimStyle}>
-          <Pressable
-            onPress={isActive ? () => setShowBreakModal(true) : () => setShowDisclaimer(true)}
-            onPressIn={() => { ctaScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
-            onPressOut={() => { ctaScale.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
-            accessibilityRole="button"
-            accessibilityLabel={isActive ? 'Romper ayuno' : 'Iniciar ayuno'}
-            style={[styles.ctaBtn, isActive && styles.ctaBtnEnd]}
-          >
-            <Text style={styles.ctaBtnText}>
-              {isActive ? 'ROMPER AYUNO' : 'INICIAR AYUNO'}
-            </Text>
-          </Pressable>
-        </Animated.View>
-      </ScrollView>
-
-      {/* Disclaimer modal — no omitible */}
+      {/* Aviso médico — no omitible, antes de CUALQUIER ayuno */}
       <Modal visible={showDisclaimer} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <MaterialIcons name="warning" size={32} color={palette.goldText} style={{ marginBottom: 12 }} />
             <Text style={styles.modalTitle}>AVISO MÉDICO</Text>
             <Text style={styles.modalBody}>
               El ayuno intermitente puede no ser adecuado para todas las personas.
               {'\n\n'}Consulta con un profesional de la salud antes de iniciar si tienes diabetes, embarazo, trastornos alimentarios, estás bajo medicación, o tienes cualquier condición médica.
               {'\n\n'}Este protocolo es solo para adultos sanos. No es consejo médico.
+              {isLong ? '\n\nUn ayuno de 24 horas o más solo debe hacerse con supervisión médica.' : ''}
             </Text>
             <View style={styles.modalActions}>
               <Pressable onPress={() => setShowDisclaimer(false)} style={styles.modalCancel} accessibilityRole="button" accessibilityLabel="Cancelar">
@@ -351,10 +295,9 @@ export default function AyunoScreen() {
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalBox}>
-            <MaterialIcons name="restaurant" size={32} color={palette.goldText} style={{ marginBottom: 12 }} />
-            <Text style={styles.modalTitle}>ROMPER EL AYUNO</Text>
+            <Text style={styles.modalTitle}>TERMINAR EL AYUNO</Text>
             <Text style={styles.modalBody}>
-              Rompe suave para cuidar tu digestión. ¿Con qué alimento vas a romper el ayuno?
+              Rompe suave para cuidar tu digestión. ¿Con qué vas a romperlo?
             </Text>
             <TextInput
               style={styles.breakInput}
@@ -373,76 +316,50 @@ export default function AyunoScreen() {
             </View>
             <View style={styles.modalActions}>
               <Pressable onPress={() => setShowBreakModal(false)} style={styles.modalCancel} accessibilityRole="button" accessibilityLabel="Cancelar">
-                <Text style={styles.modalCancelText}>Cancelar</Text>
+                <Text style={styles.modalCancelText}>Seguir ayunando</Text>
               </Pressable>
               <Pressable onPress={endFast} style={styles.modalConfirm} accessibilityRole="button" accessibilityLabel="Confirmar romper ayuno">
-                <Text style={styles.modalConfirmText}>ROMPER AYUNO</Text>
+                <Text style={styles.modalConfirmText}>TERMINAR</Text>
               </Pressable>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root:             { flex: 1, backgroundColor: palette.black },
-  header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:          { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:            { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+  pressed:          { opacity: 0.7 },
 
-  content:          { paddingHorizontal: spacing.md, paddingBottom: 40 },
+  protocolRow:      { minHeight: 56, paddingVertical: 12, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', gap: 16 },
+  protocolLabel:    { width: 56, fontFamily: Fonts.display, fontWeight: '700', fontSize: 15, color: palette.ash },
+  protocolLabelActive: { color: palette.ivory },
+  protocolDesc:     { flex: 1, fontFamily: Fonts.sans, fontSize: 15, lineHeight: 21, color: palette.ash },
+  protocolCheck:    { width: 24, alignItems: 'center' },
 
-  heroBody:         { alignItems: 'center', gap: 8 },
-  timerLabel:       { ...typography.label, color: palette.goldText },
-  timerDisplay:     { fontFamily: Fonts.mono, fontSize: 48, color: palette.ivory, letterSpacing: 4 },
-  timerProtocol:    { ...typography.caption, color: palette.ash },
-  progressBar:      { width: '100%', height: 3, backgroundColor: palette.line, borderRadius: 2, overflow: 'hidden', marginVertical: 4 },
-  progressFill:     { height: '100%', backgroundColor: palette.gold, borderRadius: 2 },
-  stageChip:        { borderWidth: 1, borderRadius: radii.pill, paddingHorizontal: 12, marginTop: 8, minHeight: 44, justifyContent: 'center' },
-  stageName:        { fontFamily: Fonts.sans, fontSize: 13, fontWeight: '600' },
-  stageInfo:        { ...typography.caption, color: palette.ash, textAlign: 'center' },
-  timerIdleText:    { fontFamily: Fonts.display, fontSize: 22, color: palette.ivory, letterSpacing: 1 },
-  timerSub:         { ...typography.caption, color: palette.ash },
+  plegable:         { minHeight: 56, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  plegableLabel:    { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
+  plegableBody:     { paddingBottom: 16 },
+  lastLine:         { borderTopWidth: 1, borderTopColor: palette.line },
 
-  section:          { marginBottom: spacing.lg },
-
-  protocolRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.md, minHeight: 44, marginBottom: 8, gap: spacing.sm },
-  protocolRowActive:{ backgroundColor: palette.gold },
-  protocolLeft:     { width: 44, alignItems: 'center' },
-  protocolLabel:    { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory },
-  protocolDesc:     { flex: 1, fontSize: 12, color: palette.ash },
-
-  stageRow:         { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  stageDot:         { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
-  stageContent:     { flex: 1 },
-  stageRowName:     { fontFamily: Fonts.sans, fontSize: 13, color: palette.ash, fontWeight: '600' },
-  stageRowInfo:     { fontSize: 12, color: palette.smoke, marginTop: 2 },
-
-  guideCard:        { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, marginBottom: 10, borderLeftWidth: 2, borderLeftColor: palette.gold },
-  guideHeader:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  guideTitle:       { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '700', flex: 1 },
-  guidePointRow:    { flexDirection: 'row', gap: 8, marginBottom: 6 },
-  guideBullet:      { width: 5, height: 5, borderRadius: 3, backgroundColor: palette.gold, marginTop: 7 },
-  guidePointText:   { flex: 1, fontSize: 12, color: palette.ash, lineHeight: 18 },
-
-  ctaBtn:           { backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, alignItems: 'center', marginTop: 8, minHeight: 44, justifyContent: 'center' },
-  ctaBtnEnd:        { backgroundColor: alpha(palette.gold, '33'), borderWidth: 1, borderColor: palette.gold },
-  ctaBtnText:       { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
+  item:             { paddingVertical: 8, gap: 4 },
+  itemTitle:        { fontFamily: Fonts.sansBold, fontSize: 15, lineHeight: 21, color: palette.ivory },
+  itemTitleCurrent: { color: palette.goldText },
+  itemText:         { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ash },
 
   modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  modalBox:         { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, borderWidth: 1, borderColor: palette.gold, maxWidth: 440, width: '100%', alignItems: 'center' },
-  modalTitle:       { fontFamily: Fonts.display, fontSize: 16, color: palette.goldText, letterSpacing: 2, marginBottom: 12 },
-  modalBody:        { fontSize: 14, color: palette.ash, lineHeight: 22, textAlign: 'center' },
+  modalBox:         { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, borderWidth: 1, borderColor: palette.lineHard, maxWidth: 440, width: '100%' },
+  modalTitle:       { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, color: palette.ivory, letterSpacing: 1, marginBottom: 12 },
+  modalBody:        { fontFamily: Fonts.sans, fontSize: 15, color: palette.ash, lineHeight: 22 },
   modalActions:     { flexDirection: 'row', gap: 12, marginTop: spacing.lg, width: '100%' },
-  modalCancel:      { flex: 1, minHeight: 44, justifyContent: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, alignItems: 'center' },
-  modalCancelText:  { color: palette.ash, fontSize: 13 },
+  modalCancel:      { flex: 1, minHeight: 44, justifyContent: 'center', borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, alignItems: 'center' },
+  modalCancelText:  { fontFamily: Fonts.sans, color: palette.ash, fontSize: 14 },
   modalConfirm:     { flex: 2, minHeight: 44, justifyContent: 'center', backgroundColor: palette.gold, borderRadius: radii.sm, alignItems: 'center' },
-  modalConfirmText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 12, letterSpacing: 1 },
+  modalConfirmText: { fontFamily: Fonts.display, fontWeight: '700', color: palette.ink, fontSize: 12, letterSpacing: 1 },
 
-  breakInput:       { width: '100%', backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, marginTop: spacing.md },
-  breakChips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm, justifyContent: 'center' },
-  breakChip:        { borderWidth: 1, borderColor: palette.lineGold, borderRadius: radii.pill, paddingHorizontal: 12, minHeight: 44, justifyContent: 'center', backgroundColor: palette.goldLight },
-  breakChipText:    { fontSize: 11, color: palette.goldText, fontFamily: Fonts.sans },
+  breakInput:       { width: '100%', backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, minHeight: 44, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 15, marginTop: spacing.md },
+  breakChips:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm },
+  breakChip:        { borderWidth: 1, borderColor: palette.line, borderRadius: radii.pill, paddingHorizontal: 12, minHeight: 44, justifyContent: 'center' },
+  breakChipText:    { fontSize: 13, color: palette.ash, fontFamily: Fonts.sans },
 });

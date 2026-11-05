@@ -9,6 +9,8 @@ import { Platform } from 'react-native';
 
 (Platform as { OS: string }).OS = 'web';
 
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+jest.mock('@/components/PolarisLogo', () => ({ PolarisLogo: () => null }));
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: jest.fn() }),
   useLocalSearchParams: () => ({}),
@@ -52,7 +54,7 @@ jest.mock('@/lib/wearables', () => ({
     connections: [], staleConnections: [], loading: false, isConnected: () => false, getConnection: () => null, reload: jest.fn(),
   }),
   disconnectWearable: jest.fn(),
-  useWearableDaily: () => ({ today: null }),
+  useWearableDaily: () => ({ today: null, data: [] }),
   recoveryLabel: () => 'Óptimo',
 }));
 
@@ -60,7 +62,11 @@ jest.mock('@/lib/wearables', () => ({
 const WearablesScreen = require('@/app/perfil/wearables').default;
 
 describe('WearablesScreen — render smoke', () => {
-  it('lista de proveedores desconectados (agregador héroe) renderiza sin throw', () => {
-    expect(() => render(<WearablesScreen />)).not.toThrow();
+  it('sin reloj: titular honesto y proveedores como filas "Conectar"', () => {
+    const { getByText, getAllByText, queryByText } = render(<WearablesScreen />);
+    expect(getByText('Conecta tu reloj.')).toBeTruthy();
+    expect(getAllByText('Conectar').length).toBeGreaterThan(0);
+    // Nada de "tiempo real": la sincronización es diaria.
+    expect(queryByText(/tiempo real/i)).toBeNull();
   });
 });

@@ -20,6 +20,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react';
@@ -128,9 +129,16 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Cambiar de tema = cambiar `data-theme` en <html> (applyAttr). Las variables
+  // ya están inyectadas; nada se remonta ni se re-inyecta. El valor memoizado
+  // evita re-renderizar a los consumidores cuando el proveedor no cambió.
+  const value = useMemo(
+    () => ({ mode, setMode, toggle, signal, setSignal, canToggle: isWeb }),
+    [mode, setMode, toggle, signal, setSignal],
+  );
+
   return (
-    <AppThemeContext.Provider
-      value={{ mode, setMode, toggle, signal, setSignal, canToggle: isWeb }}>
+    <AppThemeContext.Provider value={value}>
       {children}
     </AppThemeContext.Provider>
   );

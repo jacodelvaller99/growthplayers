@@ -302,7 +302,6 @@ export default function YoScreen() {
       <AccessField label="QUÉ HACES" value={role} onChangeText={setRole} placeholder="Fundadora, abogado…" returnKeyType="done" />
       <PrimaryButton
         label={savingProfile ? 'GUARDANDO…' : 'GUARDAR PERFIL'}
-        icon="check"
         onPress={handleSaveProfile}
         disabled={savingProfile}
       />
@@ -319,6 +318,7 @@ export default function YoScreen() {
             onValueChange={toggleNotifications}
             trackColor={{ false: palette.charcoal, true: palette.gold }}
             thumbColor={notificationsOn ? palette.ink : palette.ash}
+            {...SWITCH_WEB}
             accessibilityLabel="Recordarme el check-in"
           />
         </View>
@@ -332,6 +332,7 @@ export default function YoScreen() {
             onValueChange={handleMlConsentToggle}
             trackColor={{ false: palette.charcoal, true: palette.gold }}
             thumbColor={mlConsent ? palette.ink : palette.ash}
+            {...SWITCH_WEB}
             accessibilityLabel="Usar mis datos para mejorar"
           />
         </View>
@@ -404,9 +405,13 @@ export default function YoScreen() {
 
 
 
+// react-native-web ignora thumbColor cuando está encendido y pinta su teal
+// por defecto (#009688): activeThumbColor es su prop para ese estado.
+const SWITCH_WEB = { activeThumbColor: palette.ink, activeTrackColor: palette.gold } as object;
+
 const styles = StyleSheet.create({
   cuenta: { gap: spacing.lg },
-  cuentaLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
+  cuentaLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
   cuentaGap: { marginTop: spacing.lg },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 64, paddingVertical: 14,
@@ -442,7 +447,7 @@ const styles = StyleSheet.create({
   versionText: {
     ...typography.caption,
     color: palette.smoke,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
     paddingBottom: spacing.xl,
     paddingTop: spacing.sm,

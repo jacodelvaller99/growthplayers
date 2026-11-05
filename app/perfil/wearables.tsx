@@ -1,7 +1,8 @@
 /**
  * app/perfil/wearables.tsx
  *
- * Pantalla de conexión de dispositivos wearables (WHOOP + Oura Ring).
+ * "Tu reloj": conexión de wearables, en la gramática del rediseño — una sola
+ * acción amarilla (sincronizar el conectado), el resto en filas, estado honesto.
  *
  * OAuth Flow:
  *  WEB  → window.location.href = url  →  WHOOP/Oura auth page
@@ -11,28 +12,23 @@
  *           → code extracted → edge fn called → reload
  */
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/confirm';
 import {
@@ -43,13 +39,11 @@ import {
   disconnectWearable,
   useWearableConnections,
   useWearableDaily,
-  recoveryLabel,
   type WearableProvider,
 } from '@/lib/wearables';
 import { connectAggregator, disconnectAggregator } from '@/lib/wearableAggregator';
 import { requestNativePermissions, syncRange, disconnectNative, nativeProviderForPlatform } from '@/lib/wearablesNative';
 import { WearableCompat } from '@/components/wearable-compat';
-import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ENV } from '@/app/config/env';
 
 const PROVIDER_NAME: Record<WearableProvider, string> = {
@@ -90,544 +84,53 @@ function generateState(): string {
   return Math.random().toString(36).substring(2, 18);
 }
 
-function timeSince(iso: string | null): string {
-  if (!iso) return 'Nunca';
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'Ahora mismo';
-  if (m < 60) return `hace ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `hace ${h}h`;
-  return `hace ${Math.floor(h / 24)}d`;
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-function scoreBar(value: number | null, max = 100) {
-  if (value == null) return null;
-  return Math.min(Math.round((value / max) * 100), 100);
+/** "hoy", "ayer", "hace 7 días" — fecha ISO (día o timestamp). */
+function haceCuanto(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const days = Math.floor((Date.now() - t) / DAY_MS);
+  if (days <= 0) return 'hoy';
+  if (days === 1) return 'ayer';
+  return `hace ${days} días`;
 }
 
 // ─── Provider metadata ────────────────────────────────────────────────────────
 type ProviderMeta = {
   id: WearableProvider;
   name: string;
-  subtitle: string;
-  description: string;
-  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  metrics: string[];
-  /** Si está definido, la tarjeta solo se muestra en esa plataforma. */
+  /** Si está definido, solo se muestra en esa plataforma. */
   platform?: 'ios' | 'android';
 };
 
 const ALL_PROVIDERS: ProviderMeta[] = [
-  {
-    id:          'aggregator',
-    name:        'Cualquier reloj',
-    subtitle:    'Garmin · Polar · Coros · Fitbit · Withings · Suunto +500',
-    description: 'Una sola conexión para casi cualquier reloj o app de salud — sin importar la marca. Funciona también desde el navegador. Elige tu dispositivo y autoriza; tus métricas llegan a Norman automáticamente.',
-    icon:        'watch',
-    metrics:     ['Sueño', 'Corazón', 'Pulso en calma', 'Recuperación'],
-  },
-  {
-    id:          'apple_health',
-    name:        'Apple Salud',
-    subtitle:    'Apple Watch + cualquier reloj compatible',
-    description: 'Lee sueño, recuperación, HRV, FC y actividad de tu Apple Watch — y de cualquier reloj que sincronice con la app Salud (Garmin, Polar, Coros, Whoop, Oura, etc.).',
-    icon:        'favorite',
-    metrics:     ['Sueño', 'Corazón', 'Pulso en calma', 'Actividad'],
-    platform:    'ios',
-  },
-  {
-    id:          'health_connect',
-    name:        'Google Health Connect',
-    subtitle:    'Galaxy · Fitbit · Garmin · Polar · Wear OS',
-    description: 'Lee tus métricas desde Health Connect — el agregador de Android. Cualquier reloj o app de salud que escriba ahí queda disponible para Norman.',
-    icon:        'health-and-safety',
-    metrics:     ['Sueño', 'Corazón', 'Pulso en calma', 'Pasos'],
-    platform:    'android',
-  },
-  {
-    id:          'whoop',
-    name:        'WHOOP',
-    subtitle:    'Recovery · Strain · Sueño · HRV',
-    description: 'Conecta tu WHOOP para obtener scores de recuperación, HRV y carga de entrenamiento que Norman usa para personalizar tu protocolo.',
-    icon:        'watch',
-    metrics:     ['Recuperación', 'Corazón', 'Esfuerzo', 'Sueño'],
-  },
-  {
-    id:          'oura',
-    name:        'Oura Ring',
-    subtitle:    'Readiness · Sueño · FC · HRV',
-    description: 'El anillo Oura mide readiness, calidad de sueño y frecuencia cardíaca en reposo con alta precisión para dispositivos de consumo.',
-    icon:        'circle',
-    metrics:     ['Listo para el día', 'Corazón', 'Sueño', 'Pulso en calma'],
-  },
-  {
-    id:          'polar',
-    name:        'Polar',
-    subtitle:    'Sueño · Nightly Recharge · HRV',
-    description: 'Conecta tu reloj Polar (AccessLink) para leer tu sueño y las métricas de recuperación nocturna que calibran tu protocolo.',
-    icon:        'watch',
-    metrics:     ['Sueño', 'Corazón', 'Pulso en calma'],
-  },
-  {
-    id:          'strava',
-    name:        'Strava',
-    subtitle:    'Actividad · Calorías · Tiempo activo',
-    description: 'Conecta Strava para que tus entrenamientos registrados (running, ciclismo y más) alimenten tu carga de actividad diaria.',
-    icon:        'directions-run',
-    metrics:     ['Actividad', 'Calorías', 'Min. activos'],
-  },
+  { id: 'aggregator',     name: 'Cualquier reloj' },
+  { id: 'apple_health',   name: 'Apple Salud', platform: 'ios' },
+  { id: 'health_connect', name: 'Google Health Connect', platform: 'android' },
+  { id: 'whoop',          name: 'WHOOP' },
+  { id: 'oura',           name: 'Oura Ring' },
+  { id: 'polar',          name: 'Polar' },
+  { id: 'strava',         name: 'Strava' },
 ];
 
 function visibleProviders(): ProviderMeta[] {
   return ALL_PROVIDERS.filter((p) => {
+    // El agregador solo se ofrece si está provisionado: sin infraestructura
+    // detrás siempre acababa en "Integración en activación".
+    if (p.id === 'aggregator' && !ENV.aggregatorEnabled) return false;
     if (!p.platform) return true;
     return Platform.OS === p.platform;
   });
 }
 
-// ─── Metric chip ──────────────────────────────────────────────────────────────
-function MetricChip({ label, value, unit, color }: {
-  label: string;
-  value: number | null | undefined;
-  unit?: string;
-  color?: string;
-}) {
-  return (
-    <View style={metricStyles.chip}>
-      <Text style={metricStyles.label}>{label}</Text>
-      <Text style={[metricStyles.value, color ? { color } : null]}>
-        {value != null ? `${Math.round(value)}${unit ?? ''}` : '—'}
-      </Text>
-    </View>
-  );
-}
-
-const metricStyles = StyleSheet.create({
-  chip: {
-    flex: 1,
-    minWidth: 80,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: spacing.md,
-    backgroundColor: palette.black,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.graphiteLight,
-  },
-  label: { ...typography.mono, color: palette.ash, letterSpacing: 1 },
-  value: { ...typography.body, color: palette.ivory, fontWeight: '700', fontSize: 18 },
-});
-
-// ─── Score bar ────────────────────────────────────────────────────────────────
-function ScoreBar({ value, color }: { value: number | null; color: string }) {
-  const pct = scoreBar(value) ?? 0;
-  return (
-    <View style={barStyles.track}>
-      <View style={[barStyles.fill, { width: `${pct}%` as any, backgroundColor: color }]} />
-    </View>
-  );
-}
-
-const barStyles = StyleSheet.create({
-  track: { height: 3, backgroundColor: palette.graphite, borderRadius: 2, overflow: 'hidden', width: '100%' },
-  fill:  { height: '100%', borderRadius: 2 },
-});
-
-// ─── Connected Device Card ────────────────────────────────────────────────────
-function ConnectedCard({
-  provider, conn, onSync, onDisconnect, isSyncing,
-}: {
-  provider: ProviderMeta;
-  conn: ReturnType<ReturnType<typeof useWearableConnections>['getConnection']>;
-  onSync: () => void;
-  onDisconnect: () => void;
-  isSyncing: boolean;
-}) {
-  const { today } = useWearableDaily(7);
-  const rec   = today?.recovery_score ?? null;
-  const hrv   = today?.hrv_ms ?? null;
-  const sleep = today?.sleep_score ?? null;
-  const strain = today?.strain_score ?? null;
-  const rhr   = today?.resting_hr ?? null;
-
-  // goldText (no gold): recColor también es el color del VALOR (texto) en la MetricChip,
-  // cuyo fondo es palette.black (theme-aware) → gold brillante como texto es ilegible en claro.
-  const recColor = rec == null ? palette.smoke
-    : rec >= 70 ? palette.success
-    : rec >= 50 ? palette.goldText
-    : rec >= 30 ? palette.warning
-    : palette.danger;
-
-  return (
-    <PremiumCard style={connStyles.card}>
-      {/* Header */}
-      <View style={connStyles.header}>
-        <View style={connStyles.iconWrap}>
-          <MaterialIcons name={provider.icon} size={24} color={palette.ivory} />
-        </View>
-        <View style={connStyles.info}>
-          <Text style={connStyles.name}>{provider.name}</Text>
-          <Text style={connStyles.sub}>{timeSince(conn?.last_synced_at ?? null)}</Text>
-        </View>
-        <View style={connStyles.activeBadge}>
-          <View style={connStyles.activeDot} />
-          <Text style={connStyles.activeText}>ACTIVO</Text>
-        </View>
-      </View>
-
-      {/* Today's metrics */}
-      {today && (
-        <>
-          <View style={connStyles.metricsRow}>
-            {provider.id === 'whoop' ? (
-              <>
-                <MetricChip label="RECOVERY" value={rec} unit="%" color={recColor} />
-                <MetricChip label="HRV"      value={hrv} unit="ms" />
-                <MetricChip label="STRAIN"   value={strain} />
-                <MetricChip label="SUEÑO"    value={sleep} unit="%" />
-              </>
-            ) : (
-              <>
-                <MetricChip label="READINESS" value={rec} unit="%" color={recColor} />
-                <MetricChip label="HRV"       value={hrv} unit="ms" />
-                <MetricChip label="FC REPOSO" value={rhr} unit=" bpm" />
-                <MetricChip label="SUEÑO"     value={sleep} unit="%" />
-              </>
-            )}
-          </View>
-
-          {/* Recovery bar */}
-          {rec != null && (
-            <View style={connStyles.barWrap}>
-              <Text style={connStyles.barLabel}>
-                RECOVERY {Math.round(rec)}% · {recoveryLabel(rec)}
-              </Text>
-              <ScoreBar value={rec} color={recColor} />
-            </View>
-          )}
-        </>
-      )}
-
-      {!today && (
-        <View style={connStyles.noData}>
-          <Text style={connStyles.noDataText}>Sin datos hoy — sincroniza para ver métricas</Text>
-        </View>
-      )}
-
-      {/* Actions */}
-      <View style={connStyles.actions}>
-        <Pressable
-          style={[connStyles.syncBtn, isSyncing && { opacity: 0.6 }]}
-          onPress={onSync}
-          disabled={isSyncing}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: isSyncing }}
-          accessibilityLabel={`Sincronizar ${provider.name}`}>
-          {isSyncing
-            ? <ActivityIndicator size="small" color={palette.goldText} />
-            : <>
-                <MaterialIcons name="sync" size={15} color={palette.goldText} />
-                <Text style={connStyles.syncText}>SINCRONIZAR AHORA</Text>
-              </>
-          }
-        </Pressable>
-        <Pressable style={connStyles.disconnectBtn} onPress={onDisconnect} accessibilityRole="button" accessibilityLabel={`Desconectar ${provider.name}`}>
-          <Text style={connStyles.disconnectText}>Desconectar</Text>
-        </Pressable>
-      </View>
-    </PremiumCard>
-  );
-}
-
-const connStyles = StyleSheet.create({
-  card: { gap: spacing.md },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  iconWrap: {
-    width: 48, height: 48,
-    borderRadius: radii.md,
-    backgroundColor: palette.graphite,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  info: { flex: 1 },
-  name: { ...typography.section, color: palette.ivory, fontSize: 15 },
-  sub:  { ...typography.mono,    color: palette.smoke, marginTop: 2 },
-  activeBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: alpha(palette.success, '14'),
-    paddingHorizontal: spacing.sm, paddingVertical: 5,
-    borderRadius: radii.sm,
-  },
-  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: palette.success },
-  activeText: { ...typography.label, color: palette.success },
-  metricsRow: { flexDirection: 'row', gap: spacing.sm },
-  barWrap: { gap: 6 },
-  barLabel: { ...typography.mono, color: palette.ash, letterSpacing: 1 },
-  noData: {
-    paddingVertical: spacing.md,
-    backgroundColor: palette.black,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-  },
-  noDataText: { ...typography.caption, color: palette.smoke },
-  actions: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  syncBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, borderWidth: 1, borderColor: palette.gold,
-    borderRadius: radii.sm, paddingVertical: spacing.md, minHeight: 44,
-  },
-  syncText:       { ...typography.label, color: palette.goldText, fontWeight: '700' },
-  disconnectBtn:  { paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 44, justifyContent: 'center' },
-  disconnectText: { ...typography.caption, color: palette.smoke },
-});
-
-// ─── Disconnected Device Card ─────────────────────────────────────────────────
-function DisconnectedCard({
-  provider, onConnect, isConnecting,
-}: {
-  provider: ProviderMeta;
-  onConnect: () => void;
-  isConnecting: boolean;
-}) {
-  return (
-    <PremiumCard style={discStyles.card}>
-      <View style={discStyles.header}>
-        <View style={discStyles.iconWrap}>
-          <MaterialIcons name={provider.icon} size={24} color={palette.smoke} />
-        </View>
-        <View style={discStyles.info}>
-          <Text style={discStyles.name}>{provider.name}</Text>
-          <Text style={discStyles.sub}>{provider.subtitle}</Text>
-        </View>
-        <View style={discStyles.offBadge}>
-          <Text style={discStyles.offText}>NO CONECTADO</Text>
-        </View>
-      </View>
-
-      <Text style={discStyles.description}>{provider.description}</Text>
-
-      {/* Metric tags */}
-      <View style={discStyles.tags}>
-        {provider.metrics.map(m => (
-          <View key={m} style={discStyles.tag}>
-            <Text style={discStyles.tagText}>{m}</Text>
-          </View>
-        ))}
-      </View>
-
-      <Pressable
-        style={({ pressed }) => [
-          discStyles.connectBtn,
-          isConnecting && { opacity: 0.6 },
-          pressed && !isConnecting && { opacity: 0.8 },
-        ]}
-        onPress={onConnect}
-        disabled={isConnecting}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: isConnecting }}
-        accessibilityLabel={`Conectar ${provider.name}`}>
-        {isConnecting
-          ? <ActivityIndicator size="small" color={palette.ink} />
-          : <>
-              <MaterialIcons name="link" size={18} color={palette.ink} />
-              <Text style={discStyles.connectText}>
-                CONECTAR {provider.name.toUpperCase()}
-              </Text>
-            </>
-        }
-      </Pressable>
-    </PremiumCard>
-  );
-}
-
-const discStyles = StyleSheet.create({
-  card: { gap: spacing.md, opacity: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  iconWrap: {
-    width: 48, height: 48,
-    borderRadius: radii.md,
-    backgroundColor: palette.graphite,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  info: { flex: 1 },
-  name: { ...typography.section, color: palette.ash, fontSize: 15 },
-  sub:  { ...typography.mono,    color: palette.smoke, marginTop: 2 },
-  offBadge: {
-    backgroundColor: palette.graphite,
-    paddingHorizontal: spacing.sm, paddingVertical: 5,
-    borderRadius: radii.sm,
-  },
-  offText: { ...typography.label, color: palette.smoke },
-  description: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  tag: {
-    backgroundColor: palette.graphite,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: palette.charcoal,
-  },
-  tagText: { ...typography.mono, color: palette.smoke },
-  connectBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: palette.gold,
-    borderRadius: radii.sm, paddingVertical: 14,
-    minHeight: 48,
-  },
-  connectText: {
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    fontWeight: '800',
-    color: palette.ink,
-    letterSpacing: 1,
-  },
-});
-
-// ─── Hero Card (agregador universal — "Cualquier reloj") ──────────────────────
-// El agregador es el camino recomendado: una conexión, funciona en navegador.
-//
-// La cobertura REAL depende del vendor, así que los chips no mienten:
-//   · Terra (cloud, de pago al escalar): +500 dispositivos vía un solo widget.
-//   · Open Wearables (self-host, MIT): solo las marcas cuyo developer program
-//     conseguimos — ver OW_PROVIDERS. Garmin/Suunto están tras aprobación
-//     comercial, así que NO se prometen aquí arriba.
-const HERO_BRANDS_TERRA = ['Garmin', 'Polar', 'Coros', 'Apple', 'Oura', 'Fitbit', 'Withings', 'Samsung'];
-const HERO_BRANDS_OW = OW_PROVIDERS.filter((p) => !p.gated).map((p) => p.label);
-
-function AggregatorHeroCard({
-  provider, onConnect, isConnecting,
-}: {
-  provider: ProviderMeta;
-  onConnect: () => void;
-  isConnecting: boolean;
-}) {
-  const isSelfHost = ENV.aggregatorVendor === 'open_wearables';
-  return (
-    <PremiumCard style={heroStyles.card}>
-      <View style={heroStyles.ribbon}>
-        <MaterialIcons name="star" size={12} color={palette.ink} />
-        <Text style={heroStyles.ribbonText}>RECOMENDADO</Text>
-      </View>
-
-      <View style={heroStyles.header}>
-        <View style={heroStyles.iconWrap}>
-          {/* goldText (no gold): ícono sobre iconWrap con fondo palette.black (theme-aware). */}
-          <MaterialIcons name="watch" size={26} color={palette.goldText} />
-        </View>
-        <View style={heroStyles.info}>
-          <Text style={heroStyles.name}>{provider.name}</Text>
-          <Text style={heroStyles.sub}>Una conexión · cualquier marca · también en web</Text>
-        </View>
-      </View>
-
-      <Text style={heroStyles.description}>{provider.description}</Text>
-
-      {/* Cobertura de marcas — real por vendor, sin prometer de más. */}
-      <View style={heroStyles.brandRow}>
-        {(isSelfHost ? HERO_BRANDS_OW : HERO_BRANDS_TERRA).map((b) => (
-          <View key={b} style={heroStyles.brandChip}>
-            <Text style={heroStyles.brandText}>{b}</Text>
-          </View>
-        ))}
-        {!isSelfHost && (
-          <View style={[heroStyles.brandChip, heroStyles.brandChipMore]}>
-            <Text style={[heroStyles.brandText, heroStyles.brandTextMore]}>+500 dispositivos</Text>
-          </View>
-        )}
-      </View>
-
-      {/* En self-host, Apple Salud / Health Connect (tarjetas de abajo) son la vía
-          para Garmin, Coros, Samsung y compañía — sin depender de sus APIs cerradas. */}
-      {isSelfHost && (
-        <Text style={heroStyles.coverageNote}>
-          ¿Otra marca? Conéctala desde Apple Salud o Health Connect en la app móvil.
-        </Text>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [
-          heroStyles.connectBtn,
-          isConnecting && { opacity: 0.6 },
-          pressed && !isConnecting && { opacity: 0.8 },
-        ]}
-        onPress={onConnect}
-        disabled={isConnecting}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: isConnecting }}
-        accessibilityLabel={`Conectar ${provider.name}`}>
-        {isConnecting
-          ? <ActivityIndicator size="small" color={palette.ink} />
-          : <>
-              <MaterialIcons name="link" size={18} color={palette.ink} />
-              <Text style={heroStyles.connectText}>CONECTAR MI DISPOSITIVO</Text>
-            </>
-        }
-      </Pressable>
-    </PremiumCard>
-  );
-}
-
-const heroStyles = StyleSheet.create({
-  card: { gap: spacing.md, borderWidth: 1, borderColor: palette.lineGold, backgroundColor: palette.goldGlow },
-  ribbon: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start',
-    backgroundColor: palette.gold,
-    paddingHorizontal: spacing.sm, paddingVertical: 4,
-    borderRadius: radii.sm,
-  },
-  ribbonText: { fontFamily: Fonts.display, color: palette.ink, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  iconWrap: {
-    width: 52, height: 52,
-    borderRadius: radii.md,
-    backgroundColor: palette.black,
-    borderWidth: 1, borderColor: palette.lineGold,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  info: { flex: 1 },
-  name: { ...typography.section, color: palette.ivory, fontSize: 18 },
-  sub:  { ...typography.mono, color: palette.goldText, marginTop: 3, letterSpacing: 0.5 },
-  description: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
-  brandRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  brandChip: {
-    backgroundColor: palette.black,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: 5,
-    borderWidth: 1, borderColor: palette.charcoal,
-  },
-  brandChipMore: { borderColor: palette.lineGold, backgroundColor: palette.goldGlow },
-  brandText: { ...typography.mono, color: palette.ash },
-  brandTextMore: { color: palette.goldText },
-  coverageNote: { ...typography.caption, color: palette.smoke, fontSize: 11, lineHeight: 16 },
-  connectBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: palette.gold,
-    borderRadius: radii.sm, paddingVertical: 14,
-    minHeight: 48,
-  },
-  connectText: {
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    fontWeight: '800',
-    color: palette.ink,
-    letterSpacing: 1,
-  },
-});
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function WearablesScreen() {
-  const sc = useScreen();
-  const { isDesktop } = useBreakpoint();
-  const router  = useRouter();
-  const insets  = useSafeAreaInsets();
   const params  = useLocalSearchParams<{ connected?: string; error?: string }>();
 
   const { loading, isConnected, getConnection, staleConnections, reload } = useWearableConnections();
+  const { data: daily } = useWearableDaily(7);
   const [connecting, setConnecting] = useState<WearableProvider | null>(null);
   const [syncing,    setSyncing]    = useState<WearableProvider | null>(null);
   const [banner, setBanner] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
@@ -905,158 +408,6 @@ export default function WearablesScreen() {
     );
   }
 
-  const PROVIDERS = visibleProviders();
-  const connectedCount = PROVIDERS.filter(p => isConnected(p.id)).length;
-
-  const content = (
-    <>
-      {/* Top nav */}
-      <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-        </Pressable>
-        <Text style={styles.title}>DISPOSITIVOS</Text>
-        <View style={styles.topRight}>
-          {connectedCount > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countText}>{connectedCount} activo{connectedCount > 1 ? 's' : ''}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Banner */}
-      {banner && (() => {
-        const tone =
-          banner.type === 'success' ? palette.success
-          : banner.type === 'error' ? palette.danger
-          : palette.goldText;
-        const bannerStyle =
-          banner.type === 'success' ? styles.bannerSuccess
-          : banner.type === 'error' ? styles.bannerError
-          : styles.bannerInfo;
-        const icon =
-          banner.type === 'success' ? 'check-circle'
-          : banner.type === 'error' ? 'error-outline'
-          : 'info-outline';
-        return (
-          <Pressable
-            style={[styles.banner, bannerStyle]}
-            onPress={() => setBanner(null)}
-            accessibilityRole="button"
-            accessibilityLabel={`${banner.msg}. Toca para descartar`}
-            accessibilityLiveRegion={banner.type === 'error' ? 'assertive' : 'polite'}>
-            <MaterialIcons name={icon} size={18} color={tone} />
-            <Text style={[styles.bannerText, { color: tone }]}>{banner.msg}</Text>
-            <MaterialIcons name="close" size={15} color={palette.smoke} />
-          </Pressable>
-        );
-      })()}
-
-      {/* Info card */}
-      <PremiumCard style={styles.infoCard}>
-        <MaterialIcons name="monitor-heart" size={28} color={palette.goldText} />
-        <View style={styles.infoBody}>
-          <Text style={styles.infoTitle}>BIOMETRÍA INTELIGENTE</Text>
-          <Text style={styles.infoSub}>
-            Tus datos biométricos alimentan a Norman directamente — recovery, HRV y sueño calibran
-            el ritmo de tu protocolo y las recomendaciones de acción diaria.
-          </Text>
-        </View>
-      </PremiumCard>
-
-      <GoldDivider label="DISPOSITIVOS" />
-
-      {/* Device list */}
-      {loading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={palette.goldText} />
-          <Text style={styles.loadingText}>Cargando conexiones...</Text>
-        </View>
-      ) : (
-        PROVIDERS.map((p) => {
-          const connected = isConnected(p.id);
-          const conn      = getConnection(p.id);
-
-          if (connected) {
-            return (
-              <ConnectedCard
-                key={p.id}
-                provider={p}
-                conn={conn}
-                onSync={() => handleSync(p.id)}
-                onDisconnect={() => handleDisconnect(p.id)}
-                isSyncing={syncing === p.id}
-              />
-            );
-          }
-          // El agregador universal se destaca como héroe, pero SOLO si está
-          // provisionado. Sin infraestructura detrás, esta era la tarjeta más
-          // prominente de la pantalla y su CTA siempre acababa en "Integración
-          // en activación": ofrecer como recomendado lo único que no funciona.
-          if (p.id === 'aggregator') {
-            if (!ENV.aggregatorEnabled) return null;
-            return (
-              <AggregatorHeroCard
-                key={p.id}
-                provider={p}
-                onConnect={() => handleConnect(p.id)}
-                isConnecting={connecting === p.id}
-              />
-            );
-          }
-          // Conexión matada por el circuit breaker (token revocado / fallos
-          // seguidos): antes simplemente desaparecía sin explicación.
-          const stale = staleConnections.some(sc => sc.provider === p.id);
-          return (
-            <View key={p.id}>
-              {stale && (
-                <View style={styles.staleNotice}>
-                  <MaterialIcons name="link-off" size={14} color={palette.danger} />
-                  <Text style={styles.staleNoticeText}>
-                    CONEXIÓN CADUCADA — {PROVIDER_NAME[p.id]} dejó de autorizar el acceso. Vuelve a conectar.
-                  </Text>
-                </View>
-              )}
-              <DisconnectedCard
-                provider={p}
-                onConnect={() => handleConnect(p.id)}
-                isConnecting={connecting === p.id}
-              />
-            </View>
-          );
-        })
-      )}
-
-      {/* Web hint: nativos no disponibles en PWA */}
-      {Platform.OS === 'web' && !nativeProviderForPlatform() && (
-        <PremiumCard style={styles.privacyCard}>
-          <MaterialIcons name="phone-iphone" size={15} color={palette.smoke} />
-          <Text style={styles.privacyText}>
-            Para conectar Apple Watch o cualquier reloj vía Google Health Connect, descarga la app móvil de Polaris en iOS o Android. La PWA web solo admite Oura y WHOOP por OAuth.
-          </Text>
-        </PremiumCard>
-      )}
-
-      {/* Compatibility catalog */}
-      <WearableCompat />
-
-      {/* Privacy note */}
-      <PremiumCard style={styles.privacyCard}>
-        <MaterialIcons name="lock" size={15} color={palette.smoke} />
-        {/* Antes decía "se almacenan cifrados" — no era cierto a nivel de columna
-            (P1-7). Se describe la protección que SÍ existe: RLS owner-only + TLS.
-            Si S3 añade cifrado con pgcrypto, este texto puede volver a decirlo. */}
-        <Text style={styles.privacyText}>
-          Los tokens OAuth quedan ligados a tu cuenta: solo tú puedes leerlos, viajan
-          siempre por conexión cifrada y nunca se comparten con terceros. Al
-          desconectar un dispositivo revocamos el acceso ante el proveedor y
-          borramos los tokens y tu histórico sincronizado de ese dispositivo.
-        </Text>
-      </PremiumCard>
-    </>
-  );
-
   // Selector de marca (solo modo self-host / Open Wearables).
   const owPicker = (
     <Modal visible={owPickerOpen} transparent animationType="fade" onRequestClose={() => setOwPickerOpen(false)}>
@@ -1096,30 +447,119 @@ export default function WearablesScreen() {
     </Modal>
   );
 
-  // ── Desktop ──────────────────────────────────────────────────────────────────
-  if (isDesktop) {
-    return (
-      <>
-        <ScrollView
-          style={sc.root}
-          contentContainerStyle={styles.contentDesktop}
-          showsVerticalScrollIndicator={false}>
-          {content}
-        </ScrollView>
-        {owPicker}
-      </>
-    );
+  const PROVIDERS = visibleProviders();
+  const connected = PROVIDERS.filter((p) => isConnected(p.id));
+  const main = connected[0] ?? null;
+
+  /** Estado honesto: "Conectado" solo dice algo si hay datos recientes. */
+  function estado(p: ProviderMeta): { text: string; warn: boolean } {
+    const last = daily?.find((d) => d.provider === p.id)?.date ?? null;
+    if (last) return { text: `Conectado · últimos datos ${haceCuanto(last)}`, warn: false };
+    const sync = haceCuanto(getConnection(p.id)?.last_synced_at ?? null);
+    return {
+      text: sync ? 'Conectado · sin datos en los últimos 7 días' : 'Conectado · todavía sin datos',
+      warn: true,
+    };
   }
 
-  // ── Mobile ───────────────────────────────────────────────────────────────────
+  const mainEstado = main ? estado(main) : null;
+
+  // Una sola acción amarilla: sincronizar el reloj conectado. Sin reloj, la
+  // conexión nativa del teléfono (si existe); si no, todo va en filas.
+  const nativeFirst = PROVIDERS.find((p) => p.platform);
+  const hero = main ? (
+    <TarjetaOro
+      meta={main.name.toUpperCase()}
+      title={syncing === main.id ? 'Sincronizando…' : 'Sincronizar ahora'}
+      detail="Trae lo último que registró tu reloj."
+      onPress={() => { if (!syncing) void handleSync(main.id); }}
+    />
+  ) : nativeFirst ? (
+    <TarjetaOro
+      meta="EN ESTE TELÉFONO"
+      title={connecting === nativeFirst.id ? 'Conectando…' : `Conectar ${nativeFirst.name}`}
+      detail="Lee tu reloj desde la app de salud del teléfono."
+      onPress={() => { if (!connecting) void handleConnect(nativeFirst.id); }}
+    />
+  ) : undefined;
+
+  const bannerTone =
+    banner?.type === 'success' ? palette.success
+    : banner?.type === 'error' ? palette.dangerText
+    : palette.goldText;
+
   return (
     <>
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
-        showsVerticalScrollIndicator={false}>
-        {content}
-      </ScrollView>
+      <Pantalla
+        meta="TU RELOJ"
+        title={main ? `${main.name} conectado.` : 'Conecta tu reloj.'}
+        sub={mainEstado
+          ? `${mainEstado.text}. Se sincroniza una vez al día; puedes forzarlo aquí.`
+          : 'Tu sueño y tu pulso le dicen a Norman cómo estás de verdad. Se sincroniza una vez al día.'}
+        hero={hero}
+        footer={
+          <View style={styles.footer}>
+            {Platform.OS === 'web' && !nativeProviderForPlatform() && (
+              <Text style={styles.note}>
+                Apple Watch y los relojes de Google Health Connect se conectan desde la app móvil de Polaris (iOS o Android).
+              </Text>
+            )}
+            <WearableCompat />
+            {/* Antes decía "se almacenan cifrados" — no era cierto a nivel de columna
+                (P1-7). Se describe la protección que SÍ existe: RLS owner-only + TLS. */}
+            <Text style={styles.note}>
+              Los permisos de tu reloj quedan ligados a tu cuenta: solo tú puedes leerlos, viajan
+              siempre por conexión cifrada y nunca se comparten con terceros. Al desconectar,
+              revocamos el acceso ante el proveedor y borramos tu histórico de ese dispositivo.
+            </Text>
+          </View>
+        }>
+        {banner && (
+          <Pressable
+            style={styles.banner}
+            onPress={() => setBanner(null)}
+            accessibilityRole="button"
+            accessibilityLabel={`${banner.msg}. Toca para descartar`}
+            accessibilityLiveRegion={banner.type === 'error' ? 'assertive' : 'polite'}>
+            <Text style={[styles.bannerText, { color: bannerTone }]}>{banner.msg}</Text>
+          </Pressable>
+        )}
+
+        {loading ? (
+          <Text style={styles.note}>Cargando conexiones…</Text>
+        ) : (
+          PROVIDERS.map((p, i) => {
+            const last = i === PROVIDERS.length - 1;
+            if (isConnected(p.id)) {
+              const e = estado(p);
+              return (
+                <View key={p.id}>
+                  <Fila label={p.name.toUpperCase()} value={e.text} tone={e.warn ? 'warn' : undefined} />
+                  <Pressable
+                    onPress={() => handleDisconnect(p.id)}
+                    style={styles.quiet}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Desconectar ${p.name}`}>
+                    <Text style={styles.quietText}>Desconectar {p.name}</Text>
+                  </Pressable>
+                </View>
+              );
+            }
+            // Conexión matada por el circuit breaker (token revocado / fallos seguidos).
+            const stale = staleConnections.some((c) => c.provider === p.id);
+            return (
+              <Fila
+                key={p.id}
+                label={p.name.toUpperCase()}
+                value={connecting === p.id ? 'Conectando…' : stale ? 'Conexión caducada · volver a conectar' : 'Conectar'}
+                tone={stale ? 'warn' : undefined}
+                onPress={connecting ? undefined : () => handleConnect(p.id)}
+                last={last}
+              />
+            );
+          })
+        )}
+      </Pantalla>
       {owPicker}
     </>
   );
@@ -1127,80 +567,12 @@ export default function WearablesScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  contentDesktop: {
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 760,
-    paddingHorizontal: 40,
-    paddingTop: 32,
-    paddingBottom: 60,
-    gap: spacing.lg,
-  },
-
-  // Top nav
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  backBtn:  { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:    { fontFamily: Fonts.display, fontSize: 18, fontWeight: '800', color: palette.ivory, letterSpacing: 2 },
-  topRight: { width: 80, alignItems: 'flex-end' },
-  countBadge: {
-    backgroundColor: palette.goldMuted,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radii.sm,
-  },
-  countText: { ...typography.label, color: palette.goldText },
-
-  // Banner
-  banner: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderRadius: radii.md, borderWidth: 1, marginBottom: spacing.sm,
-  },
-  bannerSuccess: { backgroundColor: alpha(palette.success, '14'), borderColor: alpha(palette.success, '44') },
-  bannerError:   { backgroundColor: alpha(palette.danger, '14'),  borderColor: alpha(palette.danger, '44') },
-  bannerInfo:    { backgroundColor: palette.goldGlow,         borderColor: palette.lineGold },
-  bannerText:    { ...typography.body, flex: 1, fontSize: 13 },
-
-  // Info card
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  infoBody:  { flex: 1 },
-  infoTitle: { ...typography.section, color: palette.ivory, fontSize: 13, marginBottom: 6 },
-  infoSub:   { ...typography.body,    color: palette.smoke, fontSize: 13, lineHeight: 20 },
-
-  // Loading
-  loadingWrap: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl * 2 },
-  loadingText: { ...typography.body, color: palette.smoke },
-
-  // Privacy
-  privacyCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md,
-  },
-  privacyText: { ...typography.caption, color: palette.smoke, flex: 1, lineHeight: 18 },
-
-  // Aviso de conexión matada por el circuit breaker (token revocado upstream).
-  staleNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: alpha(palette.danger, '55'),
-    backgroundColor: alpha(palette.danger, '14'),
-  },
-  staleNoticeText: { ...typography.label, color: palette.danger, flex: 1 },
+  footer: { gap: spacing.lg },
+  note: { fontFamily: Fonts.sans, fontSize: 13, lineHeight: 19, color: palette.smoke },
+  banner: { minHeight: 44, justifyContent: 'center', marginBottom: spacing.sm },
+  bannerText: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 21 },
+  quiet: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  quietText: { fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke },
 
   // Selector de marca (Open Wearables self-host)
   owBackdrop: {

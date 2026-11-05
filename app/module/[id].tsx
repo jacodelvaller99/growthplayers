@@ -8,6 +8,7 @@ import { PolarisLogo } from '@/components/PolarisLogo';
 import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES, arquetipoConArticulo } from '@/data/modules';
 import { Fonts, palette, spacing } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 
 /**
@@ -77,14 +78,16 @@ export default function ModuleDetailScreen() {
   const siguiente = POLARIS_MODULES[currentModuleIdx + 1] ?? null;
   const nextModule = siguiente && siguiente.status !== 'coming_soon' ? siguiente : null;
 
-  const numerados = POLARIS_MODULES.filter((m) => m.order > 0).length;
+  // Misma cuenta que Programa: sin Bienvenida (orden 0) ni las sesiones en vivo.
+  const numerados = POLARIS_MODULES.filter((m) => m.order > 0 && !m.id.includes('sesiones')).length;
+  const pendientes = module.lessons.length - completedCount;
   const todoHecho = module.lessons.length > 0 && completedCount === module.lessons.length;
   const volver = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/programas' as never));
 
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
         showsVerticalScrollIndicator={false}>
         {/* ── Cabecera amarilla: el módulo y su avance en marcas ── */}
         <View style={[styles.hero, { paddingTop: insets.top + 12 }]}>
@@ -94,7 +97,9 @@ export default function ModuleDetailScreen() {
                 <MaterialIcons name="arrow-back" size={22} color={palette.ink} />
               </Pressable>
               <Text style={styles.heroMeta}>
-                {module.order > 0 ? `MÓDULO ${module.order} DE ${numerados}` : 'PRIMEROS PASOS'}
+                {module.id.includes('sesiones')
+                  ? 'SESIONES EN VIVO'
+                  : module.order > 0 ? `MÓDULO ${module.order} DE ${numerados}` : 'PRIMEROS PASOS'}
               </Text>
             </View>
             <PolarisLogo size={56} color={palette.ink} />
@@ -117,24 +122,35 @@ export default function ModuleDetailScreen() {
                 ))}
               </View>
             )}
+            {/* La acción principal va EN el bloque amarillo: en el teléfono
+                quedaba bajo el pliegue, después de las lecciones ya vistas. */}
+            {!todoHecho && activeLesson && (
+              <Pressable
+                onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.heroBtn, pressed && styles.rowPressed]}>
+                <Text style={styles.heroBtnText}>{completedCount === 0 ? 'EMPEZAR' : 'SEGUIR DONDE IBA'}</Text>
+                <MaterialIcons name="arrow-forward" size={18} color={palette.goldStatic} />
+              </Pressable>
+            )}
           </View>
         </View>
 
         <View style={[styles.inner, styles.body]}>
-          {module.arquetipo && (
+          {module.lessons.length > 0 && (
             <Text style={styles.arquetipo}>
               {todoHecho
-                ? `Integraste ${arquetipoConArticulo(module.arquetipo)}.`
-                : `Al cerrarlo integras ${arquetipoConArticulo(module.arquetipo)}.`}
+                ? `Terminaste este módulo.${module.arquetipo ? ` Integraste ${arquetipoConArticulo(module.arquetipo)}.` : ''}`
+                : `Te faltan ${pendientes} ${pendientes === 1 ? 'lección' : 'lecciones'} para terminar este módulo.`}
             </Text>
           )}
 
           {module.lessons.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>El contenido de este módulo vive en el classroom.</Text>
+              <Text style={styles.emptyText}>El contenido de este módulo está en Skool.</Text>
               {module.skoolUrl ? (
                 <PrimaryButton
-                  label="ABRIR EL CLASSROOM"
+                  label="ABRIR EN SKOOL"
                   icon="open-in-new"
                   onPress={() => Linking.openURL(module.skoolUrl!)}
                 />
@@ -172,6 +188,7 @@ export default function ModuleDetailScreen() {
                       {lesson.title}
                     </Text>
                     {!!lesson.duration && <Text style={styles.rowMeta}>{lesson.duration}</Text>}
+                    <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />
                   </Pressable>
                 );
               })}
@@ -186,12 +203,6 @@ export default function ModuleDetailScreen() {
                 onPress={() =>
                   router.push((nextModule ? `/module/${nextModule.id}` : '/(tabs)/progreso') as never)
                 }
-              />
-            ) : activeLesson ? (
-              <PrimaryButton
-                label={completedCount === 0 ? 'EMPEZAR' : 'SEGUIR DONDE IBA'}
-                icon="arrow-forward"
-                onPress={() => router.push(`/lesson/${activeLesson.id}` as never)}
               />
             ) : null}
             {nextModule && !todoHecho && (
@@ -225,7 +236,12 @@ const styles = StyleSheet.create({
   },
   heroSub: { marginTop: 10, fontFamily: Fonts.sans, fontSize: 16, lineHeight: 23, color: palette.ink },
   ticks: { flexDirection: 'row', gap: 6, marginTop: 28 },
-  tick: { flex: 1, height: 6, borderRadius: 999, backgroundColor: 'rgba(0, 0, 0, 0.16)' },
+  tick: { flex: 1, height: 6, borderRadius: 999, backgroundColor: alpha(palette.ink, '40') },
+  heroBtn: {
+    marginTop: 24, height: 52, borderRadius: 10, backgroundColor: palette.ink,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  heroBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, letterSpacing: 1, color: palette.goldStatic },
   tickDone: { backgroundColor: palette.ink },
   tickNow: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: palette.ink },
 

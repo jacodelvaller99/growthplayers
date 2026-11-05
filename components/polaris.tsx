@@ -790,7 +790,9 @@ export function PrimaryButton({ label, icon, onPress, disabled }: { label: strin
   };
 
   return (
-    <Animated.View style={[animStyle, disabled && { opacity: 0.4 }]}>
+    // Deshabilitado = superficie neutra + texto gris, no oro al 40 %: el
+    // «mostaza sucio» parecía un botón roto y en claro era ilegible.
+    <Animated.View style={animStyle}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -802,9 +804,9 @@ export function PrimaryButton({ label, icon, onPress, disabled }: { label: strin
         onPress={handlePress}
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
-        style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{label}</Text>
-        {icon ? <MaterialIcons name={icon} color={palette.ink} size={18} /> : null}
+        style={[styles.primaryButton, disabled && styles.primaryButtonOff]}>
+        <Text style={[styles.primaryButtonText, disabled && styles.primaryButtonTextOff]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{label}</Text>
+        {icon ? <MaterialIcons name={icon} color={disabled ? palette.smoke : palette.ink} size={18} /> : null}
       </Pressable>
     </Animated.View>
   );
@@ -944,8 +946,9 @@ export const ChatBubble = memo(function ChatBubble({
   role: 'mentor' | 'user';
   children: React.ReactNode;
 }) {
-  const short = role === 'mentor' && typeof children === 'string' && children.length <= 160 && !children.includes('\n');
-  const textStyle = [styles.chatText, short && styles.chatTextShort, role === 'user' && styles.userChatText];
+  // Una sola voz para Norman: antes los mensajes cortos salían en Grandis
+  // grande y los largos en Source Sans — dos voces para el mismo mentor.
+  const textStyle = [styles.chatText, role === 'user' && styles.userChatText];
   const reducedMotion = useReducedMotion();
   const bubbleStyle = [styles.chatBubble, role === 'user' ? styles.userBubble : styles.mentorBubble];
   const body = typeof children === 'string' ? (
@@ -1467,6 +1470,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: spacing.xl,
   },
+  primaryButtonOff: { backgroundColor: palette.charcoal },
+  primaryButtonTextOff: { color: palette.smoke },
   primaryButtonText: {
     ...typography.section,
     color: palette.ink,
@@ -1535,6 +1540,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     maxWidth: '80%',
     alignItems: 'flex-end',
+    backgroundColor: palette.charcoal,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
   },
   chatText: {
     fontFamily: Fonts.sans,
@@ -1542,15 +1550,8 @@ const styles = StyleSheet.create({
     lineHeight: 27,
     color: palette.ivory,
   },
-  // Mensajes cortos de Norman: en la voz display, como en el diseño.
-  chatTextShort: {
-    fontFamily: Fonts.displayRegular,
-    fontWeight: '400',
-    fontSize: 21,
-    lineHeight: 28,
-  },
+  // Lo que dice el usuario no gasta el oro: texto normal sobre una burbuja.
   userChatText: {
-    color: palette.goldText,
     textAlign: 'right',
   },
   userLabel: {

@@ -8,7 +8,6 @@ import { HapticTab } from '@/components/haptic-tab';
 import { WellnessMiniPlayer } from '@/components/WellnessMiniPlayer';
 import { CHROME_MAX_SCALE, Colors, Fonts, palette } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
-import { useAppTheme } from '@/hooks/use-app-theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { analytics } from '@/lib/analytics';
@@ -42,7 +41,6 @@ const tabStyles = StyleSheet.create({
 export function BottomNavigation() {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
-  const { mode } = useAppTheme();
   // 60 y no 56: el relleno (8 arriba + 6 abajo, sin contar el área segura) se
   // come 14px, así que con 56 cada pestaña quedaba en 41px de zona pulsable —
   // por debajo del mínimo de 44. Medido en el DOM a 390px, en las 25 apariciones
@@ -68,29 +66,25 @@ export function BottomNavigation() {
         // Dynamic Type escala hasta 1.3× sin romperla.
         tabBarShowLabel: false,
         tabBarIconStyle: { width: '100%', height: 44 },
-        // Chrome estructural con material (audit "Fluidez Polaris" §Fase 5):
-        // antes backgroundColor opaco. El fondo semi-transparente + blur da
-        // jerarquía de peso — el contenido que scrollea debajo se insinúa en
-        // vez de cortar en seco. `borderTopWidth` se conserva pero más suave
-        // (0.5 vs 1): el blur ya es la señal principal de separación.
+        // Web: barra SÓLIDA del tema (palette.black). Antes iba un BlurView de
+        // expo-blur encima de un fondo alpha(): en web expo-blur pinta un rgba
+        // FIJO según `tint` (no una variable CSS), así que en claro quedaba un
+        // velo gris oscuro bajo las etiquetas. Nativo es siempre oscuro: ahí
+        // el material con blur se conserva.
         tabBarStyle: {
-          backgroundColor: alpha(palette.blackDeep, '99'),
-          borderTopColor: palette.lineSoft,
+          backgroundColor: Platform.OS === 'web' ? palette.black : alpha(palette.blackDeep, '99'),
+          borderTopColor: palette.line,
           borderTopWidth: StyleSheet.hairlineWidth,
           height: isDesktop ? 0 : tabBarHeight,
           paddingBottom: insets.bottom + 6,
           paddingTop: 8,
           // Hidden on desktop — navigation via DesktopSidebar
           display: isDesktop ? 'none' : 'flex',
-          ...(Platform.OS === 'web' ? { boxShadow: '0 -2px 16px rgba(0,0,0,0.4)' } as any : {}),
         },
-        tabBarBackground: () => (
-          <BlurView
-            intensity={80}
-            tint={mode === 'light' ? 'light' : 'dark'}
-            style={StyleSheet.absoluteFill}
-          />
-        ),
+        tabBarBackground:
+          Platform.OS === 'web'
+            ? undefined
+            : () => <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />,
       }}>
       <Tabs.Screen
         name="comando"

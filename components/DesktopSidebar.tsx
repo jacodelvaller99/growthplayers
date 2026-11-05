@@ -1,16 +1,13 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { BlurView } from 'expo-blur';
 import { usePathname, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { palette, Fonts } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
 import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { PolarisLogo } from '@/components/PolarisLogo';
 import { ModeSwitch } from '@/components/ModeSwitch';
-import { computeStreak } from '@/lib/utils';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -21,61 +18,43 @@ interface NavItem {
   match: string;
 }
 
-// ─── Navegación por DOMINIOS (4: Comando · Protocolo · Norman · Recuperación) ───
-// Simplificación de la arquitectura: pocos dominios claros en vez de dos listas
-// largas (prioridad del consejo asesor + feedback "menos cosas"). Las MISMAS rutas
-// — solo se reagrupan bajo encabezados de dominio.
-interface NavGroup { title: string; items: NavItem[] }
-const NAV_DOMAINS: NavGroup[] = [
-  { title: 'COMANDO', items: [
-    { label: 'HOY',      icon: 'radar',         route: '/(tabs)/comando', match: 'comando' },
-    { label: 'CHECK-IN', icon: 'monitor-heart', route: '/checkin',        match: 'checkin' },
-    { label: 'MI NORTE', icon: 'explore',       route: '/(tabs)/norte',   match: 'norte'   },
-  ] },
-  { title: 'PROTOCOLO', items: [
-    { label: 'PROGRAMA', icon: 'view-module', route: '/(tabs)/programas', match: 'programas' },
-    { label: 'MENTORÍA', icon: 'route',       route: '/mentoria',         match: 'mentoria'  },
-    { label: 'PROGRESO', icon: 'insights',    route: '/(tabs)/progreso',  match: 'progreso'  },
-  ] },
-  { title: 'NORMAN IA', items: [
-    { label: 'NORMAN', icon: 'chat-bubble-outline', route: '/(tabs)/mentor', match: 'mentor' },
-  ] },
-  { title: 'RECUPERACIÓN', items: [
-    // El destino se titula BIENESTAR en su propia pantalla y en la barra del
-    // móvil. Aquí decía LIFEFLOW: el nombre INTERNO del repositorio, colado en
-    // el único sitio de la interfaz donde alguien lo lee, y solo en escritorio.
-    // El mismo lugar tenía dos nombres según el tamaño de la ventana.
-    { label: 'BIENESTAR', icon: 'spa', route: '/bienestar', match: 'bienestar' },
-    { label: 'YO',        icon: 'person-outline', route: '/(tabs)/yo', match: 'yo' },
-  ] },
+// ─── Navegación: las MISMAS 4 pestañas del teléfono (Hoy · Norman · Progreso ·
+// Yo) + Check-in, sin rótulos de grupo. Antes eran 9 destinos en 4 "dominios"
+// (COMANDO, PROTOCOLO…): jerga, y una arquitectura distinta según el tamaño de
+// la ventana. Norte, Programa, Mentoría y Bienestar se abren desde Hoy y Yo;
+// cuando estás en una de ellas se marca YO.
+const NAV_ITEMS: (NavItem & { also?: string[] })[] = [
+  { label: 'HOY',      icon: 'radar',               route: '/(tabs)/comando',  match: 'comando'  },
+  { label: 'CHECK-IN', icon: 'monitor-heart',       route: '/checkin',         match: 'checkin'  },
+  { label: 'NORMAN',   icon: 'chat-bubble-outline', route: '/(tabs)/mentor',   match: 'mentor'   },
+  { label: 'PROGRESO', icon: 'insights',            route: '/(tabs)/progreso', match: 'progreso' },
+  { label: 'YO',       icon: 'person-outline',      route: '/(tabs)/yo',       match: 'yo',
+    also: ['norte', 'programas', 'mentoria', 'bienestar', 'perfil', 'module', 'lesson'] },
 ];
 
 // subscription_tier → etiqueta mostrada en la tarjeta de usuario
 const TIER_LABEL: Record<string, string> = {
-  free:         'OPERADOR',
-  premium:      'SOBERANO · PRO',
-  premium_plus: 'SOBERANO · ELITE',
+  free:         'Plan gratis',
+  premium:      'Plan Pro',
+  premium_plus: 'Plan Elite',
 };
 
 export function DesktopSidebar() {
   const router   = useRouter();
   const pathname = usePathname();
-  const { state, protocolDay } = useLifeFlow();
+  const { state } = useLifeFlow();
   const { mode, setMode, canToggle } = useAppTheme();
 
-  // Racha real (días consecutivos con check-in). El `Math.max(..., protocolDay)`
-  // anterior crecía con el calendario aunque el usuario no registrara nada.
-  const streak   = computeStreak(state.checkIns);
   // `?? 'U'` no atrapa `''` (perfil sin nombre aún, string vacío no es nullish):
   // `''[0]` da `undefined` y `.toUpperCase()` revienta el sidebar entero antes
   // de montar nada. Mismo patrón defensivo que ya usa `Avatar.tsx`.
   const initial  = (state.profile.name?.trim()?.charAt(0) || 'U').toUpperCase();
-  const tier     = TIER_LABEL[state.subscriptionTier] ?? 'OPERADOR';
+  const tier     = TIER_LABEL[state.subscriptionTier] ?? TIER_LABEL.free;
 
   // Match by path segment (not substring) so '/mentoria' no activa 'mentor'.
   const segments = (pathname ?? '').split('/').filter(Boolean);
-  const renderItem = (item: NavItem) => {
-    const isActive = segments.includes(item.match);
+  const renderItem = (item: (typeof NAV_ITEMS)[number]) => {
+    const isActive = [item.match, ...(item.also ?? [])].some((m) => segments.includes(m));
     return (
       <HoverCard
         key={item.route}
@@ -100,17 +79,12 @@ export function DesktopSidebar() {
 
   return (
     <View style={styles.sidebar}>
-      {/* Chrome estructural, no un botón — blur más pesado que el de la tab
-          bar (audit "Fluidez Polaris" §Fase 5). */}
-      <BlurView
-        intensity={100}
-        tint={mode === 'light' ? 'light' : 'dark'}
-        style={StyleSheet.absoluteFill}
-      />
-
+      {/* Fondo sólido del tema. Aquí había un BlurView de expo-blur: en web
+          pinta un rgba FIJO por `tint` (no variable CSS) entre el fondo y las
+          etiquetas → velo gris oscuro en tema claro. */}
       {/* ── Logo oficial — Manual de Marca Polaris (Orgánico Studio 2024) ── */}
       <View style={styles.logoArea}>
-        <PolarisLogo variant="star" size={28} color={palette.goldText} />
+        <PolarisLogo variant="star" size={28} color={mode === 'light' ? palette.starOnLight : palette.gold} />
         <View>
           <Text style={styles.logoText}>POLARIS</Text>
           <Text style={styles.logoSub}>GROWTH INSTITUTE</Text>
@@ -128,31 +102,14 @@ export function DesktopSidebar() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View>
-          {NAV_DOMAINS.map((group) => (
-            <View key={group.title}>
-              <Text style={styles.navGroupLabel}>{group.title}</Text>
-              <View style={styles.navList}>{group.items.map(renderItem)}</View>
-            </View>
-          ))}
-
-          {/* ── Streak card (gradiente oro) — datos reales ── */}
-          <View style={styles.streakCard}>
-            <View style={styles.streakRow}>
-              <MaterialIcons name="local-fire-department" size={20} color={palette.goldText} />
-              <Text style={styles.streakNum}>{streak}</Text>
-              <Text style={styles.streakUnit}>DÍAS</Text>
-            </View>
-            <Text style={styles.streakMeta}>RACHA · DÍA {protocolDay} DE PROTOCOLO</Text>
-          </View>
-        </View>
+        <View style={styles.navList}>{NAV_ITEMS.map(renderItem)}</View>
 
         <View>
           {/* ── Toggle de tema OSCURO/CLARO (solo web) ── */}
           {canToggle && (
             <View style={styles.themeToggle}>
-              {(['dark', 'light'] as ThemeMode[]).map((m) => {
-                const on = mode === m;
+              {(['tinta', 'light'] as ThemeMode[]).map((m) => {
+                const on = m === 'light' ? mode === 'light' : mode !== 'light';
                 return (
                   <HoverCard
                     key={m}
@@ -160,15 +117,15 @@ export function DesktopSidebar() {
                     style={[styles.themeBtn, on && styles.themeBtnOn]}
                     hoverStyle={on ? styles.themeBtnOn : styles.navItemHover}
                     accessibilityRole="button"
-                    accessibilityLabel={m === 'dark' ? 'Tema oscuro' : 'Tema claro'}
+                    accessibilityLabel={m === 'light' ? 'Tema claro' : 'Tema oscuro'}
                   >
                     <MaterialIcons
-                      name={m === 'dark' ? 'dark-mode' : 'light-mode'}
+                      name={m === 'light' ? 'light-mode' : 'dark-mode'}
                       size={14}
-                      color={on ? palette.ink : palette.smoke}
+                      color={on ? palette.ivory : palette.smoke}
                     />
                     <Text style={[styles.themeBtnText, on && styles.themeBtnTextOn]}>
-                      {m === 'dark' ? 'OSCURO' : 'CLARO'}
+                      {m === 'light' ? 'CLARO' : 'OSCURO'}
                     </Text>
                   </HoverCard>
                 );
@@ -176,39 +133,19 @@ export function DesktopSidebar() {
             </View>
           )}
 
-          {/* ── Personalizar (modo · fondo · señal) ──────────────────────
-              Antes, empezar a personalizar exigía: Comando → Perfil →
-              "Ver perfil completo" → Apariencia. Tres saltos para algo que
-              se usa desde el primer día. Un solo acceso directo aquí, junto
-              al toggle de tema (que ES un tercio de lo mismo), lleva a los
-              3 ejes de una — modo funciona también en nativo (se guarda
-              local), así que no depende de `canToggle` como el toggle de
-              arriba. */}
-          <HoverCard
-            style={styles.personalizeRow}
-            hoverStyle={styles.navItemHover}
-            onPress={() => router.push('/perfil/apariencia' as never)}
-            accessibilityRole="button"
-            accessibilityLabel="Personalizar la app — modo, fondo y color"
-          >
-            <MaterialIcons name="tune" size={16} color={palette.goldText} />
-            <Text style={styles.personalizeText}>PERSONALIZAR</Text>
-            <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-          </HoverCard>
-
           {/* ── Tarjeta de usuario (abajo) ── */}
           <HoverCard
             style={styles.userCard}
-            onPress={() => router.push('/(tabs)/progreso' as never)}
+            onPress={() => router.push('/(tabs)/yo' as never)}
             accessibilityRole="button"
-            accessibilityLabel="Ver perfil"
+            accessibilityLabel="Ver tu cuenta"
           >
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>{initial}</Text>
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName} numberOfLines={1}>
-                {state.profile.name ?? 'Operador'}
+                {state.profile.name || 'Tu cuenta'}
               </Text>
               <Text style={styles.userTier}>{tier}</Text>
             </View>
@@ -225,7 +162,7 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 240,
     height: '100%',
-    backgroundColor: alpha(palette.graphite, 'cc'),
+    backgroundColor: palette.graphite,
     borderRightWidth: 1,
     borderRightColor: palette.lineSoft,
     paddingTop: 28,
@@ -267,17 +204,7 @@ const styles = StyleSheet.create({
   // Nav — ScrollView: mantiene tema+usuario alcanzables aunque el contenido
   // (dominios + racha) no quepa en la altura disponible.
   navScroll: { flex: 1 },
-  navScrollContent: { flexGrow: 1, justifyContent: 'space-between' },
-  navGroupLabel: {
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 2,
-    color: palette.muted,
-    textTransform: 'uppercase',
-    paddingHorizontal: 10,
-    paddingTop: 14,
-    paddingBottom: 8,
-  },
+  navScrollContent: { flexGrow: 1, justifyContent: 'space-between', paddingTop: 8 },
   navList: { gap: 2 },
   navItem: {
     flexDirection: 'row',
@@ -292,8 +219,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: palette.goldGlow,
-    borderColor: palette.lineGoldSubtle,
+    backgroundColor: palette.charcoal,
   },
   // Hover suave para nav/toggles (sin lift — es navegación, no una card)
   navItemHover: {
@@ -318,41 +244,6 @@ const styles = StyleSheet.create({
   },
   navLabelActive: { color: palette.goldText },
 
-  // Streak card
-  streakCard: {
-    marginTop: 18,
-    marginHorizontal: 4,
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: palette.goldGlow,
-    borderWidth: 1,
-    borderColor: palette.lineGoldSubtle,
-  },
-  streakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  streakNum: {
-    fontFamily: Fonts.display,
-    fontSize: 20,
-    fontWeight: '700',
-    color: palette.goldText,
-  },
-  streakUnit: {
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    color: palette.ash,
-    letterSpacing: 1.5,
-    marginLeft: 'auto',
-  },
-  streakMeta: {
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    color: palette.ash,
-    letterSpacing: 1,
-    marginTop: 8,
-  },
 
   // Theme toggle (OSCURO/CLARO)
   themeToggle: {
@@ -377,36 +268,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingVertical: 6,
   },
-  themeBtnOn: { backgroundColor: palette.gold },
+  themeBtnOn: { backgroundColor: palette.charcoal },
 
-  // Acceso directo a Personalizar (modo · fondo · señal)
-  personalizeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    marginTop: 8,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: palette.lineGold,
-    backgroundColor: palette.goldGlow,
-  },
-  personalizeText: {
-    flex: 1,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: palette.goldText,
-    fontWeight: '700',
-  },
   themeBtnText: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 1,
     color: palette.smoke,
   },
-  themeBtnTextOn: { color: palette.ink, fontWeight: '700' },
+  themeBtnTextOn: { color: palette.ivory, fontWeight: '700' },
 
   // User card
   userCard: {
@@ -424,18 +294,18 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: palette.gold,
+    backgroundColor: palette.charcoal,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
   },
-  avatarText: { color: palette.ink, fontWeight: '800', fontSize: 15, fontFamily: Fonts.display },
+  avatarText: { color: palette.ivory, fontWeight: '800', fontSize: 15, fontFamily: Fonts.display },
   userInfo: { flex: 1, minWidth: 0 },
   userName: { color: palette.ivoryWarm, fontSize: 12.5, fontWeight: '600', marginBottom: 2 },
   userTier: {
-    color: palette.goldText,
+    color: palette.smoke,
     fontSize: 11,
     letterSpacing: 1,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
   },
 });

@@ -1,24 +1,14 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  Platform,
-} from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts, radii, hitBox } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { palette, Fonts, hitBox } from '@/constants/theme';
 import {
-  HABIT_CATALOG,
   MORNING_HABITS,
   EVENING_HABITS,
   findTemplate,
@@ -33,9 +23,6 @@ import {
   getScheduledRemindersByHabit,
 } from '@/services/notifications';
 
-const DAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const TODAY_DOW = new Date().getDay(); // 0=dom, 1=lun…
-
 interface Habit {
   id: string;
   name: string;
@@ -45,13 +32,12 @@ interface Habit {
   // ── Columnas nuevas (migración meeting_features) — leídas vía cliente sin tipar
   timeOfDay: TimeOfDay;
   sequenceOrder: number;
+  /** Se sigue leyendo/escribiendo (columna existente); la UI no lo muestra. */
   points: number;
   importanceText: string | null;
   videoUrl: string | null;
   guideUrl: string | null;
   options: HabitOption[];
-  /** id de la notificación local agendada (en memoria; solo nativo) */
-  reminderId?: string | null;
 }
 
 // Ruta interna asociada a un hábito (deep-link de la práctica / notificación).
@@ -59,21 +45,14 @@ function routeForCategory(category: string): string | undefined {
   return findTemplate(category)?.route;
 }
 
-// El circulo de marcar es LA accion diaria de esta pantalla — un scale(0.97)
-// en press-in/out le da la senal tactil que le faltaba. Componente propio
-// (no un helper de render) para que el hook de Reanimated tenga su propia
-// instancia por fila, no una compartida entre todas.
+// Marcar un hábito es LA acción diaria de esta pantalla. El círculo mide 28;
+// `hitBox` crece la caja táctil a 44×44 (también en web, donde `hitSlop` no
+// existe) sin mover el círculo.
 function HabitCheckButton({ completed, onPress, label }: { completed: boolean; onPress: () => void; label: string }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Animated.View style={animStyle}>
-      {/* Marcar un habito es LA accion diaria de esta pantalla, y su
-          circulo mide 28: por debajo del minimo de 44 en las dos guias.
-          Lo cubria `hitSlop`, que react-native-web ignora -- correcto en
-          movil, inerte en la PWA. `hitBox` crece la caja de verdad y el
-          margen negativo devuelve el hueco, asi que el circulo no se
-          mueve ni un pixel. `hitSlop` se queda: en nativo no estorba. */}
       <Pressable
         onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
@@ -84,10 +63,8 @@ function HabitCheckButton({ completed, onPress, label }: { completed: boolean; o
         accessibilityLabel={label}
         style={hitBox(28)}
       >
-        <View style={[styles.habitCheck, completed && styles.habitCheckDone]}>
-          {completed && (
-            <MaterialIcons name="check" size={16} color={palette.ink} />
-          )}
+        <View style={[styles.check, completed && styles.checkDone]}>
+          {completed && <MaterialIcons name="check" size={16} color={palette.ink} />}
         </View>
       </Pressable>
     </Animated.View>
@@ -96,17 +73,12 @@ function HabitCheckButton({ completed, onPress, label }: { completed: boolean; o
 
 export default function HabitosScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
-  // ids de hábitos con recordatorio agendado en esta sesión (solo nativo)
+  // ids de hábitos con recordatorio agendado (solo nativo)
   const [reminders, setReminders] = useState<Record<string, string>>({});
-  // Banner inline en voz de la interfaz — reemplaza los Alert.alert() nativos
-  // que rompían la voz de marca. Se auto-oculta: estas notificaciones son de
-  // una sola acción (crear hábito, activar recordatorio), no un formulario
-  // con reintento que las limpie por su cuenta.
+  // Aviso en línea en la voz de la interfaz; se oculta solo.
   const [banner, setBanner] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showBanner = useCallback((tone: 'success' | 'error', text: string) => {
@@ -138,21 +110,18 @@ export default function HabitosScreen() {
           timeOfDay:      (h.time_of_day as TimeOfDay) ?? tmpl?.timeOfDay ?? 'anytime',
           sequenceOrder:  h.sequence_order ?? tmpl?.sequence ?? 0,
           points:         h.points ?? tmpl?.points ?? 10,
-          importanceText: h.importance_text ?? tmpl?.importance ?? null,
+          // La plantilla manda sobre el texto guardado: así la copia corregida
+          // (sin mecanismos inventados) llega también a quien ya tenía el hábito.
+          importanceText: tmpl?.importance ?? h.importance_text ?? null,
           videoUrl:       h.video_url ?? tmpl?.videoUrl ?? null,
           guideUrl:       h.guide_url ?? tmpl?.guideUrl ?? null,
-          options:        Array.isArray(h.options) && h.options.length
-            ? (h.options as HabitOption[])
-            : (tmpl?.options ?? []),
-          reminderId:     undefined,
+          options:        tmpl?.options ?? (Array.isArray(h.options) ? (h.options as HabitOption[]) : []),
         };
       });
       setHabits(mapped);
-      // Rehidrata los toggles de recordatorio desde el SO (las notificaciones
-      // persisten entre reinicios; el estado en memoria no). Fuente de verdad real.
+      // Rehidrata los recordatorios desde el SO (persisten entre reinicios).
       setReminders(await getScheduledRemindersByHabit());
     } catch { /* la tabla/columnas pueden no existir aún */ }
-    setLoading(false);
   };
 
   useEffect(() => { loadHabits(); }, [userId]);
@@ -160,7 +129,6 @@ export default function HabitosScreen() {
   const createHabit = async (template: HabitTemplate) => {
     if (!userId) return;
     try {
-      // Persistimos las columnas nuevas con el contenido del catálogo semilla.
       await db2.habits().insert({
         user_id:         userId,
         name:            template.name,
@@ -175,13 +143,13 @@ export default function HabitosScreen() {
         options:         template.options ?? [],
       });
       loadHabits();
-    } catch { showBanner('error', 'No se pudo crear el hábito. Intenta de nuevo.'); }
+    } catch { showBanner('error', 'No se pudo añadir el hábito. Intenta de nuevo.'); }
   };
 
   const toggleToday = async (habit: Habit) => {
     if (!userId) return;
     const today = new Date().toISOString().split('T')[0];
-    // Optimista: refleja el cambio de inmediato (puntos + check).
+    // Optimista: refleja el cambio de inmediato.
     setHabits((prev) => prev.map((h) =>
       h.id === habit.id
         ? { ...h, completedToday: !h.completedToday, streak: h.completedToday ? Math.max(0, h.streak - 1) : h.streak + 1 }
@@ -211,9 +179,7 @@ export default function HabitosScreen() {
 
   // ── Recordatorio con deep-link (WS-7): agenda/cancela la notificación ────────
   const toggleReminder = async (habit: Habit) => {
-    // El botón ya no se renderiza en web (ver más abajo); este guard queda como
-    // red de seguridad por si alguien vuelve a montarlo ahí.
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web') return; // solo existen en nativo
     const existing = reminders[habit.id];
     if (existing) {
       await cancelScheduledNotification(existing);
@@ -239,213 +205,161 @@ export default function HabitosScreen() {
       body:   habit.importanceText ?? 'Es hora de tu práctica.',
       hour:   tmpl.reminderHour,
       minute: tmpl.reminderMinute ?? 0,
-      // Deep-link: abre la práctica si existe; si no, el check-in.
+      // Deep-link: abre la práctica si existe; si no, esta pantalla.
       route:  tmpl.route ?? '/bienestar/habitos',
-      // habitId viaja en la notificación → permite rehidratar el toggle al recargar.
       data:   { habitId: habit.id },
     });
     if (id) {
       setReminders((prev) => ({ ...prev, [habit.id]: id }));
       showBanner(
         'success',
-        `Recordatorio activado. Te avisaremos a las ${String(tmpl.reminderHour).padStart(2, '0')}:${String(tmpl.reminderMinute ?? 0).padStart(2, '0')}.`,
+        `Te avisaremos a las ${String(tmpl.reminderHour).padStart(2, '0')}:${String(tmpl.reminderMinute ?? 0).padStart(2, '0')}.`,
       );
     }
   };
 
   // ── Derivados ────────────────────────────────────────────────────────────────
-  const completed   = habits.filter((h) => h.completedToday);
-  const activeCount  = completed.length;
-  const pointsToday  = completed.reduce((sum, h) => sum + h.points, 0);
-  const pointsTotal  = habits.reduce((sum, h) => sum + h.points, 0);
-
-  const morning = habits.filter((h) => h.timeOfDay === 'morning').sort((a, b) => a.sequenceOrder - b.sequenceOrder);
-  const evening = habits.filter((h) => h.timeOfDay === 'evening').sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+  const doneCount = habits.filter((h) => h.completedToday).length;
+  const bySeq = (a: Habit, b: Habit) => a.sequenceOrder - b.sequenceOrder;
+  const morning = habits.filter((h) => h.timeOfDay === 'morning').sort(bySeq);
+  const evening = habits.filter((h) => h.timeOfDay === 'evening').sort(bySeq);
   const other   = habits.filter((h) => h.timeOfDay !== 'morning' && h.timeOfDay !== 'evening');
+  const ordered = [...morning, ...evening, ...other];
+  const nextHabit = ordered.find((h) => !h.completedToday) ?? null;
 
   const addedCategories = new Set(habits.map((h) => h.category));
+  const firstTemplate = [...MORNING_HABITS, ...EVENING_HABITS].find((t) => !addedCategories.has(t.category)) ?? null;
 
-  const renderHabitStep = (habit: Habit, index: number) => {
+  // UNA acción: el siguiente hábito por marcar; sin hábitos, añadir el primero.
+  const hero = nextHabit ? (
+    <TarjetaOro
+      meta="SIGUIENTE"
+      metaRight={`${doneCount} DE ${habits.length}`}
+      title={nextHabit.name}
+      detail="Toca cuando lo hayas hecho."
+      onPress={() => toggleToday(nextHabit)}
+      accessibilityLabel={`Marcar como hecho: ${nextHabit.name}`}
+    />
+  ) : habits.length === 0 && firstTemplate ? (
+    <TarjetaOro
+      meta="PARA EMPEZAR"
+      title={firstTemplate.name}
+      detail={firstTemplate.science}
+      onPress={() => createHabit(firstTemplate)}
+      accessibilityLabel={`Añadir hábito: ${firstTemplate.name}`}
+    />
+  ) : undefined;
+
+  const sub = habits.length === 0
+    ? 'Elige uno para empezar.'
+    : doneCount === habits.length
+      ? `Hoy: ${doneCount} de ${habits.length} hechos. Listo por hoy.`
+      : `Hoy: ${doneCount} de ${habits.length} hechos.`;
+
+  const renderHabit = (habit: Habit) => {
     const isExpanded = expanded === habit.id;
     const tmpl = findTemplate(habit.category);
     const hasReminder = !!reminders[habit.id];
     const route = routeForCategory(habit.category);
+    const toggleExpand = () => setExpanded(isExpanded ? null : habit.id);
     return (
-      <View key={habit.id} style={styles.stepWrap}>
-        {/* Conector de secuencia (ruta paso a paso) */}
-        <View style={styles.stepRail}>
-          <View style={[styles.stepNumber, habit.completedToday && styles.stepNumberDone]}>
-            <Text style={[styles.stepNumberText, habit.completedToday && styles.stepNumberTextDone]}>
-              {index + 1}
-            </Text>
-          </View>
-          <View style={styles.stepLine} />
-        </View>
-
-        <View style={[styles.habitCard, habit.completedToday && styles.habitCardDone]}>
-          <View style={styles.habitRow}>
-            <HabitCheckButton
-              completed={habit.completedToday}
-              onPress={() => toggleToday(habit)}
-              label={`Marcar ${habit.name}`}
-            />
-
-            <Pressable
-              style={styles.habitInfo}
-              onPress={() => setExpanded(isExpanded ? null : habit.id)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: isExpanded }}
-              accessibilityLabel={`${habit.name}, ${habit.points} puntos. Ver detalle`}>
-              <View style={styles.habitTitleRow}>
-                {tmpl?.icon && (
-                  <MaterialIcons name={tmpl.icon} size={16} color={palette.goldText} style={{ marginRight: 6 }} />
-                )}
-                <Text style={[styles.habitName, habit.completedToday && styles.habitNameDone]} numberOfLines={1}>
-                  {habit.name}
-                </Text>
-              </View>
-              <View style={styles.habitMetaRow}>
-                <Text style={styles.habitPoints}>+{habit.points} pts</Text>
-                <Text style={styles.habitDot}>·</Text>
-                <Text style={styles.habitStreak}>
-                  {habit.streak > 0 ? `🔥 ${habit.streak}` : 'Empieza hoy'}
-                </Text>
-              </View>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setExpanded(isExpanded ? null : habit.id)}
-              hitSlop={8}
-              style={hitBox(22)}
-              accessibilityRole="button"
-              accessibilityLabel={isExpanded ? 'Ocultar detalle' : 'Ver detalle'}
-              accessibilityState={{ expanded: isExpanded }}>
-              <MaterialIcons
-                name={isExpanded ? 'expand-less' : 'expand-more'}
-                size={22}
-                color={palette.ash}
-              />
-            </Pressable>
-          </View>
-
-          {isExpanded && (
-            <View style={styles.habitDetail}>
-              {!!habit.importanceText && (
-                <>
-                  <Text style={styles.detailLabel}>POR QUÉ IMPORTA</Text>
-                  <Text style={styles.detailText}>{habit.importanceText}</Text>
-                </>
-              )}
-
-              {!!tmpl?.warning && (
-                <View style={styles.warningRow}>
-                  <MaterialIcons name="info-outline" size={14} color={palette.warning} />
-                  <Text style={styles.warningText}>{tmpl.warning}</Text>
-                </View>
-              )}
-
-              {habit.options.length > 0 && (
-                <>
-                  <Text style={styles.detailLabel}>OPCIONES</Text>
-                  {habit.options.map((opt, i) => (
-                    <View key={`${opt.label}-${i}`} style={styles.optionRow}>
-                      <MaterialIcons name="chevron-right" size={14} color={palette.goldText} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.optionLabel}>{opt.label}</Text>
-                        {!!opt.detail && <Text style={styles.optionDetail}>{opt.detail}</Text>}
-                      </View>
-                    </View>
-                  ))}
-                </>
-              )}
-
-              <View style={styles.detailActions}>
-                {!!route && (
-                  <Pressable style={styles.detailAction} onPress={() => router.push(route as never)} accessibilityRole="button" accessibilityLabel="Abrir práctica">
-                    <MaterialIcons name="play-circle-outline" size={16} color={palette.goldText} />
-                    <Text style={styles.detailActionText}>Abrir práctica</Text>
-                  </Pressable>
-                )}
-                {!!habit.guideUrl && (
-                  <Pressable style={styles.detailAction} onPress={() => openExternal(habit.guideUrl!)} accessibilityRole="button" accessibilityLabel="Abrir guía (enlace externo)">
-                    <MaterialIcons name="menu-book" size={16} color={palette.goldText} />
-                    <Text style={styles.detailActionText}>Guía</Text>
-                  </Pressable>
-                )}
-                {!!habit.videoUrl && (
-                  <Pressable style={styles.detailAction} onPress={() => openExternal(habit.videoUrl!)} accessibilityRole="button" accessibilityLabel="Ver video (enlace externo)">
-                    <MaterialIcons name="ondemand-video" size={16} color={palette.goldText} />
-                    <Text style={styles.detailActionText}>Video</Text>
-                  </Pressable>
-                )}
-                {/* Los recordatorios son notificaciones locales programadas: solo
-                    existen en nativo. En web el botón se mostraba igual y siempre
-                    respondía "No disponible" — un control que nunca funciona es
-                    peor que no tenerlo. */}
-                {(tmpl?.reminderHour !== undefined) && Platform.OS !== 'web' && (
-                  <Pressable
-                    style={styles.detailAction}
-                    onPress={() => toggleReminder(habit)}
-                    accessibilityRole="button"
-                    accessibilityLabel={hasReminder ? 'Desactivar recordatorio' : 'Activar recordatorio'}
-                    accessibilityState={{ selected: hasReminder }}>
-                    <MaterialIcons
-                      name={hasReminder ? 'notifications-active' : 'notifications-none'}
-                      size={16}
-                      color={hasReminder ? palette.goldText : palette.ash}
-                    />
-                    <Text style={[styles.detailActionText, !hasReminder && { color: palette.ash }]}>
-                      {hasReminder ? 'Recordatorio activo' : 'Recordarme'}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
+      <View key={habit.id} style={styles.row}>
+        <View style={styles.rowMain}>
+          <HabitCheckButton
+            completed={habit.completedToday}
+            onPress={() => toggleToday(habit)}
+            label={`Marcar ${habit.name}`}
+          />
+          {/* Toda la fila (nombre + flecha) abre el detalle: un objetivo grande. */}
+          <Pressable
+            style={styles.rowInfo}
+            onPress={toggleExpand}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isExpanded }}
+            accessibilityLabel={`${habit.name}. ${isExpanded ? 'Ocultar detalle' : 'Ver detalle'}`}>
+            <View style={styles.rowText}>
+              <Text style={[styles.name, habit.completedToday && styles.nameDone]}>{habit.name}</Text>
+              {habit.streak > 1 && <Text style={styles.meta}>{habit.streak} días seguidos</Text>}
             </View>
-          )}
+            <MaterialIcons name={isExpanded ? 'expand-less' : 'expand-more'} size={22} color={palette.smoke} />
+          </Pressable>
         </View>
+
+        {isExpanded && (
+          <View style={styles.detail}>
+            {!!habit.importanceText && <Text style={styles.detailText}>{habit.importanceText}</Text>}
+            {!!tmpl?.warning && <Text style={styles.detailText}>{tmpl.warning}</Text>}
+            {habit.options.map((opt, i) => (
+              <Text key={`${opt.label}-${i}`} style={styles.detailText}>
+                <Text style={styles.optionLabel}>{opt.label}</Text>
+                {opt.detail ? ` — ${opt.detail}` : ''}
+              </Text>
+            ))}
+            <View style={styles.detailActions}>
+              {!!route && (
+                <Pressable style={styles.detailAction} onPress={() => router.push(route as never)} accessibilityRole="button" accessibilityLabel="Abrir práctica">
+                  <Text style={styles.detailActionText}>Abrir práctica</Text>
+                </Pressable>
+              )}
+              {!!habit.guideUrl && (
+                <Pressable style={styles.detailAction} onPress={() => openExternal(habit.guideUrl!)} accessibilityRole="button" accessibilityLabel="Abrir guía (enlace externo)">
+                  <Text style={styles.detailActionText}>Guía</Text>
+                </Pressable>
+              )}
+              {!!habit.videoUrl && (
+                <Pressable style={styles.detailAction} onPress={() => openExternal(habit.videoUrl!)} accessibilityRole="button" accessibilityLabel="Ver video (enlace externo)">
+                  <Text style={styles.detailActionText}>Video</Text>
+                </Pressable>
+              )}
+              {/* Recordatorios = notificaciones locales: solo en nativo. */}
+              {(tmpl?.reminderHour !== undefined) && Platform.OS !== 'web' && (
+                <Pressable
+                  style={styles.detailAction}
+                  onPress={() => toggleReminder(habit)}
+                  accessibilityRole="button"
+                  accessibilityLabel={hasReminder ? 'Desactivar recordatorio' : 'Activar recordatorio'}
+                  accessibilityState={{ selected: hasReminder }}>
+                  <Text style={styles.detailActionText}>
+                    {hasReminder ? 'Quitar recordatorio' : 'Recordarme'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
       </View>
     );
   };
 
-  const renderRoutineSection = (title: string, list: Habit[]) => {
+  const renderGroup = (title: string, list: Habit[]) => {
     if (list.length === 0) return null;
-    const done = list.filter((h) => h.completedToday).length;
     return (
-      <View style={styles.section}>
-        <View style={styles.routineHeader}>
-          <Text style={styles.sectionLabel}>{title}</Text>
-          <Text style={styles.routineCount}>{done}/{list.length}</Text>
-        </View>
-        {list.map((h, i) => renderHabitStep(h, i))}
+      <View style={styles.group}>
+        <Text style={styles.groupLabel}>{title}</Text>
+        {list.map(renderHabit)}
       </View>
     );
   };
 
-  // Templates por rutina, ocultando los ya añadidos.
-  const renderTemplateGroup = (title: string, list: HabitTemplate[]) => {
+  // Catálogo por rutina, sin los ya añadidos. Toda la fila añade (≥56 px).
+  const renderTemplates = (title: string, list: HabitTemplate[]) => {
     const pending = list.filter((t) => !addedCategories.has(t.category));
     if (pending.length === 0) return null;
     return (
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>{title}</Text>
+      <View style={styles.group}>
+        <Text style={styles.groupLabel}>{title}</Text>
         {pending.map((t) => (
           <Pressable
             key={t.category}
             onPress={() => createHabit(t)}
-            style={styles.templateRow}
+            style={({ pressed }) => [styles.row, styles.rowMain, pressed && styles.pressed]}
             accessibilityRole="button"
-            accessibilityLabel={`Añadir hábito: ${t.name}, ${t.points} puntos`}>
-            <View style={styles.templateIcon}>
-              <MaterialIcons name={t.icon} size={20} color={palette.goldText} />
+            accessibilityLabel={`Añadir hábito: ${t.name}`}>
+            <View style={styles.rowText}>
+              <Text style={styles.name}>{t.name}</Text>
+              <Text style={styles.meta}>{t.science}</Text>
             </View>
-            <View style={styles.templateInfo}>
-              <Text style={styles.templateName}>{t.name}</Text>
-              <Text style={styles.templateScience} numberOfLines={2}>{t.science}</Text>
-            </View>
-            <View style={styles.templatePts}>
-              <Text style={styles.templatePtsText}>+{t.points}</Text>
-            </View>
-            <MaterialIcons name="add-circle-outline" size={22} color={palette.goldText} />
+            <MaterialIcons name="add" size={22} color={palette.smoke} />
           </Pressable>
         ))}
       </View>
@@ -453,84 +367,28 @@ export default function HabitosScreen() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-        </Pressable>
-        <Text style={styles.title}>HÁBITOS</Text>
-        <View style={{ width: 38 }} />
-      </View>
-
-      {/* Banner inline — reemplaza Alert.alert(); fuera del ScrollView para
-          que sea visible sin importar cuánto haya bajado el usuario. */}
+    <Pantalla
+      meta="BIENESTAR · CUERPO"
+      title="Hábitos"
+      sub={sub}
+      hero={hero}
+      footer={<Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />}>
       {banner && (
-        <View
-          style={[styles.banner, banner.tone === 'success' ? styles.bannerSuccess : styles.bannerError]}
+        <Text
+          style={[styles.banner, { color: banner.tone === 'success' ? palette.ash : palette.danger }]}
           accessibilityRole="alert"
           accessibilityLiveRegion={banner.tone === 'success' ? 'polite' : 'assertive'}>
-          <MaterialIcons
-            name={banner.tone === 'success' ? 'check-circle' : 'error-outline'}
-            size={16}
-            color={banner.tone === 'success' ? palette.success : palette.danger}
-          />
-          <Text style={[styles.bannerText, { color: banner.tone === 'success' ? palette.success : palette.danger }]}>
-            {banner.text}
-          </Text>
-        </View>
+          {banner.text}
+        </Text>
       )}
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Progreso del día — hábitos + puntos */}
-        <View style={styles.progressCard}>
-          <View style={styles.progressTop}>
-            <View style={styles.progressCol}>
-              <Text style={styles.progressLabel}>HOY</Text>
-              <Text style={styles.progressValue}>{activeCount}/{Math.max(habits.length, 1)}</Text>
-              <Text style={styles.progressSub}>hábitos</Text>
-            </View>
-            <View style={styles.progressDivider} />
-            <View style={styles.progressCol}>
-              <Text style={styles.progressLabel}>PUNTOS</Text>
-              <Text style={[styles.progressValue, { color: palette.goldText }]}>{pointsToday}</Text>
-              <Text style={styles.progressSub}>de {pointsTotal}</Text>
-            </View>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${pointsTotal ? (pointsToday / pointsTotal) * 100 : 0}%` as any }]} />
-          </View>
-        </View>
+      {renderGroup('MAÑANA', morning)}
+      {renderGroup('NOCHE', evening)}
+      {renderGroup('OTROS', other)}
 
-        {/* Días de la semana */}
-        <View style={styles.weekRow}>
-          {DAY_LABELS.map((d, i) => {
-            const adjustedToday = TODAY_DOW === 0 ? 6 : TODAY_DOW - 1;
-            const isPast   = i < adjustedToday;
-            const isToday  = i === adjustedToday;
-            return (
-              <View key={d} style={styles.dayItem}>
-                <View style={[styles.dayDot, isPast && styles.dayDotPast, isToday && styles.dayDotToday]} />
-                <Text style={[styles.dayLabel, isToday && { color: palette.goldText }]}>{d}</Text>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Rutinas en secuencia */}
-        {renderRoutineSection('RUTINA MATUTINA', morning)}
-        {renderRoutineSection('RUTINA NOCTURNA', evening)}
-        {renderRoutineSection('OTROS HÁBITOS', other)}
-
-        {/* Catálogo — agregar por rutina */}
-        {renderTemplateGroup('AÑADIR · MATUTINOS', MORNING_HABITS)}
-        {renderTemplateGroup('AÑADIR · NOCTURNOS', EVENING_HABITS)}
-
-        {habits.length >= HABIT_CATALOG.length && (
-          <Text style={styles.allAdded}>✓ Rutina completa — todos los hábitos añadidos</Text>
-        )}
-      </ScrollView>
-    </View>
+      {renderTemplates('AÑADIR · MAÑANA', MORNING_HABITS)}
+      {renderTemplates('AÑADIR · NOCHE', EVENING_HABITS)}
+    </Pantalla>
   );
 }
 
@@ -548,85 +406,27 @@ function openExternal(url: string) {
 }
 
 const styles = StyleSheet.create({
-  root:           { flex: 1, backgroundColor: palette.black },
-  header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:        { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:          { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+  banner:      { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 21, marginBottom: 16 },
 
-  banner:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.sm },
-  bannerSuccess:  { backgroundColor: alpha(palette.success, '1A') },
-  bannerError:    { backgroundColor: alpha(palette.danger, '1A') },
-  bannerText:     { flex: 1, fontFamily: Fonts.sans, fontSize: 12, lineHeight: 17 },
+  group:       { marginBottom: 32 },
+  groupLabel:  { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke, marginBottom: 8 },
 
-  content:        { paddingHorizontal: spacing.md, paddingBottom: 40 },
+  row:         { borderTopWidth: 1, borderTopColor: palette.line },
+  rowMain:     { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 8 },
+  rowInfo:     { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowText:     { flex: 1, gap: 2 },
+  pressed:     { opacity: 0.7 },
+  name:        { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, color: palette.ivory },
+  nameDone:    { color: palette.smoke },
+  meta:        { fontFamily: Fonts.sans, fontSize: 13, lineHeight: 18, color: palette.smoke },
 
-  progressCard:   { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md },
-  progressTop:    { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  progressCol:    { flex: 1, alignItems: 'center' },
-  progressDivider:{ width: 1, alignSelf: 'stretch', backgroundColor: palette.line, marginHorizontal: spacing.sm },
-  progressLabel:  { ...typography.label, color: palette.goldText, marginBottom: 4 },
-  progressValue:  { fontFamily: Fonts.display, fontSize: 34, color: palette.ivory, lineHeight: 40 },
-  progressSub:    { ...typography.caption, color: palette.ash },
-  progressBar:    { width: '100%', height: 3, backgroundColor: palette.line, borderRadius: 2, overflow: 'hidden' },
-  progressFill:   { height: '100%', backgroundColor: palette.gold, borderRadius: 2 },
+  check:       { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: palette.lineHard, alignItems: 'center', justifyContent: 'center' },
+  checkDone:   { backgroundColor: palette.gold, borderColor: palette.gold },
 
-  weekRow:        { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.lg },
-  dayItem:        { alignItems: 'center', gap: 4 },
-  dayDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: palette.line },
-  dayDotPast:     { backgroundColor: palette.gold },
-  dayDotToday:    { backgroundColor: palette.gold, width: 12, height: 12, borderRadius: 6 },
-  dayLabel:       { ...typography.caption, color: palette.ash },
-
-  section:        { marginBottom: spacing.lg },
-  routineHeader:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  sectionLabel:   { ...typography.label, color: palette.goldText },
-  routineCount:   { fontFamily: Fonts.display, fontSize: 12, color: palette.ash, letterSpacing: 1 },
-
-  // ── Secuencia (ruta paso a paso) ─────────────────────────────────────────────
-  stepWrap:       { flexDirection: 'row', gap: spacing.sm },
-  stepRail:       { alignItems: 'center', width: 24 },
-  stepNumber:     { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: palette.line, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.graphite },
-  stepNumberDone: { backgroundColor: palette.gold, borderColor: palette.gold },
-  stepNumberText: { fontFamily: Fonts.display, fontSize: 11, color: palette.ash },
-  stepNumberTextDone: { color: palette.ink },
-  stepLine:       { flex: 1, width: 1, backgroundColor: palette.line, marginVertical: 2 },
-
-  habitCard:      { flex: 1, backgroundColor: palette.graphite, borderRadius: radii.sm, marginBottom: 8, overflow: 'hidden' },
-  habitCardDone:  { opacity: 0.75 },
-  habitRow:       { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm },
-  habitCheck:     { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
-  habitCheckDone: { backgroundColor: palette.gold, borderColor: palette.gold },
-  habitInfo:      { flex: 1 },
-  habitTitleRow:  { flexDirection: 'row', alignItems: 'center' },
-  habitName:      { flex: 1, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
-  habitNameDone:  { textDecorationLine: 'line-through', color: palette.ash },
-  habitMetaRow:   { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 6 },
-  habitPoints:    { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
-  habitDot:       { color: palette.smoke, fontSize: 11 },
-  habitStreak:    { fontSize: 11, color: palette.smoke },
-
-  habitDetail:    { paddingHorizontal: spacing.sm, paddingBottom: spacing.sm, gap: 4, borderTopWidth: 1, borderTopColor: palette.line, paddingTop: spacing.sm },
-  detailLabel:    { ...typography.label, color: palette.goldText, marginTop: 4 },
-  detailText:     { ...typography.caption, color: palette.ash },
-
-  warningRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, backgroundColor: alpha(palette.warning, '1A'), borderRadius: radii.xs, padding: 6 },
-  warningText:    { flex: 1, fontSize: 11, color: palette.warning },
-
-  optionRow:      { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 4 },
-  optionLabel:    { fontFamily: Fonts.sansBold, fontSize: 12, color: palette.ivory },
-  optionDetail:   { fontSize: 11, color: palette.smoke, marginTop: 1 },
-
-  detailActions:  { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  detailAction:   { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 },
-  detailActionText:{ fontFamily: Fonts.sansBold, fontSize: 12, color: palette.goldText },
-
-  templateRow:    { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, gap: spacing.sm },
-  templateIcon:   { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.goldLight, alignItems: 'center', justifyContent: 'center' },
-  templateInfo:   { flex: 1 },
-  templateName:   { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory },
-  templateScience:{ fontSize: 11, color: palette.smoke, marginTop: 2 },
-  templatePts:    { backgroundColor: palette.goldLight, borderRadius: radii.xs, paddingHorizontal: 6, paddingVertical: 2 },
-  templatePtsText:{ fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
-
-  allAdded:       { ...typography.caption, color: palette.goldText, textAlign: 'center', paddingVertical: spacing.sm },
+  detail:      { paddingLeft: 44, paddingBottom: 16, gap: 8 },
+  detailText:  { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ash },
+  optionLabel: { fontFamily: Fonts.sansBold, color: palette.ivory },
+  detailActions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 24 },
+  detailAction:  { minHeight: 44, justifyContent: 'center' },
+  detailActionText: { fontFamily: Fonts.sansBold, fontSize: 15, color: palette.goldText },
 });

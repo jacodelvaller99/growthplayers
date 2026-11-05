@@ -2,35 +2,23 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BodyFocusCard } from '@/components/body-focus-card';
-import { LensTabs } from '@/components/focus-deck';
-import { GoldDivider, PremiumCard, StatusPill, screen, useScreen } from '@/components/polaris';
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import SafetyWarning from '@/components/SafetyWarning';
-import { EvidenceBadge } from '@/components/EvidenceBadge';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import {
   MEDITATION_CATEGORY_MUSIC,
   MEDITATION_SESSIONS,
   meditationPhasesToNarration,
   type MeditationSession,
 } from '@/data/wellness';
+import { EVIDENCE, EVIDENCE_GRADE_LABEL } from '@/data/wellnessEvidence';
 import { createMeditationAudio } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
-import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
 import { energyFocusById, parseEnergyFocusId } from '@/lib/energyFocusLogic';
@@ -42,94 +30,37 @@ function haptic(type: 'light' | 'medium' | 'success') {
   else Haptics.impactAsync(type === 'medium' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
 }
 
-const CATEGORY_COLOR: Record<string, string> = {
-  mañana:    palette.ash,
-  noche:     palette.ash,
-  enfoque:   palette.ash,
-  estrés:    palette.ash,
-  identidad: palette.ash,
-  decisión:  palette.ash,
-  energía:   palette.ash,
-  compasión: palette.ash,
-};
-
-const CATEGORY_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
-  mañana:    'wb-sunny',
-  noche:     'bedtime',
-  enfoque:   'psychology',
-  estrés:    'spa',
-  identidad: 'fingerprint',
-  decisión:  'alt-route',
-  energía:   'bolt',
-  compasión: 'volunteer-activism',
-};
-
 /**
- * Las lentes salen de los DATOS, no de una lista escrita a mano.
- *
- * Con las categorías fijas aquí, una sesión con categoría nueva quedaría
- * invisible: no aparecería en ninguna pestaña y nadie lo notaría hasta que
- * alguien la echara de menos. Derivándolas, aparece sola.
+ * Los grupos salen de los DATOS, no de una lista escrita a mano: una sesión
+ * con categoría nueva aparece sola en su grupo.
  */
 const CATEGORIES = [...new Set(MEDITATION_SESSIONS.map((s) => s.category))];
 const SESSIONS_BY_CATEGORY = Object.fromEntries(
   CATEGORIES.map((c) => [c, MEDITATION_SESSIONS.filter((s) => s.category === c)]),
 ) as Record<string, MeditationSession[]>;
 
-// ─── Circular timer ───────────────────────────────────────────────────────────
+/** "Para ahora": la categoría que pide la hora del día. */
+function categoryForHour(hour: number): string {
+  if (hour < 11) return 'mañana';
+  if (hour >= 20) return 'noche';
+  return 'estrés';
+}
 
-function CircleTimer({ progress, size = 200 }: { progress: number; size?: number }) {
-  const r = (size - 16) / 2;
-  const circumference = 2 * Math.PI * r;
-  const strokeDashoffset = circumference * (1 - progress);
-
-  // Web SVG-based circle timer
-  if (Platform.OS === 'web') {
-    return (
-      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        {/* @ts-ignore web SVG */}
-        <svg width={size} height={size} style={{ position: 'absolute' }}>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke={palette.charcoal}
-            strokeWidth={8}
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke={palette.gold}
-            strokeWidth={8}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          />
-        </svg>
-      </View>
-    );
-  }
-
-  // Native fallback — just a progress ring using border
+function AntesDeEmpezar({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        borderWidth: 8,
-        borderColor: palette.gold,
-        opacity: 0.3 + progress * 0.7,
-      }}
-    />
+    <View>
+      <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel="Antes de empezar" style={styles.antes}>
+        <Text style={styles.antesLabel}>ANTES DE EMPEZAR</Text>
+        <MaterialIcons name={open ? 'expand-less' : 'expand-more'} size={20} color={palette.smoke} />
+      </Pressable>
+      {open && <View style={{ paddingBottom: 16 }}>{children}</View>}
+    </View>
   );
 }
 
 // ─── Meditation Player ────────────────────────────────────────────────────────
+// Negro plano, temporizador grande, un solo botón. Sin anillos ni brillos.
 
 function MeditationPlayer({
   session,
@@ -143,6 +74,7 @@ function MeditationPlayer({
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const {
     startSession: storeStart,
     stopSession: storeStop,
@@ -155,40 +87,21 @@ function MeditationPlayer({
   const [running, setRunning] = useState(false);
   const [paused, setPaused]   = useState(false);
   const [done, setDone] = useState(false);
+  const [doneSecs, setDoneSecs] = useState(0);
   const [currentPhaseText, setCurrentPhaseText] = useState(session.phases[0]?.text ?? '');
   const [phaseIdx, setPhaseIdx] = useState(0);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const audioRef = useRef<ReturnType<typeof createMeditationAudio>>(null);
   const narrationRef = useRef<NarrationHandle | null>(null);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Una sesión narrada puede terminar su guion antes de que el reloj visual
-  // llegue a cero (el guion es voz+pausas reales, el reloj es un contador
-  // fijo) — sin este guard, `finishSession` correría dos veces.
+  // llegue a cero — sin este guard, `finishSession` correría dos veces.
   const finishedRef = useRef(false);
-  const reducedMotion = useReducedMotion();
-
-  // Idle pulse
-  useEffect(() => {
-    if (!running && !reducedMotion) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.06, duration: 2000, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1.0,  duration: 2000, useNativeDriver: true }),
-        ]),
-      ).start();
-    } else {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(1);
-    }
-  }, [running, reducedMotion, pulseAnim]);
 
   /**
    * Cierra la sesión — llamada tanto por el reloj visual (llega a cero) como
-   * por el guion narrado (termina su última fase). Sin este punto único, una
-   * sesión narrada cuya voz+pausas terminan antes que el reloj se quedaba
-   * congelada en silencio hasta que el contador alcanzara cero por su cuenta.
+   * por el guion narrado (termina su última fase).
    */
   const finishSession = useCallback(() => {
     if (finishedRef.current) return;
@@ -198,14 +111,16 @@ function MeditationPlayer({
     setDone(true);
     haptic('success');
     storeStop();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (audioRef as any).current?.bell();
     narrationRef.current?.stop();
     setTimeout(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       (audioRef as any).current?.stop();
     }, 3500);
-    onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
+    const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
+    setDoneSecs(secs);
+    onComplete(secs);
   }, [onComplete, storeStop]);
 
   const startSession = useCallback(() => {
@@ -218,13 +133,10 @@ function MeditationPlayer({
 
     if (session.narrated) {
       // Sesión narrada: manda la voz. El texto en pantalla lo dicta el mp3 que
-      // esté sonando, no un contador — si la voz se retrasa, el texto también.
+      // esté sonando, no un contador.
       const narration = createNarrationPlayer({
         musicUrl: MEDITATION_CATEGORY_MUSIC[session.category],
         binaural: session.binaural,
-        // El helper deriva la pausa de cada fase (duración menos lo que dura
-        // la voz). Con `pauseAfter: 0` el player avanzaba en cuanto acababa el
-        // mp3 y una meditación de 6 minutos se consumía en dos.
         phases: meditationPhasesToNarration(session),
         onPhaseChange: (i) => {
           setPhaseIdx(i);
@@ -235,9 +147,9 @@ function MeditationPlayer({
       narrationRef.current = narration;
       narration?.start();
     } else {
-      // Cama musical Suno por categoría si existe; si no, ruido procedural.
+      // Cama musical por categoría si existe; si no, ruido procedural.
       const audio = createMeditationAudio(session.ambientType, MEDITATION_CATEGORY_MUSIC[session.category]);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       (audioRef as any).current = audio;
       audio?.start();
       audio?.bell();
@@ -264,11 +176,8 @@ function MeditationPlayer({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [running, finishSession, storeElapsed, totalSeconds]);
 
-  // Phase rotation
+  // Phase rotation (solo sesiones no narradas: en las narradas manda la voz)
   useEffect(() => {
-    // En una sesión narrada manda la voz, no el reloj: el texto lo cambia
-    // `onPhaseChange`. Si además girara este temporizador, el texto adelantaría
-    // al audio y el usuario leería una cosa mientras oye otra.
     if (!running || !session.phases.length || session.narrated) return;
     let idx = phaseIdx;
     let elapsed = 0;
@@ -292,7 +201,7 @@ function MeditationPlayer({
   const handleStop = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (audioRef as any).current?.stop();
     narrationRef.current?.stop();
     narrationRef.current = null;
@@ -322,103 +231,75 @@ function MeditationPlayer({
     haptic('light');
   }, [storeResume]);
 
-  const progress = (totalSeconds - remaining) / totalSeconds;
+  // Final limpio: "Hecho. N min." + Volver. Sin confeti ni puntos.
+  if (done) {
+    return (
+      <Pantalla
+        meta="BIENESTAR · MEDITACIÓN"
+        title="Hecho."
+        sub={`${Math.max(1, Math.round(doneSecs / 60))} min.`}>
+        <PracticeClose message="¿Cómo aterriza tu mente ahora? Registrarlo es el dato que sí importa." />
+        <Fila label="VOLVER" value="Meditación" onPress={onExit} last />
+      </Pantalla>
+    );
+  }
+
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
   const timeLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  const catColor = CATEGORY_COLOR[session.category] ?? palette.gold;
+  const started = running || paused;
+  const evidence = session.evidence ? EVIDENCE[session.evidence] : null;
 
   return (
-    <View style={player.root}>
-      <View style={player.header}>
+    <View style={[player.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}>
+      <View style={player.inner}>
         <Pressable onPress={() => { handleStop(); onExit(); }} style={player.backBtn} accessibilityRole="button" accessibilityLabel="Salir de la sesión">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
-        <StatusPill label={session.category.toUpperCase()} tone="gold" />
-        <View style={{ width: 36 }} />
-      </View>
 
-      <Text style={player.sessionTitle}>{session.title}</Text>
-      <Text style={player.sessionDesc}>{session.description}</Text>
-
-      {!running && !done && session.evidence ? (
-        <View style={player.evidenceSlot}>
-          <EvidenceBadge evidence={session.evidence} variant="full" />
-        </View>
-      ) : null}
-
-      {/* Timer circle */}
-      <View style={player.circleContainer}>
-        <CircleTimer progress={progress} size={220} />
-        <View style={player.circleCenter}>
-          <Text style={player.timeText}>{timeLabel}</Text>
-          <Text style={player.timeSub}>{session.durationMinutes} min</Text>
-        </View>
-      </View>
-
-      {/* Guidance text */}
-      {(running || done) && (
-        <PremiumCard style={player.guideCard}>
-          <Text style={[player.guideText, { color: catColor }]}>
-            {done ? '✦ Sesión completada ✦' : currentPhaseText}
+        <Text style={player.sessionTitle}>{session.title}</Text>
+        {!started && <Text style={player.sessionDesc}>{session.description}</Text>}
+        {!started && evidence && (
+          <Text style={player.evidence}>
+            {EVIDENCE_GRADE_LABEL[evidence.grade]}
           </Text>
+        )}
 
-          {/* Lo que hace esto de Polaris y no una meditación genérica: en la
-              fase de declaración la voz dice algo neutro y la pantalla muestra
-              el Norte que escribió ESTE usuario. Un solo mp3 sirve para todos
-              y aun así cada quien lee lo suyo. */}
-          {!done && northStar && session.phases[phaseIdx]?.showsNorthStar && (
-            <>
-              <GoldDivider />
+        <Text style={player.timeText} accessibilityRole="timer">{timeLabel}</Text>
+
+        {started && (
+          <View style={player.guide}>
+            <Text style={player.guideText}>{currentPhaseText}</Text>
+            {/* En la fase de declaración la pantalla muestra el Norte que
+                escribió ESTE usuario. */}
+            {northStar && session.phases[phaseIdx]?.showsNorthStar && (
               <Text style={player.northStarText}>{northStar}</Text>
+            )}
+          </View>
+        )}
+
+        <View style={player.controls}>
+          {!started && (
+            <Pressable style={player.mainBtn} onPress={startSession} accessibilityRole="button" accessibilityLabel="Empezar sesión">
+              <Text style={player.mainBtnText}>EMPEZAR</Text>
+            </Pressable>
+          )}
+          {running && (
+            <Pressable style={player.ghostBtn} onPress={handlePause} accessibilityRole="button" accessibilityLabel="Pausar sesión">
+              <Text style={player.ghostBtnText}>PAUSA</Text>
+            </Pressable>
+          )}
+          {paused && (
+            <>
+              <Pressable style={player.mainBtn} onPress={handleResume} accessibilityRole="button" accessibilityLabel="Seguir con la sesión">
+                <Text style={player.mainBtnText}>SEGUIR</Text>
+              </Pressable>
+              <Pressable style={player.textBtn} onPress={handleStop} accessibilityRole="button" accessibilityLabel="Terminar sesión">
+                <Text style={player.textBtnText}>Terminar</Text>
+              </Pressable>
             </>
           )}
-        </PremiumCard>
-      )}
-
-      {/* Cierre: registrar cómo se siente tras la sesión */}
-      {done && (
-        <PracticeClose message="Sesión cerrada. ¿Cómo aterriza tu mente ahora? Registrarlo es el dato que sí importa." />
-      )}
-
-      {/* Controls */}
-      <View style={player.controls}>
-        {!running && !paused && !done && (
-          <Pressable style={player.startBtn} onPress={startSession} accessibilityRole="button" accessibilityLabel="Iniciar sesión">
-            <MaterialIcons name="play-arrow" size={28} color={palette.ink} />
-            <Text style={player.startBtnText}>INICIAR SESIÓN</Text>
-          </Pressable>
-        )}
-        {running && (
-          <View style={player.controlRow}>
-            <Pressable style={player.pauseBtn} onPress={handlePause} accessibilityRole="button" accessibilityLabel="Pausar sesión">
-              <MaterialIcons name="pause" size={22} color={palette.goldText} />
-              <Text style={player.pauseBtnText}>PAUSAR</Text>
-            </Pressable>
-            <Pressable style={player.stopBtn} onPress={handleStop} accessibilityRole="button" accessibilityLabel="Detener sesión">
-              <MaterialIcons name="stop" size={22} color={palette.ash} />
-              <Text style={player.stopBtnText}>DETENER</Text>
-            </Pressable>
-          </View>
-        )}
-        {paused && !done && (
-          <View style={player.controlRow}>
-            <Pressable style={player.startBtn} onPress={handleResume} accessibilityRole="button" accessibilityLabel="Reanudar sesión">
-              <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
-              <Text style={player.startBtnText}>REANUDAR</Text>
-            </Pressable>
-            <Pressable style={player.stopBtn} onPress={handleStop} accessibilityRole="button" accessibilityLabel="Detener sesión">
-              <MaterialIcons name="stop" size={22} color={palette.ash} />
-              <Text style={player.stopBtnText}>DETENER</Text>
-            </Pressable>
-          </View>
-        )}
-        {done && (
-          <Pressable style={player.startBtn} onPress={onExit} accessibilityRole="button" accessibilityLabel="Completado, volver">
-            <MaterialIcons name="check" size={22} color={palette.ink} />
-            <Text style={player.startBtnText}>COMPLETADO</Text>
-          </Pressable>
-        )}
+        </View>
       </View>
     </View>
   );
@@ -427,19 +308,17 @@ function MeditationPlayer({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function MeditacionScreen() {
-  const sc = useScreen();
   const router = useRouter();
   const { focus: focusParam } = useLocalSearchParams<{ focus?: string | string[] }>();
-  const insets = useSafeAreaInsets();
   const { saveWellnessSession, state, latestCheckIn } = useLifeFlow();
-  // Razón de ser HOY: si la saturación viene alta, la pantalla lo dice con el
-  // dato. Sin lectura alta, la línea de siempre — no se dramatiza sin dato.
+  // Si la saturación viene alta, la pantalla lo dice con el dato.
   const stressReading = latestCheckIn?.stress ?? null;
   const introLine =
     stressReading !== null && stressReading >= 7
-      ? `Tu saturación está en ${stressReading}/10 — diez minutos aquí valen más que una hora de pantalla. Auriculares puestos.`
-      : 'El único momento del día en que no se te pide nada. Usa auriculares para mejor experiencia.';
+      ? `Tu estrés está en ${stressReading}/10 en tu check-in. Diez minutos aquí ayudan. Usa audífonos.`
+      : 'Unos minutos en los que no se te pide nada. Usa audífonos.';
   const [active, setActive] = useState<MeditationSession | null>(null);
+  const [openCat, setOpenCat] = useState<string | null>(null);
   const contextualFocusId = parseEnergyFocusId(focusParam);
   const contextualFocus = contextualFocusId ? energyFocusById(contextualFocusId) : null;
 
@@ -475,76 +354,27 @@ export default function MeditacionScreen() {
     );
   }
 
-  /** Una sesión. Extraída del `.map` para que las cuatro lentes la compartan. */
-  const renderSession = (session: MeditationSession) => {
-const done = completedIds.has(session.id);
-  const catColor = CATEGORY_COLOR[session.category] ?? palette.gold;
-  const catIcon = CATEGORY_ICON[session.category] ?? 'self-improvement';
+  // "Para ahora": primera sesión de la categoría de la hora que aún no hiciste.
+  const pool = SESSIONS_BY_CATEGORY[categoryForHour(new Date().getHours())] ?? MEDITATION_SESSIONS;
+  const suggested = pool.find((s) => !completedIds.has(s.id)) ?? pool[0] ?? MEDITATION_SESSIONS[0];
+
+  const open = (session: MeditationSession) => { haptic('light'); setActive(session); };
 
   return (
-    <Pressable
-      key={session.id}
-      onPress={() => { haptic('light'); setActive(session); }}
-      accessibilityRole="button"
-      accessibilityLabel={`${session.title}, ${session.category}, ${session.durationMinutes} minutos${done ? ', completada' : ''}`}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-      <PremiumCard style={styles.cardInner}>
-        <View style={styles.cardTop}>
-          <View style={[styles.iconBox, { backgroundColor: alpha(catColor, '22') }]}>
-            <MaterialIcons name={catIcon} size={26} color={catColor} />
-          </View>
-          <View style={styles.cardMeta}>
-            <Text style={styles.cardTitle}>{session.title}</Text>
-            <View style={styles.cardTags}>
-              <View style={[styles.tag, { borderColor: catColor }]}>
-                <Text style={[styles.tagText, { color: catColor }]}>
-                  {session.category.toUpperCase()}
-                </Text>
-              </View>
-              <Text style={styles.duration}>{session.durationMinutes} min</Text>
-              {/* Solo aparece si la sesion declara evidencia. La ausencia
-                  del sello ES la informacion: no hay estado "sin respaldo". */}
-              <EvidenceBadge evidence={session.evidence} />
-            </View>
-          </View>
-          {done
-            ? <MaterialIcons name="check-circle" size={26} color={palette.success} />
-            : <MaterialIcons name="play-circle" size={26} color={palette.goldText} />
-          }
-        </View>
-        <Text style={styles.cardDesc}>{session.description}</Text>
-      </PremiumCard>
-    </Pressable>
-  );
-  };
-
-  return (
-    <View style={sc.root}>
-      {/* Las prácticas son de los pocos momentos inmersivos donde la marca
-          permite color de fondo. Va FUERA del ScrollView y anclado al
-          viewport: dentro del `contentContainerStyle` (que es `maxWidth: 430`
-          centrado) se vería como una franja con costura contra el negro. */}
-      {/* Asentar. `recuperado` es el verde bajo en croma. */}
-      <Aura state="recuperado" weight={0.8} />
-    <ScrollView
-      style={styles.auraScroll}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
-      showsVerticalScrollIndicator={false}>
-
-      <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-        </Pressable>
-        <Text style={styles.title}>MEDITACIÓN</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <Text style={styles.intro}>{introLine}</Text>
-
-      <SafetyWarning
-        body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria. Si durante la práctica aumenta la angustia, sientes desconexión de tu cuerpo o del entorno, o aparece miedo intenso, detén la sesión y abre los ojos: parar es la respuesta correcta, no algo que haya que atravesar."
-      />
-
+    <Pantalla
+      meta="BIENESTAR · CALMA"
+      title="Meditación"
+      sub={introLine}
+      hero={
+        <TarjetaOro
+          meta="PARA AHORA"
+          metaRight={`${suggested.durationMinutes} MIN`}
+          title={suggested.title}
+          detail={suggested.description}
+          onPress={() => open(suggested)}
+          accessibilityLabel={`Empezar: ${suggested.title}, ${suggested.durationMinutes} minutos`}
+        />
+      }>
       {contextualFocus ? (
         <View style={styles.focusCard}>
           <BodyFocusCard
@@ -555,222 +385,86 @@ const done = completedIds.has(session.id);
         </View>
       ) : null}
 
+      {/* Las demás, agrupadas por para qué y plegadas: un grupo abierto a la vez. */}
+      {CATEGORIES.map((cat) => {
+        const items = SESSIONS_BY_CATEGORY[cat];
+        const isOpen = openCat === cat;
+        return (
+          <View key={cat}>
+            <Fila
+              label={cat.toUpperCase()}
+              value={isOpen ? 'Cerrar' : `${items.length} ${items.length === 1 ? 'sesión' : 'sesiones'}`}
+              onPress={() => setOpenCat(isOpen ? null : cat)}
+            />
+            {isOpen && items.map((session) => (
+              <View key={session.id} style={styles.sub}>
+                <Fila
+                  label={session.title.toUpperCase()}
+                  value={`${session.durationMinutes} min${completedIds.has(session.id) ? ' · hecha' : ''}`}
+                  onPress={() => open(session)}
+                />
+              </View>
+            ))}
+          </View>
+        );
+      })}
+
+      <AntesDeEmpezar>
+        <SafetyWarning
+          body="La meditación es una práctica de bienestar, no un tratamiento médico ni psicológico. Si atraviesas ansiedad intensa, trauma o una condición de salud mental, consúltalo con un profesional. No practiques mientras conduces u operas maquinaria. Si durante la práctica aumenta la angustia, sientes desconexión de tu cuerpo o del entorno, o aparece miedo intenso, detén la sesión y abre los ojos: parar es la respuesta correcta, no algo que haya que atravesar."
+        />
+      </AntesDeEmpezar>
+
       {/* Contexto biométrico del día (honesto, no en vivo) */}
-      <BodyContextCard frame="Medita para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
+      <View style={styles.context}>
+        <BodyContextCard frame="Medita para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
+      </View>
 
-      {/* ── LENTES EN VEZ DE PILA ─────────────────────────────────────────
-          26 sesiones en una lista plana son 26 tarjetas apiladas: para llegar
-          a la última hay que pasar por las veinticinco anteriores, y todas
-          pesan lo mismo. La categoría ya vive en los datos — solo hacía falta
-          dejar de ignorarla. Se elige por dónde mirar, no cuánto bajar. */}
-      <LensTabs
-        lenses={CATEGORIES.map((cat) => ({
-          id: cat,
-          label: cat.toUpperCase(),
-          render: () => <>{SESSIONS_BY_CATEGORY[cat].map(renderSession)}</>,
-        }))}
-      />
-
-      <View style={{ height: spacing.xxxl }} />
-    </ScrollView>
-    </View>
+      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
+    </Pantalla>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // El ScrollView ya no es la raíz: el aura se ancla al viewport por encima.
-  auraScroll: { flex: 1 },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xl,
-  },
-  backBtn: {
-    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-  },
-  title: {
-    ...typography.title,
-    color: palette.ivory,
-    fontSize: 18,
-  },
-  intro: {
-    ...typography.body,
-    color: palette.ash,
-    marginBottom: spacing.lg,
-  },
   focusCard: { marginBottom: spacing.lg },
-  card: { marginBottom: spacing.md },
-  cardPressed: { opacity: 0.8 },
-  cardInner: { gap: spacing.sm },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  iconBox: {
-    width: 52, height: 52,
-    borderRadius: radii.md,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  cardMeta: { flex: 1, gap: 4 },
-  cardTitle: {
-    ...typography.section,
-    color: palette.ivory,
-    fontSize: 14,
-    letterSpacing: 2,
-  },
-  cardTags: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  tag: {
-    borderWidth: 1,
-    borderRadius: radii.sm,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  tagText: {
-    ...typography.label,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  duration: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-  },
-  cardDesc: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-  },
+  sub: { paddingLeft: spacing.lg },
+  context: { marginVertical: spacing.lg },
+  antes: { minHeight: 56, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  antesLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
 });
 
 const player = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: palette.black,
-    paddingHorizontal: spacing.xl,
-    alignItems: 'center',
+  root: { flex: 1, backgroundColor: palette.black, paddingHorizontal: spacing.lg },
+  inner: { flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10 },
+  sessionTitle: {
+    marginTop: spacing.xl, fontFamily: Fonts.displayRegular, fontWeight: '400',
+    fontSize: 32, lineHeight: 36, color: palette.ivory,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingTop: 56,
-    marginBottom: spacing.lg,
+  sessionDesc: { marginTop: spacing.md, fontFamily: Fonts.sans, fontSize: 16, lineHeight: 24, color: palette.ash },
+  evidence: { marginTop: spacing.sm, fontFamily: Fonts.sans, fontSize: 13, lineHeight: 18, color: palette.smoke },
+  timeText: {
+    marginTop: spacing.xxxl, fontFamily: Fonts.display, fontWeight: '700',
+    fontSize: 72, lineHeight: 80, color: palette.ivory, fontVariant: ['tabular-nums'],
   },
-  backBtn: {
-    width: 44, height: 44,
+  guide: { marginTop: spacing.xl, gap: spacing.md },
+  guideText: { fontFamily: Fonts.sans, fontSize: 17, lineHeight: 26, color: palette.ash },
+  northStarText: {
+    fontFamily: Fonts.displayRegular, fontWeight: '400', color: palette.ivory, fontSize: 18, lineHeight: 26,
+  },
+  controls: { marginTop: spacing.xxxl, gap: spacing.md },
+  mainBtn: {
+    minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.gold,
     alignItems: 'center', justifyContent: 'center',
   },
-  sessionTitle: {
-    ...typography.title,
-    color: palette.ivory,
-    fontSize: 22,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
+  mainBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ink },
+  ghostBtn: {
+    minHeight: 52, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineHard,
+    alignItems: 'center', justifyContent: 'center',
   },
-  evidenceSlot: {
-    marginTop: spacing.md,
-    marginHorizontal: spacing.lg,
-  },
-  sessionDesc: {
-    ...typography.body,
-    color: palette.smoke,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  circleContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: spacing.lg,
-  },
-  circleCenter: {
-    position: 'absolute',
-    alignItems: 'center',
-  },
-  timeText: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 42,
-    letterSpacing: 2,
-  },
-  timeSub: {
-    ...typography.label,
-    color: palette.smoke,
-    marginTop: 4,
-  },
-  guideCard: {
-    width: '100%',
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    marginVertical: spacing.lg,
-  },
-  guideText: {
-    ...typography.body,
-    textAlign: 'center',
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  northStarText: {
-    fontFamily: Fonts.displayMedium,
-    fontWeight: '600',
-    color: palette.goldText,
-    textAlign: 'center',
-    fontSize: 17,
-    lineHeight: 27,
-  },
-  controls: {
-    marginTop: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  controlRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'center',
-  },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: palette.gold,
-    paddingHorizontal: spacing.xxxl,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.sm,
-  },
-  startBtnText: {
-    ...typography.label,
-    color: palette.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  pauseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderColor: palette.gold,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.sm,
-  },
-  pauseBtnText: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 12,
-  },
-  stopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderColor: palette.smoke,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.sm,
-  },
-  stopBtnText: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 12,
-  },
+  ghostBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ivory },
+  textBtn: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  textBtnText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
 });

@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { POLARIS_MODULES } from '@/data/modules';
-import { palette } from '@/constants/theme';
-import { Fila, Pantalla } from '@/components/pantalla';
+import { Fonts, palette } from '@/constants/theme';
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { protocolSnapshot } from '@/lib/protocolSnapshot';
 
@@ -30,8 +30,6 @@ export default function ProgresoScreen() {
   }), [state.protocolStartDate, state.checkIns, state.completedLessons, state.completedTasks, wellnessMeditation, wellnessBreathing, wellnessBinaural]);
   const protocolDay = snap.protocolDay;
   const checkinStreak = snap.streak;
-  /** Sin lecturas el score no mide nada — ver el comentario en su render. */
-  const sinLecturas = !snap.hasReadings;
 
   // SIN VITRINA DE TROFEOS. Aqui vivia un array de ocho fichas de 22% de ancho
   // que se rellenaban de oro macizo al ganarse, con iconos de copa, estrellas y
@@ -77,17 +75,23 @@ export default function ProgresoScreen() {
   const media = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null);
   const ultimos = ordenados.slice(0, 7);
   const anteriores = ordenados.slice(7, 14);
+  const coma = (n: number) => n.toFixed(1).replace('.', ',').replace(',0', '');
+  // El check-in pregunta de 1 a 5 y guarda ×2. Aquí se muestra en la escala
+  // que el usuario USÓ: nunca eligió un «10».
   const cifra = (key: 'energy' | 'clarity') => {
-    const ahora = media(ultimos.map((c) => c[key]));
-    const antes = media(anteriores.map((c) => c[key]));
-    if (ahora === null) return 'Sin lecturas aún';
-    const base = `${ahora.toFixed(1).replace('.', ',')} de 10`;
+    const ahora = media(ultimos.map((c) => c[key] / 2));
+    const antes = media(anteriores.map((c) => c[key] / 2));
+    if (ahora === null) return 'Sin check-ins aún';
+    const base = `${coma(ahora)} de 5`;
     if (antes === null) return base;
     const d = ahora - antes;
-    if (Math.abs(d) < 0.05) return `${base} · igual`;
-    return `${base} · ${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1).replace('.', ',')}`;
+    if (Math.abs(d) < 0.05) return `${base} · igual que la semana pasada`;
+    return `${base} · ${coma(Math.abs(d))} ${d > 0 ? 'más' : 'menos'} que la semana pasada`;
   };
   const modulosHechos = archetypes.filter((a) => a.earned).length;
+  const hoyClave = claveDia(new Date());
+  const hechoHoy = state.checkIns.some((c) => c.date.slice(0, 10) === hoyClave);
+  const calendario = <Calendario checkIns={state.checkIns} />;
 
   return (
     <Pantalla
@@ -95,21 +99,23 @@ export default function ProgresoScreen() {
       metaRight={`DÍA ${protocolDay} / 90`}
       title={checkinStreak > 0
         ? `${checkinStreak} ${checkinStreak === 1 ? 'día' : 'días'}\nseguido${checkinStreak === 1 ? '' : 's'}.`
-        : state.checkIns.length ? 'Retoma\nhoy.' : 'Tu racha\nempieza hoy.'}
-      sub={checkinStreak > 0 || state.checkIns.length
-        ? 'Cada cuadro amarillo es un día que apareciste.'
-        : 'Haz tu check-in y aparece el primer cuadro.'}
-      hero={<Calendario checkIns={state.checkIns} />}>
+        : 'Hoy\ncuenta.'}
+      sub="Cada cuadro amarillo es un día que hiciste tu check-in."
+      // La única acción de la pantalla: el check-in de hoy, si falta.
+      hero={hechoHoy ? calendario : (
+        <TarjetaOro
+          meta="CHECK-IN"
+          metaRight="2 MIN"
+          title="Hacer mi check-in"
+          onPress={() => router.push('/checkin' as never)}
+        />
+      )}>
+      {!hechoHoy && <View style={styles.calRows}>{calendario}</View>}
       <Fila label="ENERGÍA" value={cifra('energy')} />
       <Fila label="CLARIDAD" value={cifra('clarity')} />
       <Fila
-        label="PUNTAJE"
-        value={sinLecturas ? 'Aparece con tu primer check-in' : `${snap.score} · ${snap.tier}`}
-        onPress={() => router.push('/perfil' as never)}
-      />
-      <Fila
-        label="ARQUETIPOS"
-        value={`${modulosHechos} de ${archetypes.length} desbloqueados`}
+        label="MÓDULOS"
+        value={`${modulosHechos} de ${archetypes.length} terminados`}
         onPress={() => router.push('/(tabs)/programas' as never)}
         last
       />
@@ -117,11 +123,14 @@ export default function ProgresoScreen() {
   );
 }
 
+const claveDia = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
 /** Seis semanas de check-ins, de lunes a domingo. Hoy lleva contorno. */
 function Calendario({ checkIns }: { checkIns: { date: string }[] }) {
   const dias = useMemo(() => {
-    const clave = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     const lunes = new Date(hoy);
@@ -130,42 +139,48 @@ function Calendario({ checkIns }: { checkIns: { date: string }[] }) {
     return Array.from({ length: 42 }, (_, i) => {
       const d = new Date(lunes);
       d.setDate(lunes.getDate() + i);
-      return { key: clave(d), on: hechos.has(clave(d)), hoy: +d === +hoy, futuro: d > hoy };
+      return { key: claveDia(d), on: hechos.has(claveDia(d)), hoy: +d === +hoy, futuro: d > hoy };
     });
   }, [checkIns]);
   const hechos30 = dias.filter((d) => d.on).length;
   return (
     <View
-      style={styles.cal}
       accessible
       accessibilityLabel={`Calendario de las últimas seis semanas: ${hechos30} días con check-in`}>
-      {dias.map((d) => (
-        <View key={d.key} style={styles.calCell}>
-          <View
-            style={[
-              styles.calDay,
-              d.on && styles.calDayOn,
-              d.futuro && styles.calDayFuture,
-              d.hoy && styles.calDayToday,
-            ]}
-          />
-        </View>
-      ))}
+      <View style={styles.cal}>
+        {DIAS_SEMANA.map((l, i) => (
+          <View key={`${l}${i}`} style={styles.calCell}>
+            <Text style={styles.calHead}>{l}</Text>
+          </View>
+        ))}
+        {dias.map((d) => (
+          <View key={d.key} style={styles.calCell}>
+            <View
+              style={[
+                styles.calDay,
+                d.on && styles.calDayOn,
+                d.futuro && styles.calDayFuture,
+                d.hoy && styles.calDayToday,
+              ]}
+            />
+          </View>
+        ))}
+      </View>
+      <Text style={styles.calNote}>El cuadro con borde es hoy.</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // ── Rediseño ──
+  calRows: { marginBottom: 32 },
   cal: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3, maxWidth: 380 },
   calCell: { width: '14.2857%', padding: 3 },
-  calDay: { aspectRatio: 1, borderRadius: 4, backgroundColor: palette.charcoal },
-  calDayOn: { backgroundColor: palette.gold },
+  calHead: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, color: palette.smoke, textAlign: 'center' },
+  // Vacío con contorno `smoke`: en claro el relleno solo (#EFEFEF sobre
+  // #E9E9E9) era invisible — el contorno pasa 3:1 (WCAG 1.4.11) en ambos temas.
+  calDay: { aspectRatio: 1, borderRadius: 4, backgroundColor: palette.charcoal, borderWidth: 1, borderColor: palette.smoke },
+  calDayOn: { backgroundColor: palette.gold, borderColor: palette.gold },
   calDayFuture: { opacity: 0.35 },
   calDayToday: { borderWidth: 2, borderColor: palette.ivory },
-
-  // Achievements
-
-
+  calNote: { marginTop: 8, fontFamily: Fonts.sans, fontSize: 13, color: palette.ash },
 });
-

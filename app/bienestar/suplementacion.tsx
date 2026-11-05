@@ -2,29 +2,26 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts, radii, hitBox } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { Pantalla } from '@/components/pantalla';
+import { Fonts, palette, radii, spacing } from '@/constants/theme';
 
+// Los ids se quedan como están: son la columna `goal` de supplement_stacks.
 type Tab = 'energia' | 'sueno' | 'cognitivo';
 
-interface Supplement {
-  name:      string;
-  dose:      string;
-  timing:    string;
-  evidence:  string;
-  color:     string;
-}
+// Catálogo SIN dosis: la dosis es la que indica el médico, no la app.
+// Cada línea dice en llano para qué se usa y qué tan firme es la evidencia.
+interface Supplement { name: string; what: string }
 
 // Entrada estructurada persistida en supplement_stacks.supplements (jsonb).
 interface StackItem {
@@ -36,48 +33,46 @@ interface StackItem {
 
 const SUPPLEMENTS: Record<Tab, Supplement[]> = {
   energia: [
-    { name: 'Ashwagandha', dose: '300–600 mg',  timing: 'Mañana con comida',   evidence: 'En ensayos KSM-66 reduce cortisol (~27%) y mejora la resistencia al estrés.', color: palette.gold },
-    { name: 'Vitamina D3', dose: '5000 UI',      timing: 'Mañana con grasa',    evidence: 'Deficiencia correlaciona con fatiga crónica. Óptimo: 60-80 ng/mL.', color: palette.gold },
-    { name: 'B-Complex',   dose: '1 cápsula',    timing: 'Desayuno',            evidence: 'B12 y B6 esenciales en producción de ATP y síntesis de dopamina.', color: palette.gold },
-    { name: 'CoQ10',       dose: '100–200 mg',   timing: 'Almuerzo con grasa',  evidence: 'Cofactor en cadena mitocondrial. Especialmente útil >35 años.', color: palette.gold },
-    { name: 'Hierro (si déficit)', dose: 'Según lab', timing: 'En ayunas',     evidence: 'Déficit = fatiga inexplicable. Verificar ferritina sérica primero.', color: palette.gold },
+    { name: 'Vitamina D3',  what: 'Sirve si un análisis muestra que te falta.' },
+    { name: 'Complejo B',   what: 'Vitaminas B. Sirven si te faltan; si no, no suman energía.' },
+    { name: 'Hierro',       what: 'Solo si un análisis de sangre muestra que te falta.' },
+    { name: 'Ashwagandha',  what: 'Planta estudiada para el estrés. La evidencia aún es limitada.' },
+    { name: 'CoQ10',        what: 'Se estudia para la energía. En personas sanas, la evidencia es débil.' },
   ],
   sueno: [
-    { name: 'Magnesio Glicinato', dose: '300–400 mg', timing: '30–60 min antes dormir', evidence: 'Activa receptores GABA. Reduce tiempo de conciliación en 17 min.', color: palette.gold },
-    { name: 'L-Teanina',    dose: '200 mg',      timing: '30 min antes dormir', evidence: 'Aumenta ondas alfa cerebrales. Sinérgico con magnesio para sueño profundo.', color: palette.gold },
-    { name: 'Melatonina',   dose: '0.5–1 mg',    timing: '20 min antes dormir', evidence: 'Dosis bajas (0.5 mg) más efectivas que altas. No genera dependencia.', color: palette.gold },
-    { name: 'Ashwagandha',  dose: '300 mg',      timing: 'Noche',               evidence: 'Adaptógeno. Estudios reportan menor cortisol y mejor calidad de sueño.', color: palette.gold },
-    { name: 'Glicina',      dose: '3 g',         timing: 'Antes de dormir',     evidence: 'Baja temperatura corporal central. Aumenta sueño REM según estudios.', color: palette.gold },
+    { name: 'Magnesio',     what: 'Mineral. Algunos estudios pequeños lo relacionan con mejor descanso.' },
+    { name: 'Melatonina',   what: 'Útil para el desfase horario. Para uso corto; consúltalo.' },
+    { name: 'L-teanina',    what: 'Componente del té. Evidencia preliminar para relajarte.' },
+    { name: 'Glicina',      what: 'Aminoácido. Evidencia preliminar para dormir.' },
   ],
   cognitivo: [
-    { name: "Lion's Mane",  dose: '500–1000 mg', timing: 'Mañana',              evidence: 'Estudios preliminares sugieren que estimula el NGF (factor de crecimiento nervioso).', color: palette.gold },
-    { name: 'Omega-3 DHA',  dose: '1–2 g DHA',   timing: 'Con comida grasa',   evidence: 'DHA constituye 25% del córtex prefrontal. Esencial en neurogénesis.', color: palette.gold },
-    { name: 'Rhodiola',     dose: '200–400 mg',  timing: 'Mañana en ayunas',    evidence: 'Adaptógeno. Estudios reportan menor fatiga mental bajo estrés.', color: palette.gold },
-    { name: 'Alpha-GPC',    dose: '300–600 mg',  timing: 'Mañana o pre-entreno',evidence: 'Precursor de acetilcolina. Mejora memoria de trabajo y velocidad cognitiva.', color: palette.gold },
-    { name: 'Bacopa',       dose: '300 mg',      timing: 'Con comida',          evidence: 'Mejora memoria a largo plazo con 8–12 semanas de uso continuo.', color: palette.gold },
+    { name: 'Omega-3',          what: 'Grasas del pescado. Importantes para el corazón y el cerebro.' },
+    { name: 'Rhodiola',         what: 'Planta estudiada para el cansancio. Evidencia limitada.' },
+    { name: 'Bacopa',           what: 'Planta. Efecto leve en memoria tras semanas, según algunos estudios.' },
+    { name: 'Melena de león',   what: 'Hongo. La evidencia en personas es muy preliminar.' },
   ],
 };
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'energia',   label: 'ENERGÍA',    icon: 'bolt' },
-  { id: 'sueno',     label: 'SUEÑO',      icon: 'bedtime' },
-  { id: 'cognitivo', label: 'COGNITIVO',  icon: 'psychology' },
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'energia',   label: 'ENERGÍA' },
+  { id: 'sueno',     label: 'SUEÑO' },
+  { id: 'cognitivo', label: 'CONCENTRACIÓN' },
 ];
+
+type Mine = Record<string, { dose: string; timing: string }>;
+const key = (tab: Tab, name: string) => `${tab}:${name}`;
 
 export default function SuplementacionScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
 
   const [activeTab, setActiveTab] = useState<Tab>('energia');
-  const [savedStack, setSavedStack] = useState<string | null>(null);
-  const [editing, setEditing] = useState<string | null>(null);
-  // Overrides editables de dosis/timing por suplemento (clave: `${tab}:${name}`).
-  const [overrides, setOverrides] = useState<Record<string, { dose: string; timing: string }>>({});
+  // Lo que TÚ tomas: presencia en el mapa = lo tomas. Sin dosis precargadas.
+  const [mine, setMine] = useState<Mine>({});
+  const [saved, setSaved] = useState<Tab | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const ovKey = (tab: Tab, name: string) => `${tab}:${name}`;
-
-  // Carga los stacks guardados (estructurados) y aplica las dosis/timing editadas.
+  // Carga lo guardado (estructurado).
   useEffect(() => {
     if (!userId) return;
     (async () => {
@@ -86,234 +81,202 @@ export default function SuplementacionScreen() {
           .select('goal, supplements')
           .eq('user_id', userId);
         if (!Array.isArray(data)) return;
-        const next: Record<string, { dose: string; timing: string }> = {};
+        const next: Mine = {};
         for (const row of data as any[]) {
           const goal = row.goal as Tab;
           const items = row.supplements;
           if (!Array.isArray(items)) continue;
           for (const it of items) {
             if (it && typeof it === 'object' && it.name) {
-              next[ovKey(goal, it.name)] = {
-                dose:   it.dose   ?? '',
-                timing: it.timing ?? '',
-              };
+              next[key(goal, it.name)] = { dose: it.dose ?? '', timing: it.timing ?? '' };
             }
           }
         }
-        if (Object.keys(next).length) setOverrides(prev => ({ ...next, ...prev }));
+        if (Object.keys(next).length) setMine(prev => ({ ...next, ...prev }));
       } catch { /* tabla/columna puede no existir aún */ }
     })();
   }, [userId]);
 
-  // Suplementos del tab actual con dosis/timing efectivos (override > catálogo).
-  const currentSupps = SUPPLEMENTS[activeTab].map(s => {
-    const ov = overrides[ovKey(activeTab, s.name)];
-    return { ...s, dose: ov?.dose || s.dose, timing: ov?.timing || s.timing };
-  });
+  const toggle = (name: string) => {
+    setMine(prev => {
+      const k = key(activeTab, name);
+      if (prev[k]) {
+        const rest = { ...prev };
+        delete rest[k];
+        return rest;
+      }
+      return { ...prev, [k]: { dose: '', timing: '' } };
+    });
+    setSaved(null);
+  };
 
   const setField = (name: string, field: 'dose' | 'timing', value: string) => {
-    setOverrides(prev => {
-      const key = ovKey(activeTab, name);
-      const base = prev[key] ?? {
-        dose:   SUPPLEMENTS[activeTab].find(s => s.name === name)?.dose   ?? '',
-        timing: SUPPLEMENTS[activeTab].find(s => s.name === name)?.timing ?? '',
-      };
-      return { ...prev, [key]: { ...base, [field]: value } };
+    setMine(prev => {
+      const k = key(activeTab, name);
+      return { ...prev, [k]: { ...(prev[k] ?? { dose: '', timing: '' }), [field]: value } };
     });
-    setSavedStack(null);
+    setSaved(null);
   };
 
   const saveStack = async () => {
-    // Stack ESTRUCTURADO: objetos {name, dose, timing, category}.
-    const structured: StackItem[] = currentSupps.map(s => ({
-      name:     s.name,
-      dose:     s.dose,
-      timing:   s.timing,
-      category: activeTab,
-    }));
-    setEditing(null);
-    if (!userId) { setSavedStack(activeTab); return; }
-    try {
-      await db2.supplements().upsert({
-        user_id:     userId,
-        goal:        activeTab,
-        supplements: structured,
-        // legacy: mantiene el array de nombres por compatibilidad con lecturas viejas
-        stack:       structured.map(s => s.name),
-        updated_at:  new Date().toISOString(),
-      }, { onConflict: 'user_id,goal' });
-    } catch { /* tabla puede no existir aún */ }
-    setSavedStack(activeTab);
+    // Solo lo marcado en esta pestaña; desmarcar todo y guardar = quitarlos.
+    const structured: StackItem[] = SUPPLEMENTS[activeTab]
+      .filter(s => mine[key(activeTab, s.name)])
+      .map(s => ({ name: s.name, ...mine[key(activeTab, s.name)], category: activeTab }));
+    setSaving(true);
+    if (userId) {
+      try {
+        await db2.supplements().upsert({
+          user_id:     userId,
+          goal:        activeTab,
+          supplements: structured,
+          // legacy: mantiene el array de nombres por compatibilidad con lecturas viejas
+          stack:       structured.map(s => s.name),
+          updated_at:  new Date().toISOString(),
+        }, { onConflict: 'user_id,goal' });
+      } catch { /* tabla puede no existir aún */ }
+    }
+    setSaving(false);
+    setSaved(activeTab);
   };
 
+  const count = SUPPLEMENTS[activeTab].filter(s => mine[key(activeTab, s.name)]).length;
+
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-        </Pressable>
-        <Text style={styles.title}>SUPLEMENTOS</Text>
-        <View style={{ width: 38 }} />
-      </View>
-
-      {/* Disclaimer estático */}
-      <View style={styles.disclaimer}>
-        <MaterialIcons name="info-outline" size={14} color={palette.ash} style={{ marginTop: 1 }} />
-        <Text style={styles.disclaimerText}>
-          Solo información educativa. Consulta a tu médico antes de suplementarte.
-        </Text>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabRow}>
-        {TABS.map(tab => (
-          <Pressable
-            key={tab.id}
-            onPress={() => { setActiveTab(tab.id); setSavedStack(null); setEditing(null); }}
-            style={[styles.tab, activeTab === tab.id && styles.tabActive]}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === tab.id }}
-            accessibilityLabel={`Suplementos para ${tab.label.toLowerCase()}`}
-          >
-            <MaterialIcons name={tab.icon as any} size={16} color={activeTab === tab.id ? palette.ink : palette.ash} />
-            <Text style={[styles.tabText, activeTab === tab.id && { color: palette.ink }]}>{tab.label}</Text>
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Pantalla
+        meta="BIENESTAR · SALUD"
+        title="Suplementos"
+        sub="Marca lo que ya tomas y cuándo. Para tenerlo claro, no para empezar algo nuevo."
+        footer={
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
+            <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
+            <Text style={styles.backText}>VOLVER</Text>
           </Pressable>
-        ))}
-      </View>
+        }>
+        <Text style={styles.note}>
+          Solo información educativa. Consulta a tu médico antes de tomar cualquier suplemento.
+        </Text>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {currentSupps.map((s, i) => {
-          const isEditing = editing === s.name;
+        {/* Pestañas: texto subrayado, sin relleno amarillo. */}
+        <View style={styles.tabRow} accessibilityRole="tablist">
+          {TABS.map(tab => {
+            const active = activeTab === tab.id;
+            return (
+              <Pressable
+                key={tab.id}
+                onPress={() => { setActiveTab(tab.id); setSaved(null); }}
+                style={[styles.tab, active && styles.tabActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`Suplementos para ${tab.label.toLowerCase()}`}>
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {SUPPLEMENTS[activeTab].map((s, i) => {
+          const entry = mine[key(activeTab, s.name)];
+          const on = !!entry;
           return (
-            <View key={i} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.colorDot, { backgroundColor: s.color }]} />
-                <Text style={styles.cardName}>{s.name}</Text>
-                {!isEditing && (
-                  <View style={styles.doseChip}>
-                    <Text style={styles.doseText}>{s.dose}</Text>
-                  </View>
-                )}
-                <Pressable
-                  onPress={() => setEditing(isEditing ? null : s.name)}
-                  hitSlop={8}
-                  style={hitBox(28)}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: isEditing }}
-                  accessibilityLabel={isEditing ? `Cerrar edición de ${s.name}` : `Editar dosis y horario de ${s.name}`}
-                >
-                  {/* El circulo sigue midiendo 28; lo que crece es la caja
-                      que se toca. `hitSlop` no vale en la PWA -- RNW no lo
-                      implementa -- asi que la caja tiene que ser real. */}
-                  <View style={styles.editBtn}>
-                    <MaterialIcons name={isEditing ? 'check' : 'edit'} size={16} color={palette.goldText} />
-                  </View>
-                </Pressable>
-              </View>
-
-              {isEditing ? (
-                <View style={styles.editGrid}>
-                  <View style={styles.editField}>
-                    <Text style={styles.editLabel}>DOSIS</Text>
-                    <TextInput
-                      style={styles.editInput}
-                      value={s.dose}
-                      onChangeText={(v) => setField(s.name, 'dose', v)}
-                      placeholder="Ej: 300 mg"
-                      placeholderTextColor={palette.smoke}
-                      accessibilityLabel={`Dosis de ${s.name}`}
-                    />
-                  </View>
-                  <View style={styles.editField}>
-                    <Text style={styles.editLabel}>TIMING</Text>
-                    <TextInput
-                      style={styles.editInput}
-                      value={s.timing}
-                      onChangeText={(v) => setField(s.name, 'timing', v)}
-                      placeholder="Ej: Mañana con comida"
-                      placeholderTextColor={palette.smoke}
-                      accessibilityLabel={`Horario de ${s.name}`}
-                    />
-                  </View>
+            <View key={s.name} style={[styles.row, i === SUPPLEMENTS[activeTab].length - 1 && styles.rowLast]}>
+              <Pressable
+                onPress={() => toggle(s.name)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={`Lo tomo: ${s.name}`}
+                style={styles.rowHead}>
+                <View style={styles.rowText}>
+                  <Text style={styles.name}>{s.name}</Text>
+                  <Text style={styles.what}>{s.what}</Text>
+                  {on && !!entry.timing && <Text style={styles.timing}>{entry.timing}</Text>}
                 </View>
-              ) : (
-                <View style={styles.timingRow}>
-                  <MaterialIcons name="schedule" size={13} color={palette.goldText} />
-                  <Text style={styles.timingText}>{s.timing}</Text>
+                <MaterialIcons
+                  name={on ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color={on ? palette.goldText : palette.smoke}
+                />
+              </Pressable>
+              {on && (
+                <View style={styles.edit}>
+                  <Text style={styles.inputLabel}>TU DOSIS</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={entry.dose}
+                    onChangeText={(v) => setField(s.name, 'dose', v)}
+                    placeholder="La que te indicó tu médico"
+                    placeholderTextColor={palette.smoke}
+                    accessibilityLabel={`Tu dosis de ${s.name}, la que te indicó tu médico`}
+                  />
+                  <Text style={styles.inputLabel}>CUÁNDO</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={entry.timing}
+                    onChangeText={(v) => setField(s.name, 'timing', v)}
+                    placeholder="Por ejemplo: con el desayuno"
+                    placeholderTextColor={palette.smoke}
+                    accessibilityLabel={`Cuándo tomas ${s.name}`}
+                  />
                 </View>
               )}
-
-              <Text style={styles.evidenceText}>{s.evidence}</Text>
             </View>
           );
         })}
 
-        {/* Guardar stack */}
         <Pressable
           onPress={saveStack}
-          style={[styles.saveBtn, savedStack === activeTab && styles.saveBtnSaved]}
+          disabled={saving}
+          style={[styles.saveBtn, saving && styles.saveOff]}
           accessibilityRole="button"
-          accessibilityLabel={savedStack === activeTab ? 'Stack guardado' : 'Guardar este stack'}
-          accessibilityState={{ selected: savedStack === activeTab }}
-        >
-          <MaterialIcons
-            name={savedStack === activeTab ? 'check-circle' : 'bookmark-add'}
-            size={18}
-            color={palette.ink}
-          />
-          <Text style={styles.saveBtnText}>
-            {savedStack === activeTab ? 'STACK GUARDADO' : 'GUARDAR ESTE STACK'}
-          </Text>
+          accessibilityLabel="Guardar mis suplementos"
+          accessibilityState={{ disabled: saving }}>
+          <Text style={styles.saveText}>{saving ? 'GUARDANDO…' : 'GUARDAR MIS SUPLEMENTOS'}</Text>
         </Pressable>
+        <Text style={styles.hint}>
+          {saved === activeTab
+            ? `Guardado. ${count === 0 ? 'Ninguno marcado.' : `${count} en esta lista.`}`
+            : 'Tu dosis: la que te indicó tu médico.'}
+        </Text>
 
         <Text style={styles.footnote}>
-          Fuentes: Examine.com · PubMed · Huberman Lab. Evidencia = estudios RCT en humanos.
+          Fuente: Oficina de Suplementos Dietéticos de los NIH (ods.od.nih.gov) y estudios en humanos publicados en PubMed.
         </Text>
-      </ScrollView>
-    </View>
+      </Pantalla>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   root:          { flex: 1, backgroundColor: palette.black },
-  header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:       { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:         { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
 
-  disclaimer:    { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: alpha(palette.gold, '14'), borderRadius: radii.sm, padding: 10, borderWidth: 1, borderColor: alpha(palette.gold, '33') },
-  disclaimerText:{ flex: 1, fontSize: 11, color: palette.ash, lineHeight: 16 },
+  note:          { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash, marginBottom: spacing.lg },
 
-  tabRow:        { flexDirection: 'row', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: 4, gap: 4 },
-  tab:           { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: radii.sm - 2, gap: 5, minHeight: 44 },
-  tabActive:     { backgroundColor: palette.gold },
-  tabText:       { fontFamily: Fonts.display, fontSize: 11, color: palette.ash, letterSpacing: 1 },
+  tabRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginBottom: spacing.sm },
+  tab:           { minHeight: 44, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabActive:     { borderBottomColor: palette.ivory },
+  tabText:       { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
+  tabTextActive: { color: palette.ivory },
 
-  content:       { paddingHorizontal: spacing.md, paddingBottom: 40 },
+  row:           { borderTopWidth: 1, borderTopColor: palette.line },
+  rowLast:       { borderBottomWidth: 1, borderBottomColor: palette.line },
+  rowHead:       { minHeight: 56, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  rowText:       { flex: 1, gap: 2 },
+  name:          { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, color: palette.ivory },
+  what:          { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash },
+  timing:        { fontFamily: Fonts.sans, fontSize: 12, lineHeight: 18, color: palette.ash },
 
-  card:          { backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, marginBottom: 10 },
-  cardHeader:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  colorDot:      { width: 10, height: 10, borderRadius: 5 },
-  cardName:      { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory, fontWeight: '700', flex: 1 },
-  doseChip:      { backgroundColor: alpha(palette.gold, '26'), borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  doseText:      { fontFamily: Fonts.mono, fontSize: 11, color: palette.goldText },
-  editBtn:       { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.goldLight },
-  timingRow:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
-  timingText:    { fontSize: 12, color: palette.goldText },
-  evidenceText:  { fontSize: 12, color: palette.ash, lineHeight: 18 },
+  edit:          { paddingBottom: spacing.md, gap: 4 },
+  inputLabel:    { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke, marginTop: spacing.sm },
+  input:         { minHeight: 44, borderBottomWidth: 1, borderBottomColor: palette.lineHard, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 16 },
 
-  editGrid:      { gap: spacing.sm, marginBottom: 10 },
-  editField:     { gap: 4 },
-  editLabel:     { ...typography.label, color: palette.ash },
-  editInput:     { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.sm, paddingVertical: 8, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13 },
+  saveBtn:       { marginTop: spacing.xl, minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  saveOff:       { opacity: 0.4 },
+  saveText:      { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 2, color: palette.ink },
+  hint:          { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash, marginTop: spacing.sm },
 
-  saveBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, marginTop: spacing.sm, minHeight: 44 },
-  saveBtnSaved:  { backgroundColor: alpha(palette.gold, '4D'), borderWidth: 1, borderColor: palette.gold },
-  saveBtnText:   { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
+  footnote:      { fontFamily: Fonts.sans, fontSize: 12, lineHeight: 18, color: palette.smoke, marginTop: spacing.xl },
 
-  footnote:      { ...typography.caption, color: palette.smoke, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
+  backBtn:       { minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
+  backText:      { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ivory },
 });

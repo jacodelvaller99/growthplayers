@@ -82,6 +82,16 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
     : stage ? board.clients.filter((c) => c.stage === stage) : board.clients;
   const waiting = board.counts.review + board.counts.new;
   const first = board.clients[0];
+  // Un cliente en silencio también pide atención: el titular lo nombra en vez
+  // de decir "Nadie te espera" con él encabezando la lista de abajo.
+  const silentFirst = waiting === 0 && first?.stage === 'silent' ? first : null;
+  const headline = waiting > 0
+    ? `${waiting} cliente${waiting === 1 ? '' : 's'} te espera${waiting === 1 ? '' : 'n'}.`
+    : silentFirst
+      ? silentFirst.daysSilent == null
+        ? `${silentFirst.name} nunca ha hecho check-in.`
+        : `${silentFirst.name} lleva ${silentFirst.daysSilent} días sin registrarse.`
+      : board.clients.length > 0 ? 'Nadie te espera ahora.' : 'Aún no tienes clientes.';
 
   const split = sc.isDesktop && !!selected;
 
@@ -116,19 +126,17 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
   const banner = (
     <View style={s.banner}>
       <Text style={s.bannerText}>
-        {waiting > 0
-          ? `${waiting} cliente${waiting === 1 ? '' : 's'} te espera${waiting === 1 ? '' : 'n'}.`
-          : board.clients.length > 0 ? 'Nadie te espera ahora.' : 'Aún no tienes clientes.'}
+        {headline}
       </Text>
-      {first && waiting > 0 && (
+      {first && (waiting > 0 || silentFirst) && (
         <Pressable
           onPress={() => open(first.user_id)}
           style={({ pressed }) => [s.startCard, pressed && { opacity: 0.85 }]}
           accessibilityRole="button"
-          accessibilityLabel={`Empezar por ${first.name}`}>
+          accessibilityLabel={silentFirst ? `Escribirle a ${first.name}` : `Empezar por ${first.name}`}>
           <Avatar name={first.name} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.startTitle} numberOfLines={1}>Empezar por {first.name}</Text>
+            <Text style={s.startTitle} numberOfLines={1}>{silentFirst ? `Escribirle a ${first.name}` : `Empezar por ${first.name}`}</Text>
             <Text style={s.startSub} numberOfLines={1}>{first.reason}</Text>
           </View>
           <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />

@@ -31,6 +31,7 @@ import { LESSON_TASKS } from '@/data/tasks';
 import { animation, EASING_HOUSE, Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { readLocal, writeLocal } from '@/storage/local';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { analytics } from '@/lib/analytics';
@@ -203,104 +204,57 @@ function TaskForm({
   );
 }
 
-// ─── Flow State Pre-Lesson Ritual ────────────────────────────────────────────
+// ─── Antes de la lección: un paso, opcional ──────────────────────────────────
+// Antes eran 3 pasos (Respira → Intención → Compromiso) ANTES de cada lección
+// no completada, con la promesa «tu sistema nervioso entra en modo
+// aprendizaje» (sin evidencia). Ahora: un solo paso, solo en la primera
+// lección del día, y la acción principal es empezar.
 
-const INTENTIONS = [
-  'Aplicar esto hoy mismo',
-  'Entender a profundidad',
-  'Resolver algo que me pesa',
-] as const;
+/** Clave local: el día (AAAA-MM-DD) en que ya se ofreció la pausa. */
+const RITUAL_DAY_KEY = 'lesson-ritual-day';
+const hoyClave = () => new Date().toISOString().slice(0, 10);
 
 function FocusRitualModal({
   visible,
-  lessonTitle,
   onComplete,
 }: {
   visible: boolean;
-  lessonTitle: string;
   onComplete: () => void;
 }) {
-  const [step, setStep] = useState<0 | 1 | 2>(0);
-  const [intention, setIntention] = useState('');
+  const [breathing, setBreathing] = useState(false);
 
-  const handleBreathDone = () => setStep(1);
-
-  const handleIntention = (val: string) => {
-    setIntention(val);
-    setStep(2);
-  };
-
-  const handleCommit = () => {
+  const done = () => {
     onComplete();
-    // Reset for next use
-    setTimeout(() => { setStep(0); setIntention(''); }, 500);
+    setTimeout(() => setBreathing(false), 500);
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={done}>
       <View style={ritualStyles.overlay}>
         <View style={ritualStyles.card}>
-
-          {step === 0 && (
-            <>
-              <Text style={ritualStyles.eyebrow}>RITUAL DE ENFOQUE</Text>
-              <Text style={ritualStyles.headline}>RESPIRA.</Text>
-              <Text style={ritualStyles.body}>
-                Toma 3 respiraciones lentas.{'\n'}
-                Inhala 4 seg · retén 4 seg · exhala 6 seg.{'\n\n'}
-                Tu sistema nervioso entra en modo aprendizaje.
-              </Text>
-              <Pressable
-                style={({ pressed }) => [ritualStyles.btn, pressed && { opacity: 0.85 }]}
-                onPress={handleBreathDone}
-                accessibilityRole="button"
-                accessibilityLabel="Listo, respiración completada">
-                <Text style={ritualStyles.btnText}>LISTO</Text>
-              </Pressable>
-            </>
-          )}
-
-          {step === 1 && (
-            <>
-              <Text style={ritualStyles.eyebrow}>INTENCIÓN</Text>
-              <Text style={ritualStyles.headline}>¿QUÉ BUSCAS{'\n'}HOY?</Text>
-              <Text style={ritualStyles.lessonRef}>{lessonTitle}</Text>
-              {INTENTIONS.map((opt) => (
-                <Pressable
-                  key={opt}
-                  style={({ pressed }) => [ritualStyles.intentBtn, pressed && { opacity: 0.8 }]}
-                  onPress={() => handleIntention(opt)}
-                  accessibilityRole="button"
-                  accessibilityLabel={opt}>
-                  <Text style={ritualStyles.intentText}>{opt}</Text>
-                </Pressable>
-              ))}
-            </>
-          )}
-
-          {step === 2 && (
-            <>
-              <Text style={ritualStyles.eyebrow}>COMPROMISO</Text>
-              <Text style={ritualStyles.headline}>ENTRA.{'\n'}COMPLETA.</Text>
-              <Text style={ritualStyles.body}>
-                Intención: <Text style={{ color: palette.goldText }}>{intention}</Text>
-              </Text>
-              <Text style={ritualStyles.body}>
-                El cerebro transforma cuando cierra ciclos completos — no cuando consume fragmentos. Una lección. Un bloque de tiempo. Sin interrupciones.
-              </Text>
-              <Pressable
-                style={({ pressed }) => [ritualStyles.btn, pressed && { opacity: 0.85 }]}
-                onPress={handleCommit}
-                accessibilityRole="button"
-                accessibilityLabel="Entro y me comprometo">
-                <Text style={ritualStyles.btnText}>ENTRO · ME COMPROMETO</Text>
-              </Pressable>
-            </>
-          )}
-
-          <Pressable onPress={onComplete} style={ritualStyles.skipBtn} accessibilityRole="button" accessibilityLabel="Saltar ritual de enfoque">
-            <Text style={ritualStyles.skipText}>Saltar ritual →</Text>
+          <Text style={ritualStyles.eyebrow}>ANTES DE EMPEZAR</Text>
+          <Text style={ritualStyles.headline}>
+            {breathing ? 'Respira tres veces.' : '¿Una pausa antes?'}
+          </Text>
+          <Text style={ritualStyles.body}>
+            {breathing
+              ? 'Inhala 4 segundos, retén 4, exhala 6. Cuando termines, empieza.'
+              : 'Treinta segundos de respiración lenta ayudan a llegar con la cabeza aquí. Es opcional.'}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [ritualStyles.btn, pressed && { opacity: 0.85 }]}
+            onPress={done}
+            accessibilityRole="button">
+            <Text style={ritualStyles.btnText}>EMPEZAR LA LECCIÓN</Text>
           </Pressable>
+          {!breathing && (
+            <Pressable
+              onPress={() => setBreathing(true)}
+              style={ritualStyles.skipBtn}
+              accessibilityRole="button">
+              <Text style={ritualStyles.skipText}>Respirar antes (30 s)</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </Modal>
@@ -310,81 +264,63 @@ function FocusRitualModal({
 const ritualStyles = StyleSheet.create({
   overlay: {
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.92)',
+    backgroundColor: alpha(palette.blackDeep, 'EB'),
     flex: 1,
     justifyContent: 'center',
     padding: 24,
   },
   card: {
     backgroundColor: palette.graphite,
-    borderColor: palette.lineSoft,
     borderRadius: 16,
-    borderWidth: 1,
     gap: 16,
     maxWidth: 380,
     padding: 32,
     width: '100%',
   },
   eyebrow: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
+    color: palette.ash,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
     fontSize: 11,
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
   headline: {
     color: palette.ivory,
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayRegular,
     fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-    lineHeight: 34,
-    textTransform: 'uppercase',
-  },
-  lessonRef: {
-    color: palette.ash,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontWeight: '400',
+    lineHeight: 32,
   },
   body: {
     color: palette.ash,
     fontFamily: Fonts.sans,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 24,
   },
   btn: {
     alignItems: 'center',
     backgroundColor: palette.gold,
-    borderRadius: 8,
-    paddingVertical: 14,
+    borderRadius: 10,
+    justifyContent: 'center',
+    minHeight: 52,
   },
   btnText: {
     color: palette.ink,
-    fontFamily: Fonts.mono,
-    fontSize: 13,
+    fontFamily: Fonts.display,
+    fontSize: 14,
     fontWeight: '700',
-    letterSpacing: 2,
-  },
-  intentBtn: {
-    borderColor: palette.lineSoft,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  intentText: {
-    color: palette.ivory,
-    fontFamily: Fonts.sans,
-    fontSize: 15,
+    letterSpacing: 1,
   },
   skipBtn: {
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
   skipText: {
-    color: palette.smoke,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
+    color: palette.ivory,
+    fontFamily: Fonts.sans,
+    fontSize: 15,
+    textDecorationLine: 'underline',
   },
 });
 
@@ -584,7 +520,7 @@ const celebStyles = StyleSheet.create({
   eyebrow: {
     // goldText (no gold): texto sobre card con fondo palette.black (theme-aware).
     color:       palette.goldText,
-    fontFamily:  Fonts.mono,
+    fontFamily:  Fonts.display,
     fontSize:    11,
     letterSpacing: 3,
   },
@@ -593,7 +529,7 @@ const celebStyles = StyleSheet.create({
   },
   lessonNum: {
     color:        palette.smoke,
-    fontFamily:   Fonts.mono,
+    fontFamily:   Fonts.display,
     fontSize:     11,
     letterSpacing: 2,
     marginBottom: -spacing.xs,
@@ -616,7 +552,7 @@ const celebStyles = StyleSheet.create({
     marginTop:       spacing.sm,
   },
   progressText: {
-    ...typography.mono,
+    fontFamily: Fonts.display, fontWeight: '700', lineHeight: 16,
     color:     palette.ash,
     fontSize:  11,
   },
@@ -625,7 +561,7 @@ const celebStyles = StyleSheet.create({
   },
   progressPct: {
     color:       palette.goldText,
-    fontFamily:  Fonts.mono,
+    fontFamily:  Fonts.display,
     fontSize:    12,
     fontWeight:  '700',
   },
@@ -677,7 +613,7 @@ const celebStyles = StyleSheet.create({
   },
   btnText: {
     color:         palette.goldText,
-    fontFamily:    Fonts.mono,
+    fontFamily:    Fonts.display,
     fontSize:      12,
     fontWeight:    '700',
     letterSpacing:  2,
@@ -738,7 +674,20 @@ export default function LessonScreen() {
   const [editing, setEditing] = useState(false);
   const [showArchetype, setShowArchetype] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showRitual, setShowRitual] = useState(!isLessonCompleted);
+  // La pausa se ofrece solo en la primera lección (no completada) del día.
+  const [showRitual, setShowRitual] = useState(false);
+  useEffect(() => {
+    if (isLessonCompleted) return;
+    readLocal<string>(RITUAL_DAY_KEY)
+      .then((dia) => { if (dia !== hoyClave()) setShowRitual(true); })
+      .catch(() => {});
+    // Solo al abrir la lección: completarla después no debe reabrir la pausa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+  const closeRitual = () => {
+    setShowRitual(false);
+    writeLocal(RITUAL_DAY_KEY, hoyClave()).catch(() => {});
+  };
   const [normanInsight, setNormanInsight] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -875,11 +824,7 @@ export default function LessonScreen() {
   return (
     <>
       <Stack.Screen options={{ title: lesson.title }} />
-      <FocusRitualModal
-        visible={showRitual}
-        lessonTitle={lesson.title}
-        onComplete={() => setShowRitual(false)}
-      />
+      <FocusRitualModal visible={showRitual} onComplete={closeRitual} />
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -887,7 +832,7 @@ export default function LessonScreen() {
       <ScrollView
         ref={scrollRef}
         style={sc.root}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 48 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
 
@@ -907,14 +852,14 @@ export default function LessonScreen() {
             <View style={styles.videoComingSoon}>
               <MaterialIcons name="school" size={24} color={palette.goldText} />
               <Text style={styles.videoComingSoonText}>
-                Esta lección se ve en el classroom del módulo, no como video suelto.
+                Esta lección se ve en Skool, dentro del módulo.
               </Text>
               <Pressable
                 onPress={() => { void Linking.openURL(mod.skoolUrl as string); }}
                 accessibilityRole="button"
                 style={styles.classroomBtn}>
                 <MaterialIcons name="open-in-new" size={16} color={palette.ink} />
-                <Text style={styles.classroomBtnText}>ABRIR CLASSROOM</Text>
+                <Text style={styles.classroomBtnText}>ABRIR EN SKOOL ↗</Text>
               </Pressable>
             </View>
           ) : (
@@ -935,17 +880,13 @@ export default function LessonScreen() {
             accessibilityLabel="Volver">
             <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
           </Pressable>
-          {/* Module · archetype label */}
-          <Text style={[styles.videoLabel, { top: insets.top + 14 }]} numberOfLines={1}>
-            {moduleLabel}
-          </Text>
         </View>
 
         {/* ── Lesson Info ── */}
         <View style={styles.lessonBody}>
           <View style={styles.lessonBadgeRow}>
             <Text style={styles.lessonBadgeText}>
-              {lessonBadge}{lesson.duration ? ` · ${lesson.duration.toUpperCase()}` : ''}
+              {moduleLabel} · {lessonBadge}{lesson.duration ? ` · ${lesson.duration.toUpperCase()}` : ''}
             </Text>
             {isLessonCompleted && <Text style={styles.lessonDoneText}>VISTA ✓</Text>}
           </View>
@@ -1095,7 +1036,7 @@ export default function LessonScreen() {
         {/* ── Complete Button ── */}
         <View style={styles.completeSection}>
           {!canComplete && (
-            <Text style={styles.completeHint}>Completa la tarea para avanzar</Text>
+            <Text style={styles.completeHint}>Guarda tu tarea para marcar la lección como vista.</Text>
           )}
           <PrimaryButton
             label={isLessonCompleted ? 'LECCIÓN VISTA ✓' : 'MARCAR COMO VISTA'}
@@ -1137,36 +1078,29 @@ export default function LessonScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: palette.black },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1 },
+  // Misma columna que Módulo en escritorio: el campo de texto a 760 px de
+  // ancho de línea no se lee.
   content: {
     gap: 0,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
 
   // Video banner (fullwidth) + floating chrome
   videoBanner: {
     position: 'relative',
   },
+  // Sin borde de caja; un círculo del tema para que la flecha se lea sobre el video.
   backBtn: {
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderColor: palette.lineHard,
-    borderRadius: radii.sm,
-    borderWidth: 1,
+    backgroundColor: alpha(palette.blackDeep, 'B3'),
+    borderRadius: 22,
     height: 44,
     justifyContent: 'center',
     left: spacing.lg,
     position: 'absolute',
     width: 44,
-    zIndex: 3,
-  },
-  videoLabel: {
-    color: palette.goldText,
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.4,
-    maxWidth: '52%',
-    position: 'absolute',
-    right: spacing.lg,
-    textAlign: 'right',
     zIndex: 3,
   },
   videoComingSoon: {
@@ -1214,7 +1148,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   lessonBadgeText: {
-    color: palette.goldText,
+    flex: 1,
+    color: palette.ash,
     fontFamily: Fonts.display,
     fontSize: 11,
     fontWeight: '700',
@@ -1268,8 +1203,12 @@ const styles = StyleSheet.create({
   taskCard: {
     gap: spacing.lg,
   },
+  // Superficie neutra: el oro se reserva al botón activo (antes la tarjeta,
+  // GUARDAR TAREA y MARCAR COMO VISTA eran tres amarillos a la vez).
   taskYellow: {
-    backgroundColor: palette.gold,
+    backgroundColor: palette.graphite,
+    borderColor: palette.lineSoft,
+    borderWidth: 1,
     borderRadius: 8,
     gap: spacing.sm,
     padding: 20,
@@ -1280,7 +1219,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   taskHeaderLabel: {
-    color: palette.ink,
+    color: palette.ash,
     flex: 1,
     fontFamily: Fonts.display,
     fontSize: 11,
@@ -1288,21 +1227,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   completedBadgeText: {
-    color: palette.ink,
+    color: palette.ash,
     fontFamily: Fonts.display,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
   },
   taskTitle: {
-    color: palette.ink,
+    color: palette.ivory,
     fontFamily: Fonts.displayRegular,
     fontSize: 20,
     fontWeight: '400',
     lineHeight: 24,
   },
   taskDesc: {
-    color: palette.ink,
+    color: palette.ash,
     fontFamily: Fonts.sans,
     fontSize: 15,
     lineHeight: 22,
@@ -1327,7 +1266,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   wordCount: {
-    ...typography.mono,
+    fontFamily: Fonts.display, fontWeight: '700', lineHeight: 16,
     color: palette.smoke,
     fontSize: 11,
   },
@@ -1408,7 +1347,7 @@ const styles = StyleSheet.create({
   },
   normanInsightLabel: {
     color: palette.goldText,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 2,
     marginBottom: 4,
@@ -1470,7 +1409,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   nextLessonMeta: {
-    ...typography.mono,
+    fontFamily: Fonts.display, fontWeight: '700', lineHeight: 16,
     color: palette.ash,
     fontSize: 11,
   },
@@ -1499,7 +1438,7 @@ const styles = StyleSheet.create({
   },
   notesSavedText: {
     color:       palette.success,
-    fontFamily:  Fonts.mono,
+    fontFamily:  Fonts.display,
     fontSize:    11,
     letterSpacing: 1,
   },
@@ -1523,7 +1462,7 @@ const styles = StyleSheet.create({
   notesSaveBtnText: {
     // goldText (no gold): texto del botón sobre la página (fondo theme-aware).
     color:       palette.goldText,
-    fontFamily:  Fonts.mono,
+    fontFamily:  Fonts.display,
     fontSize:    11,
     letterSpacing: 1.5,
   },
@@ -1577,7 +1516,7 @@ const archStyles = StyleSheet.create({
     opacity: 0.4,
   },
   moduleLabel: {
-    ...typography.mono,
+    fontFamily: Fonts.display, fontWeight: '700', lineHeight: 16,
     color: palette.ash,
     textAlign: 'center',
     fontSize: 11,
@@ -1607,7 +1546,7 @@ const archStyles = StyleSheet.create({
     lineHeight: 20,
   },
   bodySecondary: {
-    ...typography.mono,
+    fontFamily: Fonts.display, fontWeight: '700', lineHeight: 16,
     color: palette.goldText,
     fontSize: 11,
     letterSpacing: 1,

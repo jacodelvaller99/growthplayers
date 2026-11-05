@@ -42,10 +42,9 @@ export function isModuleUnlocked(
 // "Por qué importa" — el peso del módulo en el camino, no su contenido literal.
 // Mantiene al usuario dentro del producto en vez de mandarlo a Skool.
 function moduleStakes(module: typeof POLARIS_MODULES[number]): string {
-  if (module.arquetipo) {
-    return `Al cerrarlo integras ${arquetipoConArticulo(module.arquetipo)}. No es teoría: es una capa de identidad que el resto del protocolo da por hecha.`;
-  }
-  return 'Cada módulo abre el siguiente. Cuando llegue tu turno aquí, ya habrás construido la base que lo sostiene.';
+  return module.subtitle
+    ? `${module.subtitle}. Cuando llegues aquí, ya tendrás la base de los módulos anteriores.`
+    : 'Cuando llegues aquí, ya tendrás la base de los módulos anteriores.';
 }
 
 export default function ProgramasScreen() {
@@ -159,7 +158,11 @@ export default function ProgramasScreen() {
     m.lessons.filter((l) => completedLessons.includes(l.id)).length;
   const aqui = conLecciones.find((m) => hechas(m) < m.lessons.length) ?? conLecciones[conLecciones.length - 1];
   const siguienteLeccion = aqui?.lessons.find((l) => !completedLessons.includes(l.id)) ?? aqui?.lessons[0];
-  const numerados = POLARIS_MODULES.filter((m) => m.order > 0);
+  // Una sola cuenta en toda la app: sin Bienvenida (orden 0) ni las sesiones
+  // en vivo — «Módulo 1 de 11» con Onboarding listado antes confundía.
+  const numerados = POLARIS_MODULES.filter((m) => m.order > 0 && !m.id.includes('sesiones'));
+  const posicion = aqui && siguienteLeccion ? aqui.lessons.indexOf(siguienteLeccion) + 1 : 0;
+  const volver = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/yo' as never));
 
   const abrir = (module: typeof POLARIS_MODULES[number], idx: number) => {
     const isComingSoon = module.status === 'coming_soon';
@@ -175,14 +178,15 @@ export default function ProgramasScreen() {
   return (
     <View style={styles.root}>
       <Pantalla
-        meta="PROTOCOLO SOBERANO"
-        metaRight={aqui && aqui.order > 0 ? `MÓDULO ${aqui.order} DE ${numerados.length}` : `${overallProgress} % HECHO`}
-        title={aqui ? `${aqui.title.replace(': ', ':\n')}.` : 'Tu programa.'}
+        onBack={volver}
+        meta="TU PROGRAMA · 90 DÍAS"
+        metaRight={aqui && numerados.includes(aqui) ? `MÓDULO ${aqui.order} DE ${numerados.length}` : `${overallProgress} % HECHO`}
+        title={aqui ? `${(aqui.order === 0 ? 'Bienvenida' : aqui.title).replace(': ', ':\n')}.` : 'Tu programa.'}
         sub={aqui?.subtitle}
         hero={siguienteLeccion ? (
           <TarjetaOro
             meta={hechas(aqui!) === 0 ? 'EMPIEZA AQUÍ' : 'SEGUIR'}
-            metaRight={`LECCIÓN ${siguienteLeccion.order} DE ${aqui!.lessons.length}`}
+            metaRight={`LECCIÓN ${posicion} DE ${aqui!.lessons.length}`}
             title={siguienteLeccion.title}
             onPress={() => router.push(`/lesson/${siguienteLeccion.id}` as never)}
           />
@@ -200,21 +204,22 @@ export default function ProgramasScreen() {
             const completo = total > 0 && done === total;
             const esAqui = m.id === aqui?.id;
             const pronto = m.status === 'coming_soon';
+            const titulo = m.order === 0 ? 'Bienvenida' : m.title;
             const estado = completo
-              ? 'Completado'
+              ? 'Terminado'
               : esAqui
-                ? `Estás aquí · ${done} de ${total}`
+                ? `Vas en la ${posicion} de ${total}`
                 : pronto
                   ? 'Pronto'
                   : total > 0
                     ? `${total} lecciones`
-                    : 'En el classroom';
+                    : 'Se abre en Skool ↗';
             return (
               <Pressable
                 key={m.id}
                 onPress={() => abrir(m, idx)}
                 accessibilityRole="link"
-                accessibilityLabel={`${m.title}. ${estado}`}
+                accessibilityLabel={`${titulo}. ${estado}`}
                 style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
                   styles.routeRow,
                   (pressed || hovered) && styles.routeRowPressed,
@@ -228,10 +233,11 @@ export default function ProgramasScreen() {
                 </View>
                 <View style={styles.routeText}>
                   <Text style={[styles.routeTitle, esAqui && styles.routeTitleNow, completo && styles.routeTitleDone]}>
-                    {m.title}
+                    {titulo}
                   </Text>
                   <Text style={[styles.routeState, esAqui && styles.routeStateNow]}>{estado}</Text>
                 </View>
+                {!pronto && <MaterialIcons name="chevron-right" size={20} color={palette.smoke} />}
               </Pressable>
             );
           })}
@@ -300,13 +306,13 @@ const styles = StyleSheet.create({
   },
   teaserEyebrow: {
     color: palette.goldText,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 1.6,
   },
   teaserArq: {
     color: palette.ash,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 2,
     marginTop: spacing.xs,
@@ -338,7 +344,7 @@ const styles = StyleSheet.create({
   },
   teaserStakesLabel: {
     color: palette.goldText,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 2,
   },
@@ -359,7 +365,7 @@ const styles = StyleSheet.create({
   },
   teaserLessonNum: {
     color: palette.smoke,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
     width: 22,
   },
@@ -382,7 +388,7 @@ const styles = StyleSheet.create({
   },
   teaserDismissText: {
     color: palette.goldText,
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
     letterSpacing: 1.5,
   },

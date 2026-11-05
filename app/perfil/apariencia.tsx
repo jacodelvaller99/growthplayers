@@ -12,7 +12,8 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldDivider, useScreen } from '@/components/polaris';
@@ -53,6 +54,17 @@ export default function AparienciaScreen() {
   const { mode, setMode, canToggle } = useAppTheme();
   const { mode: appMode, setMode: setAppMode } = useAppMode();
 
+  // El tema que de verdad se ve es el atributo `data-theme` del documento. Si
+  // alguien lo cambió por fuera (otra pestaña, extensión, el tour), el estado
+  // del contexto quedaba diciendo "Oscuro" con la pantalla en claro.
+  const shown = Platform.OS === 'web' && typeof document !== 'undefined'
+    ? document.documentElement.dataset.theme
+    : undefined;
+  const effective = shown === 'light' || shown === 'tinta' ? shown : mode;
+  useEffect(() => {
+    if (effective !== mode) setMode(effective);
+  }, [effective, mode, setMode]);
+
   return (
     <ScrollView
       style={sc.root}
@@ -73,7 +85,7 @@ export default function AparienciaScreen() {
           <GoldDivider label="CLARO U OSCURO" />
           <View style={s.pair} accessibilityRole="radiogroup">
             {([['tinta', 'Oscuro', 'dark-mode'], ['light', 'Claro', 'light-mode']] as const).map(([id, name, icon]) => {
-              const on = mode === id;
+              const on = effective === id;
               return (
                 <Pressable
                   key={id}

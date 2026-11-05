@@ -1,6 +1,6 @@
 /**
- * Render smoke test de la Escala de Consciencia / Hawkins (loop de pulido, iteración 29).
- * Grid de 17 niveles + panel de detalle + check semanal (calibración local).
+ * Render smoke test de «Tu calma» (antes Escala de Consciencia / Hawkins).
+ * Grilla de emociones (3 columnas) + guardar la semana (calibración local). Sin "Hz".
  * Monta sin throw. Platform=web para saltar haptics nativo.
  */
 import { render } from '@testing-library/react-native';
@@ -38,6 +38,9 @@ jest.mock('@/components/SafetyWarning', () => {
   const R = require('react');
   return { __esModule: true, default: () => R.createElement(RN.View) };
 });
+jest.mock('@/hooks/use-breakpoint', () => ({
+  useBreakpoint: () => ({ isDesktop: false, isMobile: true, isTablet: false }),
+}));
 jest.mock('@/storage/local', () => ({
   readLocal: jest.fn().mockResolvedValue(null),
   writeLocal: jest.fn().mockResolvedValue(undefined),
@@ -47,7 +50,12 @@ jest.mock('@/storage/local', () => ({
 const ConscienciaScreen = require('@/app/bienestar/consciencia').default;
 
 describe('ConscienciaScreen — render smoke', () => {
-  it('grid + detalle (Valentía 200 por defecto) + check semanal renderiza sin throw', () => {
-    expect(() => render(<ConscienciaScreen />)).not.toThrow();
+  it('grilla + guardar semana renderiza sin throw, sin "Hz" ni escala numérica', () => {
+    const { toJSON } = render(<ConscienciaScreen />);
+    const out = JSON.stringify(toJSON());
+    expect(out).not.toMatch(/Hz/);
+    expect(out).toContain('Tu calma');
+    expect(out).toContain('Pena');
+    expect(out).not.toContain('Aflicción');
   });
 });

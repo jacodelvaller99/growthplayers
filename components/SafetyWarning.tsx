@@ -34,9 +34,11 @@ interface SafetyWarningProps {
   style?: object;
 }
 
+// `accent` pinta TEXTO e ícono → token *Text (legible en claro: el oro de
+// relleno sobre crema daba ~1,3:1). El borde sigue con el color de relleno.
 const TONES: Record<Tone, { accent: string; tint: string; border: string }> = {
-  gold:   { accent: palette.gold,   tint: palette.goldLight,    border: palette.lineGold },
-  danger: { accent: palette.danger, tint: palette.dangerMuted,  border: palette.danger },
+  gold:   { accent: palette.goldText,   tint: palette.goldLight,    border: palette.lineGold },
+  danger: { accent: palette.dangerText, tint: palette.dangerMuted,  border: palette.danger },
 };
 
 export default function SafetyWarning({

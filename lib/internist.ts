@@ -170,6 +170,10 @@ export function buildInternistPrompt(
     '═══ TONO ═══════════════════════════════════════════════════════════════════',
     'Riguroso pero cercano. No condescendiente. No alarmista. No minimizador.',
     'Si el usuario está asustado, primero contiene (1 frase), luego educa.',
+    '',
+    '═══ FORMATO ════════════════════════════════════════════════════════════════',
+    'Se lee en un celular. Solo párrafos cortos, **negrita** puntual y listas con "-".',
+    'NUNCA tablas (|), NUNCA títulos con #, NUNCA separadores ---.',
   ].join('\n');
 }
 

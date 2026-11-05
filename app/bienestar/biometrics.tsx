@@ -1,450 +1,170 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import MedicalDisclaimer from '@/components/MedicalDisclaimer';
+/**
+ * Bienestar — "Tu reloj": lo que tu wearable dice de hoy.
+ *
+ * Gramática del rediseño: meta → titular que dice qué pasa → UNA acción
+ * amarilla (conectar o sincronizar) → filas. Cada estado dice la verdad:
+ * sin reloj, reloj sin datos (con la fecha real del último envío) o datos —
+ * y si los datos no son de hoy, se dice de qué día son.
+ */
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { StyleSheet, Text } from 'react-native';
 
-import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
+import { Fonts, palette } from '@/constants/theme';
+import { useLifeFlow } from '@/hooks/use-lifeflow';
 import {
+  hrvToNormanLanguage,
+  recoveryLabel,
+  triggerWearableSync,
   useWearableConnections,
   useWearableDaily,
-  useWearableTimeseries,
-  recoveryLabel,
-  hrvToNormanLanguage,
-  type WearableDaily,
+  type WearableProvider,
 } from '@/lib/wearables';
 
-// ─── Score bar ────────────────────────────────────────────────────────────────
-function ScoreBar({
-  label, score, max = 100, color,
-}: {
-  label: string; score: number | null; max?: number; color: string;
-}) {
-  const pct = score != null ? Math.round((score / max) * 100) : 0;
-  const display = score != null ? String(Math.round(score)) : '–';
-  return (
-    <View
-      style={scoreBarStyles.container}
-      accessible
-      accessibilityRole="progressbar"
-      accessibilityLabel={label}
-      accessibilityValue={score != null ? { min: 0, max, now: Math.round(score) } : { text: 'Sin datos' }}>
-      <Text style={scoreBarStyles.label}>{label}</Text>
-      <View style={scoreBarStyles.track}>
-        <View style={[scoreBarStyles.fill, { width: `${pct}%`, backgroundColor: color }]} />
-      </View>
-      <Text style={[scoreBarStyles.value, { color }]}>{display}</Text>
-    </View>
-  );
+const PROVIDER_NAME: Record<WearableProvider, string> = {
+  oura: 'Oura', whoop: 'WHOOP', polar: 'Polar', strava: 'Strava',
+  apple_health: 'Apple Salud', health_connect: 'Health Connect', aggregator: 'Tu reloj',
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** "hoy", "ayer", "hace 7 días" — a partir de una fecha ISO. */
+function haceCuanto(iso: string | null | undefined, now = Date.now()): string | null {
+  if (!iso) return null;
+  const t = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const days = Math.floor((now - t) / DAY_MS);
+  if (days <= 0) return 'hoy';
+  if (days === 1) return 'ayer';
+  return `hace ${days} días`;
 }
-const scoreBarStyles = StyleSheet.create({
-  container: { gap: 4 },
-  label:     { ...typography.label, color: palette.smoke, letterSpacing: 1.5 },
-  track:     {
-    height: 4, backgroundColor: palette.charcoal, borderRadius: 2, overflow: 'hidden',
-  },
-  fill:      { height: 4, borderRadius: 2 },
-  value:     { fontFamily: Fonts.display, fontSize: 22, letterSpacing: 1 },
-});
 
-// ─── Mini sparkline (simplified text-based for RN without chart lib) ──────────
-function HRSparkline({ points }: { points: { value: number; recorded_at: string }[] }) {
-  if (!points.length) return (
-    <Text style={{ ...typography.caption, color: palette.smoke }}>Sin datos de FC</Text>
+const DISCLAIMER = 'Datos de tu reloj para tu bienestar. No son diagnóstico ni consejo médico.';
+
+function BiometricsBody({ onSynced }: { onSynced: () => void }) {
+  const router = useRouter();
+  const { userId } = useLifeFlow();
+  const { connections, loading: connLoading } = useWearableConnections();
+  const { data: dailyData, today, averages, loading: dailyLoading } = useWearableDaily(7);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  const conn = connections[0] ?? null;
+  const name = conn ? PROVIDER_NAME[conn.provider] ?? 'Tu reloj' : 'Tu reloj';
+  const footer = <Text style={s.footer}>{syncMsg ? `${syncMsg}\n\n${DISCLAIMER}` : DISCLAIMER}</Text>;
+
+  const sync = async () => {
+    if (syncing || !conn || !userId) return;
+    setSyncing(true);
+    setSyncMsg(null);
+    const { success, error } = await triggerWearableSync(userId, conn.provider);
+    setSyncing(false);
+    if (success) onSynced();
+    else setSyncMsg(`No se pudo sincronizar: ${error ?? 'error desconocido'}. Prueba en un minuto.`);
+  };
+
+  const syncCard = (
+    <TarjetaOro
+      meta={name.toUpperCase()}
+      metaRight={conn?.last_synced_at ? `ÚLTIMA VEZ ${haceCuanto(conn.last_synced_at)?.toUpperCase()}` : undefined}
+      title={syncing ? 'Sincronizando…' : 'Sincronizar ahora'}
+      detail="Trae lo último que registró tu reloj."
+      onPress={sync}
+    />
   );
 
-  const vals = points.map(p => p.value);
-  const min  = Math.min(...vals);
-  const max  = Math.max(...vals);
-  const avg  = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  if (connLoading || (conn && dailyLoading)) {
+    return <Pantalla meta="TU RELOJ" title="Un momento." sub="Leyendo lo que envió tu reloj." />;
+  }
 
-  // Sample 20 points for display
-  const step    = Math.max(1, Math.floor(vals.length / 20));
-  const sampled = points.filter((_, i) => i % step === 0).slice(0, 20);
-
-  return (
-    <View style={sparklineStyles.container}>
-      <View style={sparklineStyles.bars}>
-        {sampled.map((p, i) => {
-          const h = max === min ? 50 : Math.round(((p.value - min) / (max - min)) * 40) + 4;
-          return (
-            <View
-              key={i}
-              style={[sparklineStyles.bar, { height: h }]}
-            />
-          );
-        })}
-      </View>
-      <View style={sparklineStyles.stats}>
-        <Text style={sparklineStyles.stat}>Min: {min}bpm</Text>
-        <Text style={sparklineStyles.stat}>Avg: {avg}bpm</Text>
-        <Text style={sparklineStyles.stat}>Max: {max}bpm</Text>
-      </View>
-    </View>
-  );
-}
-const sparklineStyles = StyleSheet.create({
-  container: { gap: spacing.sm },
-  bars:      {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
-    height: 48,
-  },
-  bar:       {
-    flex: 1,
-    backgroundColor: alpha(palette.gold, '88'),
-    borderRadius: 1,
-    minWidth: 3,
-  },
-  stats:     { flexDirection: 'row', justifyContent: 'space-between' },
-  stat:      { ...typography.mono, color: palette.smoke },
-});
-
-// ─── 7-day mini bar chart ─────────────────────────────────────────────────────
-function WeeklyBars({ data, field, color }: {
-  data: WearableDaily[];
-  field: 'recovery_score' | 'sleep_score' | 'activity_score';
-  color: string;
-}) {
-  const last7 = data.slice(0, 7).reverse();
-  if (!last7.length) return null;
-
-  const vals = last7.map(d => d[field] ?? 0);
-  const max  = Math.max(...vals, 1);
-
-  return (
-    <View style={weeklyStyles.container}>
-      {last7.map((d, i) => {
-        const h = Math.round((vals[i] / max) * 32) + 4;
-        return (
-          <View key={d.id} style={weeklyStyles.col}>
-            {/* Opacidad por `style`, no concatenando alpha al color: `color` puede ser
-                un token cv() → 'var(--c-gold-text)' en web, y 'var(...)cc' es CSS inválido
-                (las barras de recuperación no se renderizaban en web). */}
-            <View style={[weeklyStyles.bar, { height: h, backgroundColor: color, opacity: vals[i] > 0 ? 0.8 : 0.2 }]} />
-            <Text style={weeklyStyles.label}>
-              {new Date(d.date + 'T12:00:00').toLocaleDateString('es', { weekday: 'narrow' })}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-const weeklyStyles = StyleSheet.create({
-  container: { flexDirection: 'row', gap: 4, alignItems: 'flex-end', height: 48 },
-  col:       { flex: 1, alignItems: 'center', gap: 4 },
-  bar:       { width: '100%', borderRadius: 2, minHeight: 4 },
-  label:     { ...typography.label, color: palette.smoke },
-});
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function BiometricsScreen() {
-  const sc = useScreen();
-  const router  = useRouter();
-  const insets  = useSafeAreaInsets();
-
-  const { connections } = useWearableConnections();
-  const { data: dailyData, today, averages } = useWearableDaily(7);
-  const { data: hrPoints } = useWearableTimeseries('heart_rate', 24);
-
-  const hasWearable = connections.length > 0;
-  const provider    = connections[0]?.provider ?? null;
-
-  // No wearable connected
-  if (!hasWearable) {
+  // ── Sin reloj ──────────────────────────────────────────────────────────────
+  if (!conn) {
     return (
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.topRow}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Volver">
-            <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-          </Pressable>
-          <Text style={styles.title}>MI CUERPO</Text>
-          <View style={{ width: 36 }} />
-        </View>
-
-        <PremiumCard style={styles.noWearableCard}>
-          <MaterialIcons name="monitor-heart" size={36} color={palette.goldMuted} />
-          <Text style={styles.noWearableTitle}>CONECTA TU WEARABLE</Text>
-          <Text style={styles.noWearableSub}>
-            Conecta tu Oura Ring o WHOOP para ver tus datos biométricos
-            y recibir recomendaciones personalizadas de Norman.
-          </Text>
-          <Pressable
-            style={styles.connectBtn}
+      <Pantalla
+        meta="TU RELOJ"
+        title="Conecta tu reloj."
+        sub="Con tu sueño y tu pulso, Norman te habla de cómo estás de verdad, no solo de cómo te sientes."
+        hero={
+          <TarjetaOro
+            meta="OURA · WHOOP · APPLE · GARMIN"
+            title="Conectar mi reloj"
+            detail="Tarda un minuto."
             onPress={() => router.push('/perfil/wearables' as never)}
-            accessibilityRole="button"
-            accessibilityLabel="Conectar dispositivo wearable">
-            <Text style={styles.connectBtnText}>CONECTAR DISPOSITIVO →</Text>
-          </Pressable>
-        </PremiumCard>
-      </ScrollView>
+          />
+        }
+        footer={footer}
+      />
     );
   }
 
-  const recovLabel = today?.recovery_score != null
-    ? recoveryLabel(today.recovery_score)
-    : 'Sin datos';
+  // ── Conectado pero sin datos en 7 días ────────────────────────────────────
+  if (!today) {
+    const desde = haceCuanto(conn.last_synced_at);
+    return (
+      <Pantalla
+        meta="TU RELOJ"
+        title={`Tu ${name} no ha enviado datos.`}
+        sub={desde
+          ? `La última sincronización fue ${desde} y no trajo nada de los últimos 7 días.`
+          : 'Todavía no ha sincronizado. Abre la app de tu reloj y luego sincroniza aquí.'}
+        hero={syncCard}
+        footer={footer}>
+        <Fila label="DISPOSITIVOS" value="Gestionar" onPress={() => router.push('/perfil/wearables' as never)} last />
+      </Pantalla>
+    );
+  }
 
-  const baseline7dHrv = averages?.hrv ?? null;
-  const normanInsight = today?.hrv_ms
-    ? hrvToNormanLanguage(today.hrv_ms, baseline7dHrv)
+  // ── Con datos ──────────────────────────────────────────────────────────────
+  const cuando = haceCuanto(today.date);
+  const titulo = today.recovery_score != null
+    ? `Recuperación: ${recoveryLabel(today.recovery_score).toLowerCase()}.`
+    : 'Esto dice tu reloj.';
+  // La frase de Norman habla de "hoy": solo se muestra si los datos son de hoy.
+  const insight = cuando === 'hoy' && today.hrv_ms ? hrvToNormanLanguage(today.hrv_ms, averages?.hrv ?? null) : null;
+  const sub = [
+    cuando === 'hoy' ? 'Datos de hoy.' : `Tus últimos datos son de ${cuando}.`,
+    insight ? `Norman (IA): ${insight.charAt(0).toUpperCase()}${insight.slice(1)}.` : null,
+  ].filter(Boolean).join(' ');
+
+  const sleep = today.sleep_duration_min != null
+    ? `${Math.floor(today.sleep_duration_min / 60)} h ${today.sleep_duration_min % 60} min`
     : null;
+  const rows: { label: string; value: string | null }[] = [
+    { label: 'RECUPERACIÓN', value: today.recovery_score != null ? `${Math.round(today.recovery_score)} de 100` : null },
+    { label: 'SUEÑO', value: [sleep, today.sleep_score != null ? `${Math.round(today.sleep_score)} de 100` : null].filter(Boolean).join(' · ') || null },
+    { label: 'VARIABILIDAD CARDÍACA', value: today.hrv_ms != null ? `${Math.round(today.hrv_ms)} ms` : null },
+    { label: 'PULSO EN REPOSO', value: today.resting_hr != null ? `${today.resting_hr} lpm` : null },
+    { label: 'PASOS', value: today.steps != null ? today.steps.toLocaleString('es') : null },
+    {
+      label: 'TEMPERATURA',
+      value: today.body_temp_delta != null
+        ? `${today.body_temp_delta >= 0 ? '+' : ''}${today.body_temp_delta.toFixed(1)} °C vs tu normal`
+        : null,
+    },
+    { label: 'OXÍGENO', value: today.spo2_avg != null ? `${today.spo2_avg.toFixed(1)} %` : null },
+  ].filter((r) => r.value);
 
   return (
-    <ScrollView
-      style={sc.root}
-      contentContainerStyle={[
-        sc.content,
-        { paddingTop: insets.top + 16, paddingBottom: 80 },
-      ]}
-      showsVerticalScrollIndicator={false}>
-
-      {/* Header */}
-      <View style={styles.topRow}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-        </Pressable>
-        <Text style={styles.title}>MI CUERPO HOY</Text>
-        {/* Provider badge */}
-        <View style={styles.providerBadge}>
-          <Text style={styles.providerText}>{provider === 'oura' ? '⬡ Oura' : '◈ WHOOP'}</Text>
-        </View>
-      </View>
-
-      <MedicalDisclaimer />
-
-      {/* Main scores */}
-      <PremiumCard style={styles.mainScores}>
-        <View style={styles.scoresRow}>
-          <View style={styles.scoreBlock}>
-            <ScoreBar
-              label="RECUPERACIÓN"
-              score={today?.recovery_score ?? null}
-              color={scoreColor(today?.recovery_score)}
-            />
-            <Text style={styles.scoreSubLabel}>{recovLabel}</Text>
-          </View>
-          <View style={styles.scoreDivider} />
-          <View style={styles.scoreBlock}>
-            <ScoreBar
-              label="SUEÑO"
-              score={today?.sleep_score ?? null}
-              color={palette.info}
-            />
-            {today?.sleep_duration_min && (
-              <Text style={styles.scoreSubLabel}>
-                {Math.floor(today.sleep_duration_min / 60)}h {today.sleep_duration_min % 60}min
-              </Text>
-            )}
-          </View>
-          <View style={styles.scoreDivider} />
-          <View style={styles.scoreBlock}>
-            <ScoreBar
-              label="ACTIVIDAD"
-              score={today?.activity_score ?? today?.strain_score ?? null}
-              max={provider === 'whoop' ? 21 : 100}
-              color={palette.success}
-            />
-            {today?.steps && (
-              <Text style={styles.scoreSubLabel}>
-                {today.steps.toLocaleString()}p
-              </Text>
-            )}
-          </View>
-        </View>
-      </PremiumCard>
-
-      {/* Vitals row */}
-      <PremiumCard style={styles.vitalsCard}>
-        <View style={styles.vitalsRow}>
-          <View style={styles.vitalItem}>
-            <MaterialIcons name="favorite" size={16} color={palette.dangerText} />
-            <Text style={styles.vitalValue}>
-              {today?.hrv_ms != null ? `${Math.round(today.hrv_ms)}ms` : '–'}
-            </Text>
-            <Text style={styles.vitalLabel}>HRV</Text>
-          </View>
-          <View style={styles.vitalDivider} />
-          <View style={styles.vitalItem}>
-            <MaterialIcons name="monitor-heart" size={16} color={palette.info} />
-            <Text style={styles.vitalValue}>
-              {today?.resting_hr != null ? `${today.resting_hr}bpm` : '–'}
-            </Text>
-            <Text style={styles.vitalLabel}>FC Reposo</Text>
-          </View>
-          <View style={styles.vitalDivider} />
-          <View style={styles.vitalItem}>
-            <MaterialIcons name="thermostat" size={16} color={palette.warning} />
-            <Text style={styles.vitalValue}>
-              {today?.body_temp_delta != null
-                ? `${today.body_temp_delta >= 0 ? '+' : ''}${today.body_temp_delta.toFixed(1)}°C`
-                : '–'}
-            </Text>
-            <Text style={styles.vitalLabel}>Temp</Text>
-          </View>
-          <View style={styles.vitalDivider} />
-          <View style={styles.vitalItem}>
-            <MaterialIcons name="air" size={16} color={palette.success} />
-            <Text style={styles.vitalValue}>
-              {today?.spo2_avg != null ? `${today.spo2_avg.toFixed(1)}%` : '–'}
-            </Text>
-            <Text style={styles.vitalLabel}>SpO₂</Text>
-          </View>
-        </View>
-      </PremiumCard>
-
-      {/* Heart rate 24h */}
-      {hrPoints.length > 0 && (
-        <>
-          <GoldDivider label="RITMO CARDÍACO — ÚLTIMAS 24H" />
-          <PremiumCard>
-            <HRSparkline points={hrPoints} />
-          </PremiumCard>
-        </>
-      )}
-
-      {/* 7-day trend */}
-      {dailyData.length > 1 && (
-        <>
-          <GoldDivider label="TENDENCIA 7 DÍAS" />
-          <PremiumCard style={styles.weeklyCard}>
-            <Text style={styles.weeklyLabel}>RECUPERACIÓN</Text>
-            <WeeklyBars data={dailyData} field="recovery_score" color={palette.goldText} />
-            <Text style={[styles.weeklyLabel, { marginTop: spacing.md }]}>SUEÑO</Text>
-            <WeeklyBars data={dailyData} field="sleep_score" color={palette.info} />
-          </PremiumCard>
-        </>
-      )}
-
-      {/* Norman insight */}
-      {normanInsight && (
-        <>
-          <GoldDivider label="NORMAN IA DICE" />
-          <PremiumCard style={styles.normanCard}>
-            <MaterialIcons name="psychology" size={20} color={palette.goldText} />
-            <Text style={styles.normanText}>
-              “{normanInsight.charAt(0).toUpperCase() + normanInsight.slice(1)}.”
-            </Text>
-          </PremiumCard>
-        </>
-      )}
-
-      {/* Quick link to devices */}
-      <Pressable
-        style={styles.devicesLink}
-        onPress={() => router.push('/perfil/wearables' as never)}
-        accessibilityRole="button"
-        accessibilityLabel="Gestionar dispositivos">
-        <MaterialIcons name="settings" size={14} color={palette.smoke} />
-        <Text style={styles.devicesLinkText}>Gestionar dispositivos</Text>
-        <MaterialIcons name="chevron-right" size={14} color={palette.smoke} />
-      </Pressable>
-
-    </ScrollView>
+    <Pantalla
+      meta="TU RELOJ"
+      metaRight={dailyData.length > 1 ? `${dailyData.length} DÍAS CON DATOS` : undefined}
+      title={titulo}
+      sub={sub}
+      hero={syncCard}
+      footer={footer}>
+      {rows.map((r) => <Fila key={r.label} label={r.label} value={r.value as string} />)}
+      <Fila label="DISPOSITIVOS" value="Gestionar" onPress={() => router.push('/perfil/wearables' as never)} last />
+    </Pantalla>
   );
 }
 
-// ─── Color helpers ────────────────────────────────────────────────────────────
-function scoreColor(score: number | null | undefined): string {
-  if (score == null) return palette.smoke;
-  if (score >= 70) return palette.success;
-  // goldText (no gold): este color también es el TEXTO del score (22px). `palette.gold`
-  // (#FFC804) como texto es ilegible sobre superficie clara; goldText es theme-aware.
-  if (score >= 50) return palette.goldText;
-  if (score >= 30) return palette.warning;
-  return palette.dangerText;   // es TEXTO de 22px, no relleno
+export default function BiometricsScreen() {
+  // Tras sincronizar se remonta el cuerpo para releer conexiones y datos.
+  const [nonce, setNonce] = useState(0);
+  return <BiometricsBody key={nonce} onSynced={() => setNonce((n) => n + 1)} />;
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xl,
-  },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:   { ...typography.title, color: palette.ivory, fontSize: 18 },
-
-  providerBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.line,
-  },
-  providerText: { ...typography.mono, color: palette.ash },
-
-  mainScores: { marginBottom: spacing.md, gap: spacing.md },
-  scoresRow:  { flexDirection: 'row', gap: spacing.md },
-  scoreBlock: { flex: 1, gap: 4 },
-  scoreDivider: { width: 1, backgroundColor: palette.line },
-  scoreSubLabel: { ...typography.caption, color: palette.smoke, fontSize: 11 },
-
-  vitalsCard: { marginBottom: spacing.md },
-  vitalsRow:  {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  vitalItem:    { alignItems: 'center', gap: 4, flex: 1 },
-  vitalValue:   { fontFamily: Fonts.display, color: palette.ivory, fontSize: 16, letterSpacing: 0.5 },
-  vitalLabel:   { ...typography.label, color: palette.smoke, textAlign: 'center' },
-  vitalDivider: { width: 1, height: 36, backgroundColor: palette.line },
-
-  weeklyCard:  { gap: spacing.sm },
-  weeklyLabel: { ...typography.label, color: palette.smoke, letterSpacing: 1.5 },
-
-  normanCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  normanText: {
-    ...typography.body,
-    color: palette.ash,
-    fontStyle: 'italic',
-    flex: 1,
-    lineHeight: 22,
-  },
-
-  devicesLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-  },
-  devicesLinkText: { ...typography.caption, color: palette.smoke },
-
-  noWearableCard: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
-  },
-  noWearableTitle: { ...typography.section, color: palette.ivory, letterSpacing: 2, marginTop: spacing.sm },
-  noWearableSub:   { ...typography.body, color: palette.smoke, textAlign: 'center', lineHeight: 22 },
-  connectBtn: {
-    backgroundColor: palette.gold,
-    paddingHorizontal: spacing.xl,
-    minHeight: 44,
-    justifyContent: 'center',
-    borderRadius: radii.sm,
-    marginTop: spacing.sm,
-  },
-  connectBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
+const s = StyleSheet.create({
+  footer: { fontFamily: Fonts.sans, fontSize: 13, lineHeight: 19, color: palette.smoke },
 });

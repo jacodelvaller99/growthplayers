@@ -27,9 +27,14 @@ type PantallaProps = {
   children?: ReactNode;
   /** Algo pequeño bajo todo (p.ej. el interruptor del staff). */
   footer?: ReactNode;
+  /** Flecha de volver, para las pantallas que NO son una de las 4 pestañas. */
+  onBack?: () => void;
 };
 
-export function Pantalla({ meta, metaRight, title, sub, hero, children, footer }: PantallaProps) {
+/** Alto del botón flotante de Norman (48) + su margen (16) + aire (32). */
+const FAB_CLEARANCE = 96;
+
+export function Pantalla({ meta, metaRight, title, sub, hero, children, footer, onBack }: PantallaProps) {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
   const reduced = useReducedMotion();
@@ -51,10 +56,20 @@ export function Pantalla({ meta, metaRight, title, sub, hero, children, footer }
         s.content,
         isDesktop
           ? s.contentDesk
-          : { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 32 },
+          : { paddingTop: insets.top + 24, paddingBottom: insets.bottom + FAB_CLEARANCE },
       ]}
       showsVerticalScrollIndicator={false}>
       <Animated.View entering={reduced ? undefined : FadeIn.duration(240)} style={s.inner}>
+        {!!onBack && (
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
+            hitSlop={8}
+            style={s.back}>
+            <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
+          </Pressable>
+        )}
         <View style={s.metaRow}>
           <Text style={s.meta}>{meta}</Text>
           {!!metaRight && <Text style={s.meta}>{metaRight}</Text>}
@@ -155,11 +170,13 @@ export function Fila({
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.black },
   content: { flexGrow: 1, paddingHorizontal: spacing.lg },
-  contentDesk: { paddingHorizontal: 72, paddingTop: 48, paddingBottom: 72 },
+  contentDesk: { paddingHorizontal: 72, paddingTop: 48, paddingBottom: FAB_CLEARANCE },
   inner: { width: '100%', maxWidth: 1128, alignSelf: 'center' },
 
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 24, gap: spacing.md },
-  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
+  // El meta va en gris: el amarillo se gana (es de la tarjeta de acción).
+  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
+  back: { width: 44, height: 44, marginLeft: -10, marginBottom: 8, alignItems: 'center', justifyContent: 'center' },
 
   title: { marginTop: 40, fontFamily: Fonts.displayRegular, fontWeight: '400', color: palette.ivory, letterSpacing: -0.3 },
   sub: { marginTop: 20, fontFamily: Fonts.sans, fontSize: 17, lineHeight: 26, color: palette.ash, maxWidth: 340 },

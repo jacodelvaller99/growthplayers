@@ -91,6 +91,12 @@ function raceSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   });
 }
 
+// El saludo sembrado en el estado (hooks/use-lifeflow.tsx) usaba jerga
+// («protocolo», «instrucción operativa»). Se reescribe al pintar para que
+// también cambie en las conversaciones ya guardadas en el dispositivo.
+const LEGACY_GREETING = 'Estoy leyendo tu protocolo. Haz check-in y te devuelvo una instrucción operativa para hoy.';
+const GREETING = 'Haz tu check-in y te digo qué hacer hoy.';
+
 function getOpeningMessage(params: {
   name: string;
   protocolDay: number;
@@ -771,17 +777,6 @@ function MentorScreenInner() {
           </View>
         </View>
 
-        {/* ── Divulgación de IA (persistente, requisito App Store) ──
-            Compacta: una línea. Antes eran dos líneas + tarjeta de contexto +
-            8 consultas + 4 modos + ancla de sesión ENCIMA de la conversación;
-            el chat quedaba a un scroll de distancia. */}
-        <View style={styles.aiDisclosure} accessibilityRole="text">
-          <MaterialIcons name="smart-toy" size={13} color={palette.smoke} />
-          <Text style={styles.aiDisclosureText}>
-            Norman es un mentor de IA. No sustituye atención médica ni psicológica.
-          </Text>
-        </View>
-
         {/* ── Qué ve Norman: plegado por defecto ── */}
         <Pressable
           accessibilityRole="button"
@@ -857,7 +852,7 @@ function MentorScreenInner() {
               {displayMessages.map((message, i) => {
                 const bubble = (
                   <ChatBubble key={message.id} role={message.role}>
-                    {message.text}
+                    {message.text === LEGACY_GREETING ? GREETING : message.text}
                   </ChatBubble>
                 );
                 // Ancla del salto: primer mensaje del día elegido en el historial.
@@ -951,6 +946,18 @@ function MentorScreenInner() {
         </View>
       </Modal>
 
+      {/* ── Divulgación de IA (persistente, requisito App Store) ──
+          FIJA sobre el campo de escribir: en la cabecera se iba con el scroll
+          y en el teléfono el chat abre ya desplazado — nunca se veía. */}
+      <View
+        style={[styles.aiDisclosure, { maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}
+        accessibilityRole="text">
+        <MaterialIcons name="smart-toy" size={14} color={palette.ash} />
+        <Text style={styles.aiDisclosureText}>
+          Norman es un mentor de IA. No sustituye atención médica ni psicológica.
+        </Text>
+      </View>
+
       {/* ── Selector de modo ── */}
       <View style={[styles.modeRow, { maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}>
         {!modesOpen ? (
@@ -962,7 +969,7 @@ function MentorScreenInner() {
             onPress={() => setModesOpen(true)}
             style={({ pressed }) => [styles.modeChip, styles.modeChipCompact, pressed && styles.modeChipPressed]}>
             <Text style={styles.modeChipText}>
-              Modo · {MENTOR_MODES.find((m) => m.key === mentorMode)?.label ?? 'Adaptativo'}
+              Cómo te acompaña Norman · {MENTOR_MODES.find((m) => m.key === mentorMode)?.label ?? 'Adaptativo'}
             </Text>
             <MaterialIcons name="expand-less" size={16} color={palette.smoke} />
           </Pressable>
@@ -1115,18 +1122,21 @@ const styles = StyleSheet.create({
 
   // AI disclosure (persistente)
   aiDisclosure: {
+    alignSelf: 'center',
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: spacing.xs,
-    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   aiDisclosureText: {
     flex: 1,
     fontFamily: Fonts.sans,
-    fontSize: 11,
-    lineHeight: 15,
-    color: palette.smoke,
+    fontSize: 12,
+    lineHeight: 16,
+    color: palette.ash,
   },
 
   // Context card

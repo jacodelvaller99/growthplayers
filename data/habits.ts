@@ -1,8 +1,8 @@
 // ─── Catálogo semilla de hábitos — Protocolo Soberano ────────────────────────
 // Contenido dictado en el walkthrough de producto (2026-06-04, WS-4).
 // Rutina MATUTINA y NOCTURNA en SECUENCIA (sequence_order), tipo "ruta paso a
-// paso". Cada hábito suma `points` al completarse, lleva su `importance` (por qué
-// importa), opcionalmente una guía/video corto y `options` (variantes/recetas).
+// paso". `points` queda en datos por compatibilidad: la UI ya no muestra puntos.
+// Cada hábito lleva su `importance` (una frase llana, sin mecanismos), opcionalmente una guía/video corto y `options` (variantes/recetas).
 //
 // Estos campos viven en las columnas nuevas de `habits`
 // (migración 20260604000000_meeting_features.sql). Como esas columnas NO están en
@@ -46,9 +46,9 @@ export interface HabitTemplate {
   /** hora sugerida para el recordatorio (0–23). Habilita WS-7. */
   reminderHour?:   number;
   reminderMinute?: number;
-  /** variantes/recetas (ej. café bulletproof, bebida matutina) */
+  /** variantes/recetas (ej. bebida matutina) */
   options?:    HabitOption[];
-  /** nota/advertencia destacada (ej. "rompe la autofagia") */
+  /** nota/advertencia destacada */
   warning?:    string;
 }
 
@@ -61,8 +61,8 @@ export const MORNING_HABITS: HabitTemplate[] = [
     timeOfDay:  'morning',
     sequence:   1,
     points:     10,
-    importance: 'Tras 7–8 horas sin líquidos, el cuerpo despierta algo deshidratado. Rehidratar al levantarte apoya la concentración, la energía y la función renal —el órgano que realmente filtra los desechos.',
-    science:    'Rehidrata tras el ayuno nocturno. Apoya energía y función renal.',
+    importance: 'Pasaste la noche sin beber. Un vaso de agua al levantarte es una forma fácil de empezar el día.',
+    science:    'Empieza el día con un vaso de agua.',
     reminderHour: 6,
     reminderMinute: 0,
   },
@@ -73,8 +73,8 @@ export const MORNING_HABITS: HabitTemplate[] = [
     timeOfDay:  'morning',
     sequence:   2,
     points:     20,
-    importance: 'Antes de reaccionar al mundo, te enraízas. Agradeces lo que ya tienes y creas el día con intención: defines cómo quieres sentirte y qué quieres lograr.',
-    science:    'Agradecimiento + creación del día. Reduce cortisol, activa la corteza prefrontal.',
+    importance: 'Unos minutos en calma antes de mirar el teléfono: agradeces algo y eliges cómo quieres vivir el día.',
+    science:    'Unos minutos en calma antes de empezar.',
     route:      '/bienestar/meditacion',
     reminderHour: 6,
     reminderMinute: 30,
@@ -90,26 +90,26 @@ export const MORNING_HABITS: HabitTemplate[] = [
     timeOfDay:  'morning',
     sequence:   3,
     points:     15,
-    importance: 'Una bebida alcalinizante en ayunas prepara el sistema digestivo, apoya la producción de ácido estomacal y equilibra los electrolitos antes de la primera comida.',
-    science:    'Alcaliniza, hidrata y apoya la digestión antes de la primera comida.',
+    importance: 'Una bebida tibia antes de desayunar. Es un ritual para empezar despacio, no un remedio.',
+    science:    'Una bebida tibia antes de desayunar.',
     reminderHour: 6,
     reminderMinute: 15,
     options: [
       { label: 'Agua tibia',                   detail: 'Base de la bebida — no fría, para no estresar la digestión.' },
-      { label: 'Jugo de limón',                detail: 'Vitamina C y efecto alcalinizante.' },
-      { label: 'Sal del Himalaya (pizca)',     detail: 'Minerales y electrolitos.' },
-      { label: 'Vinagre de manzana (1 cda)',   detail: 'Apoya la digestión y la glucosa en ayunas.' },
+      { label: 'Jugo de limón',                detail: 'Un chorrito, al gusto.' },
+      { label: 'Sal del Himalaya (pizca)',     detail: 'Solo una pizca. Evítala si te indicaron reducir la sal.' },
+      { label: 'Vinagre de manzana (1 cda)',   detail: 'Diluido en el agua. Opcional.' },
     ],
   },
   {
     category:   'grounding',
     icon:       'wb-sunny',
-    name:       'Grounding / Sol 10–15 min',
+    name:       'Luz del sol 10–15 min',
     timeOfDay:  'morning',
     sequence:   4,
     points:     15,
-    importance: 'La luz solar matutina en los ojos y la piel regula el ritmo circadiano y dispara la síntesis de vitamina D. El contacto con la tierra (grounding) reduce la inflamación y calma el sistema nervioso.',
-    science:    'Regula el ritmo circadiano. Reduce inflamación. Sintetiza vitamina D.',
+    importance: 'Salir a la luz de la mañana ayuda a que el cuerpo sepa que empezó el día y, de noche, a que te dé sueño a tu hora.',
+    science:    'Sal a la luz de la mañana unos minutos.',
     reminderHour: 7,
     reminderMinute: 0,
   },
@@ -120,13 +120,13 @@ export const MORNING_HABITS: HabitTemplate[] = [
     timeOfDay:  'morning',
     sequence:   5,
     points:     25,
-    importance: 'Mover el cuerpo en la mañana libera BDNF, mejora el ánimo y deja la mente clara para el resto del día. Incluye tapping para descargar tensión emocional.',
-    science:    'Libera BDNF. Mejora el ánimo y la claridad mental.',
+    importance: 'Moverte media hora en la mañana suele mejorar el ánimo y la energía del resto del día.',
+    science:    'Media hora de moverte, a tu ritmo.',
     route:      '/bienestar/tapping',
     reminderHour: 7,
     reminderMinute: 30,
     options: [
-      { label: 'Tapping', detail: 'Golpeteo en puntos de meridianos para descargar tensión.' },
+      { label: 'Tapping', detail: 'Golpecitos suaves para soltar tensión. Opcional.' },
     ],
   },
   {
@@ -136,26 +136,10 @@ export const MORNING_HABITS: HabitTemplate[] = [
     timeOfDay:  'morning',
     sequence:   6,
     points:     20,
-    importance: 'La exposición al frío dispara norepinefrina, mejora el foco, la resistencia al estrés y la recuperación. Termina la rutina matutina activando el sistema.',
-    science:    'Activa norepinefrina. Mejora foco y resistencia al frío.',
+    importance: 'Terminar la ducha con agua fría despierta. Empieza con pocos segundos. Evítala si tienes problemas del corazón o presión alta.',
+    science:    'Termina la ducha con unos segundos de agua fría.',
     reminderHour: 8,
     reminderMinute: 0,
-  },
-  {
-    category:   'cafe_bulletproof',
-    icon:       'coffee',
-    name:       'Café bulletproof',
-    timeOfDay:  'morning',
-    sequence:   7,
-    points:     10,
-    importance: 'Café con grasas saludables para energía sostenida y enfoque sin picos de glucosa. Opcional dentro de la rutina.',
-    science:    'Energía sostenida y enfoque. Grasas saludables como combustible.',
-    warning:    'Rompe la autofagia — evítalo si estás en ayuno prolongado.',
-    options: [
-      { label: 'Café',               detail: 'Base — recién hecho.' },
-      { label: 'Mantequilla ghee',   detail: 'Grasa limpia, sin lactosa.' },
-      { label: 'Aceite de coco',     detail: 'Triglicéridos de cadena media (MCT) para energía rápida.' },
-    ],
   },
 ];
 
@@ -164,48 +148,48 @@ export const EVENING_HABITS: HabitTemplate[] = [
   {
     category:   'luz_roja',
     icon:       'nightlight',
-    name:       'Apagar luz blanca/azul · luz roja',
+    name:       'Luces bajas',
     timeOfDay:  'evening',
     sequence:   1,
     points:     15,
-    importance: 'La luz azul/blanca de la noche suprime la melatonina y retrasa el sueño. Cambiar a luz roja le indica al cuerpo que es hora de descansar y protege tu descanso profundo.',
-    science:    'Protege la melatonina. Prepara el cuerpo para el sueño profundo.',
+    importance: 'La luz fuerte de noche retrasa el sueño. Bajar las luces y las pantallas le avisa al cuerpo que ya es hora de descansar.',
+    science:    'Baja las luces y las pantallas.',
     reminderHour: 20,
     reminderMinute: 0,
   },
   {
     category:   'ultima_comida',
     icon:       'restaurant',
-    name:       'Última comida antes del atardecer',
+    name:       'Cenar temprano',
     timeOfDay:  'evening',
     sequence:   2,
     points:     20,
-    importance: 'Cenar temprano (~7pm) deja que la digestión termine antes de dormir, mejora la calidad del sueño y alarga la ventana de ayuno nocturno.',
-    science:    'Mejora la calidad del sueño. Alarga el ayuno nocturno.',
+    importance: 'Cenar unas horas antes de acostarte te deja dormir sin estar lleno.',
+    science:    'Cena unas horas antes de dormir.',
     reminderHour: 18,
     reminderMinute: 45,
   },
   {
     category:   'frio_noche',
     icon:       'ac-unit',
-    name:       'Ducha fría / refrescante',
+    name:       'Ducha antes de dormir',
     timeOfDay:  'evening',
     sequence:   3,
     points:     15,
-    importance: 'Una ducha refrescante baja la temperatura corporal central, lo que facilita conciliar el sueño y descargar la tensión del día.',
-    science:    'Baja la temperatura central. Facilita conciliar el sueño.',
+    importance: 'Una ducha tibia o fresca antes de dormir ayuda a soltar el día.',
+    science:    'Una ducha para soltar el día.',
     reminderHour: 21,
     reminderMinute: 0,
   },
   {
     category:   'journaling',
     icon:       'edit-note',
-    name:       'Journaling',
+    name:       'Escribir en el diario',
     timeOfDay:  'evening',
     sequence:   4,
     points:     20,
-    importance: 'Escribir antes de dormir cierra los ciclos mentales abiertos, procesa las emociones del día y libera la mente para descansar.',
-    science:    'Cierra ciclos mentales. Procesa emociones del día.',
+    importance: 'Escribir lo que te quedó dando vueltas ayuda a soltarlo antes de dormir.',
+    science:    'Escribe lo que te quedó del día.',
     route:      '/bienestar/diario',
     reminderHour: 21,
     reminderMinute: 30,
@@ -217,8 +201,8 @@ export const EVENING_HABITS: HabitTemplate[] = [
     timeOfDay:  'evening',
     sequence:   5,
     points:     15,
-    importance: 'Leer (en papel o luz cálida) relaja el sistema nervioso, reduce el cortisol y reemplaza las pantallas como última actividad del día.',
-    science:    'Relaja el sistema nervioso. Mejor que las pantallas antes de dormir.',
+    importance: 'Leer en papel es una buena forma de dejar las pantallas antes de dormir.',
+    science:    'Lee en papel antes de dormir.',
     reminderHour: 22,
     reminderMinute: 0,
   },

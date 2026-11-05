@@ -6,31 +6,30 @@ import {
   Linking,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { FocusHero, HeroPanel } from '@/components/focus-deck';
-import { GoldDivider } from '@/components/polaris';
-import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
+import { Fonts, palette, radii, spacing } from '@/constants/theme';
 
-const DIET_TYPES = [
-  { id: 'omnivoro',     label: 'Omnívoro',     icon: 'restaurant',         desc: 'Como de todo: carne, verduras, granos.' },
-  { id: 'vegetariano',  label: 'Vegetariano',  icon: 'eco',                desc: 'Sin carne. Incluye lácteos y huevos.' },
-  { id: 'vegano',       label: 'Vegano',       icon: 'grass',              desc: 'Solo alimentos de origen vegetal.' },
-  { id: 'keto',         label: 'Keto',         icon: 'whatshot',           desc: 'Alta en grasas, muy baja en carbohidratos.' },
-  { id: 'carnivoro',    label: 'Carnívoro',    icon: 'set-meal',           desc: 'Solo carne, pescado y huevos.' },
-  { id: 'mediterraneo', label: 'Mediterráneo', icon: 'local-dining',       desc: 'Aceite de oliva, pescado, vegetales, vino.' },
-  { id: 'paleo',        label: 'Paleo',        icon: 'outdoor-grill',      desc: 'Sin procesados, lácteos ni granos.' },
+type Option = { id: string; label: string; desc?: string };
+
+const DIET_TYPES: Option[] = [
+  { id: 'omnivoro',     label: 'Omnívoro',     desc: 'Como de todo: carne, verduras, granos.' },
+  { id: 'vegetariano',  label: 'Vegetariano',  desc: 'Sin carne. Incluye lácteos y huevos.' },
+  { id: 'vegano',       label: 'Vegano',       desc: 'Solo alimentos de origen vegetal.' },
+  { id: 'keto',         label: 'Keto',         desc: 'Alta en grasas, muy baja en carbohidratos.' },
+  { id: 'carnivoro',    label: 'Carnívoro',    desc: 'Solo carne, pescado y huevos.' },
+  { id: 'mediterraneo', label: 'Mediterráneo', desc: 'Aceite de oliva, pescado, vegetales, legumbres.' },
+  { id: 'paleo',        label: 'Paleo',        desc: 'Sin procesados, lácteos ni granos.' },
 ];
 
-const RESTRICTIONS = [
+const RESTRICTIONS: Option[] = [
   { id: 'gluten',    label: 'Sin gluten' },
   { id: 'lactosa',   label: 'Sin lactosa' },
   { id: 'azucar',    label: 'Sin azúcar' },
@@ -38,7 +37,7 @@ const RESTRICTIONS = [
   { id: 'ninguna',   label: 'Ninguna' },
 ];
 
-const ALLERGIES = [
+const ALLERGIES: Option[] = [
   { id: 'frutos_secos', label: 'Frutos secos' },
   { id: 'mariscos',     label: 'Mariscos' },
   { id: 'huevos',       label: 'Huevos' },
@@ -46,25 +45,33 @@ const ALLERGIES = [
   { id: 'ninguna',      label: 'Ninguna' },
 ];
 
-const GOALS = [
-  { id: 'perder_grasa',    label: 'Perder grasa',      icon: 'trending-down' },
-  { id: 'ganar_musculo',   label: 'Ganar músculo',     icon: 'fitness-center' },
-  { id: 'energia',         label: 'Más energía',       icon: 'bolt' },
-  { id: 'longevidad',      label: 'Longevidad',        icon: 'favorite' },
-  { id: 'rendimiento',     label: 'Rendimiento',       icon: 'speed' },
-  { id: 'mantenimiento',   label: 'Mantenimiento',     icon: 'balance' },
+const GOALS: Option[] = [
+  { id: 'perder_grasa',    label: 'Perder grasa' },
+  { id: 'ganar_musculo',   label: 'Ganar músculo' },
+  { id: 'energia',         label: 'Más energía' },
+  { id: 'longevidad',      label: 'Vivir más y mejor' },
+  { id: 'rendimiento',     label: 'Rendir más' },
+  { id: 'mantenimiento',   label: 'Mantenerme como estoy' },
 ];
 
-const CALORIE_RANGES = [
-  { id: '1500', label: '~1500 kcal', desc: 'Déficit pronunciado' },
-  { id: '1800', label: '~1800 kcal', desc: 'Déficit moderado' },
-  { id: '2000', label: '~2000 kcal', desc: 'Mantenimiento bajo' },
-  { id: '2200', label: '~2200 kcal', desc: 'Mantenimiento estándar' },
-  { id: '2500', label: '~2500 kcal', desc: 'Superávit moderado' },
-  { id: '3000', label: '3000+ kcal', desc: 'Superávit pronunciado' },
+const CALORIE_RANGES: Option[] = [
+  { id: '1500', label: '~1500 kcal', desc: 'Comer bastante menos' },
+  { id: '1800', label: '~1800 kcal', desc: 'Comer algo menos' },
+  { id: '2000', label: '~2000 kcal', desc: 'Lo justo, en bajo' },
+  { id: '2200', label: '~2200 kcal', desc: 'Lo justo' },
+  { id: '2500', label: '~2500 kcal', desc: 'Comer algo más' },
+  { id: '3000', label: '3000+ kcal', desc: 'Comer bastante más' },
 ];
 
 const TOTAL_STEPS = 5;
+
+const STEPS: { q: string; sub: string; multi?: 'restrictions' | 'allergies'; single?: 'dietType' | 'goal' | 'calories'; options: Option[] }[] = [
+  { q: '¿Cómo comes?',               sub: 'Elige la que más se parece a tu día.', single: 'dietType', options: DIET_TYPES },
+  { q: '¿Evitas algo?',              sub: 'Puedes elegir varias.',                multi: 'restrictions', options: RESTRICTIONS },
+  { q: '¿Tienes alergias?',          sub: 'Puedes elegir varias.',                multi: 'allergies', options: ALLERGIES },
+  { q: '¿Qué buscas?',               sub: 'Elige una.',                           single: 'goal', options: GOALS },
+  { q: '¿Cuánto comes al día?',      sub: 'Una idea aproximada basta.',           single: 'calories', options: CALORIE_RANGES },
+];
 
 interface NutritionAnswers {
   dietType:      string | null;
@@ -76,11 +83,10 @@ interface NutritionAnswers {
 
 export default function NutricionScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
 
-  const [step, setStep] = useState(1);
-  const [saved, setSaved] = useState(false);
+  // 0 = pantalla principal; 1..5 = paso de las preguntas.
+  const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<NutritionAnswers>({
     dietType:     null,
     restrictions: [],
@@ -88,28 +94,32 @@ export default function NutricionScreen() {
     goal:         null,
     calories:     null,
   });
+  const [savedProfile, setSavedProfile] = useState<{ diet: string | null; calories: number | null } | null>(null);
 
-  // Plan de nutrición subido por el nutriólogo (columnas nuevas, cliente sin tipar)
+  // Plan de nutrición del nutriólogo: es un ENLACE (PDF o imagen), no una subida.
   const [planUrl, setPlanUrl] = useState('');
   const [nutritionistName, setNutritionistName] = useState('');
   const [savedPlanUrl, setSavedPlanUrl] = useState<string | null>(null);
   const [savedNutritionist, setSavedNutritionist] = useState<string | null>(null);
   const [planSaving, setPlanSaving] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
 
-  // Carga el plan ya guardado (si existe) para mostrarlo al volver a la pantalla.
+  // Carga el plan y el perfil ya guardados (si existen).
   useEffect(() => {
     if (!userId) return;
     (async () => {
       try {
         const { data } = await db2.nutritionProfiles()
-          .select('plan_url, nutritionist_name')
+          .select('plan_url, nutritionist_name, diet_type, calories')
           .eq('user_id', userId)
           .maybeSingle();
         if (data) {
-          setSavedPlanUrl((data as any).plan_url ?? null);
-          setSavedNutritionist((data as any).nutritionist_name ?? null);
-          setPlanUrl((data as any).plan_url ?? '');
-          setNutritionistName((data as any).nutritionist_name ?? '');
+          const d = data as any;
+          setSavedPlanUrl(d.plan_url ?? null);
+          setSavedNutritionist(d.nutritionist_name ?? null);
+          setPlanUrl(d.plan_url ?? '');
+          setNutritionistName(d.nutritionist_name ?? '');
+          if (d.diet_type) setSavedProfile({ diet: d.diet_type, calories: d.calories ?? null });
         }
       } catch { /* tabla/columna puede no existir aún */ }
     })();
@@ -133,6 +143,7 @@ export default function NutricionScreen() {
     setSavedPlanUrl(url);
     setSavedNutritionist(name || null);
     setPlanSaving(false);
+    setPlanOpen(false);
   };
 
   const openPlan = () => {
@@ -163,356 +174,189 @@ export default function NutricionScreen() {
   };
 
   const saveProfile = async () => {
-    if (!userId) { setSaved(true); return; }
-    try {
-      await db2.nutritionProfiles().upsert({
-        user_id:      userId,
-        diet_type:    answers.dietType,
-        restrictions: answers.restrictions,
-        allergies:    answers.allergies,
-        goal:         answers.goal,
-        calories:     answers.calories ? parseInt(answers.calories) : null,
-        updated_at:   new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-    } catch { /* tabla puede no existir aún */ }
-    setSaved(true);
+    if (userId) {
+      try {
+        await db2.nutritionProfiles().upsert({
+          user_id:      userId,
+          diet_type:    answers.dietType,
+          restrictions: answers.restrictions,
+          allergies:    answers.allergies,
+          goal:         answers.goal,
+          calories:     answers.calories ? parseInt(answers.calories) : null,
+          updated_at:   new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+      } catch { /* tabla puede no existir aún */ }
+    }
+    setSavedProfile({ diet: answers.dietType, calories: answers.calories ? parseInt(answers.calories) : null });
+    setStep(0);
   };
 
   const handleNext = async () => {
-    if (step < TOTAL_STEPS) {
-      setStep(step + 1);
-    } else {
-      await saveProfile();
-    }
+    if (step < TOTAL_STEPS) setStep(step + 1);
+    else await saveProfile();
   };
 
-  const progressPct = `${((step - 1) / TOTAL_STEPS) * 100}%` as any;
-
-  // Sección reutilizable: plan de nutrición (subir/ver el plan del nutriólogo).
-  // Hero compacto sin métrica: el plan no tiene un número protagonista, solo
-  // un estado (guardado o no) — así que FocusHero va sin la prop `metric`.
-  const PlanSection = (
-    <View style={styles.planSection}>
-      <HeroPanel>
-        <FocusHero
-          eyebrow="PLAN DE NUTRICIÓN"
-          statement={
-            savedPlanUrl
-              ? `Plan guardado${savedNutritionist ? ` · Por ${savedNutritionist}` : ''}.`
-              : 'Sube el plan que te entregó tu nutriólogo (enlace a un PDF o imagen) para tenerlo siempre a mano.'
-          }
-          directive={savedPlanUrl ? { title: 'ABRIR PLAN', reason: 'Ver el documento subido', onPress: openPlan } : undefined}
-        />
-      </HeroPanel>
-
-      <GoldDivider />
-
-      <Text style={styles.planInputLabel}>ENLACE DEL PLAN (PDF / IMAGEN)</Text>
-      <TextInput
-        style={styles.planInput}
-        value={planUrl}
-        onChangeText={setPlanUrl}
-        placeholder="https://…"
-        placeholderTextColor={palette.smoke}
-        autoCapitalize="none"
-        keyboardType="url"
-        accessibilityLabel="Enlace del plan de nutrición"
-      />
-      <Text style={styles.planInputLabel}>NUTRIÓLOGO (OPCIONAL)</Text>
-      <TextInput
-        style={styles.planInput}
-        value={nutritionistName}
-        onChangeText={setNutritionistName}
-        placeholder="Nombre del profesional"
-        placeholderTextColor={palette.smoke}
-        accessibilityLabel="Nombre del nutriólogo (opcional)"
-      />
-      <Pressable
-        onPress={savePlan}
-        disabled={planSaving || !planUrl.trim()}
-        accessibilityRole="button"
-        accessibilityLabel={savedPlanUrl ? 'Actualizar plan de nutrición' : 'Agregar plan de nutrición'}
-        accessibilityState={{ disabled: planSaving || !planUrl.trim() }}
-        style={[styles.planSaveBtn, (planSaving || !planUrl.trim()) && styles.planSaveBtnDisabled]}
-      >
-        <MaterialIcons name="upload-file" size={16} color={(planSaving || !planUrl.trim()) ? palette.ash : palette.ink} />
-        <Text style={[styles.planSaveBtnText, (planSaving || !planUrl.trim()) && { color: palette.ash }]}>
-          {planSaving ? 'GUARDANDO…' : savedPlanUrl ? 'ACTUALIZAR PLAN' : 'AGREGAR PLAN DE NUTRICIÓN'}
-        </Text>
-      </Pressable>
-    </View>
+  const backBtn = (
+    <Pressable
+      onPress={step > 0 ? () => setStep(step - 1) : () => router.back()}
+      style={styles.backBtn}
+      accessibilityRole="button"
+      accessibilityLabel={step > 1 ? 'Paso anterior' : 'Volver'}>
+      <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
+      <Text style={styles.backText}>{step > 1 ? 'ANTERIOR' : 'VOLVER'}</Text>
+    </Pressable>
   );
 
-  if (saved) {
+  // ── Preguntas: una por pantalla, un solo botón amarillo «Seguir». ──
+  if (step > 0) {
+    const cfg = STEPS[step - 1];
+    const isSelected = (id: string) =>
+      cfg.multi ? answers[cfg.multi].includes(id) : answers[cfg.single!] === id;
+    const ok = canNext();
     return (
-      <KeyboardAvoidingView
-        style={[styles.root, { paddingTop: insets.top }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-            <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-          </Pressable>
-          <Text style={styles.title}>NUTRICIÓN</Text>
-          <View style={{ width: 38 }} />
-        </View>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.successContainer}>
-            <MaterialIcons name="check-circle" size={64} color={palette.goldText} />
-            <Text style={styles.successTitle}>PERFIL GUARDADO</Text>
-            <Text style={styles.successSub}>
-              Tu perfil nutricional está configurado.{'\n'}
-              Dieta {DIET_TYPES.find(d => d.id === answers.dietType)?.label ?? ''} ·{' '}
-              {answers.calories} kcal/día
-            </Text>
-          </View>
+      <Pantalla
+        meta="NUTRICIÓN"
+        metaRight={`${step} DE ${TOTAL_STEPS}`}
+        title={cfg.q}
+        sub={cfg.sub}
+        footer={backBtn}>
+        {cfg.options.map((o, i) => {
+          const sel = isSelected(o.id);
+          return (
+            <Pressable
+              key={o.id}
+              onPress={() => cfg.multi
+                ? toggleMulti(cfg.multi, o.id)
+                : setAnswers(prev => ({ ...prev, [cfg.single!]: o.id }))}
+              accessibilityRole={cfg.multi ? 'checkbox' : 'radio'}
+              accessibilityLabel={o.desc ? `${o.label}: ${o.desc}` : o.label}
+              accessibilityState={cfg.multi ? { checked: sel } : { selected: sel }}
+              style={[styles.option, i === cfg.options.length - 1 && styles.optionLast]}>
+              <View style={styles.optionText}>
+                <Text style={styles.optionLabel}>{o.label}</Text>
+                {!!o.desc && <Text style={styles.optionDesc}>{o.desc}</Text>}
+              </View>
+              <MaterialIcons
+                name={sel ? (cfg.multi ? 'check-box' : 'radio-button-checked') : (cfg.multi ? 'check-box-outline-blank' : 'radio-button-unchecked')}
+                size={22}
+                color={sel ? palette.goldText : palette.smoke}
+              />
+            </Pressable>
+          );
+        })}
 
-          {PlanSection}
-
-          <Pressable onPress={() => router.back()} style={styles.doneBtn} accessibilityRole="button" accessibilityLabel="Volver al hub">
-            <Text style={styles.doneBtnText}>VOLVER AL HUB</Text>
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <Pressable
+          onPress={handleNext}
+          disabled={!ok}
+          accessibilityRole="button"
+          accessibilityLabel={step === TOTAL_STEPS ? 'Guardar' : 'Seguir'}
+          accessibilityState={{ disabled: !ok }}
+          style={[styles.seguir, !ok && styles.seguirOff]}>
+          <Text style={styles.seguirText}>{step === TOTAL_STEPS ? 'GUARDAR' : 'SEGUIR'}</Text>
+        </Pressable>
+        {!ok && <Text style={styles.hint}>Elige una opción para seguir.</Text>}
+      </Pantalla>
     );
   }
 
+  // ── Principal: una acción (abrir tu plan, o responder 5 preguntas) + filas. ──
+  const dietLabel = DIET_TYPES.find(d => d.id === savedProfile?.diet)?.label;
+  const profileValue = savedProfile
+    ? `${dietLabel ?? 'Guardado'}${savedProfile.calories ? ` · ${savedProfile.calories} kcal` : ''}`
+    : 'Responder 5 preguntas';
+
   return (
-    <KeyboardAvoidingView
-      style={[styles.root, { paddingTop: insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0 /* pantalla sin header: el KAV arranca en y=0 */}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={step > 1 ? () => setStep(step - 1) : () => router.back()}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel={step > 1 ? 'Paso anterior' : 'Volver'}>
-          <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-        </Pressable>
-        <Text style={styles.title}>NUTRICIÓN</Text>
-        <Text style={styles.stepCounter}>{step}/{TOTAL_STEPS}</Text>
-      </View>
-
-      {/* Progress bar */}
-      <View
-        style={styles.progressBar}
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel={`Paso ${step} de ${TOTAL_STEPS}`}
-        accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: step }}>
-        <View style={[styles.progressFill, { width: progressPct }]} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-        {/* PASO 1 — Tipo de dieta */}
-        {step === 1 && (
-          <View>
-            <Text style={styles.questionTitle}>¿Cuál es tu tipo de alimentación?</Text>
-            <Text style={styles.questionSub}>Selecciona el que mejor describe tu estilo actual.</Text>
-            {DIET_TYPES.map(d => (
-              <Pressable
-                key={d.id}
-                onPress={() => setAnswers(prev => ({ ...prev, dietType: d.id }))}
-                accessibilityRole="radio"
-                accessibilityLabel={`${d.label}: ${d.desc}`}
-                accessibilityState={{ selected: answers.dietType === d.id }}
-                style={[styles.optionRow, answers.dietType === d.id && styles.optionRowActive]}
-              >
-                <View style={[styles.optionIcon, answers.dietType === d.id && styles.optionIconActive]}>
-                  <MaterialIcons name={d.icon as any} size={20} color={answers.dietType === d.id ? palette.ink : palette.goldText} />
-                </View>
-                <View style={styles.optionText}>
-                  <Text style={[styles.optionLabel, answers.dietType === d.id && { color: palette.ink }]}>{d.label}</Text>
-                  <Text style={[styles.optionDesc,  answers.dietType === d.id && { color: 'rgba(0,0,0,0.6)' }]}>{d.desc}</Text>
-                </View>
-                {answers.dietType === d.id && (
-                  <MaterialIcons name="check-circle" size={20} color={palette.ink} />
-                )}
-              </Pressable>
-            ))}
-
-            {/* Plan de nutrición — accesible desde el inicio del wizard */}
-            {PlanSection}
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Pantalla
+        meta="BIENESTAR · CUERPO"
+        title="Nutrición"
+        sub="Tu plan de comidas, en un solo lugar."
+        hero={savedPlanUrl ? (
+          <TarjetaOro
+            meta="TU PLAN"
+            title="Abrir tu plan"
+            detail={savedNutritionist ? `De ${savedNutritionist}.` : 'El enlace que guardaste.'}
+            onPress={openPlan}
+          />
+        ) : (
+          <TarjetaOro
+            meta="EMPIEZA AQUÍ"
+            title={savedProfile ? 'Actualiza cómo comes' : 'Cuéntanos cómo comes'}
+            detail="Cinco preguntas cortas. Menos de un minuto."
+            onPress={() => setStep(1)}
+          />
+        )}
+        footer={backBtn}>
+        <Fila label="CÓMO COMES" value={profileValue} onPress={() => setStep(1)} />
+        <Fila
+          label="TU PLAN DEL NUTRIÓLOGO"
+          value={savedPlanUrl ? (savedNutritionist ? `Guardado · ${savedNutritionist}` : 'Guardado') : 'Pega el enlace de tu plan'}
+          onPress={() => setPlanOpen(o => !o)}
+          last={!planOpen}
+        />
+        {planOpen && (
+          <View style={styles.plan}>
+            <Text style={styles.hint}>
+              Pega el enlace de tu plan (un PDF o una imagen en Drive, Dropbox o similar) para tenerlo siempre a mano.
+            </Text>
+            <Text style={styles.inputLabel}>ENLACE DEL PLAN</Text>
+            <TextInput
+              style={styles.input}
+              value={planUrl}
+              onChangeText={setPlanUrl}
+              placeholder="https://…"
+              placeholderTextColor={palette.smoke}
+              autoCapitalize="none"
+              keyboardType="url"
+              accessibilityLabel="Enlace del plan de nutrición"
+            />
+            <Text style={styles.inputLabel}>NUTRIÓLOGO (OPCIONAL)</Text>
+            <TextInput
+              style={styles.input}
+              value={nutritionistName}
+              onChangeText={setNutritionistName}
+              placeholder="Nombre del profesional"
+              placeholderTextColor={palette.smoke}
+              accessibilityLabel="Nombre del nutriólogo (opcional)"
+            />
+            <Pressable
+              onPress={savePlan}
+              disabled={planSaving || !planUrl.trim()}
+              accessibilityRole="button"
+              accessibilityLabel={savedPlanUrl ? 'Actualizar enlace del plan' : 'Guardar enlace del plan'}
+              accessibilityState={{ disabled: planSaving || !planUrl.trim() }}
+              style={[styles.secondary, (planSaving || !planUrl.trim()) && styles.seguirOff]}>
+              <Text style={styles.secondaryText}>
+                {planSaving ? 'GUARDANDO…' : savedPlanUrl ? 'ACTUALIZAR ENLACE' : 'GUARDAR ENLACE'}
+              </Text>
+            </Pressable>
           </View>
         )}
-
-        {/* PASO 2 — Restricciones */}
-        {step === 2 && (
-          <View>
-            <Text style={styles.questionTitle}>¿Tienes restricciones alimenticias?</Text>
-            <Text style={styles.questionSub}>Puedes seleccionar varias.</Text>
-            <View style={styles.chipGrid}>
-              {RESTRICTIONS.map(r => {
-                const selected = answers.restrictions.includes(r.id);
-                return (
-                  <Pressable
-                    key={r.id}
-                    onPress={() => toggleMulti('restrictions', r.id)}
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={r.label}
-                    accessibilityState={{ checked: selected }}
-                    style={[styles.chip, selected && styles.chipActive]}
-                  >
-                    <Text style={[styles.chipText, selected && styles.chipTextActive]}>{r.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* PASO 3 — Alergias */}
-        {step === 3 && (
-          <View>
-            <Text style={styles.questionTitle}>¿Tienes alergias alimentarias?</Text>
-            <Text style={styles.questionSub}>Puedes seleccionar varias.</Text>
-            <View style={styles.chipGrid}>
-              {ALLERGIES.map(a => {
-                const selected = answers.allergies.includes(a.id);
-                return (
-                  <Pressable
-                    key={a.id}
-                    onPress={() => toggleMulti('allergies', a.id)}
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={a.label}
-                    accessibilityState={{ checked: selected }}
-                    style={[styles.chip, selected && styles.chipActive]}
-                  >
-                    <Text style={[styles.chipText, selected && styles.chipTextActive]}>{a.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* PASO 4 — Objetivo */}
-        {step === 4 && (
-          <View>
-            <Text style={styles.questionTitle}>¿Cuál es tu objetivo principal?</Text>
-            <Text style={styles.questionSub}>Define tu norte nutricional.</Text>
-            <View style={styles.goalGrid}>
-              {GOALS.map(g => {
-                const selected = answers.goal === g.id;
-                return (
-                  <Pressable
-                    key={g.id}
-                    onPress={() => setAnswers(prev => ({ ...prev, goal: g.id }))}
-                    accessibilityRole="radio"
-                    accessibilityLabel={g.label}
-                    accessibilityState={{ selected }}
-                    style={[styles.goalCard, selected && styles.goalCardActive]}
-                  >
-                    <MaterialIcons name={g.icon as any} size={28} color={selected ? palette.ink : palette.goldText} />
-                    <Text style={[styles.goalLabel, selected && { color: palette.ink }]}>{g.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* PASO 5 — Calorías */}
-        {step === 5 && (
-          <View>
-            <Text style={styles.questionTitle}>¿Cuántas calorías consumes al día?</Text>
-            <Text style={styles.questionSub}>Una estimación aproximada es suficiente.</Text>
-            {CALORIE_RANGES.map(c => (
-              <Pressable
-                key={c.id}
-                onPress={() => setAnswers(prev => ({ ...prev, calories: c.id }))}
-                accessibilityRole="radio"
-                accessibilityLabel={`${c.label}: ${c.desc}`}
-                accessibilityState={{ selected: answers.calories === c.id }}
-                style={[styles.calRow, answers.calories === c.id && styles.calRowActive]}
-              >
-                <View style={styles.calLeft}>
-                  <Text style={[styles.calLabel, answers.calories === c.id && { color: palette.ink }]}>{c.label}</Text>
-                  <Text style={[styles.calDesc,  answers.calories === c.id && { color: 'rgba(0,0,0,0.6)' }]}>{c.desc}</Text>
-                </View>
-                {answers.calories === c.id && (
-                  <MaterialIcons name="check-circle" size={20} color={palette.ink} />
-                )}
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        {/* Botón siguiente */}
-        <Pressable
-          onPress={handleNext}
-          disabled={!canNext()}
-          accessibilityRole="button"
-          accessibilityLabel={step === TOTAL_STEPS ? 'Guardar perfil' : 'Continuar'}
-          accessibilityState={{ disabled: !canNext() }}
-          style={[styles.nextBtn, !canNext() && styles.nextBtnDisabled]}
-        >
-          <Text style={[styles.nextBtnText, !canNext() && { color: palette.ash }]}>
-            {step === TOTAL_STEPS ? 'GUARDAR PERFIL' : 'CONTINUAR'}
-          </Text>
-        </Pressable>
-      </ScrollView>
+      </Pantalla>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  root:             { flex: 1, backgroundColor: palette.black },
-  header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:          { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:            { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
-  stepCounter:      { fontFamily: Fonts.mono, fontSize: 13, color: palette.goldText, width: 38, textAlign: 'right' },
+  root:          { flex: 1, backgroundColor: palette.black },
 
-  progressBar:      { height: 2, backgroundColor: palette.line, marginHorizontal: spacing.md },
-  progressFill:     { height: '100%', backgroundColor: palette.gold },
+  option:        { minHeight: 56, paddingVertical: 14, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  optionLast:    { borderBottomWidth: 1, borderBottomColor: palette.line },
+  optionText:    { flex: 1, gap: 2 },
+  optionLabel:   { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, color: palette.ivory },
+  optionDesc:    { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash },
 
-  content:          { paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: 40 },
+  seguir:        { marginTop: spacing.xl, minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  seguirOff:     { opacity: 0.4 },
+  seguirText:    { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 2, color: palette.ink },
+  hint:          { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash, marginTop: spacing.sm },
 
-  questionTitle:    { fontFamily: Fonts.display, fontSize: 20, color: palette.ivory, letterSpacing: 1, marginBottom: 8 },
-  questionSub:      { ...typography.caption, color: palette.ash, marginBottom: spacing.lg },
+  plan:          { paddingTop: spacing.sm, paddingBottom: spacing.md, gap: spacing.sm },
+  inputLabel:    { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke, marginTop: spacing.sm },
+  input:         { minHeight: 44, borderBottomWidth: 1, borderBottomColor: palette.lineHard, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 16 },
+  secondary:     { marginTop: spacing.sm, minHeight: 44, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineHard, alignItems: 'center', justifyContent: 'center' },
+  secondaryText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, letterSpacing: 1, color: palette.ivory },
 
-  optionRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, gap: spacing.sm, borderWidth: 1, borderColor: 'transparent' },
-  optionRowActive:  { backgroundColor: palette.gold, borderColor: palette.gold },
-  optionIcon:       { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.goldLight, alignItems: 'center', justifyContent: 'center' },
-  optionIconActive: { backgroundColor: 'rgba(0,0,0,0.15)' },
-  optionText:       { flex: 1 },
-  optionLabel:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600' },
-  optionDesc:       { fontSize: 11, color: palette.ash, marginTop: 2 },
-
-  chipGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  chip:             { paddingHorizontal: 16, paddingVertical: 10, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.graphite },
-  chipActive:       { backgroundColor: palette.gold, borderColor: palette.gold },
-  chipText:         { fontFamily: Fonts.sans, fontSize: 13, color: palette.ash },
-  chipTextActive:   { color: palette.ink, fontWeight: '600' },
-
-  goalGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  goalCard:         { width: '47%', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'transparent' },
-  goalCardActive:   { backgroundColor: palette.gold, borderColor: palette.gold },
-  goalLabel:        { fontFamily: Fonts.sans, fontSize: 12, color: palette.ivory, textAlign: 'center', fontWeight: '600' },
-
-  calRow:           { flexDirection: 'row', alignItems: 'center', backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, marginBottom: 8, borderWidth: 1, borderColor: 'transparent' },
-  calRowActive:     { backgroundColor: palette.gold, borderColor: palette.gold },
-  calLeft:          { flex: 1 },
-  calLabel:         { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory },
-  calDesc:          { fontSize: 11, color: palette.ash, marginTop: 2 },
-
-  nextBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, alignItems: 'center', marginTop: spacing.lg, minHeight: 44, justifyContent: 'center' },
-  nextBtnDisabled:  { backgroundColor: palette.graphite },
-  nextBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
-
-  successContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl, gap: 16 },
-  successTitle:     { fontFamily: Fonts.display, fontSize: 22, color: palette.goldText, letterSpacing: 2 },
-  successSub:       { ...typography.body, color: palette.ash, textAlign: 'center', lineHeight: 22 },
-  doneBtn:          { backgroundColor: palette.gold, borderRadius: radii.md, paddingVertical: 14, paddingHorizontal: 32, marginTop: spacing.lg, alignSelf: 'center' },
-  doneBtnText:      { fontFamily: Fonts.display, fontSize: 14, color: palette.ink, letterSpacing: 2 },
-
-  planSection:      { marginTop: spacing.lg, gap: spacing.sm },
-  planInputLabel:   { ...typography.label, color: palette.ash, marginTop: 4 },
-  planInput:        { backgroundColor: palette.black, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.md, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 13, minHeight: 44, justifyContent: 'center' },
-  planSaveBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: palette.gold, borderRadius: radii.sm, paddingHorizontal: spacing.md, marginTop: 4, minHeight: 44 },
-  planSaveBtnDisabled:{ backgroundColor: palette.charcoal },
-  planSaveBtnText:  { fontFamily: Fonts.display, fontSize: 12, color: palette.ink, letterSpacing: 1 },
+  backBtn:       { minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
+  backText:      { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ivory },
 });

@@ -580,8 +580,8 @@ export function clientSafeNarrative(ci: CoachIntelligence): ClientNarrative {
     case 'confront':
       return {
         momentum,
-        headline: 'Hay algo que dijiste y quedó abierto.',
-        why: 'No es un reproche: un compromiso sin cerrar consume atención en segundo plano. Ciérralo o cámbialo, pero sácalo del limbo.',
+        headline: 'Cierra lo que dijiste que harías',
+        why: 'Le dijiste a Norman que harías algo y sigue abierto. Termínalo o cámbialo.',
       };
     case 'reconnect':
       return {

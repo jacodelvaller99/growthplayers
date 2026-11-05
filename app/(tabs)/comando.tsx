@@ -391,7 +391,9 @@ export default function DashboardScreen() {
         <TarjetaOro
           meta={pendingCheckIn ? 'CHECK-IN' : 'TU SIGUIENTE PASO'}
           metaRight={pendingCheckIn ? '2 MIN' : todayCheckIn ? `ESTADO ${coherenceToday} / 10` : undefined}
-          title={pendingCheckIn ? '¿Cómo\nllegas hoy?' : capitalize(turno.verb)}
+          // Con narrativa, el titular dice QUÉ pasa («Cierra lo que dijiste que
+          // harías»); el verbo suelto («Hablar con Norman») no lo decía.
+          title={pendingCheckIn ? '¿Cómo\nllegas hoy?' : turno.source === 'narrative' ? turno.headline : capitalize(turno.verb)}
           detail={pendingCheckIn ? undefined : turno.why}
           onPress={() => router.push(turno.route as never)}
         />
@@ -409,7 +411,7 @@ export default function DashboardScreen() {
       />
       <Fila
         label="MENTORÍA"
-        value={`Semana ${currentWeekNumber(protocolDay)} de ${TOTAL_WEEKS} · ${week.phase}`}
+        value={`Semana ${currentWeekNumber(protocolDay)} de ${TOTAL_WEEKS} · ${week.phase === 'Onboarding' ? 'Empezar' : week.phase}`}
         onPress={() => router.push('/mentoria' as never)}
       />
       <Fila

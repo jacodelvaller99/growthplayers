@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
@@ -16,32 +16,79 @@ interface SkoolVideoProps {
   height?: number;
 }
 
+/** Si el embed no cargó en este tiempo, se ofrece abrir el video fuera. */
+const WEB_LOAD_TIMEOUT_MS = 8000;
+
 export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   // speed=1 enables Vimeo's native playback-rate control (1×/1.5×/2× selector).
   // transparent=0 forces a solid black background instead of transparent overlay.
   const vimeoEmbedUrl = vimeoId
     ? `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&autopause=0&speed=1&transparent=0`
     : null;
+  const externalUrl = vimeoId ? `https://vimeo.com/${vimeoId}` : url;
+
+  // Web: el iframe podía quedarse girando para siempre (permisos de dominio
+  // del embed) sin mensaje ni salida. A los 8 s sin cargar, se reemplaza.
+  const webEmbed = Platform.OS === 'web' && !!vimeoEmbedUrl;
+  useEffect(() => {
+    if (!webEmbed || !loading) return;
+    const t = setTimeout(() => setTimedOut(true), WEB_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [webEmbed, loading]);
 
   // ── WEB con Vimeo embed ──────────────────────────────────────────────────────
-  if (Platform.OS === 'web' && vimeoEmbedUrl) {
+  if (webEmbed) {
+    if (timedOut && loading) {
+      return (
+        <View style={[styles.container, { height }]}>
+          <View style={styles.fallback}>
+            <Text style={styles.title}>El video no cargó aquí.</Text>
+            {!!externalUrl && (
+              <Pressable
+                onPress={() => Linking.openURL(externalUrl)}
+                accessibilityRole="link"
+                style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}>
+                <Text style={styles.btnSecondaryText}>Abrir el video ↗</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      );
+    }
     return (
-      <View style={[styles.container, { height }]}>
-        <iframe
-          src={vimeoEmbedUrl}
-          style={{
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            borderRadius: radii.md,
-            backgroundColor: '#000',
-          }}
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-        />
+      <View>
+        <View style={[styles.container, { height }]}>
+          <iframe
+            src={vimeoEmbedUrl!}
+            onLoad={() => setLoading(false)}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              borderRadius: radii.md,
+              backgroundColor: '#000',
+            }}
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
+          {loading && (
+            <View style={styles.skeleton} pointerEvents="none">
+              <ActivityIndicator color={palette.goldText} size="large" />
+              <Text style={styles.loadingText}>Cargando el video…</Text>
+            </View>
+          )}
+        </View>
+        {/* Cargar la página del reproductor no garantiza que el video arranque:
+            siempre queda una salida. */}
+        {!loading && !!externalUrl && (
+          <Pressable onPress={() => Linking.openURL(externalUrl)} accessibilityRole="link" style={styles.exitLink}>
+            <Text style={styles.exitLinkText}>¿No arranca? Abrir el video ↗</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -183,6 +230,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 12,
   },
+  btnSecondary: {
+    borderColor: palette.lineHard,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 24,
+  },
+  btnSecondaryText: {
+    color: palette.ivory,
+    fontFamily: Fonts.display,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  exitLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  exitLinkText: { color: palette.smoke, fontFamily: Fonts.sans, fontSize: 14 },
   btnPressed: {
     backgroundColor: palette.goldDim,
   },

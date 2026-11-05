@@ -1,7 +1,7 @@
 /**
  * Render smoke test de Respiración (loop de pulido, iteración 13).
- * Monta la pantalla (orbe animado + chips de técnica + SafetyWarning) sin throw.
- * El SafetyWarning (embarazo/epilepsia/mareo) se preserva.
+ * Monta la pantalla (propuesta + filas por intención + «Antes de empezar» con el
+ * SafetyWarning) sin throw. El SafetyWarning (embarazo/epilepsia/mareo) se preserva.
  */
 import { render } from '@testing-library/react-native';
 import React from 'react';
@@ -40,7 +40,9 @@ jest.mock('@/app/bienestar/body-context', () => {
     PracticeClose: () => R.createElement(RN.View),
   };
 });
-jest.mock('@/components/polaris', () => ({ useScreen: () => ({ root: {} }) }));
+jest.mock('@/hooks/use-breakpoint', () => ({
+  useBreakpoint: () => ({ isDesktop: false, isMobile: true, isTablet: false }),
+}));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const RespiracionScreen = require('@/app/bienestar/respiracion').default;
@@ -48,5 +50,11 @@ const RespiracionScreen = require('@/app/bienestar/respiracion').default;
 describe('RespiracionScreen — render smoke', () => {
   it('renderiza sin throw', () => {
     expect(() => render(<RespiracionScreen />)).not.toThrow();
+  });
+  it('nombra por intención, sin jerga técnica en las filas', () => {
+    const out = JSON.stringify(render(<RespiracionScreen />).toJSON());
+    expect(out).toContain('Respiración');
+    expect(out).toContain('ANTES DE EMPEZAR');
+    expect(out).not.toMatch(/WIM HOF|BOX|FISIO/);
   });
 });

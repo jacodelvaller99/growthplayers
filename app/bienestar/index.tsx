@@ -53,12 +53,12 @@ const GROUPS: { id: string; label: string; items: HubItem[] }[] = [
   { id: 'salud', label: 'SALUD', items: [
     { route: '/bienestar/internista',     icon: 'medical-services', label: 'TU SALUD',    sub: 'pregunta qué significan tus exámenes' },
     { route: '/bienestar/ayuno',          icon: 'schedule',         label: 'AYUNO',       sub: 'temporizador y guía' },
-    { route: '/bienestar/suplementacion', icon: 'medication',       label: 'SUPLEMENTOS', sub: 'dosis y horarios' },
+    { route: '/bienestar/suplementacion', icon: 'medication',       label: 'SUPLEMENTOS', sub: 'lo que tomas y cuándo' },
   ] },
   { id: 'mente', label: 'MENTE', items: [
     fromBlock('/bienestar/diario'),
     fromBlock('/bienestar/biblioteca'),
-    { route: '/bienestar/consciencia', icon: 'psychology-alt', label: 'TU CALMA',    sub: 'mide cada semana qué tan en paz estás' },
+    { route: '/bienestar/consciencia', icon: 'psychology-alt', label: 'TU CALMA',    sub: 'cómo te sentiste esta semana' },
     { route: '/bienestar/comunidad',   icon: 'groups',         label: 'COMUNIDAD',   sub: 'el grupo del protocolo' },
     // Complementarias: menos evidencia — al final y dichas como tal.
     { route: '/bienestar/tapping', icon: 'touch-app', label: 'TAPPING', sub: 'golpecitos para soltar tensión · opcional' },
@@ -169,6 +169,6 @@ export default function BienestarHub() {
 const styles = StyleSheet.create({
   group: { marginTop: 32 },
   groupLabel: {
-    fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText, marginBottom: 8,
+    fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash, marginBottom: 8,
   },
 });

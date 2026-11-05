@@ -16,8 +16,9 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withS
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { JornadaCierre } from '@/components/jornada';
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
-import { palette, radii, spacing, typography, EASING_HOUSE, DURATION_HOUSE } from '@/constants/theme';
+import { Fila, Pantalla } from '@/components/pantalla';
+import { useScreen } from '@/components/polaris';
+import { Fonts, palette, radii, spacing, EASING_HOUSE, DURATION_HOUSE } from '@/constants/theme';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -65,7 +66,7 @@ function EntryTypeChip({ t, active, onPress }: { t: (typeof ENTRY_TYPES)[number]
         <MaterialIcons
           name={t.icon}
           size={16}
-          color={active ? palette.ink : palette.ash}
+          color={active ? palette.ivory : palette.smoke}
         />
         <Text style={[styles.typeBtnText, active && styles.typeBtnTextActive]}>
           {t.label}
@@ -162,151 +163,103 @@ export default function DiarioScreen() {
     );
   }
 
+  const empty = !text.trim();
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView
-        style={sc.root}
-        contentContainerStyle={[sc.content, { paddingTop: insets.top + 16, paddingBottom: 80 }]}
-        keyboardShouldPersistTaps="handled">
-
-        {/* Header */}
-        <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-            <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-          </Pressable>
-          <Text style={styles.title}>DIARIO</Text>
-          <View style={{ width: 36 }} />
-        </View>
-
-        <Text style={styles.intro}>
-          Escribe sin filtros. Tu diario es privado y solo tuyo.
-        </Text>
-
-        {/* Entry type selector */}
-        <GoldDivider label="TIPO" />
+      <Pantalla
+        meta="BIENESTAR · MENTE"
+        title="Diario"
+        sub="¿Qué te dejó el día? Es privado y solo tuyo."
+        footer={<Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />}>
         <View style={styles.typeRow}>
           {ENTRY_TYPES.map((t) => (
             <EntryTypeChip key={t.id} t={t} active={type === t.id} onPress={() => setType(t.id)} />
           ))}
         </View>
 
-        {/* Input */}
-        <GoldDivider label="ENTRADA" />
-        <PremiumCard style={styles.inputCard}>
-          <TextInput
-            style={styles.input}
-            multiline
-            value={text}
-            onChangeText={setText}
-            placeholder={current.placeholder}
-            placeholderTextColor={palette.smoke}
-            textAlignVertical="top"
-            accessibilityLabel={`Entrada de ${current.label.toLowerCase()}`}
-          />
-          <Animated.View style={saveBtnAnimStyle}>
-            <Pressable
-              style={[styles.saveBtn, (!text.trim() || saving) && { opacity: 0.4 }]}
-              onPress={save}
-              onPressIn={() => { saveBtnScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
-              onPressOut={() => { saveBtnScale.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
-              disabled={!text.trim() || saving}
-              accessibilityRole="button"
-              accessibilityLabel="Guardar entrada"
-              accessibilityState={{ disabled: !text.trim() || saving }}>
-              {saving ? (
-                <ActivityIndicator size="small" color={palette.ink} />
-              ) : saved ? (
-                <>
-                  <MaterialIcons name="check" size={16} color={palette.ink} />
-                  <Text style={styles.saveBtnText}>GUARDADO</Text>
-                </>
-              ) : (
-                <Text style={styles.saveBtnText}>GUARDAR ENTRADA</Text>
-              )}
-            </Pressable>
-          </Animated.View>
-        </PremiumCard>
+        <TextInput
+          style={styles.input}
+          multiline
+          value={text}
+          onChangeText={setText}
+          placeholder={current.placeholder}
+          placeholderTextColor={palette.smoke}
+          textAlignVertical="top"
+          accessibilityLabel={`Entrada de ${current.label.toLowerCase()}`}
+        />
+
+        <Animated.View style={saveBtnAnimStyle}>
+          <Pressable
+            style={[styles.saveBtn, (empty || saving) && { opacity: 0.4 }]}
+            onPress={save}
+            onPressIn={() => { saveBtnScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+            onPressOut={() => { saveBtnScale.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
+            disabled={empty || saving}
+            accessibilityRole="button"
+            accessibilityLabel="Guardar entrada"
+            accessibilityHint={empty ? 'Escribe algo para guardar' : undefined}
+            accessibilityState={{ disabled: empty || saving }}>
+            {saving ? (
+              <ActivityIndicator size="small" color={palette.ink} />
+            ) : (
+              <Text style={styles.saveBtnText}>{saved ? 'GUARDADO' : 'GUARDAR'}</Text>
+            )}
+          </Pressable>
+        </Animated.View>
+
+        {empty && !saved && <Text style={styles.helper}>Escribe algo para guardar.</Text>}
 
         {saved && (
-          <View style={styles.savedBanner} accessibilityLiveRegion="polite" accessibilityRole="alert">
-            <MaterialIcons name="check-circle" size={16} color={palette.success} />
-            <Text style={styles.savedText}>Entrada guardada correctamente.</Text>
-          </View>
+          <Text style={styles.helper} accessibilityLiveRegion="polite" accessibilityRole="alert">
+            Guardado.
+          </Text>
         )}
 
         {saveError && (
-          <View style={styles.errorBanner} accessibilityLiveRegion="assertive" accessibilityRole="alert">
-            <MaterialIcons name="error-outline" size={16} color={palette.danger} />
-            <Text style={styles.errorText}>{saveError}</Text>
-          </View>
+          <Text style={styles.errorText} accessibilityLiveRegion="assertive" accessibilityRole="alert">
+            {saveError}
+          </Text>
         )}
-
-      </ScrollView>
+      </Pantalla>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xl,
-  },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.title, color: palette.ivory, fontSize: 18 },
-  intro: { ...typography.body, color: palette.ash, marginBottom: spacing.lg },
-
   typeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg, flexWrap: 'wrap' },
-  typeBtn: { flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.line, minHeight: 44, justifyContent: 'center' },
-  typeBtnActive: { backgroundColor: palette.gold, borderColor: palette.gold },
-  typeBtnText: { ...typography.label, color: palette.ash },
-  typeBtnTextActive: { color: palette.ink },
+  typeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md,
+    borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line, minHeight: 44, justifyContent: 'center',
+  },
+  // Activo en tinta clara, no amarillo: el único amarillo es GUARDAR.
+  typeBtnActive: { borderColor: palette.ivory },
+  typeBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
+  typeBtnTextActive: { color: palette.ivory },
 
-  inputCard: { gap: spacing.md },
   input: {
-    ...typography.body,
+    fontFamily: Fonts.sans,
+    fontSize: 17,
+    lineHeight: 26,
     color: palette.ivory,
-    minHeight: 160,
-    paddingTop: spacing.sm,
+    minHeight: 200,
     textAlignVertical: 'top',
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: palette.line,
-    borderRadius: radii.sm,
-    padding: spacing.md,
-    backgroundColor: palette.graphite,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
   },
   saveBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
     backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    minHeight: 48,
+    borderRadius: 8,
+    minHeight: 52,
   },
-  saveBtnText: { ...typography.label, color: palette.ink, fontWeight: '700' },
-  savedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  savedText: { ...typography.body, color: palette.success, fontSize: 13 },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  errorText: { ...typography.body, color: palette.danger, fontSize: 13 },
+  saveBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ink },
+  helper: { fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke, marginTop: spacing.sm },
+  errorText: { fontFamily: Fonts.sans, fontSize: 14, color: palette.danger, marginTop: spacing.sm },
 });

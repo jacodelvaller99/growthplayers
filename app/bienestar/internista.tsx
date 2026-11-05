@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, useScreen } from '@/components/polaris';
+import { GoldDivider, MarkdownText, PremiumCard, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import {
@@ -161,7 +161,7 @@ function InternistaScreenInner() {
       </Pressable>
       <View>
         <Text style={s.title}>INTERNISTA</Text>
-        <Text style={s.subtitle}>Educación clínica basada en evidencia</Text>
+        <Text style={s.subtitle}>Asistente con IA · no es un médico</Text>
       </View>
       <View style={{ width: 36 }} />
     </View>
@@ -246,7 +246,7 @@ function InternistaScreenInner() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }}
+        contentContainerStyle={s.thread}
         showsVerticalScrollIndicator={false}>
         {turns.length === 0 && !streaming && (
           <PremiumCard style={s.intro}>
@@ -260,12 +260,14 @@ function InternistaScreenInner() {
         )}
         {turns.map((t, i) => (
           <View key={i} style={[s.bubble, t.role === 'user' ? s.bubbleUser : s.bubbleAI]}>
-            <Text style={t.role === 'user' ? s.bubbleUserText : s.bubbleAIText}>{t.text}</Text>
+            {t.role === 'user'
+              ? <Text style={s.bubbleUserText}>{t.text}</Text>
+              : <MarkdownText text={t.text} style={s.bubbleAIText} />}
           </View>
         ))}
         {streaming && (
           <View style={[s.bubble, s.bubbleAI]}>
-            <Text style={s.bubbleAIText}>{streamText || '…'}</Text>
+            <MarkdownText text={streamText || '…'} style={s.bubbleAIText} />
           </View>
         )}
       </ScrollView>
@@ -342,6 +344,9 @@ const s = StyleSheet.create({
   intro: { marginBottom: spacing.md },
   introText: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
 
+  // Medida de lectura: ~68ch. En escritorio el hilo se centra en vez de
+  // estirarse a líneas de 150 caracteres.
+  thread: { padding: spacing.lg, paddingBottom: spacing.xl, width: '100%', maxWidth: 720, alignSelf: 'center' },
   bubble: {
     maxWidth: '88%', paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: radii.md, marginBottom: spacing.sm,
@@ -351,21 +356,21 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: palette.lineGold,
   },
   bubbleAI: {
-    alignSelf: 'flex-start', backgroundColor: palette.graphite,
+    alignSelf: 'flex-start', width: '100%', maxWidth: 680, backgroundColor: palette.graphite,
     borderWidth: 1, borderColor: palette.line,
   },
   bubbleUserText: { ...typography.body, color: palette.ivory, fontSize: 13.5 },
-  bubbleAIText: { ...typography.body, color: palette.ivory, fontSize: 13.5, lineHeight: 20 },
+  bubbleAIText: { ...typography.body, color: palette.ivory, fontSize: 15, lineHeight: 23 },
 
   quickRow: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
+    width: '100%', maxWidth: 720, alignSelf: 'center',
   },
   quickChip: {
-    paddingHorizontal: spacing.md, paddingVertical: 6,
-    borderRadius: radii.pill, backgroundColor: palette.charcoal,
+    minHeight: 44, justifyContent: 'center',
+    borderTopWidth: 1, borderTopColor: palette.line,
   },
-  quickText: { ...typography.caption, color: palette.ash, fontSize: 11 },
+  quickText: { fontFamily: Fonts.sans, color: palette.ivory, fontSize: 15 },
 
   examsLink: {
     paddingHorizontal: spacing.lg, paddingBottom: spacing.xs,

@@ -1,22 +1,20 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
-import { HeroPanel, RowList } from '@/components/focus-deck';
+import { Fonts, palette, radii, spacing } from '@/constants/theme';
+import { Fila, Pantalla } from '@/components/pantalla';
 
 interface Measurement {
   id?: string;
@@ -34,17 +32,22 @@ interface Measurement {
 }
 
 // Medidas corporales opcionales (columnas nuevas de body_measurements).
+// Placeholder = solo la unidad: un número de ejemplo parecía un dato ya cargado.
 const EXTRA_FIELDS = [
-  { key: 'waist_cm',         label: 'CINTURA (cm)',   placeholder: '80'   },
-  { key: 'chest_cm',         label: 'PECHO (cm)',     placeholder: '100'  },
-  { key: 'hip_cm',           label: 'CADERA (cm)',    placeholder: '95'   },
-  { key: 'thigh_cm',         label: 'MUSLO (cm)',     placeholder: '55'   },
-  { key: 'arm_cm',           label: 'BRAZO (cm)',     placeholder: '35'   },
-  { key: 'body_fat_percent', label: '% GRASA',        placeholder: '15'   },
-  { key: 'muscle_mass_kg',   label: 'M. MUSCULAR (kg)', placeholder: '35' },
+  { key: 'waist_cm',         label: 'CINTURA',      unit: 'cm' },
+  { key: 'chest_cm',         label: 'PECHO',        unit: 'cm' },
+  { key: 'hip_cm',           label: 'CADERA',       unit: 'cm' },
+  { key: 'thigh_cm',         label: 'MUSLO',        unit: 'cm' },
+  { key: 'arm_cm',           label: 'BRAZO',        unit: 'cm' },
+  { key: 'body_fat_percent', label: 'GRASA',        unit: '%'  },
+  { key: 'muscle_mass_kg',   label: 'MASA MUSCULAR', unit: 'kg' },
 ] as const;
 
 type ExtraKey = typeof EXTRA_FIELDS[number]['key'];
+const EMPTY_EXTRAS: Record<ExtraKey, string> = {
+  waist_cm: '', chest_cm: '', hip_cm: '', thigh_cm: '', arm_cm: '',
+  body_fat_percent: '', muscle_mass_kg: '',
+};
 
 function calcBMI(weight: number, height: number): number {
   if (!weight || !height) return 0;
@@ -52,34 +55,53 @@ function calcBMI(weight: number, height: number): number {
   return Math.round((weight / (hm * hm)) * 10) / 10;
 }
 
-function bmiCategory(bmi: number): { label: string; color: string } {
-  if (bmi <= 0)   return { label: '—',          color: palette.ash };
-  // Tokens, no hex: este color es a la vez el relleno del segmento Y el TEXTO de
-  // la categoría. Un hex constante no puede pasar AA en claro y oscuro a la vez
-  // (sobre #111111 exige luminancia >= 0.201; sobre blanco <= 0.183), así que la
-  // escala tenía que ser tematizable o quedarse ilegible en uno de los dos.
-  if (bmi < 18.5) return { label: 'Bajo peso',  color: palette.info };
-  if (bmi < 25)   return { label: 'Normal',      color: palette.success };
-  if (bmi < 30)   return { label: 'Sobrepeso',   color: palette.warning };
-  return              { label: 'Obesidad',    color: palette.danger };
-}
-
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getDate()}/${d.getMonth() + 1}`;
 }
 
+function Plegable({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={label}
+        style={styles.antes}>
+        <Text style={styles.antesLabel}>{label.toUpperCase()}</Text>
+        <MaterialIcons name={open ? 'expand-less' : 'expand-more'} size={20} color={palette.smoke} />
+      </Pressable>
+      {open && <View style={styles.plegado}>{children}</View>}
+    </View>
+  );
+}
+
+function Campo({ label, unit, value, onChange }: { label: string; unit: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <View style={styles.campo}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChange}
+        keyboardType="decimal-pad"
+        placeholder={unit}
+        placeholderTextColor={palette.smoke}
+        accessibilityLabel={`${label.toLowerCase()} en ${unit}`}
+      />
+    </View>
+  );
+}
+
 export default function CuerpoScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
 
   const [weight, setWeight]   = useState('');
   const [height, setHeight]   = useState('');
-  const [extras, setExtras]   = useState<Record<ExtraKey, string>>({
-    waist_cm: '', chest_cm: '', hip_cm: '', thigh_cm: '', arm_cm: '',
-    body_fat_percent: '', muscle_mass_kg: '',
-  });
+  const [extras, setExtras]   = useState<Record<ExtraKey, string>>(EMPTY_EXTRAS);
   const [history, setHistory] = useState<Measurement[]>([]);
   const [saving, setSaving]   = useState(false);
 
@@ -89,7 +111,7 @@ export default function CuerpoScreen() {
   const weightNum = parseFloat(weight) || 0;
   const heightNum = parseFloat(height) || 0;
   const bmi       = calcBMI(weightNum, heightNum);
-  const category  = bmiCategory(bmi);
+  const canSave   = !saving && !!weightNum && !!heightNum;
 
   const loadHistory = async () => {
     if (!userId) return;
@@ -139,233 +161,139 @@ export default function CuerpoScreen() {
       });
       setWeight('');
       setHeight('');
-      setExtras({ waist_cm: '', chest_cm: '', hip_cm: '', thigh_cm: '', arm_cm: '', body_fat_percent: '', muscle_mass_kg: '' });
+      setExtras(EMPTY_EXTRAS);
       loadHistory();
     } catch { /* tabla/columna puede no existir aún */ }
     setSaving(false);
   };
 
-  // Últimas 8 mediciones como sparkline (índice inverso para mostrar cronológico)
-  const sparkData = [...history].reverse();
-  const maxW = sparkData.length ? Math.max(...sparkData.map(m => m.weight_kg)) : 1;
-  const minW = sparkData.length ? Math.min(...sparkData.map(m => m.weight_kg)) : 0;
-  const range = maxW - minW || 1;
+  const last = history[0];
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-            <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
-          </Pressable>
-          <Text style={styles.title}>CUERPO</Text>
-          <View style={{ width: 38 }} />
-        </View>
-
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-          {/* IMC en tiempo real */}
-          <View style={styles.heroSpacer}>
-            <HeroPanel>
-              <View style={styles.bmiCard}>
-                <Text style={styles.bmiLabel}>ÍNDICE DE MASA CORPORAL</Text>
-                <Text style={[styles.bmiValue, { color: category.color }]}>
-                  {bmi > 0 ? bmi.toFixed(1) : '—'}
-                </Text>
-                <Text style={[styles.bmiCategory, { color: category.color }]}>{category.label}</Text>
-                {/* Barra visual IMC */}
-                <View style={styles.bmiBar}>
-                  <View style={[styles.bmiSegment, { flex: 1, backgroundColor: palette.info }]} />
-                  <View style={[styles.bmiSegment, { flex: 2, backgroundColor: palette.success }]} />
-                  <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.warning }]} />
-                  <View style={[styles.bmiSegment, { flex: 1.5, backgroundColor: palette.danger }]} />
-                </View>
-                <View style={styles.bmiBarLabels}>
-                  <Text style={styles.bmiBarTick}>18.5</Text>
-                  <Text style={styles.bmiBarTick}>25</Text>
-                  <Text style={styles.bmiBarTick}>30</Text>
-                </View>
-                {bmi > 0 && (
-                  <View style={[styles.bmiPointer, { left: `${Math.min(Math.max((bmi - 15) / 20, 0), 1) * 100}%` as any }]} />
-                )}
-              </View>
-            </HeroPanel>
-          </View>
-
-          {/* Formulario */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>NUEVO REGISTRO</Text>
-            <View style={styles.inputRow}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>PESO (kg)</Text>
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Pantalla
+        meta="BIENESTAR · CUERPO"
+        metaRight={last?.created_at ? `ÚLTIMO ${formatDate(last.created_at)}` : undefined}
+        title="Medidas"
+        sub="Peso y medidas, sin juicio. Solo para ver cómo cambias."
+        hero={
+          // La única acción amarilla: registrar hoy, con lo mínimo (peso y altura).
+          <View style={styles.oro}>
+            <Text style={styles.oroMeta}>REGISTRAR HOY</Text>
+            <View style={styles.oroRow}>
+              <View style={styles.campo}>
+                <Text style={styles.oroLabel}>PESO</Text>
                 <TextInput
-                  style={styles.input}
+                  style={styles.oroInput}
                   value={weight}
                   onChangeText={setWeight}
                   keyboardType="decimal-pad"
-                  placeholder="75.0"
-                  placeholderTextColor={palette.smoke}
+                  placeholder="kg"
+                  placeholderTextColor={palette.ink}
                   accessibilityLabel="Peso en kilogramos"
                 />
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>ALTURA (cm)</Text>
+              <View style={styles.campo}>
+                <Text style={styles.oroLabel}>ALTURA</Text>
                 <TextInput
-                  style={styles.input}
+                  style={styles.oroInput}
                   value={height}
                   onChangeText={setHeight}
                   keyboardType="decimal-pad"
-                  placeholder="175"
-                  placeholderTextColor={palette.smoke}
+                  placeholder="cm"
+                  placeholderTextColor={palette.ink}
                   accessibilityLabel="Altura en centímetros"
                 />
               </View>
             </View>
-
-            {/* Medidas corporales (opcionales) */}
-            <Text style={styles.subLabel}>MEDIDAS (OPCIONAL)</Text>
-            <View style={styles.measureGrid}>
-              {EXTRA_FIELDS.map(f => (
-                <View key={f.key} style={styles.measureGroup}>
-                  <Text style={styles.inputLabel}>{f.label}</Text>
-                  <TextInput
-                    style={styles.measureInput}
-                    value={extras[f.key]}
-                    onChangeText={(v) => setExtra(f.key, v)}
-                    keyboardType="decimal-pad"
-                    placeholder={f.placeholder}
-                    placeholderTextColor={palette.smoke}
-                    accessibilityLabel={f.label}
-                  />
-                </View>
-              ))}
-            </View>
-
             <Pressable
               onPress={saveMeasurement}
-              disabled={saving || !weightNum || !heightNum}
+              disabled={!canSave}
               accessibilityRole="button"
               accessibilityLabel="Guardar medición"
-              accessibilityState={{ disabled: saving || !weightNum || !heightNum }}
-              style={[styles.saveBtn, (saving || !weightNum || !heightNum) && styles.saveBtnDisabled]}
-            >
-              <Text style={[styles.saveBtnText, (saving || !weightNum || !heightNum) && { color: palette.ash }]}>
-                {saving ? 'GUARDANDO…' : 'GUARDAR MEDICIÓN'}
-              </Text>
+              accessibilityState={{ disabled: !canSave }}
+              style={[styles.oroBtn, !canSave && styles.oroBtnOff]}>
+              <Text style={styles.oroBtnText}>{saving ? 'GUARDANDO…' : 'GUARDAR'}</Text>
             </Pressable>
+            {!weightNum || !heightNum ? (
+              <Text style={styles.oroHint}>Escribe peso y altura para guardar.</Text>
+            ) : null}
           </View>
+        }
+        footer={
+          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
+            <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
+            <Text style={styles.backText}>VOLVER</Text>
+          </Pressable>
+        }>
+        {/* IMC: un dato neutro, sin zonas ni rojo. */}
+        <Fila label="IMC" value={bmi > 0 ? bmi.toFixed(1) : last?.bmi ? String(last.bmi) : '—'} />
 
-          {/* Sparkline histórico */}
-          {sparkData.length > 1 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>HISTORIAL (últimas {sparkData.length})</Text>
-              <View style={styles.sparklineContainer}>
-                {sparkData.map((m, i) => {
-                  const heightPct = ((m.weight_kg - minW) / range) * 60 + 20;
-                  return (
-                    <View key={i} style={styles.sparkColumn}>
-                      <View style={[styles.sparkBar, { height: heightPct }]} />
-                      <Text style={styles.sparkLabel}>{formatDate(m.created_at ?? '')}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-              <View style={styles.sparkRange}>
-                <Text style={styles.sparkRangeText}>{minW} kg</Text>
-                <Text style={styles.sparkRangeText}>{maxW} kg</Text>
-              </View>
-            </View>
-          )}
+        <Plegable label="Más medidas">
+          <View style={styles.grid}>
+            {EXTRA_FIELDS.map(f => (
+              <Campo key={f.key} label={f.label} unit={f.unit} value={extras[f.key]} onChange={(v) => setExtra(f.key, v)} />
+            ))}
+          </View>
+          <Text style={styles.hint}>Se guardan junto con el peso y la altura.</Text>
+        </Plegable>
 
-          {/* Lista histórico */}
-          {history.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>REGISTROS</Text>
-              <RowList
-                rows={history.map((m, i) => {
-                  const cat = bmiCategory(m.bmi);
-                  // medidas extra presentes → línea compacta de detalle
-                  const extraParts: string[] = [];
-                  if (m.waist_cm != null)         extraParts.push(`Cintura ${m.waist_cm}`);
-                  if (m.chest_cm != null)         extraParts.push(`Pecho ${m.chest_cm}`);
-                  if (m.hip_cm != null)           extraParts.push(`Cadera ${m.hip_cm}`);
-                  if (m.thigh_cm != null)         extraParts.push(`Muslo ${m.thigh_cm}`);
-                  if (m.arm_cm != null)           extraParts.push(`Brazo ${m.arm_cm}`);
-                  if (m.body_fat_percent != null) extraParts.push(`Grasa ${m.body_fat_percent}%`);
-                  if (m.muscle_mass_kg != null)   extraParts.push(`Músculo ${m.muscle_mass_kg}kg`);
-                  const value = `${m.weight_kg}kg · IMC ${m.bmi} · ${cat.label}` +
-                    (extraParts.length > 0 ? ` · ${extraParts.join(' · ')}` : '');
-                  return {
-                    label: m.created_at ? formatDate(m.created_at) : `#${i + 1}`,
-                    value,
-                  };
-                })}
-              />
-            </View>
+        <View style={styles.historial}>
+          <Text style={styles.antesLabel}>REGISTROS</Text>
+          {history.length === 0 ? (
+            <Text style={styles.hint}>Aún no hay registros. Empieza con tu peso y altura.</Text>
+          ) : (
+            history.map((m, i) => {
+              // medidas extra presentes → línea compacta de detalle
+              const extraParts: string[] = [];
+              if (m.waist_cm != null)         extraParts.push(`Cintura ${m.waist_cm}`);
+              if (m.chest_cm != null)         extraParts.push(`Pecho ${m.chest_cm}`);
+              if (m.hip_cm != null)           extraParts.push(`Cadera ${m.hip_cm}`);
+              if (m.thigh_cm != null)         extraParts.push(`Muslo ${m.thigh_cm}`);
+              if (m.arm_cm != null)           extraParts.push(`Brazo ${m.arm_cm}`);
+              if (m.body_fat_percent != null) extraParts.push(`Grasa ${m.body_fat_percent}%`);
+              if (m.muscle_mass_kg != null)   extraParts.push(`Músculo ${m.muscle_mass_kg} kg`);
+              return (
+                <Fila
+                  key={m.id ?? i}
+                  label={m.created_at ? formatDate(m.created_at) : `#${i + 1}`}
+                  value={`${m.weight_kg} kg · IMC ${m.bmi}` + (extraParts.length ? ` · ${extraParts.join(' · ')}` : '')}
+                  last={i === history.length - 1}
+                />
+              );
+            })
           )}
-
-          {history.length === 0 && (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="monitor-weight" size={48} color={palette.line} />
-              <Text style={styles.emptyText}>Sin registros aún</Text>
-              <Text style={styles.emptySubtext}>Ingresa tu peso y altura para comenzar</Text>
-            </View>
-          )}
-        </ScrollView>
-      </View>
+        </View>
+      </Pantalla>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  root:               { flex: 1, backgroundColor: palette.black },
-  header:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  backBtn:            { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:              { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+  root:       { flex: 1, backgroundColor: palette.black },
 
-  content:            { paddingHorizontal: spacing.md, paddingBottom: 40 },
+  oro:        { borderRadius: 8, backgroundColor: palette.gold, padding: 22, gap: 16 },
+  oroMeta:    { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink },
+  oroRow:     { flexDirection: 'row', gap: spacing.md },
+  oroLabel:   { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink, marginBottom: 6 },
+  oroInput:   { minHeight: 52, borderBottomWidth: 2, borderBottomColor: palette.ink, color: palette.ink, fontFamily: Fonts.displayRegular, fontSize: 28 },
+  oroBtn:     { minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center' },
+  oroBtnOff:  { opacity: 0.4 },
+  oroBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 2, color: palette.gold },
+  oroHint:    { fontFamily: Fonts.sans, fontSize: 14, color: palette.ink },
 
-  bmiCard:            { alignItems: 'center', gap: 4 },
-  heroSpacer:         { marginBottom: spacing.lg },
-  bmiLabel:           { ...typography.label, color: palette.goldText },
-  bmiValue:           { fontFamily: Fonts.display, fontSize: 56, lineHeight: 64 },
-  bmiCategory:        { fontFamily: Fonts.sans, fontSize: 14, fontWeight: '600', marginBottom: 12 },
-  bmiBar:             { flexDirection: 'row', width: '100%', height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 2 },
-  bmiSegment:         { height: '100%' },
-  bmiBarLabels:       { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
-  bmiBarTick:         { fontSize: 11, color: palette.smoke },
-  bmiPointer:         { position: 'absolute', bottom: 52, width: 3, height: 10, backgroundColor: palette.ivory, borderRadius: 1 },
+  campo:      { flex: 1, minWidth: 130 },
+  inputLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke, marginBottom: 6 },
+  input:      { minHeight: 44, borderBottomWidth: 1, borderBottomColor: palette.lineHard, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 17 },
+  grid:       { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  hint:       { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash, marginTop: spacing.sm },
 
-  section:            { marginBottom: spacing.lg },
-  sectionLabel:       { ...typography.label, color: palette.goldText, marginBottom: spacing.sm },
+  antes:      { minHeight: 56, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  antesLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
+  plegado:    { paddingBottom: 16 },
 
-  inputRow:           { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  inputGroup:         { flex: 1 },
-  inputLabel:         { ...typography.label, color: palette.ash, marginBottom: 6 },
-  input:              { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, minHeight: 44, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 18, borderWidth: 1, borderColor: palette.line },
+  historial:  { marginTop: 32, gap: 8 },
 
-  subLabel:           { ...typography.label, color: palette.smoke, marginBottom: spacing.sm },
-  measureGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
-  measureGroup:       { width: '47%', flexGrow: 1 },
-  measureInput:       { backgroundColor: palette.graphite, borderRadius: radii.sm, paddingHorizontal: spacing.sm, minHeight: 44, color: palette.ivory, fontFamily: Fonts.mono, fontSize: 15, borderWidth: 1, borderColor: palette.line },
-
-  saveBtn:            { backgroundColor: palette.gold, borderRadius: radii.md, paddingHorizontal: spacing.md, alignItems: 'center', minHeight: 44, justifyContent: 'center',
-  },
-  saveBtnDisabled:    { backgroundColor: palette.graphite },
-  saveBtnText:        { fontFamily: Fonts.display, fontSize: 13, color: palette.ink, letterSpacing: 2 },
-
-  sparklineContainer: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 6, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm },
-  sparkColumn:        { flex: 1, alignItems: 'center', gap: 4 },
-  sparkBar:           { width: '100%', backgroundColor: palette.gold, borderRadius: 2, opacity: 0.8 },
-  sparkLabel:         { fontSize: 11, color: palette.smoke },
-  sparkRange:         { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  sparkRangeText:     { fontSize: 11, color: palette.smoke },
-
-  emptyState:         { alignItems: 'center', paddingVertical: spacing.xl, gap: 8 },
-  emptyText:          { fontFamily: Fonts.display, fontSize: 16, color: palette.ash },
-  emptySubtext:       { ...typography.caption, color: palette.smoke, textAlign: 'center' },
+  backBtn:    { minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
+  backText:   { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ivory },
 });

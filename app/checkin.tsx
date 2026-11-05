@@ -514,12 +514,21 @@ export default function CheckInScreen() {
           <Text style={[styles.big, isDesktop && styles.bigDesk]} accessibilityLiveRegion="polite">
             {elegido ?? ''}
           </Text>
-          <Text style={styles.bigWord}>{elegido ? paso.words[elegido - 1].toUpperCase() : 'ELIGE UNO'}</Text>
+          <Text style={styles.bigWord}>{elegido ? paso.words[elegido - 1].toUpperCase() : ''}</Text>
         </View>
       </View>
 
       <View style={[styles.qBottom, isDesktop && styles.qBottomDesk, isDesktop && styles.qPadDesk]}>
-        {opciones}
+        {/* «ELIGE UNO» justo encima de los botones, y debajo qué significa cada
+            punta: antes la escala se elegía a ciegas. */}
+        <View style={[styles.scale, isDesktop && styles.scaleDesk]}>
+          <Text style={styles.scaleHint}>ELIGE UNO</Text>
+          {opciones}
+          <View style={styles.scaleEnds}>
+            <Text style={styles.scaleEnd}>{`1 = ${paso.words[0].toLowerCase()}`}</Text>
+            <Text style={styles.scaleEnd}>{`5 = ${paso.words[4].toLowerCase()}`}</Text>
+          </View>
+        </View>
         <View style={[styles.qActions, isDesktop && styles.qActionsDesk]}>
           {step > 0 && (
             <Pressable onPress={atras} accessibilityRole="button" style={styles.backLink}>
@@ -537,7 +546,7 @@ export default function CheckInScreen() {
               (elegido === null || submitting) && styles.nextOff,
               pressed && styles.nextPressed,
             ]}>
-            <Text style={styles.nextText}>
+            <Text style={[styles.nextText, (elegido === null || submitting) && { color: palette.ink }]}>
               {submitting ? 'GUARDANDO…' : esUltimo ? 'GUARDAR' : 'SIGUIENTE'}
             </Text>
           </Pressable>
@@ -573,6 +582,11 @@ const styles = StyleSheet.create({
   bigWord: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ink },
   qBottom: { gap: 16 },
   qBottomDesk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 32 },
+  scale: { gap: 8 },
+  scaleDesk: { flex: 1 },
+  scaleHint: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink },
+  scaleEnds: { flexDirection: 'row', justifyContent: 'space-between' },
+  scaleEnd: { fontFamily: Fonts.sans, fontSize: 13, color: palette.ink },
   options: { flexDirection: 'row', gap: 10 },
   optionsDesk: { gap: 14 },
   option: {
@@ -591,7 +605,8 @@ const styles = StyleSheet.create({
     flex: 1, height: 58, borderRadius: 8, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center',
   },
   nextDesk: { height: 64 },
-  nextOff: { opacity: 0.35 },
+  // Deshabilitado = contorno, no un botón oscuro "sucio" que parece roto.
+  nextOff: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: palette.ink, opacity: 0.4 },
   nextPressed: { opacity: 0.85 },
   nextText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, letterSpacing: 1, color: palette.goldStatic },
 

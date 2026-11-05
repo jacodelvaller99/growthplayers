@@ -58,7 +58,7 @@ export function TourButton() {
           accessibilityRole="button"
           accessibilityLabel="Norman te explica esta pantalla"
           style={[s.btn, { bottom }]}>
-          <MaterialIcons name="auto-awesome" size={20} color={palette.ink} />
+          <MaterialIcons name="auto-awesome" size={20} color={palette.ash} />
         </Pressable>
       )}
     </>
@@ -66,9 +66,13 @@ export function TourButton() {
 }
 
 const s = StyleSheet.create({
+  // Neutro a propósito: el amarillo se gana — es de la acción principal de
+  // cada pantalla, no de un botón de ayuda que flota sobre todas.
   btn: {
     alignItems: 'center',
-    backgroundColor: palette.gold,
+    backgroundColor: palette.graphite,
+    borderColor: palette.line,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 24,
     height: 48,
     justifyContent: 'center',
@@ -76,7 +80,7 @@ const s = StyleSheet.create({
     right: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     width: 48,
     zIndex: 850,

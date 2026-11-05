@@ -2,37 +2,26 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldDivider, PremiumCard, screen, useScreen } from '@/components/polaris';
+import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import SafetyWarning from '@/components/SafetyWarning';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
-import { alpha } from '@/constants/themeColors';
+import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import {
   AMBIENCE_OPTIONS,
   BINAURAL_PRESETS,
   TIMER_OPTIONS,
   binauralMusicForBeat,
+  normanVoiceUrl,
   type AmbienceType,
   type BinauralPreset,
 } from '@/data/wellness';
-import { Aura } from '@/components/aura';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
 import { getBinauralGuide } from '@/data/binauralGuides';
-import { normanVoiceUrl } from '@/data/wellness';
 import { analytics } from '@/lib/analytics';
 
 // ─── Haptic helper ────────────────────────────────────────────────────────────
@@ -51,6 +40,61 @@ function haptic(type: 'light' | 'medium' | 'success') {
 
 function formatTime(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Cada sonido se nombra por para qué sirve. La banda técnica (delta, theta…)
+ * y los hercios no salen a la cara: no le dicen nada a quien solo quiere
+ * dormir o concentrarse.
+ */
+const PURPOSE: Record<string, { name: string; detail: string }> = {
+  delta: { name: 'Dormir profundo', detail: 'Un tono lento para acompañar el descanso.' },
+  theta: { name: 'Relajarte',       detail: 'Para soltar el día y bajar el ritmo.' },
+  alpha: { name: 'Calma alerta',    detail: 'Tranquilo, pero presente.' },
+  beta:  { name: 'Concentrarte',    detail: 'Para sostener la atención en una tarea.' },
+  gamma: { name: 'Atención intensa', detail: 'Para un bloque corto de trabajo exigente.' },
+};
+const purposeOf = (p: BinauralPreset) => PURPOSE[p.id] ?? { name: p.label, detail: p.benefit };
+
+// ─── Tu mezcla: tonos extra, nombrados por intención ─────────────────────────
+interface MixerPreset {
+  id: string;
+  name: string;
+  detail: string;
+  carrierHz: number;
+  beatHz: number;
+}
+
+const MIXER_PRESETS: MixerPreset[] = [
+  { id: 'intelligence', name: 'Foco',        detail: 'Un tono rápido para trabajar.',      carrierHz: 200, beatHz: 40 },
+  { id: 'intuition',    name: 'Creatividad', detail: 'Un tono medio para pensar suelto.',  carrierHz: 210, beatHz: 8 },
+  { id: 'euphoria',     name: 'Ánimo',       detail: 'Un tono medio, más brillante.',      carrierHz: 432, beatHz: 10 },
+  { id: 'healing',      name: 'Calma',       detail: 'Un tono suave para relajarte.',      carrierHz: 200, beatHz: 7.83 },
+  { id: 'memory',       name: 'Ensoñación',  detail: 'Un tono lento, entre la vigilia y el sueño.', carrierHz: 100, beatHz: 4 },
+];
+
+const mixerToPreset = (mp: MixerPreset): BinauralPreset => ({
+  id: mp.id,
+  label: mp.name,
+  description: mp.name,
+  benefit: mp.detail,
+  carrierHz: mp.carrierHz,
+  beatHz: mp.beatHz,
+  color: palette.ash,
+  icon: 'graphic-eq',
+});
+
+function AntesDeEmpezar({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel="Antes de empezar" style={styles.antes}>
+        <Text style={styles.antesLabel}>ANTES DE EMPEZAR</Text>
+        <MaterialIcons name={open ? 'expand-less' : 'expand-more'} size={20} color={palette.smoke} />
+      </Pressable>
+      {open && <View style={{ paddingBottom: 16 }}>{children}</View>}
+    </View>
+  );
 }
 
 // ─── Simple Slider (web + native compatible) ──────────────────────────────────
@@ -74,143 +118,33 @@ function VolumeSlider({
           max={1}
           step={0.05}
           value={value}
+          aria-label={label}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(Number(e.target.value))}
           style={{ flex: 1, accentColor: palette.gold, cursor: 'pointer' }}
         />
-        <Text style={slider.val}>{Math.round(value * 100)}%</Text>
       </View>
     );
   }
-  // Native: simple touch bar (tap to set approximate value)
+  // Native: barra de lectura (el volumen fino se ajusta con los botones del equipo)
   return (
     <View style={slider.row}>
       <Text style={slider.label}>{label}</Text>
       <View style={slider.track}>
         <View style={[slider.fill, { width: `${value * 100}%` as unknown as number }]} />
       </View>
-      <Text style={slider.val}>{Math.round(value * 100)}%</Text>
     </View>
   );
 }
 
 const slider = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  label: {
-    ...typography.label,
-    color: palette.ash,
-    // 96 y no 70: a 11pt «BINAURAL» (8 letras GrandisExtended) mide ~85px.
-    width: 96,
-    letterSpacing: 0.6,
-  },
-  track: {
-    flex: 1,
-    height: 4,
-    backgroundColor: palette.charcoal,
-    borderRadius: radii.xs,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: palette.gold,
-  },
-  val: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    width: 32,
-    textAlign: 'right',
-  },
-});
-
-// ─── Mixer mode presets ───────────────────────────────────────────────────────
-interface MixerPreset {
-  id: string;
-  label: string;
-  description: string;
-  carrierHz: number;
-  beatHz: number;
-  color: string;
-  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-}
-
-const MIXER_PRESETS: MixerPreset[] = [
-  { id: 'intelligence', label: 'INTELLIGENCE',  description: '40 Hz Gamma — Foco máximo y cognición',      carrierHz: 200, beatHz: 40,   color: palette.info,    icon: 'psychology'       },
-  { id: 'intuition',    label: 'INTUITION',     description: '8 Hz Alpha — Creatividad e intuición',       carrierHz: 210, beatHz: 8,    color: palette.purple,  icon: 'auto-awesome'     },
-  { id: 'euphoria',     label: 'EUPHORIA',      description: '10 Hz Alpha — Estados elevados de bienestar', carrierHz: 432, beatHz: 10,   color: palette.goldText,    icon: 'sentiment-very-satisfied' },
-  { id: 'healing',      label: 'CALMA',         description: '7.83 Hz — Frecuencia suave para relajación profunda', carrierHz: 200, beatHz: 7.83, color: palette.success, icon: 'favorite'         },
-  { id: 'memory',       label: 'MEMORY',        description: '4 Hz Theta — Memoria profunda y sueños',     carrierHz: 100, beatHz: 4,    color: palette.danger,  icon: 'memory'           },
-];
-
-// ─── Wave Visualizer ──────────────────────────────────────────────────────────
-function WaveVisualizer({ active, color }: { active: boolean; color: string }) {
-  const bars = useRef(
-    Array.from({ length: 7 }, () => new Animated.Value(0.3))
-  ).current;
-  const reducedMotion = useReducedMotion();
-
-  useEffect(() => {
-    // Reduced motion: barra fija a media altura, sin el flicker aleatorio en
-    // loop (vestibular-hostile a propósito lo evita) — ni al activar ni al
-    // desactivar.
-    if (!active || reducedMotion) {
-      const target = !active ? 0.3 : 0.6;
-      bars.forEach((b) => Animated.timing(b, { toValue: target, duration: 300, useNativeDriver: false }).start());
-      return;
-    }
-    const anims = bars.map((bar, i) => {
-      const delay = i * 80;
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(bar, { toValue: 0.2 + Math.random() * 0.6, duration: 300 + Math.random() * 200, useNativeDriver: false }),
-          Animated.timing(bar, { toValue: 0.2 + Math.random() * 0.4, duration: 300 + Math.random() * 200, useNativeDriver: false }),
-        ])
-      );
-    });
-    Animated.stagger(60, anims).start();
-    return () => anims.forEach((a) => a.stop());
-  }, [active, reducedMotion]);
-
-  return (
-    <View style={wave.row}>
-      {bars.map((anim, i) => (
-        <Animated.View
-          key={i}
-          style={[
-            wave.bar,
-            {
-              backgroundColor: color,
-              height: anim.interpolate({ inputRange: [0, 1], outputRange: [6, 40] }),
-              opacity: active ? 1 : 0.3,
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
-
-const wave = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    height: 48,
-    paddingHorizontal: spacing.md,
-  },
-  bar: {
-    width: 5,
-    borderRadius: radii.xs,
-    minHeight: 6,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 44 },
+  label: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke, width: 96 },
+  track: { flex: 1, height: 4, backgroundColor: palette.charcoal, borderRadius: radii.xs, overflow: 'hidden' },
+  fill: { height: '100%', backgroundColor: palette.ash },
 });
 
 // ─── Binaural Player ──────────────────────────────────────────────────────────
+// Negro plano, temporizador grande, un solo botón. Sin anillos ni hercios.
 
 function BinauralPlayer({
   preset,
@@ -221,7 +155,7 @@ function BinauralPlayer({
   onComplete: (secs: number) => void;
   onExit: () => void;
 }) {
-  const sc = useScreen();
+  const insets = useSafeAreaInsets();
   const {
     startSession: storeStart,
     stopSession: storeStop,
@@ -245,6 +179,7 @@ function BinauralPlayer({
   const pausedAtRef  = useRef(0);   // Date.now() when paused
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const targetSecs  = timerMinutes * 60;
+  const purpose = purposeOf(preset);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -255,6 +190,24 @@ function BinauralPlayer({
     };
   }, []);
 
+  const tick = useCallback(() => {
+    const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
+    setElapsed(secs);
+    storeElapsed(secs);
+    if (secs >= targetSecs) {
+      clearInterval(timerRef.current!);
+      audioRef.current?.stop();
+      audioRef.current = null;
+      narrationRef.current?.stop();
+      narrationRef.current = null;
+      setRunning(false);
+      setDone(true);
+      haptic('success');
+      storeStop();
+      onComplete(secs);
+    }
+  }, [targetSecs, onComplete, storeStop, storeElapsed]);
+
   const startSession = useCallback(() => {
     const handle = createBinauralAudio(preset.carrierHz, preset.beatHz, binauralMusicForBeat(preset.beatHz));
     if (handle) {
@@ -264,9 +217,7 @@ function BinauralPlayer({
       if (ambience !== 'none') handle.setAmbience(ambience);
       audioRef.current = handle;
     }
-    // Guia de entrada: Norman abre la sesion (postura, auriculares, que
-    // esperar de esta banda) y se calla. El tono sigue sonando despues -- el
-    // arrastre lo hace el binaural en silencio, no la voz.
+    // Guía de entrada: Norman abre la sesión y se calla; el tono sigue.
     const guide = getBinauralGuide(preset.id);
     if (guide) {
       const n = createNarrationPlayer({
@@ -275,8 +226,7 @@ function BinauralPlayer({
           duration: seg.duration,
           pauseAfter: seg.pauseAfter,
         })),
-        // La cama la lleva `audioRef` con su propio timer, asi que el player
-        // de narracion solo avisa cuando agachar el tono para no tapar la voz.
+        // Agacha el tono para no tapar la voz.
         onDuck: (ducked) => audioRef.current?.setVolume(ducked ? binauralVol * 0.35 : binauralVol),
       });
       if (n) { narrationRef.current = n; n.start(); }
@@ -291,7 +241,7 @@ function BinauralPlayer({
     // Wire to global wellness store so mini player appears
     storeStart({
       type:          'binaural',
-      sessionName:   preset.label,
+      sessionName:   purpose.name,
       leftHz:        preset.carrierHz,
       rightHz:       preset.carrierHz + preset.beatHz,
       waveVolume:    binauralVol,
@@ -300,24 +250,8 @@ function BinauralPlayer({
       targetSeconds: targetSecs,
     });
 
-    timerRef.current = setInterval(() => {
-      const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
-      setElapsed(secs);
-      storeElapsed(secs);
-      if (secs >= targetSecs) {
-        clearInterval(timerRef.current!);
-        audioRef.current?.stop();
-        audioRef.current = null;
-        narrationRef.current?.stop();
-        narrationRef.current = null;
-        setRunning(false);
-        setDone(true);
-        haptic('success');
-        storeStop();
-        onComplete(secs);
-      }
-    }, 500);
-  }, [preset, binauralVol, ambienceVol, ambience, targetSecs, onComplete, storeStart, storeStop, storeElapsed]);
+    timerRef.current = setInterval(tick, 500);
+  }, [preset, purpose.name, binauralVol, ambienceVol, ambience, targetSecs, storeStart, tick]);
 
   const stopSession = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -345,33 +279,15 @@ function BinauralPlayer({
 
   const resumeSession = useCallback(() => {
     // Slide startTime forward by the duration we were paused
-    const pausedMs = Date.now() - pausedAtRef.current;
-    startTimeRef.current += pausedMs;
+    startTimeRef.current += Date.now() - pausedAtRef.current;
     audioRef.current?.resume();
     narrationRef.current?.resume();
     setRunning(true);
     setPaused(false);
     storeResume();
     haptic('light');
-
-    timerRef.current = setInterval(() => {
-      const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
-      setElapsed(secs);
-      storeElapsed(secs);
-      if (secs >= targetSecs) {
-        clearInterval(timerRef.current!);
-        audioRef.current?.stop();
-        audioRef.current = null;
-        narrationRef.current?.stop();
-        narrationRef.current = null;
-        setRunning(false);
-        setDone(true);
-        haptic('success');
-        storeStop();
-        onComplete(secs);
-      }
-    }, 500);
-  }, [targetSecs, onComplete, storeResume, storeStop, storeElapsed]);
+    timerRef.current = setInterval(tick, 500);
+  }, [storeResume, tick]);
 
   const handleBinauralVol = (v: number) => {
     setBinauralVol(v);
@@ -389,246 +305,118 @@ function BinauralPlayer({
     audioRef.current?.setAmbience(a);
   };
 
-  const progress = Math.min(elapsed / targetSecs, 1);
+  // Final limpio: "Hecho. N min." + Volver.
+  if (done) {
+    return (
+      <Pantalla meta="BIENESTAR · SONIDOS" title="Hecho." sub={`${Math.max(1, Math.round(elapsed / 60))} min.`}>
+        <Fila label="VOLVER" value="Sonidos" onPress={onExit} last />
+      </Pantalla>
+    );
+  }
+
+  const started = running || paused;
   const remaining = Math.max(targetSecs - elapsed, 0);
 
   return (
     <ScrollView
-      style={[sc.root]}
-      contentContainerStyle={[sc.content, { paddingTop: 56, alignItems: 'center' }]}
+      style={play.root}
+      contentContainerStyle={[play.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}
       showsVerticalScrollIndicator={false}>
-
-      {/* Header */}
-      <View style={play.header}>
-        <Pressable onPress={onExit} style={play.backBtn} accessibilityRole="button" accessibilityLabel="Salir de la sesión">
+      <View style={play.inner}>
+        <Pressable onPress={() => { stopSession(); onExit(); }} style={play.backBtn} accessibilityRole="button" accessibilityLabel="Salir de la sesión">
           <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
         </Pressable>
-        <Text style={play.titleText}>{preset.label}</Text>
-        <Text style={play.elapsed}>{formatTime(elapsed)}</Text>
-      </View>
 
-      <Text style={play.descText}>{preset.benefit}</Text>
+        <Text style={play.title}>{purpose.name}</Text>
+        <Text style={play.desc}>{purpose.detail}</Text>
 
-      {/* Ring progress */}
-      <View style={play.ringWrap}>
-        {Platform.OS === 'web' ? (
-          <WebRing progress={progress} color={preset.color} label={done ? '✓' : running ? formatTime(remaining) : preset.description} />
-        ) : (
-          <NativeRing progress={progress} color={preset.color} label={done ? '✓' : running ? formatTime(remaining) : preset.description} />
+        <Text style={play.time} accessibilityRole="timer">{formatTime(started ? remaining : targetSecs)}</Text>
+
+        {!started && (
+          <>
+            <Text style={play.groupLabel}>DURACIÓN</Text>
+            <View style={play.optRow}>
+              {TIMER_OPTIONS.map((m) => (
+                <Pressable
+                  key={m}
+                  onPress={() => { setTimerMinutes(m); haptic('light'); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${m} minutos`}
+                  accessibilityState={{ selected: timerMinutes === m }}
+                  style={play.opt}>
+                  <Text style={[play.optText, timerMinutes === m && play.optTextOn]}>{m} min</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={play.groupLabel}>FONDO</Text>
+            <View style={play.optRow}>
+              {AMBIENCE_OPTIONS.map((a) => (
+                <Pressable
+                  key={a.id}
+                  onPress={() => handleAmbience(a.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Fondo: ${a.label.toLowerCase()}`}
+                  accessibilityState={{ selected: ambience === a.id }}
+                  style={play.opt}>
+                  <Text style={[play.optText, ambience === a.id && play.optTextOn]}>
+                    {a.label.charAt(0) + a.label.slice(1).toLowerCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
         )}
-        <WaveVisualizer active={running} color={preset.color} />
-      </View>
 
-      {/* Hz info */}
-      <View style={play.hzRow}>
-        <View style={play.hzBox}>
-          <Text style={play.hzValue}>{preset.carrierHz}</Text>
-          <Text style={play.hzLabel}>Hz portadora</Text>
+        <View style={play.vols}>
+          <VolumeSlider value={binauralVol} onChange={handleBinauralVol} label="TONO" />
+          <VolumeSlider value={ambienceVol} onChange={handleAmbienceVol} label="FONDO" />
         </View>
-        <View style={play.hzDivider} />
-        <View style={play.hzBox}>
-          <Text style={play.hzValue}>{preset.beatHz}</Text>
-          <Text style={play.hzLabel}>Hz beat</Text>
-        </View>
-        <View style={play.hzDivider} />
-        <View style={play.hzBox}>
-          <Text style={play.hzValue}>{preset.carrierHz + preset.beatHz}</Text>
-          <Text style={play.hzLabel}>Hz derecho</Text>
-        </View>
-      </View>
 
-      <GoldDivider label="CONFIGURACIÓN" />
+        <Text style={play.notice}>Usa audífonos. Si te mareas, para.</Text>
+        {Platform.OS !== 'web' && (
+          <Text style={play.notice}>En la app suena la música de fondo; el tono completo está en la versión web.</Text>
+        )}
 
-      {/* Timer selector */}
-      {!running && !done && (
-        <>
-          <View style={play.timerRow}>
-            {TIMER_OPTIONS.map((m) => (
-              <Pressable
-                key={m}
-                onPress={() => { setTimerMinutes(m); haptic('light'); }}
-                accessibilityRole="button"
-                accessibilityLabel={`Temporizador ${m} minutos`}
-                accessibilityState={{ selected: timerMinutes === m }}
-                style={[play.timerBtn, timerMinutes === m && play.timerBtnActive]}>
-                <Text style={[play.timerBtnText, timerMinutes === m && play.timerBtnTextActive]}>
-                  {m}m
-                </Text>
+        <View style={play.controls}>
+          {!started && (
+            <Pressable style={play.mainBtn} onPress={startSession} accessibilityRole="button" accessibilityLabel={`Empezar ${timerMinutes} minutos`}>
+              <Text style={play.mainBtnText}>EMPEZAR</Text>
+            </Pressable>
+          )}
+          {running && (
+            <Pressable style={play.ghostBtn} onPress={pauseSession} accessibilityRole="button" accessibilityLabel="Pausar sesión">
+              <Text style={play.ghostBtnText}>PAUSA</Text>
+            </Pressable>
+          )}
+          {paused && (
+            <>
+              <Pressable style={play.mainBtn} onPress={resumeSession} accessibilityRole="button" accessibilityLabel="Seguir con la sesión">
+                <Text style={play.mainBtnText}>SEGUIR</Text>
               </Pressable>
-            ))}
-          </View>
-
-          {/* Ambience selector */}
-          <View style={play.ambienceRow}>
-            {AMBIENCE_OPTIONS.map((a) => (
-              <Pressable
-                key={a.id}
-                onPress={() => handleAmbience(a.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`Ambiente ${a.label}`}
-                accessibilityState={{ selected: ambience === a.id }}
-                style={[play.ambienceBtn, ambience === a.id && play.ambienceBtnActive]}>
-                <MaterialIcons
-                  name={a.icon as React.ComponentProps<typeof MaterialIcons>['name']}
-                  size={16}
-                  color={ambience === a.id ? palette.ink : palette.ash}
-                />
-                <Text style={[play.ambienceBtnText, ambience === a.id && play.ambienceBtnTextActive]}>
-                  {a.label}
-                </Text>
+              <Pressable style={play.textBtn} onPress={stopSession} accessibilityRole="button" accessibilityLabel="Terminar sesión">
+                <Text style={play.textBtnText}>Terminar</Text>
               </Pressable>
-            ))}
-          </View>
-        </>
-      )}
-
-      {/* Volume controls */}
-      <PremiumCard style={play.volCard}>
-        <VolumeSlider value={binauralVol} onChange={handleBinauralVol} label="TONO BINAURAL" />
-        <VolumeSlider value={ambienceVol} onChange={handleAmbienceVol} label="AMBIENTE" />
-      </PremiumCard>
-
-      {/* Headphone notice */}
-      <View style={play.noticeRow}>
-        <MaterialIcons name="headphones" size={14} color={palette.goldMuted} />
-        <Text style={play.noticeText}>Requiere audífonos para el efecto binaural</Text>
+            </>
+          )}
+        </View>
       </View>
-
-      {/* CTA */}
-      {!running && !paused && !done && (
-        <Pressable style={play.startBtn} onPress={startSession} accessibilityRole="button" accessibilityLabel={`Iniciar sesión de ${timerMinutes} minutos`}>
-          <MaterialIcons name="play-arrow" size={24} color={palette.ink} />
-          <Text style={play.startBtnText}>INICIAR {timerMinutes} MIN</Text>
-        </Pressable>
-      )}
-      {running && (
-        <View style={play.controlRow}>
-          <Pressable style={play.pauseBtn} onPress={pauseSession} accessibilityRole="button" accessibilityLabel="Pausar sesión">
-            <MaterialIcons name="pause" size={20} color={palette.goldText} />
-            <Text style={play.pauseBtnText}>PAUSAR</Text>
-          </Pressable>
-          <Pressable style={play.stopBtn} onPress={stopSession} accessibilityRole="button" accessibilityLabel="Detener sesión">
-            <MaterialIcons name="stop" size={20} color={palette.ash} />
-            <Text style={play.stopBtnText}>DETENER</Text>
-          </Pressable>
-        </View>
-      )}
-      {paused && !done && (
-        <View style={play.controlRow}>
-          <Pressable style={play.startBtn} onPress={resumeSession} accessibilityRole="button" accessibilityLabel="Reanudar sesión">
-            <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
-            <Text style={play.startBtnText}>REANUDAR</Text>
-          </Pressable>
-          <Pressable style={play.stopBtn} onPress={stopSession} accessibilityRole="button" accessibilityLabel="Detener sesión">
-            <MaterialIcons name="stop" size={20} color={palette.ash} />
-            <Text style={play.stopBtnText}>DETENER</Text>
-          </Pressable>
-        </View>
-      )}
-      {done && (
-        <View style={play.doneBox}>
-          <Text style={play.doneText}>SESIÓN COMPLETADA</Text>
-          <Pressable style={play.startBtn} onPress={onExit} accessibilityRole="button" accessibilityLabel="Continuar">
-            <Text style={play.startBtnText}>CONTINUAR</Text>
-          </Pressable>
-        </View>
-      )}
-
-      <View style={{ height: spacing.xxxl }} />
     </ScrollView>
   );
 }
 
-// ─── Ring components ──────────────────────────────────────────────────────────
-
-function WebRing({ progress, color, label }: { progress: number; color: string; label: string }) {
-  const r = 88;
-  const circ = 2 * Math.PI * r;
-  const dash = circ * (1 - progress);
-
-  return (
-    // @ts-ignore web SVG
-    <svg width={200} height={200} style={{ transform: 'rotate(-90deg)' }}>
-      {/* @ts-ignore */}
-      <circle cx={100} cy={100} r={r} fill="none" stroke={palette.charcoal} strokeWidth={6} />
-      {/* @ts-ignore */}
-      <circle
-        cx={100} cy={100} r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth={6}
-        strokeDasharray={circ}
-        strokeDashoffset={dash}
-        strokeLinecap="round"
-        style={{ transition: 'stroke-dashoffset 0.5s linear' }}
-      />
-      {/* Center label rendered via foreignObject */}
-      {/* @ts-ignore */}
-      <foreignObject x={30} y={70} width={140} height={60} style={{ transform: 'rotate(90deg)', transformOrigin: '100px 100px' }}>
-        <div
-          // @ts-ignore
-          xmlns="http://www.w3.org/1999/xhtml"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <span style={{ color: palette.ivory, fontFamily: Fonts.display, fontSize: 18, letterSpacing: 1, textAlign: 'center' }}>
-            {label}
-          </span>
-        </div>
-      </foreignObject>
-    </svg>
-  );
-}
-
-function NativeRing({ progress, color, label }: { progress: number; color: string; label: string }) {
-  return (
-    <View style={[ring.outer, { borderColor: alpha(color, '44') }]}>
-      <View style={[ring.inner, { borderColor: color }]}>
-        <Text style={[ring.label, { color }]}>{label}</Text>
-      </View>
-    </View>
-  );
-}
-
-const ring = StyleSheet.create({
-  outer: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inner: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 2,
-    backgroundColor: palette.graphite,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontFamily: Fonts.mono,
-    fontSize: 16,
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-});
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BinauralesScreen() {
-  const sc = useScreen();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { saveWellnessSession } = useLifeFlow();
   const [active, setActive] = useState<BinauralPreset | null>(null);
-  const [mixerMode, setMixerMode] = useState(false);
-  const [activeMixer, setActiveMixer] = useState<MixerPreset | null>(null);
+  const [mixerOpen, setMixerOpen] = useState(false);
 
   const handleComplete = useCallback(async (preset: BinauralPreset, secs: number) => {
     await saveWellnessSession({
       type: 'binaural',
-      sessionName: preset.label,
+      sessionName: purposeOf(preset).name,
       durationSeconds: secs,
       completedAt: new Date().toISOString(),
       metadata: { presetId: preset.id, beatHz: preset.beatHz, carrierHz: preset.carrierHz },
@@ -647,628 +435,111 @@ export default function BinauralesScreen() {
     );
   }
 
+  const open = (preset: BinauralPreset) => {
+    haptic('light');
+    analytics.binauralStart(preset.label, 0, preset.beatHz);
+    setActive(preset);
+  };
+
+  // Propuesta por hora: de noche, dormir; de día, concentrarte.
+  const hour = new Date().getHours();
+  const suggestedId = hour >= 20 || hour < 5 ? 'delta' : hour < 12 ? 'beta' : 'alpha';
+  const suggested = BINAURAL_PRESETS.find((p) => p.id === suggestedId) ?? BINAURAL_PRESETS[0];
+  const rest = BINAURAL_PRESETS.filter((p) => p.id !== suggested.id);
+
   return (
-    <View style={sc.root}>
-      {/* Enfocar. `reposo` es el gris neutro — aquí no se busca un estado, se sostiene la atención. */}
-      <Aura state="reposo" weight={0.8} />
-    <ScrollView
-      style={styles.auraScroll}
-      contentContainerStyle={[sc.content, { paddingTop: insets.top + 16 }]}
-      showsVerticalScrollIndicator={false}>
+    <Pantalla
+      meta="BIENESTAR · CALMA"
+      title="Sonidos"
+      sub="Para concentrarte o calmarte. Usa audífonos. Si te mareas, para."
+      hero={
+        <TarjetaOro
+          meta="PARA AHORA"
+          metaRight="10 MIN"
+          title={purposeOf(suggested).name}
+          detail={purposeOf(suggested).detail}
+          onPress={() => open(suggested)}
+        />
+      }>
+      {rest.map((preset) => (
+        <Fila
+          key={preset.id}
+          label={purposeOf(preset).name.toUpperCase()}
+          value={purposeOf(preset).detail}
+          onPress={() => open(preset)}
+        />
+      ))}
 
-      {/* Header */}
-      <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-          <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
-        </Pressable>
-        <Text style={styles.title}>BINAURALES</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <Text style={styles.intro}>
-        Tonos diseñados para acompañar estados de calma; la experiencia es subjetiva. Requiere audífonos.
-      </Text>
-
-      {/* Headphone banner */}
-      <PremiumCard style={styles.noticeBanner}>
-        <MaterialIcons name="headphones" size={20} color={palette.goldText} />
-        <Text style={styles.noticeText}>
-          Los beats binaurales requieren audífonos estéreo. El cerebro percibe la diferencia entre el tono izquierdo y el derecho.
-        </Text>
-      </PremiumCard>
-
-      {Platform.OS !== 'web' && (
-        <PremiumCard style={styles.noticeBanner}>
-          <MaterialIcons name="volume-off" size={20} color={palette.goldText} />
-          <Text style={styles.noticeText}>
-            El tono binaural exacto requiere la versión web — aquí suena la cama musical de la banda mientras corre el temporizador guiado.
-          </Text>
-        </PremiumCard>
-      )}
-
-      <SafetyWarning
-        title="SOBRE LOS BINAURALES"
-        body="Los efectos de los ritmos binaurales en foco, calma o energía están investigados pero no son concluyentes; la respuesta es individual. Es un complemento de bienestar, no un tratamiento médico ni un sustituto de atención profesional. No los uses mientras conduces u operas maquinaria, y consulta a tu médico si tienes epilepsia o fotosensibilidad. Si durante la sesión aumenta la angustia o sientes desconexión de tu cuerpo o del entorno, detenla."
+      <Fila
+        label="HACER TU MEZCLA"
+        value={mixerOpen ? 'Cerrar' : 'Más tonos'}
+        onPress={() => { setMixerOpen((o) => !o); haptic('light'); }}
       />
+      {mixerOpen && MIXER_PRESETS.map((mp) => (
+        <View key={mp.id} style={styles.sub}>
+          <Fila
+            label={mp.name.toUpperCase()}
+            value={mp.detail}
+            onPress={() => { haptic('medium'); setActive(mixerToPreset(mp)); }}
+          />
+        </View>
+      ))}
 
-      {/* Mode toggle */}
-      <View style={styles.modeToggleRow}>
-        <Pressable
-          onPress={() => { setMixerMode(false); haptic('light'); }}
-          accessibilityRole="button"
-          accessibilityLabel="Modo básico"
-          accessibilityState={{ selected: !mixerMode }}
-          style={[styles.modeBtn, !mixerMode && styles.modeBtnActive]}>
-          <MaterialIcons name="queue-music" size={16} color={!mixerMode ? palette.ink : palette.ash} />
-          <Text style={[styles.modeBtnText, !mixerMode && styles.modeBtnTextActive]}>BÁSICO</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => { setMixerMode(true); haptic('light'); }}
-          accessibilityRole="button"
-          accessibilityLabel="Modo mezclador"
-          accessibilityState={{ selected: mixerMode }}
-          style={[styles.modeBtn, mixerMode && styles.modeBtnActive]}>
-          <MaterialIcons name="tune" size={16} color={mixerMode ? palette.ink : palette.ash} />
-          <Text style={[styles.modeBtnText, mixerMode && styles.modeBtnTextActive]}>MEZCLADOR</Text>
-        </Pressable>
-      </View>
+      <AntesDeEmpezar>
+        <SafetyWarning
+          title="SOBRE LOS BINAURALES"
+          body="Los efectos de los ritmos binaurales en foco, calma o energía están investigados pero no son concluyentes; la respuesta es individual. Es un complemento de bienestar, no un tratamiento médico ni un sustituto de atención profesional. No los uses mientras conduces u operas maquinaria, y consulta a tu médico si tienes epilepsia o fotosensibilidad. Si durante la sesión aumenta la angustia o sientes desconexión de tu cuerpo o del entorno, detenla."
+        />
+      </AntesDeEmpezar>
 
-      {!mixerMode ? (
-        <>
-          <GoldDivider label="FRECUENCIAS" />
-          {BINAURAL_PRESETS.map((preset) => (
-            <Pressable
-              key={preset.id}
-              onPress={() => { haptic('light'); analytics.binauralStart(preset.label, 0, preset.beatHz); setActive(preset); }}
-              accessibilityRole="button"
-              accessibilityLabel={`${preset.label}: ${preset.description}`}
-              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-              <View style={[styles.colorBar, { backgroundColor: preset.color }]} />
-              <View style={styles.cardContent}>
-                <View style={styles.cardTop}>
-                  <View style={[styles.iconBox, { backgroundColor: preset.color + '22' }]}>
-                    <MaterialIcons
-                      name={preset.icon as React.ComponentProps<typeof MaterialIcons>['name']}
-                      size={24}
-                      color={preset.color}
-                    />
-                  </View>
-                  <View style={styles.cardMeta}>
-                    <Text style={styles.cardLabel}>{preset.label}</Text>
-                    <Text style={[styles.cardHz, { color: preset.color }]}>{preset.description}</Text>
-                  </View>
-                  <MaterialIcons name="play-circle" size={32} color={preset.color} />
-                </View>
-                <Text style={styles.cardBenefit}>{preset.benefit}</Text>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardFooterText}>{preset.beatHz} Hz beat · {preset.carrierHz} Hz portadora</Text>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </>
-      ) : (
-        <>
-          <GoldDivider label="FRECUENCIAS AVANZADAS" />
-          <Text style={styles.mixerIntro}>
-            Selecciona una categoría de estado mental y lanza la sesión desde el mezclador.
-          </Text>
-          <View style={styles.mixerGrid}>
-            {MIXER_PRESETS.map((mp) => (
-              <Pressable
-                key={mp.id}
-                onPress={() => { setActiveMixer(activeMixer?.id === mp.id ? null : mp); haptic('light'); }}
-                accessibilityRole="button"
-                accessibilityLabel={`${mp.label}: ${mp.description}`}
-                accessibilityState={{ selected: activeMixer?.id === mp.id }}
-                style={[
-                  styles.mixerCard,
-                  activeMixer?.id === mp.id && { borderColor: mp.color, backgroundColor: mp.color + '18' },
-                ]}>
-                <View style={[styles.mixerIconBox, { backgroundColor: mp.color + '22' }]}>
-                  <MaterialIcons name={mp.icon} size={22} color={mp.color} />
-                </View>
-                <Text style={[styles.mixerLabel, { color: mp.color }]}>{mp.label}</Text>
-                <Text style={styles.mixerDesc} numberOfLines={2}>{mp.description}</Text>
-                <Text style={styles.mixerHz}>{mp.beatHz} Hz · {mp.carrierHz} Hz</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {activeMixer && (
-            <PremiumCard style={[styles.mixerPlayerCard, { borderColor: activeMixer.color + '66' }]}>
-              <View style={styles.mixerPlayerHeader}>
-                <Text style={[styles.mixerPlayerTitle, { color: activeMixer.color }]}>
-                  {activeMixer.label}
-                </Text>
-                <WaveVisualizer active={false} color={activeMixer.color} />
-              </View>
-              <View style={styles.mixerHzRow}>
-                <View style={styles.mixerHzBox}>
-                  <Text style={[styles.mixerHzVal, { color: activeMixer.color }]}>{activeMixer.carrierHz}</Text>
-                  <Text style={styles.mixerHzLabel}>Hz portadora</Text>
-                </View>
-                <View style={styles.hzDividerV} />
-                <View style={styles.mixerHzBox}>
-                  <Text style={[styles.mixerHzVal, { color: activeMixer.color }]}>{activeMixer.beatHz}</Text>
-                  <Text style={styles.mixerHzLabel}>Hz beat</Text>
-                </View>
-                <View style={styles.hzDividerV} />
-                <View style={styles.mixerHzBox}>
-                  <Text style={[styles.mixerHzVal, { color: activeMixer.color }]}>
-                    {activeMixer.carrierHz + activeMixer.beatHz}
-                  </Text>
-                  <Text style={styles.mixerHzLabel}>Hz derecho</Text>
-                </View>
-              </View>
-              <Pressable
-                style={[styles.mixerStartBtn, { backgroundColor: activeMixer.color }]}
-                accessibilityRole="button"
-                accessibilityLabel={`Lanzar sesión ${activeMixer.label}`}
-                onPress={() => {
-                  haptic('medium');
-                  // Convert mixer preset to BinauralPreset shape and launch player
-                  setActive({
-                    id: activeMixer.id,
-                    label: activeMixer.label,
-                    description: `${activeMixer.beatHz} Hz beat`,
-                    benefit: activeMixer.description,
-                    carrierHz: activeMixer.carrierHz,
-                    beatHz: activeMixer.beatHz,
-                    color: activeMixer.color,
-                    icon: activeMixer.icon as string,
-                  } as BinauralPreset);
-                }}>
-                <MaterialIcons name="play-arrow" size={22} color={palette.ink} />
-                <Text style={styles.mixerStartText}>LANZAR SESIÓN</Text>
-              </Pressable>
-            </PremiumCard>
-          )}
-        </>
-      )}
-
-      <View style={{ height: spacing.xxxl }} />
-    </ScrollView>
-    </View>
+      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
+    </Pantalla>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // El ScrollView ya no es la raíz: el aura se ancla al viewport por encima.
-  auraScroll: { flex: 1 },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xl,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    ...typography.title,
-    color: palette.ivory,
-    fontSize: 18,
-  },
-  intro: {
-    ...typography.body,
-    color: palette.ash,
-    marginBottom: spacing.lg,
-  },
-  noticeBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  noticeText: {
-    ...typography.body,
-    color: palette.ash,
-    flex: 1,
-    fontSize: 13,
-  },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: palette.graphite,
-    borderColor: palette.line,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-  },
-  cardPressed: {
-    opacity: 0.8,
-  },
-  colorBar: {
-    width: 4,
-  },
-  cardContent: {
-    flex: 1,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardMeta: {
-    flex: 1,
-  },
-  cardLabel: {
-    ...typography.section,
-    color: palette.ivory,
-    fontSize: 16,
-    letterSpacing: 2.5,
-  },
-  cardHz: {
-    ...typography.mono,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  cardBenefit: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 12,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  cardFooterText: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 11,
-  },
-
-  // Mode toggle
-  modeToggleRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  modeBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    minHeight: 44,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.line,
-  },
-  modeBtnActive: {
-    backgroundColor: palette.gold,
-    borderColor: palette.gold,
-  },
-  modeBtnText: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  modeBtnTextActive: {
-    color: palette.ink,
-    fontWeight: '700',
-  },
-
-  // Mixer
-  mixerIntro: {
-    ...typography.body,
-    color: palette.smoke,
-    fontSize: 12,
-    marginBottom: spacing.lg,
-  },
-  mixerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  mixerCard: {
-    width: '47%',
-    flexGrow: 1,
-    backgroundColor: palette.graphite,
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    minWidth: 130,
-  },
-  mixerIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mixerLabel: {
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  mixerDesc: {
-    ...typography.caption,
-    color: palette.smoke,
-    fontSize: 11,
-    lineHeight: 14,
-  },
-  mixerHz: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  mixerPlayerCard: {
-    gap: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  mixerPlayerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mixerPlayerTitle: {
-    fontFamily: Fonts.display,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  mixerHzRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  mixerHzBox: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  mixerHzVal: {
-    fontFamily: Fonts.display,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  mixerHzLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  hzDividerV: {
-    width: 1,
-    height: 28,
-    backgroundColor: palette.line,
-  },
-  mixerStartBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    minHeight: 48,
-  },
-  mixerStartText: {
-    ...typography.label,
-    color: palette.ink,
-    fontWeight: '700',
-    fontSize: 13,
-  },
+  sub: { paddingLeft: spacing.lg },
+  antes: { minHeight: 56, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  antesLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
 });
 
 const play = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: spacing.lg,
+  root: { flex: 1, backgroundColor: palette.black },
+  content: { flexGrow: 1, paddingHorizontal: spacing.lg },
+  inner: { width: '100%', maxWidth: 680, alignSelf: 'center' },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10 },
+  title: {
+    marginTop: spacing.xl, fontFamily: Fonts.displayRegular, fontWeight: '400',
+    fontSize: 32, lineHeight: 36, color: palette.ivory,
   },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
+  desc: { marginTop: spacing.md, fontFamily: Fonts.sans, fontSize: 16, lineHeight: 24, color: palette.ash },
+  time: {
+    marginTop: spacing.xxl, fontFamily: Fonts.display, fontWeight: '700',
+    fontSize: 72, lineHeight: 80, color: palette.ivory, fontVariant: ['tabular-nums'],
   },
-  titleText: {
-    ...typography.section,
-    color: palette.ivory,
-    fontSize: 18,
-    letterSpacing: 4,
+  groupLabel: {
+    marginTop: spacing.xl, fontFamily: Fonts.display, fontWeight: '700',
+    fontSize: 11, letterSpacing: 1, color: palette.smoke,
   },
-  elapsed: {
-    fontFamily: Fonts.mono,
-    color: palette.smoke,
-    fontSize: 14,
-    letterSpacing: 1,
+  optRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.lg },
+  opt: { minHeight: 44, justifyContent: 'center' },
+  optText: { fontFamily: Fonts.sans, fontSize: 16, color: palette.smoke },
+  optTextOn: { color: palette.ivory, textDecorationLine: 'underline' },
+  vols: { marginTop: spacing.xl, gap: spacing.xs },
+  notice: { marginTop: spacing.md, fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.smoke },
+  controls: { marginTop: spacing.xl, gap: spacing.md },
+  mainBtn: {
+    minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.gold,
+    alignItems: 'center', justifyContent: 'center',
   },
-  descText: {
-    ...typography.body,
-    color: palette.smoke,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
+  mainBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ink },
+  ghostBtn: {
+    minHeight: 52, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineHard,
+    alignItems: 'center', justifyContent: 'center',
   },
-  ringWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: spacing.xxl,
-  },
-  hzRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    justifyContent: 'space-around',
-    marginBottom: spacing.xl,
-  },
-  hzBox: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  hzValue: {
-    fontFamily: Fonts.display,
-    color: palette.goldText,
-    fontSize: 22,
-  },
-  hzLabel: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 11,
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  hzDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: palette.line,
-  },
-  timerRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  timerBtn: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.line,
-  },
-  timerBtnActive: {
-    backgroundColor: palette.goldLight,
-    borderColor: palette.gold,
-  },
-  timerBtnText: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 12,
-  },
-  timerBtnTextActive: {
-    color: palette.goldText,
-  },
-  ambienceRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-    width: '100%',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  },
-  ambienceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: palette.line,
-  },
-  ambienceBtnActive: {
-    backgroundColor: palette.gold,
-    borderColor: palette.gold,
-  },
-  ambienceBtnText: {
-    ...typography.label,
-    color: palette.ash,
-    fontSize: 11,
-  },
-  ambienceBtnTextActive: {
-    color: palette.ink,
-  },
-  volCard: {
-    gap: spacing.lg,
-    width: '100%',
-    marginBottom: spacing.lg,
-  },
-  noticeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  noticeText: {
-    ...typography.caption,
-    color: palette.ash,
-    fontSize: 11,
-  },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: palette.gold,
-    paddingHorizontal: spacing.xxxl,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.sm,
-    marginBottom: spacing.lg,
-  },
-  startBtnText: {
-    ...typography.label,
-    color: palette.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  stopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderColor: palette.smoke,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.sm,
-    marginBottom: spacing.lg,
-  },
-  stopBtnText: {
-    ...typography.label,
-    color: palette.smoke,
-    fontSize: 12,
-  },
-  controlRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  pauseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderColor: palette.gold,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.sm,
-  },
-  pauseBtnText: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 12,
-  },
-  doneBox: {
-    alignItems: 'center',
-    gap: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  doneText: {
-    ...typography.section,
-    color: palette.goldText,
-    letterSpacing: 3,
-  },
+  ghostBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ivory },
+  textBtn: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  textBtnText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
 });

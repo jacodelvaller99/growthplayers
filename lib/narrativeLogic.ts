@@ -171,7 +171,7 @@ export function arcForDay(
       quoted: !!obstaculo,
       line: obstaculo
         ? `Dijiste que lo que se interpone es «${obstaculo}». Sigue ahí, y tú también.`
-        : `Llevas ${day} día${plural} aquí. Lo único que pide hoy es una lectura honesta de cómo entras.`,
+        : `Llevas ${day} día${plural} aquí. Hoy solo te pido una cosa: cuéntame cómo llegas.`,
     };
   }
   if (day <= 7) {

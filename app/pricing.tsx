@@ -39,6 +39,9 @@ const ADVISOR_EMAIL = 'info@polarisgrowthinstitute.com';
 // Tiers shown on pricing page
 const PRICING_TIERS: SubscriptionTier[] = ['free', 'premium', 'premium_plus'];
 
+/** Orden de profundidad: el orden de declaración de SUBSCRIPTION_TIERS. */
+const tierRank = (t: string) => Object.keys(SUBSCRIPTION_TIERS).indexOf(t);
+
 // ─── Plan Card ────────────────────────────────────────────────────────────────
 
 function PlanCard({
@@ -82,7 +85,7 @@ function PlanCard({
         <Text style={[s.planName, { color: accentText }]}>{info.name.toUpperCase()}</Text>
         {isActive && (
           <View style={s.activePill}>
-            <Text style={s.activePillText}>ACTIVO</Text>
+            <Text style={s.activePillText}>TU PLAN</Text>
           </View>
         )}
       </View>
@@ -202,33 +205,51 @@ export default function PricingScreen() {
         <>
       {/* Hero */}
       <PremiumCard style={s.heroCard}>
-        <Text style={s.heroEyebrow}>PLANES</Text>
-        <Text style={s.heroTitle}>Elige la profundidad{'\n'}que te sirve hoy.</Text>
-        <Text style={s.heroBody}>
-          Cada plan abre una capa del Método Polaris. El acceso se activa al momento
-          y puedes cambiar de plan cuando lo necesites.
-        </Text>
+        {currentTier !== 'free' ? (
+          <>
+            <Text style={s.heroTitle}>Tu plan:{'\n'}{SUBSCRIPTION_TIERS[currentTier as SubscriptionTier]?.name ?? currentTier}.</Text>
+            <Text style={s.heroBody}>
+              Está activo. Si quieres más acompañamiento, escribe a tu asesor.
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={s.heroTitle}>Elige la profundidad{'\n'}que te sirve hoy.</Text>
+            <Text style={s.heroBody}>
+              {Platform.OS === 'web'
+                ? 'La suscripción se activa desde la app de iOS o Android. Si tienes un código de acceso, canjéalo aquí abajo.'
+                : 'Cada plan abre una capa del Método Polaris. El acceso se activa al momento y puedes cambiar de plan cuando lo necesites.'}
+            </Text>
+          </>
+        )}
       </PremiumCard>
 
       {/* Plans */}
       <GoldDivider label="PLANES DISPONIBLES" />
       <View style={s.planList}>
-        {PRICING_TIERS.map((tier) => {
-          // free no tiene precio de tienda que consultar — es un hecho fijo.
-          // premium sí lo tiene, pero solo se conoce en vivo (App Store/Google
-          // Play, nativo); el CTA lleva a paywall.tsx a verlo y suscribirse.
-          // premium_plus es a medida — sin tarifa fija, se coordina con un asesor
-          // (mismo mensaje que ya usa la sección "Contacto" de esta pantalla).
+        {/* Quien ya paga ve su plan primero; nunca se le recomienda uno inferior. */}
+        {[...PRICING_TIERS]
+          .sort((a, b) => Number(b === currentTier) - Number(a === currentTier))
+          .map((tier) => {
+          const isLower = tierRank(tier) < tierRank(currentTier);
+          // free no tiene precio de tienda — es un hecho fijo.
+          // premium: el precio real solo existe en la tienda (RevenueCat, nativo).
+          //   En web no se puede comprar: se dice cómo, sin botón amarillo.
+          // premium_plus es a medida — se coordina con un asesor.
           const pricing =
             tier === 'premium'
-              ? {
-                  price: premiumPrice ? `Desde ${premiumPrice}` : 'Consulta el precio en la app',
-                  ctaLabel: 'VER PRECIO Y SUSCRIBIRME',
-                  onPressCta: () => router.push('/paywall' as never),
-                }
+              ? Platform.OS === 'web'
+                ? { price: 'Se activa desde la app de iOS o Android' }
+                : {
+                    price: premiumPrice
+                      ? `Desde ${premiumPrice}`
+                      : `El precio de tu país aparece en ${Platform.OS === 'ios' ? 'la App Store' : 'Google Play'} al suscribirte`,
+                    ctaLabel: 'SUSCRIBIRME',
+                    onPressCta: () => router.push('/paywall' as never),
+                  }
               : tier === 'premium_plus'
               ? {
-                  price: 'A medida',
+                  price: 'A medida, con un asesor',
                   ctaLabel: 'HABLAR CON UN ASESOR',
                   onPressCta: () =>
                     Linking.openURL(`mailto:${ADVISOR_EMAIL}?subject=${encodeURIComponent('Quiero saber más de Premium Plus')}`),
@@ -239,8 +260,8 @@ export default function PricingScreen() {
               key={tier}
               tier={tier}
               isActive={currentTier === tier}
-              highlight={tier === 'premium'}
-              {...pricing}
+              highlight={currentTier === 'free' && tier === 'premium' && Platform.OS !== 'web'}
+              {...(isLower ? { price: pricing.price } : pricing)}
             />
           );
         })}

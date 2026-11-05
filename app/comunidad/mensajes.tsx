@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ENV } from '@/app/config/env';
 import { Avatar } from '@/components/Avatar';
 import { CircleEmpty } from '@/components/circle';
 import { usePresence } from '@/lib/presence';
@@ -44,6 +45,9 @@ export default function MensajesScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
   const onlineSet = usePresence(userId ?? undefined);
+  // No hay buscador de personas: se escribe a alguien de tu red (El Círculo) o
+  // desde un post de la comunidad ("Escribir"). El botón lleva a ese lugar.
+  const nuevo = () => router.push((ENV.socialSpacesEnabled ? '/comunidad/conexiones' : '/bienestar/comunidad') as never);
 
   const [convos, setConvos]       = useState<Conversation[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -150,21 +154,21 @@ export default function MensajesScreen() {
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <Text style={styles.title}>MENSAJES</Text>
-        <View style={{ width: 44 }} />
+        <Pressable
+          onPress={nuevo}
+          style={styles.newBtn}
+          accessibilityRole="button"
+          accessibilityLabel={ENV.socialSpacesEnabled ? 'Nuevo mensaje: elige a alguien de tu red' : 'Nuevo mensaje: elige a alguien desde la comunidad'}>
+          <Text style={styles.newBtnText}>Nuevo mensaje</Text>
+        </Pressable>
       </View>
 
-      {/* Señal de pertenencia: derivada de datos reales (tu red de hermanos en
-          la comunidad). Si no hay conversaciones aún, se omite — no inventamos
-          números: el estado vacío ya da el encuadre honesto. */}
+      {/* Señal de pertenencia derivada de datos reales; sin conversaciones se
+          omite — el estado vacío ya da el encuadre honesto. */}
       {!loading && convos.length > 0 && (
-        <View style={styles.belong}>
-          <MaterialIcons name="groups" size={16} color={palette.goldText} />
-          <Text style={styles.belongText}>
-            {convos.length === 1
-              ? '1 hermano en tu red. No caminas el protocolo solo.'
-              : `${convos.length} hermanos en tu red. No caminas el protocolo solo.`}
-          </Text>
-        </View>
+        <Text style={styles.belongText}>
+          {convos.length === 1 ? '1 persona en tu red.' : `${convos.length} personas en tu red.`}
+        </Text>
       )}
 
       {loading ? (
@@ -182,7 +186,7 @@ export default function MensajesScreen() {
           ListEmptyComponent={
             <CircleEmpty
               icon="forum"
-              text={'Sin conversaciones.\nAbre el perfil de un miembro desde la comunidad para iniciar un mensaje directo.'}
+              text={'Sin conversaciones.\nToca «Nuevo mensaje» para elegir a alguien y escribirle.'}
             />
           }
           renderItem={({ item }) => (
@@ -222,8 +226,9 @@ const styles = StyleSheet.create({
   backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title:       { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
 
-  belong:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, borderRadius: 10 },
-  belongText:  { flex: 1, fontFamily: Fonts.sans, fontSize: 12.5, color: palette.ivory, lineHeight: 17 },
+  newBtn:      { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: 8, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  newBtnText:  { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 14, color: palette.ink },
+  belongText:  { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, lineHeight: 18, marginHorizontal: spacing.md, marginBottom: spacing.sm },
 
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap:   { flexGrow: 1, justifyContent: 'center' },
