@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -63,7 +62,6 @@ type Mine = Record<string, { dose: string; timing: string }>;
 const key = (tab: Tab, name: string) => `${tab}:${name}`;
 
 export default function SuplementacionScreen() {
-  const router = useRouter();
   const { userId } = useLifeFlow();
 
   const [activeTab, setActiveTab] = useState<Tab>('energia');
@@ -147,13 +145,7 @@ export default function SuplementacionScreen() {
       <Pantalla
         meta="BIENESTAR · SALUD"
         title="Suplementos"
-        sub="Marca lo que ya tomas y cuándo. Para tenerlo claro, no para empezar algo nuevo."
-        footer={
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-            <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
-            <Text style={styles.backText}>VOLVER</Text>
-          </Pressable>
-        }>
+        sub="Marca lo que ya tomas y cuándo. Para tenerlo claro, no para empezar algo nuevo.">
         <Text style={styles.note}>
           Solo información educativa. Consulta a tu médico antes de tomar cualquier suplemento.
         </Text>
@@ -277,6 +269,4 @@ const styles = StyleSheet.create({
 
   footnote:      { fontFamily: Fonts.sans, fontSize: 12, lineHeight: 18, color: palette.smoke, marginTop: spacing.xl },
 
-  backBtn:       { minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText:      { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ivory },
 });

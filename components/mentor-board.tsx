@@ -85,6 +85,8 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
   // Un cliente en silencio también pide atención: el titular lo nombra en vez
   // de decir "Nadie te espera" con él encabezando la lista de abajo.
   const silentFirst = waiting === 0 && first?.stage === 'silent' ? first : null;
+  // Solo el nombre de pila en el botón: el completo no cabe en móvil y ya va en el titular.
+  const firstName = first?.name.trim().split(/\s+/)[0] ?? '';
   const headline = waiting > 0
     ? `${waiting} cliente${waiting === 1 ? '' : 's'} te espera${waiting === 1 ? '' : 'n'}.`
     : silentFirst
@@ -136,7 +138,7 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
           accessibilityLabel={silentFirst ? `Escribirle a ${first.name}` : `Empezar por ${first.name}`}>
           <Avatar name={first.name} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.startTitle} numberOfLines={1}>{silentFirst ? `Escribirle a ${first.name}` : `Empezar por ${first.name}`}</Text>
+            <Text style={s.startTitle} numberOfLines={1}>{silentFirst ? `Escribirle a ${firstName}` : `Empezar por ${firstName}`}</Text>
             <Text style={s.startSub} numberOfLines={1}>{first.reason}</Text>
           </View>
           <MaterialIcons name="arrow-forward" size={18} color={palette.ink} />

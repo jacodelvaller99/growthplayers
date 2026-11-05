@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +38,16 @@ const CATEGORIES = [...new Set(MEDITATION_SESSIONS.map((s) => s.category))];
 const SESSIONS_BY_CATEGORY = Object.fromEntries(
   CATEGORIES.map((c) => [c, MEDITATION_SESSIONS.filter((s) => s.category === c)]),
 ) as Record<string, MeditationSession[]>;
+
+/** Nombre de grupo en palabras del usuario; las categorías opacas se traducen. */
+const CAT_LABEL: Record<string, string> = {
+  identidad: 'Quién quieres ser',
+  'decisión': 'Para decidir',
+  'inmersión': 'Sesión larga',
+};
+const catLabel = (c: string) => CAT_LABEL[c] ?? c;
+/** Los títulos vienen en Mayúscula De Título; en pantalla, caja de frase. */
+const sentence = (t: string) => t.charAt(0) + t.slice(1).toLowerCase();
 
 /** "Para ahora": la categoría que pide la hora del día. */
 function categoryForHour(hour: number): string {
@@ -237,9 +247,9 @@ function MeditationPlayer({
       <Pantalla
         meta="BIENESTAR · MEDITACIÓN"
         title="Hecho."
-        sub={`${Math.max(1, Math.round(doneSecs / 60))} min.`}>
+        sub={`${Math.max(1, Math.round(doneSecs / 60))}\u00A0min.`}
+        onBack={onExit}>
         <PracticeClose message="¿Cómo aterriza tu mente ahora? Registrarlo es el dato que sí importa." />
-        <Fila label="VOLVER" value="Meditación" onPress={onExit} last />
       </Pantalla>
     );
   }
@@ -308,7 +318,6 @@ function MeditationPlayer({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function MeditacionScreen() {
-  const router = useRouter();
   const { focus: focusParam } = useLocalSearchParams<{ focus?: string | string[] }>();
   const { saveWellnessSession, state, latestCheckIn } = useLifeFlow();
   // Si la saturación viene alta, la pantalla lo dice con el dato.
@@ -369,7 +378,7 @@ export default function MeditacionScreen() {
         <TarjetaOro
           meta="PARA AHORA"
           metaRight={`${suggested.durationMinutes} MIN`}
-          title={suggested.title}
+          title={sentence(suggested.title)}
           detail={suggested.description}
           onPress={() => open(suggested)}
           accessibilityLabel={`Empezar: ${suggested.title}, ${suggested.durationMinutes} minutos`}
@@ -392,7 +401,7 @@ export default function MeditacionScreen() {
         return (
           <View key={cat}>
             <Fila
-              label={cat.toUpperCase()}
+              label={catLabel(cat).toUpperCase()}
               value={isOpen ? 'Cerrar' : `${items.length} ${items.length === 1 ? 'sesión' : 'sesiones'}`}
               onPress={() => setOpenCat(isOpen ? null : cat)}
             />
@@ -400,7 +409,7 @@ export default function MeditacionScreen() {
               <View key={session.id} style={styles.sub}>
                 <Fila
                   label={session.title.toUpperCase()}
-                  value={`${session.durationMinutes} min${completedIds.has(session.id) ? ' · hecha' : ''}`}
+                  value={`${session.durationMinutes}\u00A0min${completedIds.has(session.id) ? ' · hecha' : ''}`}
                   onPress={() => open(session)}
                 />
               </View>
@@ -415,12 +424,8 @@ export default function MeditacionScreen() {
         />
       </AntesDeEmpezar>
 
-      {/* Contexto biométrico del día (honesto, no en vivo) */}
-      <View style={styles.context}>
-        <BodyContextCard frame="Medita para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
-      </View>
-
-      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
+      {/* Contexto del reloj (honesto, no en vivo): una fila gris. */}
+      <BodyContextCard />
     </Pantalla>
   );
 }
@@ -430,7 +435,6 @@ export default function MeditacionScreen() {
 const styles = StyleSheet.create({
   focusCard: { marginBottom: spacing.lg },
   sub: { paddingLeft: spacing.lg },
-  context: { marginVertical: spacing.lg },
   antes: { minHeight: 56, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   antesLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
 });

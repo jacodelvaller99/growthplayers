@@ -47,7 +47,7 @@ jest.mock('@/storage/local', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ConscienciaScreen = require('@/app/bienestar/consciencia').default;
+const { default: ConscienciaScreen, migrateMarked } = require('@/app/bienestar/consciencia');
 
 describe('ConscienciaScreen — render smoke', () => {
   it('grilla + guardar semana renderiza sin throw, sin "Hz" ni escala numérica', () => {
@@ -55,7 +55,17 @@ describe('ConscienciaScreen — render smoke', () => {
     const out = JSON.stringify(toJSON());
     expect(out).not.toMatch(/Hz/);
     expect(out).toContain('Tu calma');
-    expect(out).toContain('Pena');
-    expect(out).not.toContain('Aflicción');
+    expect(out).toContain('Triste');
+    expect(out).toContain('Tranquilo');
+    // Ya no es la escalera de Hawkins disfrazada.
+    for (const viejo of ['Vergüenza', 'Neutralidad', 'Razón', 'Plenitud', 'Aflicción']) {
+      expect(out).not.toContain(viejo);
+    }
+  });
+
+  it('una semana guardada con ids viejos se traduce sin perderse', () => {
+    // 75 Pena→Triste (se queda), 20 Vergüenza→Triste (dedup), 350 Aceptación→Tranquilo (600).
+    expect(migrateMarked([20, 75, 350, 600])).toEqual([75, 600]);
+    expect(migrateMarked([400, 9999])).toEqual([400]);
   });
 });

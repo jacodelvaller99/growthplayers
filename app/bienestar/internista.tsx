@@ -187,16 +187,17 @@ function InternistaScreenInner() {
         <PremiumCard style={{ gap: spacing.md }}>
           <Text style={s.consentTitle}>Cómo es este internista</Text>
           <Text style={s.consentBody}>
-            Es una IA EDUCATIVA. Te explica qué significan tus marcadores y qué dice
-            la evidencia sobre estilo de vida — citando guías clínicas reales (USPSTF,
-            NIH, Mayo Clinic, ACLM, Cochrane, entre otras).
+            Es una inteligencia artificial que te enseña. Te explica qué significan los
+            resultados de tus exámenes y qué se sabe sobre hábitos de vida, citando
+            guías médicas reconocidas (por ejemplo, Mayo Clinic).
           </Text>
           <Text style={s.consentBody}>
             <Text style={s.consentEmph}>No es tu médico tratante.</Text> No te diagnostica,
-            no te receta, no ajusta dosis ni reemplaza una consulta. Cuando detecta una
-            señal seria (dolor torácico, salud mental en crisis, valores críticos de lab,
-            embarazo + medicación, riesgo de TCA, etc.), <Text style={s.consentEmph}>detiene la
-            educación y te deriva</Text> al médico o a urgencias.
+            no te receta, no cambia dosis ni reemplaza una consulta. Si ve una señal de
+            alarma (dolor en el pecho, una crisis emocional, un resultado de examen muy
+            fuera de lo normal, embarazo y medicamentos juntos, riesgo de un trastorno de
+            la conducta alimentaria, entre otras), <Text style={s.consentEmph}>deja de explicar
+            y te manda</Text> al médico o a urgencias.
           </Text>
           <Text style={s.consentBody}>
             Lo que escribas con el internista se guarda en tu cuenta para que puedas
@@ -205,11 +206,14 @@ function InternistaScreenInner() {
             solo los compartes con el coach si lo activas explícitamente más adelante.
           </Text>
           <View style={s.consentBullets}>
-            <Text style={s.consentBullet}>• Educación general, no diagnóstico personal.</Text>
-            <Text style={s.consentBullet}>• Cita la fuente de cada afirmación clínica.</Text>
-            <Text style={s.consentBullet}>• Deriva ante red-flags sin negociar.</Text>
+            <Text style={s.consentBullet}>• Te enseña en general; no dice qué tienes tú.</Text>
+            <Text style={s.consentBullet}>• Dice de dónde sale cada dato médico.</Text>
+            <Text style={s.consentBullet}>• Ante una señal de alarma, siempre te manda al médico.</Text>
             <Text style={s.consentBullet}>• Tus datos son tuyos; puedes borrar todo cuando quieras.</Text>
           </View>
+          <Text style={s.consentBullet}>
+            Guías que consulta: USPSTF, NIH/MedlinePlus, Mayo Clinic, ACLM, Cochrane, entre otras.
+          </Text>
           <Pressable
             onPress={acceptConsent}
             style={s.consentBtn}

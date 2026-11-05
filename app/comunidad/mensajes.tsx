@@ -18,7 +18,7 @@ import { CircleEmpty } from '@/components/circle';
 import { usePresence } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { palette, spacing, typography, Fonts } from '@/constants/theme';
+import { palette, spacing, Fonts } from '@/constants/theme';
 
 // direct_messages / user_blocks no están en los tipos generados → cliente anyClient.
 const anyDb = supabase as any;
@@ -153,7 +153,7 @@ export default function MensajesScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
-        <Text style={styles.title}>MENSAJES</Text>
+        <Text style={styles.meta}>MENSAJES</Text>
         <Pressable
           onPress={nuevo}
           style={styles.newBtn}
@@ -163,6 +163,8 @@ export default function MensajesScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.column}>
+      <Text accessibilityRole="header" style={styles.headline}>Tus conversaciones.</Text>
       {/* Señal de pertenencia derivada de datos reales; sin conversaciones se
           omite — el estado vacío ya da el encuadre honesto. */}
       {!loading && convos.length > 0 && (
@@ -216,6 +218,7 @@ export default function MensajesScreen() {
           )}
         />
       )}
+      </View>
     </View>
   );
 }
@@ -224,7 +227,10 @@ const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: palette.black },
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:       { fontFamily: Fonts.display, fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+  meta:        { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
+  // Columna legible en escritorio: la fila a 1.500 px dejaba la hora a ~1.000 px del nombre.
+  column:      { flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' },
+  headline:    { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 36, color: palette.ivory, letterSpacing: -0.3, marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.sm },
 
   newBtn:      { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: 8, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
   newBtnText:  { fontFamily: Fonts.sans, fontWeight: '700', fontSize: 14, color: palette.ink },
@@ -233,13 +239,13 @@ const styles = StyleSheet.create({
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap:   { flexGrow: 1, justifyContent: 'center' },
 
-  row:         { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 64 },
+  row:         { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginHorizontal: spacing.md, paddingVertical: spacing.md, minHeight: 64, borderBottomWidth: 1, borderBottomColor: palette.line },
   rowMain:     { flex: 1, gap: 3 },
   rowName:     { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory, fontWeight: '600', letterSpacing: 0.2 },
   rowNameUnread: { fontWeight: '700' },
   rowPreview:  { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, lineHeight: 18 },
   rowPreviewUnread: { color: palette.ivory },
   rowMeta:     { alignItems: 'flex-end', gap: 6 },
-  rowTime:     { ...typography.mono, color: palette.smoke },
+  rowTime:     { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },
   unreadDot:   { width: 9, height: 9, borderRadius: 5, backgroundColor: palette.gold },
 });

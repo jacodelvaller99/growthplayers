@@ -3,6 +3,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { palette, Fonts } from '@/constants/theme';
+import { getTierLabel } from '@/constants/subscriptions';
 import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
@@ -32,12 +33,10 @@ const NAV_ITEMS: (NavItem & { also?: string[] })[] = [
     also: ['norte', 'programas', 'mentoria', 'bienestar', 'perfil', 'module', 'lesson'] },
 ];
 
-// subscription_tier → etiqueta mostrada en la tarjeta de usuario
-const TIER_LABEL: Record<string, string> = {
-  free:         'Plan gratis',
-  premium:      'Plan Pro',
-  premium_plus: 'Plan Elite',
-};
+// subscription_tier → etiqueta de la tarjeta de usuario. Mismo nombre que
+// /pricing (constants/subscriptions.ts): antes decía "Plan Elite" aquí y
+// "Premium Plus" allá para el mismo plan.
+const tierLabel = (tier: string | null | undefined) => `Plan ${getTierLabel(tier)}`;
 
 export function DesktopSidebar() {
   const router   = useRouter();
@@ -49,7 +48,7 @@ export function DesktopSidebar() {
   // `''[0]` da `undefined` y `.toUpperCase()` revienta el sidebar entero antes
   // de montar nada. Mismo patrón defensivo que ya usa `Avatar.tsx`.
   const initial  = (state.profile.name?.trim()?.charAt(0) || 'U').toUpperCase();
-  const tier     = TIER_LABEL[state.subscriptionTier] ?? TIER_LABEL.free;
+  const tier     = tierLabel(state.subscriptionTier);
 
   // Match by path segment (not substring) so '/mentoria' no activa 'mentor'.
   const segments = (pathname ?? '').split('/').filter(Boolean);

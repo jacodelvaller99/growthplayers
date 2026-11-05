@@ -8,6 +8,7 @@ import { POLARIS_MODULES, arquetipoConArticulo } from '@/data/modules';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { modulosNumerados } from '@/lib/modulosCuenta';
 import { Pantalla, TarjetaOro } from '@/components/pantalla';
 import { PolarisLogo } from '@/components/PolarisLogo';
 
@@ -160,7 +161,7 @@ export default function ProgramasScreen() {
   const siguienteLeccion = aqui?.lessons.find((l) => !completedLessons.includes(l.id)) ?? aqui?.lessons[0];
   // Una sola cuenta en toda la app: sin Bienvenida (orden 0) ni las sesiones
   // en vivo — «Módulo 1 de 11» con Onboarding listado antes confundía.
-  const numerados = POLARIS_MODULES.filter((m) => m.order > 0 && !m.id.includes('sesiones'));
+  const numerados = modulosNumerados();
   const posicion = aqui && siguienteLeccion ? aqui.lessons.indexOf(siguienteLeccion) + 1 : 0;
   const volver = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/yo' as never));
 

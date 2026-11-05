@@ -1470,7 +1470,9 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: spacing.xl,
   },
-  primaryButtonOff: { backgroundColor: palette.charcoal },
+  // Borde fino: en claro charcoal sobre el fondo casi no se distinguen y dejaba un
+  // texto gris suelto, sin forma de botón. Con el borde se lee «apagado», no roto.
+  primaryButtonOff: { backgroundColor: palette.charcoal, borderWidth: 1, borderColor: palette.lineHard },
   primaryButtonTextOff: { color: palette.smoke },
   primaryButtonText: {
     ...typography.section,

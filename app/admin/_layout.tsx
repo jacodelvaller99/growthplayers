@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, spacing, typography, radii, Fonts } from '@/constants/theme';
 import { alpha } from '@/constants/themeColors';
+
 import { PressableScale } from '@/components/polaris';
 import { ModeSwitch } from '@/components/ModeSwitch';
 import { AiConsentBanner } from '@/components/AiConsentBanner';
@@ -32,6 +33,13 @@ import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { AdminRoleProvider } from '@/hooks/use-admin-role';
 import { intel } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
+
+// Chrome en web = fondo SÓLIDO del tema. BlurView de expo-blur pinta en web un
+// rgba fijo por `tint` (no variable CSS) → velo gris oscuro en tema claro.
+// Mismo arreglo que DesktopSidebar.tsx y (tabs)/_layout.tsx.
+const IS_WEB = Platform.OS === 'web';
+const CHROME_BG = IS_WEB ? palette.graphite : alpha(palette.graphite, '99');
+const CHROME_BG_STRONG = IS_WEB ? palette.graphite : alpha(palette.graphite, 'cc');
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -104,7 +112,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       {/* Chrome estructural, no un botón — blur pesado igual que el sidebar
           de la app cliente (audit "Fluidez Polaris" §Fase 5, commit 41e060d).
           El admin no heredaba nada de eso; ahora reusa el mismo patrón. */}
-      <BlurView intensity={100} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
+      {!IS_WEB && <BlurView intensity={100} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />}
 
       {/* Logo / toggle */}
       <Pressable
@@ -190,7 +198,7 @@ function AdminBottomNav() {
   return (
     <>
       <View style={[s.bottomNav, { paddingBottom: Math.max(insets.bottom, spacing.xs) }]}>
-        <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
+        {!IS_WEB && <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />}
         {BOTTOM_TABS.map((t) => {
           const active = tabOn(t);
           return (
@@ -278,7 +286,7 @@ function StaffTopBar({ topInset, simple = false }: { topInset: number; simple?: 
   const onClients = pathname === '/admin/clientes';
   return (
     <View style={[s.mentorBar, { paddingTop: topInset + spacing.sm }]}>
-      <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
+      {!IS_WEB && <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />}
       {simple ? (
         // Vista simple: solo dos destinos, Mentorías y Clientes. Nada más.
         <View style={s.simpleNav}>
@@ -486,7 +494,7 @@ const s = StyleSheet.create({
     backgroundColor: palette.black,
   },
   sidebar: {
-    backgroundColor: alpha(palette.graphite, 'cc'),
+    backgroundColor: CHROME_BG_STRONG,
     borderRightWidth: 1,
     borderRightColor: palette.line,
     paddingHorizontal: spacing.sm,
@@ -511,7 +519,7 @@ const s = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-    backgroundColor: alpha(palette.graphite, '99'),
+    backgroundColor: CHROME_BG,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: palette.line,
     overflow: 'hidden',
@@ -528,7 +536,7 @@ const s = StyleSheet.create({
   navSubLabel: { fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: alpha(palette.graphite, '99'),
+    backgroundColor: CHROME_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: palette.line,
     paddingTop: spacing.xs,

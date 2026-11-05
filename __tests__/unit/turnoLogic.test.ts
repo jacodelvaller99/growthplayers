@@ -35,9 +35,27 @@ describe('peldaño 1 — narrativa de coaching', () => {
     ['support',     '/(tabs)/norte'],
     ['celebrate',   '/bienestar/diario'],
   ])('kind %s enruta a %s', (kind, route) => {
-    const t = selectTurno({ ...base, narrative: NARRATIVA, kind });
+    // Con lectura de hoy (la narrativa es la tarjeta DE DESPUÉS del check-in);
+    // `reconnect` es justo el que pide la lectura, así que va sin ella.
+    const todayCheckIn = kind === 'reconnect' ? null : SANO;
+    const t = selectTurno({ ...base, narrative: NARRATIVA, kind, todayCheckIn });
     expect(t.route).toBe(route);
     expect(t.verb.length).toBeGreaterThan(0);
+  });
+
+  it.each<TurnoKind>(['confront', 'support', 'celebrate'])(
+    'sin lectura de hoy, %s NO compite con el check-in: el turno es la lectura',
+    (kind) => {
+      const t = selectTurno({ ...base, narrative: NARRATIVA, kind, daysSinceLastCheckIn: 1 });
+      expect(t.route).toBe('/checkin');
+      expect(t.headline).not.toBe(NARRATIVA.headline);
+    },
+  );
+
+  it('sin lectura de hoy, la señal de sobrecarga (rest_signal) conserva la prioridad', () => {
+    const t = selectTurno({ ...base, narrative: NARRATIVA, kind: 'rest_signal' });
+    expect(t.source).toBe('narrative');
+    expect(t.route).toBe('/bienestar/respiracion');
   });
 
   it('investigate NO enruta: cae al peldaño siguiente en vez de inventar destino', () => {

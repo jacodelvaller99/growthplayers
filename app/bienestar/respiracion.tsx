@@ -1,6 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,16 +29,17 @@ function haptic(type: 'light' | 'medium' | 'success') {
 
 // Nombres por intención: la técnica (4·7·8, caja, Wim Hof…) no le dice nada a
 // quien llega cansado. El patrón técnico vive en `description`, como detalle.
+// Cinco intenciones distintas; las técnicas casi iguales (5·5, 2:1, tummo) no
+// se listan para no hacer elegir entre dos cosas que suenan igual.
 const PURPOSE: Record<string, string> = {
   '4-7-8': 'Para dormir',
   'box': 'Para enfocarte',
-  'coherente': 'Para sostener el foco',
   'wim-hof': 'Para activarte',
   'fisiologica': 'Para calmarte ya',
   'nadi-shodhana': 'Para ordenar la mente',
-  '2-1': 'Para bajar el ritmo',
 };
 const purpose = (t: BreathingTechnique) => PURPOSE[t.id] ?? t.subtitle;
+const LISTED = BREATHING_TECHNIQUES.filter((t) => t.id in PURPOSE);
 const minutesOf = (t: BreathingTechnique) =>
   Math.max(1, Math.round((t.phases.reduce((a, p) => a + p.duration, 0) * t.cycles) / 60));
 
@@ -70,7 +70,6 @@ type Mode = 'idle' | 'running' | 'paused' | 'done';
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function RespiracionScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { saveWellnessSession } = useLifeFlow();
   const {
@@ -193,9 +192,8 @@ export default function RespiracionScreen() {
   // ── Final ──────────────────────────────────────────────────────────────────
   if (mode === 'done') {
     return (
-      <Pantalla meta="BIENESTAR · CALMA" title="Hecho." sub={`${doneMinutes} min.`}>
+      <Pantalla meta="BIENESTAR · CALMA" title="Hecho." sub={`${doneMinutes}\u00A0min.`} onBack={() => setMode('idle')}>
         <PracticeClose message="¿Cómo aterriza tu cuerpo ahora? Registrarlo es el dato que sí importa." />
-        <Fila label="VOLVER" value="Respiración" onPress={() => setMode('idle')} last />
       </Pantalla>
     );
   }
@@ -246,7 +244,7 @@ export default function RespiracionScreen() {
   }
 
   // ── Elegir ─────────────────────────────────────────────────────────────────
-  const rest = BREATHING_TECHNIQUES.filter((t) => t.id !== suggested.id);
+  const rest = LISTED.filter((t) => t.id !== suggested.id);
   return (
     <Pantalla
       meta="BIENESTAR · CALMA"
@@ -266,7 +264,7 @@ export default function RespiracionScreen() {
         <Fila
           key={t.id}
           label={purpose(t).toUpperCase()}
-          value={`${minutesOf(t)} min`}
+          value={`${minutesOf(t)}\u00A0min`}
           onPress={() => start(t)}
         />
       ))}
@@ -275,10 +273,7 @@ export default function RespiracionScreen() {
           body="No realices estos ejercicios mientras conduces, en el agua, o de pie. Si estás embarazada, tienes epilepsia, problemas cardíacos o respiratorios, consulta a tu médico antes. Si sientes mareo intenso, detente."
         />
       </AntesDeEmpezar>
-      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
-      <View style={s.context}>
-        <BodyContextCard frame="Respira para acompañar tu recuperación de hoy. Persigue el estado, no el número." />
-      </View>
+      <BodyContextCard />
     </Pantalla>
   );
 }
@@ -288,7 +283,6 @@ export default function RespiracionScreen() {
 const s = StyleSheet.create({
   antes: { minHeight: 56, borderTopWidth: 1, borderTopColor: palette.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   antesLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
-  context: { marginTop: spacing.xl },
 
   player: { flex: 1, backgroundColor: palette.black, paddingHorizontal: spacing.lg, alignItems: 'center' },
   playerTop: { width: '100%', maxWidth: 680, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

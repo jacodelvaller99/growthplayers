@@ -6,16 +6,21 @@
  * FUERZA contra PODER y emociones calificadas de 20 a 700. Eso es culpa
  * explícita. Ahora la acción es marcar lo que sentiste; sin escala ni nota.
  *
+ * Ronda 2: la lista seguía siendo la escalera de Hawkins sin números (de
+ * Vergüenza a Plenitud, con "Razón" o "Neutralidad", que nadie siente). Ahora
+ * son emociones cotidianas en orden alfabético: nada se lee como ranking.
+ *
  * El `hz` de cada emoción queda SOLO como identificador interno: es lo que ya
- * está guardado en `consciencia:weekly` y no se muestra en ningún sitio.
+ * está guardado en `consciencia:weekly` y no se muestra en ningún sitio. Se
+ * reusan los ids viejos donde la emoción es la misma, y `LEGACY` traduce el
+ * resto al cargar, así una semana ya guardada no se pierde.
  */
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Fila, Pantalla } from '@/components/pantalla';
+import { Pantalla } from '@/components/pantalla';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import { readLocal, writeLocal } from '@/storage/local';
@@ -33,24 +38,29 @@ interface Emotion {
 }
 
 const EMOTIONS: Emotion[] = [
-  { hz: 20,  name: 'Vergüenza',   advice: 'Habla con alguien de confianza. Un gesto amable contigo: luz, movimiento, aire libre.' },
-  { hz: 30,  name: 'Culpa',       advice: 'Quédate con lo que aprendiste y suelta el resto. Trátate como tratarías a un amigo.' },
-  { hz: 50,  name: 'Apatía',      advice: 'Una sola acción mínima. Sal del espacio donde estás. Conecta con algo vivo.' },
-  { hz: 75,  name: 'Pena',        advice: 'Permite sentirla sin pelear con ella. Escribir ayuda.' },
-  { hz: 100, name: 'Miedo',       advice: 'Respira lento unos minutos. Nombra el miedo exacto. Da un paso pequeño.' },
-  { hz: 125, name: 'Deseo',       advice: 'Distingue lo que quieres de lo que necesitas. Agradece lo que ya tienes.' },
-  { hz: 150, name: 'Ira',         advice: 'Muévete fuerte un rato. La ira trae información: ¿qué límite se cruzó?' },
-  { hz: 175, name: 'Orgullo',     advice: 'Escucha otra mirada con curiosidad, sin defenderte.' },
-  { hz: 200, name: 'Valentía',    advice: 'Aprovéchala: da un paso concreto hacia lo que te importa.' },
-  { hz: 250, name: 'Neutralidad', advice: 'Buen punto de partida. Desde aquí decides con claridad.' },
-  { hz: 310, name: 'Disposición', advice: 'Tienes ganas de hacer. Elige una cosa y muévete.' },
-  { hz: 350, name: 'Aceptación',  advice: 'Buen momento para el trabajo profundo y para conectar.' },
-  { hz: 400, name: 'Razón',       advice: 'Comparte lo que entiendes: enseña, escribe, diseña.' },
-  { hz: 500, name: 'Amor',        advice: 'Cuida con quién y en qué pones esta energía.' },
-  { hz: 540, name: 'Alegría',     advice: 'Compártela. Dar las gracias la sostiene.' },
-  { hz: 600, name: 'Paz',         advice: 'Quédate un rato aquí. No hace falta resolver nada.' },
-  { hz: 700, name: 'Plenitud',    advice: 'Nada que alcanzar. Solo estar.' },
+  { hz: 1002, name: 'Abrumado',    advice: 'Escribe todo lo pendiente y elige solo una cosa para hoy.' },
+  { hz: 1001, name: 'Agradecido',  advice: 'Dilo en voz alta o escríbeselo a alguien. Así dura más.' },
+  { hz: 100,  name: 'Ansioso',     advice: 'Respira lento unos minutos. Nombra qué te preocupa. Da un paso pequeño.' },
+  { hz: 50,   name: 'Cansado',     advice: 'Tu cuerpo pide pausa. Duerme antes hoy y baja el ritmo.' },
+  { hz: 310,  name: 'Con energía', advice: 'Aprovéchala: elige una cosa que te importa y muévete.' },
+  { hz: 540,  name: 'Contento',    advice: 'Compártelo. Fíjate qué lo hizo posible.' },
+  { hz: 400,  name: 'Enfocado',    advice: 'Protege ese rato: avisos fuera y una sola tarea.' },
+  { hz: 150,  name: 'Enojado',     advice: 'Muévete fuerte un rato. El enojo avisa de algo: ¿qué límite se cruzó?' },
+  { hz: 500,  name: 'Querido',     advice: 'Dale las gracias a quien te hizo sentir así.' },
+  { hz: 200,  name: 'Seguro',      advice: 'Buen momento para decidir lo que venías aplazando.' },
+  { hz: 1003, name: 'Solo',        advice: 'Escríbele hoy a alguien de confianza. Un mensaje basta.' },
+  { hz: 600,  name: 'Tranquilo',   advice: 'Quédate un rato aquí. No hace falta resolver nada.' },
+  { hz: 75,   name: 'Triste',      advice: 'Permite sentirlo sin pelear con ello. Escribir ayuda.' },
 ];
+
+/** Ids de la escala vieja → la emoción cotidiana más cercana (para semanas ya guardadas). */
+const LEGACY: Record<number, number> = {
+  20: 75, 30: 75, 125: 310, 175: 540, 250: 600, 350: 600, 700: 600,
+};
+/** Normaliza ids guardados: traduce los viejos y quita duplicados. */
+export function migrateMarked(ids: number[]): number[] {
+  return [...new Set(ids.map((h) => LEGACY[h] ?? h))].filter((h) => EMOTIONS.some((e) => e.hz === h));
+}
 
 // ─── Calibración semanal (local) ───────────────────────────────────────────────
 const WEEKLY_KEY = 'consciencia:weekly';
@@ -86,7 +96,6 @@ function AntesDeEmpezar({ children }: { children: ReactNode }) {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ConscienciaScreen() {
-  const router = useRouter();
   const thisWeek = isoWeekId();
   const [marked, setMarked] = useState<number[]>([]);
   const [last, setLast] = useState<Emotion | null>(null);
@@ -97,7 +106,7 @@ export default function ConscienciaScreen() {
       const stored = await readLocal<WeeklyCalibration>(WEEKLY_KEY);
       if (stored && stored.week === thisWeek) {
         setSaved(stored);
-        setMarked(stored.hz ?? []);
+        setMarked(migrateMarked(stored.hz ?? []));
       }
     })();
   }, [thisWeek]);
@@ -172,7 +181,6 @@ export default function ConscienciaScreen() {
           body="Esta es una herramienta de autoexploración, no un diagnóstico ni tratamiento."
         />
       </AntesDeEmpezar>
-      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
     </Pantalla>
   );
 }
@@ -198,8 +206,9 @@ const s = StyleSheet.create({
   advice: { marginTop: spacing.lg, fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ash },
 
   btn: { marginTop: spacing.xl, height: 52, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
-  btnOff: { backgroundColor: palette.charcoal },
+  // Deshabilitado: contorno gris y texto apagado; el amarillo solo cuando se puede guardar.
+  btnOff: { backgroundColor: 'transparent', borderWidth: 1, borderColor: palette.lineHard },
   btnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1.5, color: palette.ink },
-  btnTextOff: { color: palette.ash },
+  btnTextOff: { color: palette.smoke },
   hint: { marginTop: spacing.sm, marginBottom: spacing.xl, fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.smoke },
 });

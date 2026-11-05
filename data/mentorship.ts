@@ -39,13 +39,13 @@ const WEEK_META: Record<string, { focus: string; tasks: string[] }> = {
     tasks: [
       'Mira las lecciones de Emociones · Autoconocimiento',
       'Haz una sesión de escritura terapéutica',
-      'Ubícate en la Escala de Consciencia esta semana',
+      'Ubícate en la escala de consciencia esta semana',
     ],
   },
   'modulo-3': {
     focus: 'Profundiza en tu propósito y las leyes que gobiernan tu avance.',
     tasks: [
-      'Mira las lecciones de Maduración del Guerrero',
+      'Mira las lecciones de Maduración del guerrero',
       'Redacta tu sentido y propósito de vida',
       'Aplica HISAR–PERAS a una situación real',
     ],
@@ -61,7 +61,7 @@ const WEEK_META: Record<string, { focus: string; tasks: string[] }> = {
   'modulo-5': {
     focus: 'Sube al 4º nivel de consciencia: cooperación y energía como moneda.',
     tasks: [
-      'Mira la Intro al 4to Nivel de Consciencia',
+      'Mira la Intro al cuarto nivel de consciencia',
       'Identifica una relación para operar en cooperación',
       'Observa dónde gastas energía sin retorno',
     ],

@@ -3,7 +3,7 @@
  * en flujos inmersivos (auth/onboarding/ritual/prácticas) donde un botón
  * extra compite con el foco que esa pantalla existe para dar.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSegments } from 'expo-router';
@@ -35,6 +35,26 @@ export function TourButton() {
 
   useEffect(() => { hydrateVoicePref(); }, [hydrateVoicePref]);
 
+  // Mientras se desplaza, el botón se aparta: tapaba valores alineados a la
+  // derecha («Crea tu Nueva Identid…», la última columna del calendario).
+  // `capture` atrapa el scroll de cualquier ScrollView de react-native-web.
+  // ponytail: solo web (la PWA es el móvil real hoy); en nativo queda fijo.
+  const [scrolling, setScrolling] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      setScrolling(true);
+      if (t) clearTimeout(t);
+      t = setTimeout(() => setScrolling(false), 700);
+    };
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener('scroll', onScroll, { capture: true });
+      if (t) clearTimeout(t);
+    };
+  }, []);
+
   const root = segments[0] ?? '';
   const inTabs = root === '(tabs)';
   const hidden =
@@ -42,7 +62,8 @@ export function TourButton() {
     HIDDEN_ROUTES.has(root) ||
     HIDDEN_PREFIXES.includes(root) ||
     (inTabs && HIDDEN_TABS.has(segments[1] ?? '')) ||
-    active; // el propio overlay ya trae su navegación — no duplicar el botón encima.
+    active || // el propio overlay ya trae su navegación — no duplicar el botón encima.
+    (scrolling && !isDesktop);
 
   // Sobre la tab bar real (oculta en desktop) + área segura; nunca encima de ella.
   // El panel del equipo en el teléfono también tiene barra abajo (Hoy…Más).
@@ -57,8 +78,8 @@ export function TourButton() {
           onPress={start}
           accessibilityRole="button"
           accessibilityLabel="Norman te explica esta pantalla"
-          style={[s.btn, { bottom }]}>
-          <MaterialIcons name="auto-awesome" size={20} color={palette.ash} />
+          style={[s.btn, !isDesktop && s.btnMobile, { bottom }]}>
+          <MaterialIcons name="auto-awesome" size={isDesktop ? 20 : 18} color={palette.ash} />
         </Pressable>
       )}
     </>
@@ -86,4 +107,6 @@ const s = StyleSheet.create({
     zIndex: 850,
     ...(Platform.OS === 'web' ? { position: 'fixed' as never } : null),
   },
+  // Móvil: más chico y pegado al gutter de 16 px, para tapar lo mínimo.
+  btnMobile: { width: 40, height: 40, borderRadius: 20, right: 16 },
 });

@@ -2,10 +2,10 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { POLARIS_MODULES } from '@/data/modules';
 import { Fonts, palette } from '@/constants/theme';
 import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { modulosNumerados, modulosTerminados } from '@/lib/modulosCuenta';
 import { protocolSnapshot } from '@/lib/protocolSnapshot';
 
 export default function ProgresoScreen() {
@@ -51,26 +51,6 @@ export default function ProgresoScreen() {
   // tarjeta TU HISTORIA. Y el cruce de un hito lo reconoce `MilestoneToast`,
   // que es sobrio y cita las palabras del usuario.
 
-  // Archetype badges — earned by completing all lessons in a module with an arquetipo
-  const archetypes = useMemo(() => {
-    const completed = state.completedLessons ?? [];
-    return POLARIS_MODULES
-      .filter((m) => m.arquetipo)
-      .map((m) => {
-        const totalLessons = m.lessons.length;
-        const completedCount = m.lessons.filter((l) => completed.includes(l.id)).length;
-        const earned = totalLessons > 0 && completedCount >= totalLessons;
-        return {
-          id: m.id,
-          name: (m.arquetipo ?? '').toUpperCase(),
-          order: m.order,
-          earned,
-          completedCount,
-          totalLessons,
-        };
-      });
-  }, [state.completedLessons]);
-
   const ordenados = [...state.checkIns].sort((a, b) => (a.date < b.date ? 1 : -1));
   const media = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null);
   const ultimos = ordenados.slice(0, 7);
@@ -88,7 +68,9 @@ export default function ProgresoScreen() {
     if (Math.abs(d) < 0.05) return `${base} · igual que la semana pasada`;
     return `${base} · ${coma(Math.abs(d))} ${d > 0 ? 'más' : 'menos'} que la semana pasada`;
   };
-  const modulosHechos = archetypes.filter((a) => a.earned).length;
+  // La misma cuenta que Programa («Módulo 1 de 9»): lib/modulosCuenta.
+  const modulosHechos = modulosTerminados(state.completedLessons ?? []);
+  const modulosTotal = modulosNumerados().length;
   const hoyClave = claveDia(new Date());
   const hechoHoy = state.checkIns.some((c) => c.date.slice(0, 10) === hoyClave);
   const calendario = <Calendario checkIns={state.checkIns} />;
@@ -115,7 +97,7 @@ export default function ProgresoScreen() {
       <Fila label="CLARIDAD" value={cifra('clarity')} />
       <Fila
         label="MÓDULOS"
-        value={`${modulosHechos} de ${archetypes.length} terminados`}
+        value={`${modulosHechos} de ${modulosTotal} terminados`}
         onPress={() => router.push('/(tabs)/programas' as never)}
         last
       />

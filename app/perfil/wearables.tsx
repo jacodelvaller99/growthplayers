@@ -492,7 +492,8 @@ export default function WearablesScreen() {
     <>
       <Pantalla
         meta="TU RELOJ"
-        title={main ? `${main.name} conectado.` : 'Conecta tu reloj.'}
+        // Mismo titular que /bienestar/biometrics: "conectado" sin datos sonaba a que todo iba bien.
+        title={main ? (mainEstado?.warn ? `Tu ${main.name} no ha enviado datos.` : `${main.name} conectado.`) : 'Conecta tu reloj.'}
         sub={mainEstado
           ? `${mainEstado.text}. Se sincroniza una vez al día; puedes forzarlo aquí.`
           : 'Tu sueño y tu pulso le dicen a Norman cómo estás de verdad. Se sincroniza una vez al día.'}

@@ -16,8 +16,8 @@ interface SkoolVideoProps {
   height?: number;
 }
 
-/** Si el embed no cargó en este tiempo, se ofrece abrir el video fuera. */
-const WEB_LOAD_TIMEOUT_MS = 8000;
+/** Si el embed no cargó en este tiempo, se quita el «Cargando» y el enlace lo dice. */
+const WEB_LOAD_TIMEOUT_MS = 15000;
 
 export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
   const externalUrl = vimeoId ? `https://vimeo.com/${vimeoId}` : url;
 
   // Web: el iframe podía quedarse girando para siempre (permisos de dominio
-  // del embed) sin mensaje ni salida. A los 8 s sin cargar, se reemplaza.
+  // del embed) sin mensaje ni salida. A los 15 s sin cargar, el enlace lo dice.
   const webEmbed = Platform.OS === 'web' && !!vimeoEmbedUrl;
   useEffect(() => {
     if (!webEmbed || !loading) return;
@@ -41,24 +41,11 @@ export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
   }, [webEmbed, loading]);
 
   // ── WEB con Vimeo embed ──────────────────────────────────────────────────────
+  // El iframe no avisa si falla (no hay onError cross-origin), así que nunca se
+  // sustituye: el reproductor se queda y el enlace de salida está SIEMPRE
+  // debajo. En móvil con 3G/4G el embed tardaba más de 8 s y la lección caía a
+  // un respaldo aunque el video sí iba a cargar.
   if (webEmbed) {
-    if (timedOut && loading) {
-      return (
-        <View style={[styles.container, { height }]}>
-          <View style={styles.fallback}>
-            <Text style={styles.title}>El video no cargó aquí.</Text>
-            {!!externalUrl && (
-              <Pressable
-                onPress={() => Linking.openURL(externalUrl)}
-                accessibilityRole="link"
-                style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}>
-                <Text style={styles.btnSecondaryText}>Abrir el video ↗</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-      );
-    }
     return (
       <View>
         <View style={[styles.container, { height }]}>
@@ -75,18 +62,18 @@ export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
           />
-          {loading && (
+          {loading && !timedOut && (
             <View style={styles.skeleton} pointerEvents="none">
               <ActivityIndicator color={palette.goldText} size="large" />
               <Text style={styles.loadingText}>Cargando el video…</Text>
             </View>
           )}
         </View>
-        {/* Cargar la página del reproductor no garantiza que el video arranque:
-            siempre queda una salida. */}
-        {!loading && !!externalUrl && (
+        {!!externalUrl && (
           <Pressable onPress={() => Linking.openURL(externalUrl)} accessibilityRole="link" style={styles.exitLink}>
-            <Text style={styles.exitLinkText}>¿No arranca? Abrir el video ↗</Text>
+            <Text style={styles.exitLinkText}>
+              {loading && timedOut ? 'Tarda en cargar. Abrir el video ↗' : '¿No arranca? Abrir el video ↗'}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -229,20 +216,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingHorizontal: 28,
     paddingVertical: 12,
-  },
-  btnSecondary: {
-    borderColor: palette.lineHard,
-    borderRadius: 10,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 24,
-  },
-  btnSecondaryText: {
-    color: palette.ivory,
-    fontFamily: Fonts.display,
-    fontSize: 14,
-    fontWeight: '700',
   },
   exitLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   exitLinkText: { color: palette.smoke, fontFamily: Fonts.sans, fontSize: 14 },

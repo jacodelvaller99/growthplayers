@@ -1,6 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -305,12 +304,10 @@ function BinauralPlayer({
     audioRef.current?.setAmbience(a);
   };
 
-  // Final limpio: "Hecho. N min." + Volver.
+  // Final limpio: "Hecho. N min."; la flecha de arriba vuelve a Sonidos.
   if (done) {
     return (
-      <Pantalla meta="BIENESTAR · SONIDOS" title="Hecho." sub={`${Math.max(1, Math.round(elapsed / 60))} min.`}>
-        <Fila label="VOLVER" value="Sonidos" onPress={onExit} last />
-      </Pantalla>
+      <Pantalla meta="BIENESTAR · SONIDOS" title="Hecho." sub={`${Math.max(1, Math.round(elapsed / 60))}\u00A0min.`} onBack={onExit} />
     );
   }
 
@@ -408,7 +405,6 @@ function BinauralPlayer({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BinauralesScreen() {
-  const router = useRouter();
   const { saveWellnessSession } = useLifeFlow();
   const [active, setActive] = useState<BinauralPreset | null>(null);
   const [mixerOpen, setMixerOpen] = useState(false);
@@ -492,7 +488,6 @@ export default function BinauralesScreen() {
         />
       </AntesDeEmpezar>
 
-      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
     </Pantalla>
   );
 }

@@ -30,11 +30,12 @@ const SLEEP_ITEMS: SleepItem[] = [
   { id: 'sos-2',    label: 'RECORRE TU CUERPO',    title: 'Recorrido rápido',         minutes: 8,  music: 'descenso' },
   { id: 'relax-2',  label: 'RESPIRA LENTO',        title: 'Respiración para la noche', minutes: 10, music: 'descenso' },
   { id: 'relax-1',  label: 'SUELTA LA TENSIÓN',    title: 'Relajación muscular',      minutes: 15, music: 'descenso' },
-  { id: 'nidra-1',  label: 'DESCANSO GUIADO',      title: 'Para empezar',             minutes: 20, music: 'nidra' },
-  { id: 'nidra-2',  label: 'DESCANSO GUIADO',      title: 'Completo',                 minutes: 40, music: 'nidra' },
-  { id: 'story-1',  label: 'UNA HISTORIA',         title: 'El bosque de secuoyas',    minutes: 20, music: 'descenso' },
-  { id: 'story-3',  label: 'UNA HISTORIA',         title: 'Cabaña en las montañas',   minutes: 18, music: 'descenso' },
-  { id: 'story-2',  label: 'UNA HISTORIA',         title: 'La orilla del mar',        minutes: 25, music: 'descenso' },
+  { id: 'nidra-1',  label: 'DESCANSO GUIADO',      title: 'Relajación guiada para empezar', minutes: 20, music: 'nidra' },
+  { id: 'nidra-2',  label: 'DESCANSO LARGO',       title: 'Relajación guiada completa', minutes: 40, music: 'nidra' },
+  // Historias: la etiqueta es su nombre (antes "UNA HISTORIA" tres veces).
+  { id: 'story-1',  label: 'HISTORIA · EL BOSQUE',   title: 'El bosque de secuoyas',    minutes: 20, music: 'descenso' },
+  { id: 'story-3',  label: 'HISTORIA · LA MONTAÑA',  title: 'Cabaña en las montañas',   minutes: 18, music: 'descenso' },
+  { id: 'story-2',  label: 'HISTORIA · EL MAR',      title: 'La orilla del mar',        minutes: 25, music: 'descenso' },
 ];
 
 function AntesDeEmpezar({ children }: { children: React.ReactNode }) {
@@ -100,7 +101,7 @@ export default function SuenoScreen() {
           meta="PARA ESTA NOCHE"
           metaRight={`${suggested.minutes} MIN`}
           title={suggested.label.charAt(0) + suggested.label.slice(1).toLowerCase()}
-          detail={suggested.title}
+          detail={`${suggested.title}, ${suggested.minutes}\u00A0min.`}
           onPress={() => handlePlay(suggested)}
           accessibilityLabel={`Empezar: ${suggested.title}, ${suggested.minutes} minutos`}
         />
@@ -109,7 +110,8 @@ export default function SuenoScreen() {
         <Fila
           key={item.id}
           label={item.label}
-          value={`${item.title} · ${item.minutes} min`}
+          // Valor corto con espacio duro: en 390 px "5 min" no se parte.
+          value={`${item.minutes}\u00A0min`}
           onPress={() => handlePlay(item)}
         />
       ))}
@@ -118,7 +120,6 @@ export default function SuenoScreen() {
           body="Estas prácticas favorecen el descanso, pero no tratan el insomnio crónico, la apnea del sueño ni otros trastornos. Si tienes problemas de sueño persistentes, consulta a un profesional de la salud. No las uses mientras conduces u operas maquinaria."
         />
       </AntesDeEmpezar>
-      <Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />
     </Pantalla>
   );
 }

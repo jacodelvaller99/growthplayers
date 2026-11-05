@@ -56,15 +56,6 @@ interface Post {
   liked:         boolean;
 }
 
-/**
- * "Norman" es el nombre de la IA. Un post firmado así sin más se lee como la IA
- * participando del feed (o alguien suplantándola). Se presenta como lo que es:
- * una cuenta del equipo, marcada.
- */
-function isTeamAuthor(name: string): boolean {
-  return /^norman\b/i.test(name.trim());
-}
-
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 60)   return 'ahora';
@@ -335,7 +326,7 @@ export default function ComunidadScreen() {
       <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
         <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
       </Pressable>
-      <Text style={styles.title}>COMUNIDAD</Text>
+      <Text style={styles.meta}>COMUNIDAD</Text>
       {COMMUNITY_ENABLED && eulaState === 'ok' ? (
         <View style={{ flexDirection: 'row', gap: spacing.xs }}>
           {ENV.socialSpacesEnabled && (
@@ -441,7 +432,9 @@ export default function ComunidadScreen() {
           </Pressable>
         )}
 
-        <Text style={styles.whoReads}>Comunidad de clientes Polaris · lo ven solo miembros</Text>
+        <View style={styles.column}>
+        <Text accessibilityRole="header" style={styles.headline}>Lo que comparten los clientes.</Text>
+        <Text style={styles.whoReads}>Lo ven solo los miembros de Polaris.</Text>
 
         {/* Input nuevo post */}
         <View style={styles.composeBox}>
@@ -450,7 +443,7 @@ export default function ComunidadScreen() {
             style={styles.composeInput}
             value={newPost}
             onChangeText={(t) => { setNewPost(t); if (postError) setPostError(null); }}
-            placeholder="Comparte algo con la tribu..."
+            placeholder="Escribe algo para los demás…"
             placeholderTextColor={palette.smoke}
             multiline
             maxLength={500}
@@ -491,14 +484,13 @@ export default function ComunidadScreen() {
         >
           {loading && (
             <View style={styles.loadingState}>
-              <Text style={styles.loadingText}>Cargando posts…</Text>
+              <Text style={styles.loadingText}>Cargando publicaciones…</Text>
             </View>
           )}
 
           {!loading && posts.length === 0 && (
             <View style={styles.emptyState}>
-              <MaterialIcons name="group" size={56} color={palette.line} />
-              <Text style={styles.emptyTitle}>La tribu aún está en silencio</Text>
+              <Text style={styles.emptyTitle}>Todavía nadie ha escrito.</Text>
               <Text style={styles.emptySubtext}>Sé el primero en compartir algo.</Text>
             </View>
           )}
@@ -507,21 +499,17 @@ export default function ComunidadScreen() {
             <View key={post.id} style={[styles.postCard, post.is_pinned && styles.postCardPinned]}>
               {post.is_pinned && (
                 <View style={styles.pinnedBadge}>
-                  <MaterialIcons name="push-pin" size={11} color={palette.goldText} />
-                  <Text style={styles.pinnedText}>FIJADO</Text>
+                  <MaterialIcons name="push-pin" size={12} color={palette.smoke} />
+                  <Text style={styles.pinnedText}>Fijado</Text>
                 </View>
               )}
               <View style={styles.postHeader}>
-                <Avatar id={post.user_id} name={isTeamAuthor(post.author_name) ? 'Equipo Polaris' : post.author_name} uri={post.author_avatar} size={36} />
+                {/* Sin insignia de equipo: decidirla por el nombre dejaba que cualquiera
+                    llamado "Norman" publicara como "Equipo Polaris" (suplantación).
+                    Vuelve cuando el select traiga un rol del servidor. */}
+                <Avatar id={post.user_id} name={post.author_name} uri={post.author_avatar} size={36} />
                 <View style={styles.postMeta}>
-                  {isTeamAuthor(post.author_name) ? (
-                    <View style={styles.teamRow}>
-                      <Text style={styles.postAuthor} numberOfLines={1}>Equipo Polaris</Text>
-                      <Text style={styles.teamMark}>EQUIPO</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.postAuthor} numberOfLines={1}>{post.author_name}</Text>
-                  )}
+                  <Text style={styles.postAuthor} numberOfLines={1}>{post.author_name}</Text>
                   <Text style={styles.postTime}>{timeAgo(post.created_at)}</Text>
                 </View>
                 {/* Menú de moderación / DM por post (no en tus propios posts) */}
@@ -576,6 +564,7 @@ export default function ComunidadScreen() {
 
           <View style={{ height: 20 }} />
         </ScrollView>
+        </View>
 
         {/* ── El Círculo: comentarios (solo con flag activo) ── */}
         {ENV.socialSpacesEnabled && (
@@ -671,12 +660,12 @@ const styles = StyleSheet.create({
   root:            { flex: 1, backgroundColor: palette.black },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title:           { fontFamily: Fonts.display, fontWeight: '700', fontSize: 16, color: palette.ivory, letterSpacing: 3 },
+  meta:            { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
+  column:          { flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center' },
+  headline:        { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 36, color: palette.ivory, letterSpacing: -0.3, marginHorizontal: spacing.md, marginTop: spacing.md },
   headerLink:      { minHeight: 44, paddingHorizontal: spacing.sm, alignItems: 'center', justifyContent: 'center' },
   headerLinkText:  { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory },
   whoReads:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, marginHorizontal: spacing.md, marginBottom: spacing.sm },
-  teamRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  teamMark:        { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
   actionText:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ash },
 
   composeBox:      { flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, gap: 8, borderWidth: 1, borderColor: palette.line },
@@ -712,19 +701,19 @@ const styles = StyleSheet.create({
   loadingText:     { ...typography.caption, color: palette.ash },
 
   emptyState:      { paddingVertical: 60, alignItems: 'center', gap: 12 },
-  emptyTitle:      { fontFamily: Fonts.display, fontSize: 16, color: palette.ash, letterSpacing: 1 },
+  emptyTitle:      { fontFamily: Fonts.sans, fontSize: 17, color: palette.ivory },
   emptySubtext:    { ...typography.caption, color: palette.smoke },
 
-  postCard:        { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, marginBottom: spacing.sm, borderWidth: 1, borderColor: palette.line },
-  postCardPinned:  { borderColor: palette.lineGold, borderWidth: 1 },
+  postCard:        { paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: palette.line },
+  postCardPinned:  {},
 
   pinnedBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
-  pinnedText:      { fontFamily: Fonts.display, fontSize: 11, color: palette.goldText, letterSpacing: 1 },
+  pinnedText:      { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },
 
   postHeader:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   postMeta:        { flex: 1, gap: 2 },
   postAuthor:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600', letterSpacing: 0.2 },
-  postTime:        { ...typography.mono, color: palette.smoke },
+  postTime:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },
   moreBtn:         { padding: 6, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 
   postContent:     { fontFamily: Fonts.sans, fontSize: 14.5, color: palette.ivory, lineHeight: 23, marginBottom: spacing.md },
@@ -733,7 +722,7 @@ const styles = StyleSheet.create({
   // Reaccionar/comentar: el numero puede ser una sola cifra ("3"), asi que
   // el contenido por si solo deja una caja mas angosta que un dedo.
   likeBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 44, minHeight: 44 },
-  likeCount:       { fontSize: 13, color: palette.ash, fontFamily: Fonts.mono },
+  likeCount:       { fontSize: 14, color: palette.ash, fontFamily: Fonts.sans },
 
   // Action sheet
   sheetBackdrop:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

@@ -10,6 +10,7 @@ import {
   PrimaryButton,
 } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
+import { alpha } from '@/constants/themeColors';
 import { useToast } from '@/context/ToastContext';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -546,7 +547,7 @@ export default function CheckInScreen() {
               (elegido === null || submitting) && styles.nextOff,
               pressed && styles.nextPressed,
             ]}>
-            <Text style={[styles.nextText, (elegido === null || submitting) && { color: palette.ink }]}>
+            <Text style={[styles.nextText, (elegido === null || submitting) && styles.nextTextOff]}>
               {submitting ? 'GUARDANDO…' : esUltimo ? 'GUARDAR' : 'SIGUIENTE'}
             </Text>
           </Pressable>
@@ -605,8 +606,10 @@ const styles = StyleSheet.create({
     flex: 1, height: 58, borderRadius: 8, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center',
   },
   nextDesk: { height: 64 },
-  // Deshabilitado = contorno, no un botón oscuro "sucio" que parece roto.
-  nextOff: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: palette.ink, opacity: 0.4 },
+  // Deshabilitado = hueco hundido sin borde: velo de tinta al 8 % y texto de
+  // tinta atenuado. El contorno al 40 % de opacidad se leía «mostaza roto».
+  nextOff: { backgroundColor: alpha(palette.ink, '14') },
+  nextTextOff: { color: alpha(palette.ink, '80') },
   nextPressed: { opacity: 0.85 },
   nextText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, letterSpacing: 1, color: palette.goldStatic },
 

@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
@@ -81,7 +80,8 @@ function Plegable({ label, children }: { label: string; children: ReactNode }) {
 function Campo({ label, unit, value, onChange }: { label: string; unit: string; value: string; onChange: (v: string) => void }) {
   return (
     <View style={styles.campo}>
-      <Text style={styles.inputLabel}>{label}</Text>
+      {/* La unidad vive en la etiqueta: el placeholder desaparece al escribir. */}
+      <Text style={styles.inputLabel}>{label} ({unit.toUpperCase()})</Text>
       <TextInput
         style={styles.input}
         value={value}
@@ -96,7 +96,6 @@ function Campo({ label, unit, value, onChange }: { label: string; unit: string; 
 }
 
 export default function CuerpoScreen() {
-  const router = useRouter();
   const { userId } = useLifeFlow();
 
   const [weight, setWeight]   = useState('');
@@ -182,7 +181,7 @@ export default function CuerpoScreen() {
             <Text style={styles.oroMeta}>REGISTRAR HOY</Text>
             <View style={styles.oroRow}>
               <View style={styles.campo}>
-                <Text style={styles.oroLabel}>PESO</Text>
+                <Text style={styles.oroLabel}>PESO (KG)</Text>
                 <TextInput
                   style={styles.oroInput}
                   value={weight}
@@ -194,7 +193,7 @@ export default function CuerpoScreen() {
                 />
               </View>
               <View style={styles.campo}>
-                <Text style={styles.oroLabel}>ALTURA</Text>
+                <Text style={styles.oroLabel}>ALTURA (CM)</Text>
                 <TextInput
                   style={styles.oroInput}
                   value={height}
@@ -213,21 +212,15 @@ export default function CuerpoScreen() {
               accessibilityLabel="Guardar medición"
               accessibilityState={{ disabled: !canSave }}
               style={[styles.oroBtn, !canSave && styles.oroBtnOff]}>
-              <Text style={styles.oroBtnText}>{saving ? 'GUARDANDO…' : 'GUARDAR'}</Text>
+              <Text style={[styles.oroBtnText, !canSave && styles.oroBtnTextOff]}>{saving ? 'GUARDANDO…' : 'GUARDAR'}</Text>
             </Pressable>
             {!weightNum || !heightNum ? (
               <Text style={styles.oroHint}>Escribe peso y altura para guardar.</Text>
             ) : null}
           </View>
-        }
-        footer={
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Volver">
-            <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
-            <Text style={styles.backText}>VOLVER</Text>
-          </Pressable>
         }>
         {/* IMC: un dato neutro, sin zonas ni rojo. */}
-        <Fila label="IMC" value={bmi > 0 ? bmi.toFixed(1) : last?.bmi ? String(last.bmi) : '—'} />
+        <Fila label="ÍNDICE DE MASA CORPORAL (IMC)" value={bmi > 0 ? bmi.toFixed(1) : last?.bmi ? String(last.bmi) : '—'} />
 
         <Plegable label="Más medidas">
           <View style={styles.grid}>
@@ -278,7 +271,9 @@ const styles = StyleSheet.create({
   oroLabel:   { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink, marginBottom: 6 },
   oroInput:   { minHeight: 52, borderBottomWidth: 2, borderBottomColor: palette.ink, color: palette.ink, fontFamily: Fonts.displayRegular, fontSize: 28 },
   oroBtn:     { minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center' },
-  oroBtnOff:  { opacity: 0.4 },
+  // Deshabilitado: solo contorno, sin relleno lavado (antes, oliva sobre amarillo).
+  oroBtnOff:  { backgroundColor: 'transparent', borderWidth: 1, borderColor: palette.ink },
+  oroBtnTextOff: { color: palette.ink },
   oroBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 2, color: palette.gold },
   oroHint:    { fontFamily: Fonts.sans, fontSize: 14, color: palette.ink },
 
@@ -294,6 +289,4 @@ const styles = StyleSheet.create({
 
   historial:  { marginTop: 32, gap: 8 },
 
-  backBtn:    { minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText:   { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ivory },
 });

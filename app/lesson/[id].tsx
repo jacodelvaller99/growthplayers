@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SkoolVideo } from '@/components/SkoolVideo';
+import { AccessField } from '@/components/auth/AccessFrame';
 import { PrimaryButton, SecondaryButton, useScreen } from '@/components/polaris';
 import EmptyState from '@/components/EmptyState';
 import { POLARIS_MODULES } from '@/data/modules';
@@ -456,7 +457,7 @@ function LessonCelebrationModal({
 
           {/* Lesson label */}
           <Text style={celebStyles.lessonNum}>
-            LECCIÓN {String(lessonIndex + 1).padStart(2, '0')}
+            LECCIÓN {String(lessonIndex + 1)}
           </Text>
           <Text style={celebStyles.lessonTitle}>{lessonTitle}</Text>
 
@@ -819,7 +820,7 @@ export default function LessonScreen() {
   const { lesson, mod } = meta;
   const lessonIndex = mod.lessons.findIndex((l) => l.id === lessonId);
   const moduleLabel = `MÓDULO ${mod.order} · ${(mod.arquetipo ?? mod.title).toUpperCase()}`;
-  const lessonBadge = `LECCIÓN ${String(lessonIndex + 1).padStart(2, '0')}`;
+  const lessonBadge = `LECCIÓN ${String(lessonIndex + 1)}`;
 
   return (
     <>
@@ -983,25 +984,23 @@ export default function LessonScreen() {
 
         {/* ── Personal Notes ── */}
         <View style={styles.notesCard}>
-          <View style={styles.notesHeader}>
-            <Text style={styles.notesTitle}>TUS NOTAS</Text>
-            {notesSaved && (
-              <View style={styles.notesSavedBadge}>
-                <MaterialIcons name="check" size={12} color={palette.success} />
-                <Text style={styles.notesSavedText}>Guardado</Text>
-              </View>
-            )}
-          </View>
-          <TextInput
+          {/* Mismo campo que «Quién eres» en Norte: rótulo + línea que se
+              enciende al enfocar. Antes la pregunta parecía texto suelto. */}
+          <AccessField
+            label="TUS NOTAS"
             multiline
-            style={styles.notesInput}
             value={lessonNotes}
             onChangeText={setLessonNotes}
             placeholder="¿Qué te llevas de esta lección? ¿Qué aplicarás en las próximas 24 horas?"
-            placeholderTextColor={palette.smoke}
             textAlignVertical="top"
             onBlur={lessonNotes.trim().length > 0 ? handleSaveNotes : undefined}
           />
+          {notesSaved && (
+            <View style={styles.notesSavedBadge}>
+              <MaterialIcons name="check" size={12} color={palette.success} />
+              <Text style={styles.notesSavedText}>Guardado</Text>
+            </View>
+          )}
           {lessonNotes.trim().length > 0 && !notesSaved && (
             <Pressable
               style={styles.notesSaveBtn}
@@ -1418,19 +1417,6 @@ const styles = StyleSheet.create({
   notesCard: {
     gap: spacing.sm,
   },
-  notesHeader: {
-    alignItems:   'center',
-    flexDirection: 'row',
-    gap:           spacing.sm,
-  },
-  notesTitle: {
-    color: palette.smoke,
-    flex: 1,
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
   notesSavedBadge: {
     alignItems:   'center',
     flexDirection: 'row',
@@ -1441,17 +1427,6 @@ const styles = StyleSheet.create({
     fontFamily:  Fonts.display,
     fontSize:    11,
     letterSpacing: 1,
-  },
-  notesInput: {
-    borderBottomColor: palette.line,
-    borderBottomWidth: 1,
-    color: palette.ivory,
-    fontFamily: Fonts.sans,
-    fontSize: 16,
-    lineHeight: 24,
-    minHeight: 72,
-    paddingVertical: spacing.sm,
-    textAlignVertical: 'top',
   },
   notesSaveBtn: {
     alignItems:   'center',

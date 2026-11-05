@@ -223,7 +223,7 @@ export default function MovimientoScreen() {
         body="Estas prácticas son de bienestar general, no ejercicio terapéutico ni tratamiento médico. Si tienes una lesión, condición cardiovascular o dolor, consulta a un profesional antes de practicar. Detente si sientes mareo, dolor o falta de aire."
       />
 
-      <BodyContextCard frame="Elige el movimiento según tu estado de hoy, no según lo que hiciste ayer." />
+      <BodyContextCard />
 
       <GoldDivider label="FLOWS" />
       {MOVEMENT_PRACTICES.filter((p) => p.category === 'flow').map((p) => (

@@ -158,7 +158,7 @@ function getOpeningMessage(params: {
 // ─── Prompt shortcuts por módulo ──────────────────────────────────────────────
 const BASE_PROMPTS: Array<{ label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }> = [
   { label: 'Analiza mi estado', icon: 'psychology' },
-  { label: 'Ordena mi dia', icon: 'calendar-today' },
+  { label: 'Ordena mi día', icon: 'calendar-today' },
 ];
 
 const MODULE_PROMPTS: Record<number, Array<{ label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }>> = {
@@ -257,7 +257,7 @@ function BasisRows() {
     <>
       {BASIS_ITEMS.map((item) => (
         <View key={item.label} style={styles.basisRow}>
-          <MaterialIcons name={item.icon} size={13} color={palette.goldText} />
+          <MaterialIcons name={item.icon} size={13} color={palette.smoke} />
           <Text style={styles.basisRowText}>{item.label}</Text>
         </View>
       ))}
@@ -752,7 +752,7 @@ function MentorScreenInner() {
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => { if (!jumpingRef.current) scrollToBottom(false); }}>
         <View style={styles.metaRow}>
-          <Text style={styles.metaTitle} accessibilityRole="header">NORMAN · MENTOR IA</Text>
+          <Text style={styles.metaTitle} accessibilityRole="header">NORMAN · IA</Text>
           <View style={styles.metaRight}>
             <Text
               style={[styles.metaStatus, !aiLive && styles.metaStatusDemo]}
@@ -785,7 +785,7 @@ function MentorScreenInner() {
           accessibilityState={{ expanded: showBasis }}
           onPress={() => setShowBasis((v) => !v)}
           style={styles.basisToggle}>
-          <MaterialIcons name="visibility" size={13} color={palette.goldText} />
+          <MaterialIcons name="visibility" size={13} color={palette.ash} />
           <Text style={styles.basisToggleText}>QUÉ VE NORMAN</Text>
           <MaterialIcons
             name={showBasis ? 'expand-less' : 'expand-more'}
@@ -1038,10 +1038,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     minHeight: 44,
   },
-  metaTitle: { color: palette.goldText, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  // N-6: el oro se gana — en esta pantalla solo la flecha de enviar lo lleva.
+  metaTitle: { color: palette.ash, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   metaRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.lg },
   metaStatus: { color: palette.smoke, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
-  metaStatusDemo: { color: palette.goldText },
+  metaStatusDemo: { color: palette.ash },
   content: {
     // paddingBottom is set dynamically via insets.bottom + 24
   },
@@ -1049,7 +1050,7 @@ const styles = StyleSheet.create({
   chatsBtnText: {
     fontFamily: Fonts.display,
     fontSize: 11,
-    color: palette.goldText,
+    color: palette.ash,
     letterSpacing: 1.5,
   },
   chatsBtnPressed: {
@@ -1152,7 +1153,7 @@ const styles = StyleSheet.create({
   },
   basisToggleText: {
     ...typography.label,
-    color: palette.goldText,
+    color: palette.ash,
     flex: 1,
     fontSize: 11,
   },

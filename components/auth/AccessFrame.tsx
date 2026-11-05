@@ -23,13 +23,30 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PolarisLogo } from '@/components/PolarisLogo';
 import { Fonts, palette, spacing } from '@/constants/theme';
-import { useAppTheme } from '@/hooks/use-app-theme';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
+// La estrella decorativa sigue al tema REAL (el atributo `data-theme` de
+// <html>), no al estado de React: en la captura de Norte en claro salía
+// amarilla porque `mode` del contexto no siempre coincide con el atributo
+// (p. ej. si el tema se fija desde fuera, o la pantalla queda fuera del
+// proveedor). Una variable CSS no puede desincronizarse.
+const STAR_VAR = '--c-decor-star';
+function injectStarVar() {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  if (document.getElementById('polaris-decor-star')) return;
+  const style = document.createElement('style');
+  style.id = 'polaris-decor-star';
+  style.textContent =
+    `:root{${STAR_VAR}:${palette.gold}}[data-theme="light"]{${STAR_VAR}:${palette.starOnLight}}`;
+  document.head.appendChild(style);
+}
+
 export function useDecorStarColor() {
-  const { mode } = useAppTheme();
-  return mode === 'light' ? palette.starOnLight : palette.gold;
+  // Nativo no tiene tema claro (cv() devuelve los hex oscuros): oro siempre.
+  if (Platform.OS !== 'web') return palette.gold;
+  injectStarVar();
+  return `var(${STAR_VAR})`;
 }
 
 type FrameProps = {

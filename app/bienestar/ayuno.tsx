@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
@@ -12,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
+import { Pantalla, TarjetaOro } from '@/components/pantalla';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, Fonts, radii } from '@/constants/theme';
@@ -126,7 +125,6 @@ function ProtocolRow({ p, active, onPress }: { p: Protocol; active: boolean; onP
 }
 
 export default function AyunoScreen() {
-  const router = useRouter();
   const { userId } = useLifeFlow();
 
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -209,9 +207,9 @@ export default function AyunoScreen() {
     />
   ) : (
     <TarjetaOro
-      meta="EMPEZAR"
-      metaRight={selectedProtocol.label}
-      title={`Ayuno ${selectedProtocol.label}`}
+      meta="PARA HOY"
+      metaRight={`${selectedProtocol.targetHours} H`}
+      title={`Empezar ${selectedProtocol.label}`}
       detail={selectedProtocol.description}
       onPress={() => setShowDisclaimer(true)}
       accessibilityLabel={`Iniciar ayuno ${selectedProtocol.label}`}
@@ -224,8 +222,7 @@ export default function AyunoScreen() {
         meta="BIENESTAR · SALUD"
         title="Ayuno"
         sub={isActive ? currentStage.info : 'Elige cuánto y empieza. Agua, café solo y té sin azúcar están permitidos.'}
-        hero={hero}
-        footer={<Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />}>
+        hero={hero}>
         {!isActive && (
           <View accessibilityRole="radiogroup">
             {PROTOCOLS.map(p => (

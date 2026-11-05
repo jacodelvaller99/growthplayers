@@ -1,6 +1,6 @@
 /**
  * Render smoke test de /perfil (gramática del rediseño): titular con el día,
- * una acción, filas y la historia.
+ * una acción y filas (sin el bloque de historia: repetía las filas).
  * Deja correr las utils puras de score. Monta sin throw. Platform=web.
  */
 import { render } from '@testing-library/react-native';

@@ -7,7 +7,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
   'm1-1': {
     id: 'task-m1-1',
     lessonId: 'm1-1',
-    title: 'Reflexión: Nunca es Suficiente',
+    title: 'Reflexión: nunca es suficiente',
     description: 'Responde con honestidad. No hay respuestas correctas — solo las tuyas.',
     type: 'reflection',
     fields: [
@@ -38,7 +38,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
   'm1-2': {
     id: 'task-m1-2',
     lessonId: 'm1-2',
-    title: 'Resultados de Trabajar tu Mindset',
+    title: 'Resultados de trabajar tu mentalidad',
     description: 'El cambio no es perfección — es autenticidad. Define qué quieres transformar.',
     type: 'reflection',
     fields: [
@@ -69,7 +69,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
   'm1-3': {
     id: 'task-m1-3',
     lessonId: 'm1-3',
-    title: 'Detecta Tus Creencias Limitantes',
+    title: 'Detecta tus creencias limitantes',
     description: 'Identifica creencias que te frenan en cada área de tus PERAS.',
     type: 'exercise',
     fields: [
@@ -151,7 +151,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
   'm1-5': {
     id: 'task-m1-5',
     lessonId: 'm1-5',
-    title: 'Declaración de Nueva Identidad',
+    title: 'Declaración de nueva identidad',
     description: 'Escribe tu nueva identidad en tiempo presente, como si ya fuera cierta.',
     type: 'writing',
     fields: [
@@ -176,7 +176,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
   'm1-6': {
     id: 'task-m1-6',
     lessonId: 'm1-6',
-    title: 'Integra tu Nueva Identidad',
+    title: 'Integra tu nueva identidad',
     description: 'La integración no es mental — es conductual. La repetición sostenida es lo que asienta un hábito nuevo.',
     type: 'action',
     fields: [
@@ -446,7 +446,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
   'm3-3': {
     id: 'task-m3-3',
     lessonId: 'm3-3',
-    title: 'Conecta con las Leyes Universales',
+    title: 'Conecta con las leyes universales',
     description: 'El universo opera con leyes exactas. Quien las conoce puede fluir con ellas.',
     type: 'reflection',
     fields: [
@@ -623,7 +623,7 @@ export const LESSON_TASKS: Record<string, LessonTask> = {
   'm4-3': {
     id: 'task-m4-3',
     lessonId: 'm4-3',
-    title: 'Practica la Coherencia Cardíaca',
+    title: 'Practica la coherencia cardíaca',
     description: '9 puntos. 3 minutos. Una práctica para acompañar la regulación de tu sistema nervioso.',
     type: 'exercise',
     fields: [

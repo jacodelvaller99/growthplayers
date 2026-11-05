@@ -9,13 +9,12 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Share, StyleSheet, Text } from 'react-native';
 
 import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
-import { Fonts, palette, spacing } from '@/constants/theme';
+import { Fonts, palette } from '@/constants/theme';
 import { POLARIS_MODULES } from '@/data/modules';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
-import { buildHistoria } from '@/lib/narrativeLogic';
 import { protocolSnapshot } from '@/lib/protocolSnapshot';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -26,7 +25,7 @@ function fechaCorta(ms: number): string {
 
 export default function PerfilScreen() {
   const router = useRouter();
-  const { state, averages } = useLifeFlow();
+  const { state } = useLifeFlow();
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -70,20 +69,6 @@ export default function PerfilScreen() {
   }, [state.completedLessons]);
 
   const firstName = (state.profile.name || 'Tú').split(' ')[0];
-
-  // La historia — misma fuente que Progreso (buildHistoria).
-  const historia = useMemo(() => buildHistoria({
-    protocolDay,
-    painPoint: state.profile.painPoint,
-    purpose: state.northStar.purpose,
-    identity: state.northStar.identity,
-    completedLessonCount: lessons,
-    taskCount: Object.keys(state.completedTasks ?? {}).length,
-    checkInsCount: state.checkIns.length,
-    avgEnergy: averages.energy ?? 0,
-    archetypesEarned: earnedArchetypes,
-    daysSinceLastCheckIn: snap.daysSinceLastReading,
-  }), [protocolDay, state.profile.painPoint, state.northStar.purpose, state.northStar.identity, lessons, state.completedTasks, state.checkIns.length, averages.energy, earnedArchetypes, snap.daysSinceLastReading]);
 
   const sub = restartedAt
     ? `Reiniciaste el programa el ${fechaCorta(restartedAt)}. Lo que hiciste antes — ${state.checkIns.length} registros y ${lessons} lecciones — sigue contando.`
@@ -162,26 +147,11 @@ export default function PerfilScreen() {
       <Fila label="TU RELOJ" value="Conectar o sincronizar" onPress={() => router.push('/perfil/wearables' as never)} />
       <Fila label="APARIENCIA" value="Claro u oscuro" onPress={() => router.push('/perfil/apariencia' as never)} />
       <Fila label="PROGRESO" value="Tus números, semana a semana" onPress={() => router.push('/(tabs)/progreso' as never)} last />
-
-      {historia.length > 0 && (
-        <View style={styles.historia}>
-          {historia.map((c) => (
-            <View key={c.label} style={styles.chapter}>
-              <Text style={styles.chapterLabel}>{c.label.toUpperCase()}</Text>
-              <Text style={styles.chapterText}>{c.text}</Text>
-            </View>
-          ))}
-        </View>
-      )}
     </Pantalla>
   );
 }
 
 const styles = StyleSheet.create({
-  historia: { marginTop: spacing.xxl, gap: spacing.lg, maxWidth: 680 },
-  chapter: { gap: 6 },
-  chapterLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.smoke },
-  chapterText: { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 24, color: palette.ivory },
   quiet: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   quietText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
 });

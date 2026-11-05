@@ -47,54 +47,48 @@ const tierRank = (t: string) => Object.keys(SUBSCRIPTION_TIERS).indexOf(t);
 function PlanCard({
   tier,
   isActive,
-  highlight,
+  primary,
   price,
+  priceIsNote,
   ctaLabel,
   onPressCta,
 }: {
   tier: SubscriptionTier;
   isActive: boolean;
-  highlight?: boolean;
+  /** La única acción amarilla de la pantalla. Las demás van en contorno gris. */
+  primary?: boolean;
   price: string;
+  /** El "precio" es una indicación (p. ej. dónde se activa), no un número. */
+  priceIsNote?: boolean;
   ctaLabel?: string;
   onPressCta?: () => void;
 }) {
   const info = SUBSCRIPTION_TIERS[tier];
-  const accentColor = info.color;                                   // fills (dot/badge/borde)
-  // El tier premium usa #FFC804 (gold brillante). Como TEXTO/ícono sobre la tarjeta
-  // (fondo graphite theme-aware) es ilegible en tema claro → goldText (theme-aware).
-  // Por clave del tier, no por color: en web palette.gold es var(--c-gold) y nunca
-  // iguala al hex literal de SUBSCRIPTION_TIERS.
-  const accentText  = tier === 'premium' ? palette.goldText : accentColor;
+  // El amarillo se gana: los planes van en neutro (el tuyo en ivory, los demás
+  // en gris). Antes cada plan llevaba su color de tier y el más brillante era
+  // un plan que el usuario no necesitaba.
+  const tone = isActive ? palette.ivory : palette.ash;
 
   return (
     <PremiumCard
       style={[
         s.planCard,
-        highlight && { borderColor: accentColor, borderWidth: 1.5 },
         isActive && { backgroundColor: palette.graphiteLight },
       ]}>
-      {highlight && (
-        <View style={[s.planBadge, { backgroundColor: accentColor }]}>
-          {/* «MÁS POPULAR» era un dato que no tenemos: prueba social inventada. */}
-          <Text style={s.planBadgeText}>RECOMENDADO</Text>
-        </View>
-      )}
       <View style={s.planHeader}>
-        <View style={[s.planDot, { backgroundColor: accentColor }]} />
-        <Text style={[s.planName, { color: accentText }]}>{info.name.toUpperCase()}</Text>
+        <Text style={[s.planName, { color: tone }]}>{info.name.toUpperCase()}</Text>
         {isActive && (
           <View style={s.activePill}>
             <Text style={s.activePillText}>TU PLAN</Text>
           </View>
         )}
       </View>
-      <Text style={[s.planPrice, { color: accentText }]}>{price}</Text>
+      <Text style={priceIsNote ? s.planPriceNote : [s.planPrice, { color: tone }]}>{price}</Text>
       <Text style={s.planDesc}>{info.description}</Text>
       <View style={s.featureList}>
         {info.features.map((feat, i) => (
           <View key={i} style={s.featureRow}>
-            <MaterialIcons name="check-circle" size={14} color={accentText} />
+            <MaterialIcons name="check" size={14} color={palette.smoke} />
             <Text style={s.featureText}>{feat}</Text>
           </View>
         ))}
@@ -105,12 +99,12 @@ function PlanCard({
       {!isActive && ctaLabel && onPressCta && (
         <PressableScale
           haptic
-          style={[s.planCta, { backgroundColor: accentColor }]}
+          style={[s.planCta, primary ? s.planCtaPrimary : s.planCtaSecondary]}
           onPress={onPressCta}
           accessibilityRole="button"
           accessibilityLabel={ctaLabel}>
-          {/* Todos los rellenos de tier son claros: ink cumple 4.5:1 en todos. */}
-          <Text style={[s.planCtaText, { color: palette.ink }]}>
+          {/* ink (constante) sobre el relleno gold; en contorno, ivory del tema. */}
+          <Text style={[s.planCtaText, { color: primary ? palette.ink : palette.ivory }]}>
             {ctaLabel}
           </Text>
         </PressableScale>
@@ -187,7 +181,6 @@ export default function PricingScreen() {
           <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={s.eyebrow}>POLARIS GROWTH INSTITUTE</Text>
           <Text style={s.title}>{IOS_CODE_ONLY ? 'TU ACCESO' : 'PLANES Y ACCESO'}</Text>
         </View>
       </View>
@@ -211,6 +204,12 @@ export default function PricingScreen() {
             <Text style={s.heroBody}>
               Está activo. Si quieres más acompañamiento, escribe a tu asesor.
             </Text>
+            <Pressable
+              onPress={() => Linking.openURL(`mailto:${ADVISOR_EMAIL}?subject=${encodeURIComponent('Sobre mi plan Polaris')}`)}
+              accessibilityRole="link"
+              style={s.advisorLink}>
+              <Text style={s.advisorLinkText}>Escribir a mi asesor →</Text>
+            </Pressable>
           </>
         ) : (
           <>
@@ -227,8 +226,9 @@ export default function PricingScreen() {
       {/* Plans */}
       <GoldDivider label="PLANES DISPONIBLES" />
       <View style={s.planList}>
-        {/* Quien ya paga ve su plan primero; nunca se le recomienda uno inferior. */}
-        {[...PRICING_TIERS]
+        {/* Quien ya paga ve su plan primero; el resto, de menor a mayor.
+            Nunca se le recomienda uno inferior. */}
+        {(() => { let primaryTaken = false; return [...PRICING_TIERS]
           .sort((a, b) => Number(b === currentTier) - Number(a === currentTier))
           .map((tier) => {
           const isLower = tierRank(tier) < tierRank(currentTier);
@@ -239,7 +239,7 @@ export default function PricingScreen() {
           const pricing =
             tier === 'premium'
               ? Platform.OS === 'web'
-                ? { price: 'Se activa desde la app de iOS o Android' }
+                ? { price: 'Se activa desde la app de iOS o Android', priceIsNote: true }
                 : {
                     price: premiumPrice
                       ? `Desde ${premiumPrice}`
@@ -255,16 +255,20 @@ export default function PricingScreen() {
                     Linking.openURL(`mailto:${ADVISOR_EMAIL}?subject=${encodeURIComponent('Quiero saber más de Premium Plus')}`),
                 }
               : { price: 'Gratis' };
+          const props = isLower ? { price: pricing.price, priceIsNote: pricing.priceIsNote } : pricing;
+          const hasCta = currentTier !== tier && 'ctaLabel' in props && !!props.ctaLabel;
+          const primary = hasCta && !primaryTaken;
+          if (primary) primaryTaken = true;
           return (
             <PlanCard
               key={tier}
               tier={tier}
               isActive={currentTier === tier}
-              highlight={currentTier === 'free' && tier === 'premium' && Platform.OS !== 'web'}
-              {...(isLower ? { price: pricing.price } : pricing)}
+              primary={primary}
+              {...props}
             />
           );
-        })}
+        }); })()}
       </View>
         </>
       )}
@@ -347,7 +351,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radii.sm,
   },
-  eyebrow: { ...typography.label, color: palette.goldText },
   title: {
     fontFamily: Fonts.display,
     fontSize: 20,
@@ -370,33 +373,15 @@ const s = StyleSheet.create({
     color: palette.ash,
     lineHeight: 22,
   },
+  advisorLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  advisorLinkText: { ...typography.body, color: palette.ivory },
 
   planList: { gap: spacing.md },
   planCard: { gap: spacing.md, overflow: 'visible' },
-  planBadge: {
-    position: 'absolute',
-    top: -10,
-    right: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 3,
-    borderRadius: radii.xs,
-  },
-  planBadgeText: {
-    fontFamily: Fonts.sansBold,
-    fontSize: 11,
-    color: palette.ink,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
   planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  planDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   planName: {
     fontFamily: Fonts.display,
@@ -424,6 +409,7 @@ const s = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
   },
+  planPriceNote: { ...typography.body, fontSize: 13, color: palette.smoke },
   planDesc: { ...typography.body, color: palette.ash },
   featureList: { gap: spacing.sm },
   featureRow: {
@@ -444,6 +430,8 @@ const s = StyleSheet.create({
     height: 44,
     marginTop: spacing.xs,
   },
+  planCtaPrimary: { backgroundColor: palette.gold },
+  planCtaSecondary: { borderWidth: 1, borderColor: palette.line },
   planCtaText: {
     ...typography.label,
     fontSize: 11,

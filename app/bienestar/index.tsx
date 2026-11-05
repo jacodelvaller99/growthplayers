@@ -23,7 +23,7 @@ type Block = {
 // Monochrome — spec: "Sin colores por categoría (todo monocromo excepto el gold CTA)"
 const BLOCKS: Block[] = [
   { route: '/bienestar/binaurales',  icon: 'graphic-eq',      label: 'SONIDOS',     sub: 'para concentrarte o calmarte', color: palette.ash, type: 'binaural'   },
-  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', sub: 'baja el ritmo en 5 minutos',    color: palette.ash, type: 'breathing'  },
+  { route: '/bienestar/respiracion', icon: 'air',              label: 'RESPIRACIÓN', sub: 'baja el ritmo en pocos minutos',    color: palette.ash, type: 'breathing'  },
   { route: '/bienestar/movimiento',  icon: 'directions-walk',  label: 'MOVIMIENTO',  sub: 'rutinas cortas para moverte',    color: palette.ash, type: 'movement'   },
   { route: '/bienestar/meditacion',  icon: 'self-improvement', label: 'MEDITACIÓN',  sub: 'calma la mente',       color: palette.ash, type: 'meditation' },
   { route: '/bienestar/sueno',       icon: 'bedtime',          label: 'SUEÑO',       sub: 'descansa mejor',       color: palette.ash, type: 'sleep'      },

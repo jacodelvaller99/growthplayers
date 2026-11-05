@@ -12,94 +12,44 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { Fila } from '@/components/pantalla';
 import { PremiumCard } from '@/components/polaris';
-import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useJornada } from '@/hooks/use-jornada';
 import { useWearableDaily, type WearableDaily } from '@/lib/wearables';
 
-// ─── Contexto del cuerpo HOY (pre-práctica) ───────────────────────────────────
+// ─── Tu reloj (pre-práctica) ──────────────────────────────────────────────────
 
 /**
- * @param frame  encuadre corto de por qué importa hoy (voz Polaris sobria).
+ * Una sola fila gris, sin segundo amarillo ni jerga: "Tu reloj · Conectar" o
+ * el dato del día en palabras llanas. Nunca un dato inventado.
  */
-export function BodyContextCard({ frame }: { frame: string }) {
+export function BodyContextCard() {
   const router = useRouter();
   const { today, loading } = useWearableDaily();
 
   // Mientras carga no mostramos nada (no hay promesa que cumplir todavía).
   if (loading) return null;
 
-  const hasData =
-    today != null &&
-    (today.hrv_ms != null || today.resting_hr != null || today.recovery_score != null);
-
-  // ── Sin reloj / sin dato del día → estado honesto, nunca datos falsos ──
-  if (!hasData) {
-    return (
-      <Pressable
-        onPress={() => router.push('/perfil/wearables')}
-        accessibilityRole="button"
-        accessibilityLabel="Conecta tu reloj para ver tu contexto del día">
-        <PremiumCard style={styles.card}>
-          <View style={styles.headRow}>
-            <MaterialIcons name="watch" size={18} color={palette.goldText} />
-            <Text style={styles.headLabel}>TU CUERPO HOY</Text>
-          </View>
-          <Text style={styles.emptyText}>
-            Conecta tu reloj para ver tu contexto del día — HRV, frecuencia
-            cardíaca en reposo y recuperación.
-          </Text>
-          <View style={styles.linkRow}>
-            <Text style={styles.linkText}>CONECTAR RELOJ</Text>
-            <MaterialIcons name="chevron-right" size={18} color={palette.goldText} />
-          </View>
-        </PremiumCard>
-      </Pressable>
-    );
-  }
+  const value = today?.recovery_score != null
+    ? `Recuperación ${Math.round(today.recovery_score)} %`
+    : today?.resting_hr != null
+      ? `Pulso en reposo ${Math.round(today.resting_hr)}`
+      : today?.hrv_ms != null
+        ? 'Datos de hoy'
+        : 'Conectar';
+  const connected = value !== 'Conectar';
 
   return (
-    <PremiumCard style={styles.card}>
-      <View style={styles.headRow}>
-        <MaterialIcons name="watch" size={18} color={palette.goldText} />
-        <Text style={styles.headLabel}>TU CUERPO HOY</Text>
-      </View>
-
-      <View style={styles.metricRow}>
-        <Metric label="HRV" value={fmt(today!.hrv_ms)} unit="ms" />
-        <Metric label="FC REPOSO" value={fmt(today!.resting_hr)} unit="bpm" />
-        <Metric label="RECUPERACIÓN" value={fmt(today!.recovery_score)} unit="%" />
-      </View>
-
-      <Text style={styles.frameText}>{frame}</Text>
-      <Text style={styles.disclaimer}>
-        Lectura del día, no en tiempo real.
-      </Text>
-    </PremiumCard>
+    <Fila
+      label="TU RELOJ"
+      value={value}
+      onPress={() => router.push(connected ? '/bienestar/biometrics' : '/perfil/wearables')}
+      last
+    />
   );
-}
-
-function Metric({ label, value, unit }: { label: string; value: string; unit: string }) {
-  const has = value !== '—';
-  // Un solo elemento accesible por métrica, en orden natural (etiqueta → valor),
-  // en vez de leer "45", "ms", "HRV" suelto y fuera de orden.
-  const a11yLabel = has ? `${label}: ${value} ${unit}` : `${label}: sin dato`;
-  return (
-    <View style={styles.metric} accessible accessibilityLabel={a11yLabel}>
-      <Text style={styles.metricValue}>
-        {value}
-        {has ? <Text style={styles.metricUnit}> {unit}</Text> : null}
-      </Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function fmt(n: number | null): string {
-  if (n == null) return '—';
-  return String(Math.round(n));
 }
 
 // ─── Cierre (post-práctica): el siguiente paso de la jornada ──────────────────
@@ -153,80 +103,6 @@ export function PracticeClose({ message }: { message: string }) {
 export type { WearableDaily };
 
 const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  headRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  headLabel: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 11,
-    letterSpacing: 2,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  metric: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  metricValue: {
-    fontFamily: Fonts.display,
-    color: palette.ivory,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  metricUnit: {
-    fontFamily: Fonts.sans,
-    color: palette.smoke,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  metricLabel: {
-    ...typography.mono,
-    color: palette.ash,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  frameText: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  disclaimer: {
-    ...typography.mono,
-    color: palette.smoke,
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  emptyText: {
-    ...typography.body,
-    color: palette.ash,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  linkText: {
-    ...typography.label,
-    color: palette.goldText,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-
   // Cierre
   closeCard: {
     width: '100%',

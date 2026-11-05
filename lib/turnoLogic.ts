@@ -242,9 +242,17 @@ export function selectTurno(input: TurnoInput): Turno {
   // el camino POR DEFECTO en cuanto el ML está vivo. Sin esto, `reconnect`
   // (la rama que dispara el silencio) manda al check-in a quien acaba de
   // hacerlo, y la pantalla se vuelve a contradecir con la tarjeta de al lado.
+  //
+  // Y el invariante espejo: SIN lectura de hoy, el turno ES la lectura. Hoy
+  // decía «cuéntame cómo llegas» y la tarjeta oro «Cierra lo que dijiste que
+  // harías» — dos pedidos en la misma pantalla. La narrativa pasa a ser la
+  // tarjeta de después del check-in. Solo `rest_signal` (señal de sobrecarga)
+  // conserva la prioridad: bajar revoluciones no espera a medirse.
   if (narrative && kind && kind !== 'investigate') {
     const destino = RUTA_POR_KIND[kind];
-    if (destino && !(todayCheckIn && destino.route === '/checkin')) {
+    const pideLectura = destino?.route === '/checkin';
+    const aplica = todayCheckIn ? !pideLectura : pideLectura || kind === 'rest_signal';
+    if (destino && aplica) {
       return {
         source: 'narrative',
         // La narrativa ya trae su porqué redactado; el delta queda para el

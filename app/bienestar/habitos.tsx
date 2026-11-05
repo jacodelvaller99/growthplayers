@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
+import { Pantalla, TarjetaOro } from '@/components/pantalla';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, Fonts, hitBox } from '@/constants/theme';
@@ -230,6 +230,7 @@ export default function HabitosScreen() {
   const addedCategories = new Set(habits.map((h) => h.category));
   const firstTemplate = [...MORNING_HABITS, ...EVENING_HABITS].find((t) => !addedCategories.has(t.category)) ?? null;
 
+  const heroIsTemplate = !nextHabit && habits.length === 0 && !!firstTemplate;
   // UNA acción: el siguiente hábito por marcar; sin hábitos, añadir el primero.
   const hero = nextHabit ? (
     <TarjetaOro
@@ -343,7 +344,8 @@ export default function HabitosScreen() {
 
   // Catálogo por rutina, sin los ya añadidos. Toda la fila añade (≥56 px).
   const renderTemplates = (title: string, list: HabitTemplate[]) => {
-    const pending = list.filter((t) => !addedCategories.has(t.category));
+    // Lo que ya propone la tarjeta amarilla no se repite como fila.
+    const pending = list.filter((t) => !addedCategories.has(t.category) && !(heroIsTemplate && t === firstTemplate));
     if (pending.length === 0) return null;
     return (
       <View style={styles.group}>
@@ -371,8 +373,7 @@ export default function HabitosScreen() {
       meta="BIENESTAR · CUERPO"
       title="Hábitos"
       sub={sub}
-      hero={hero}
-      footer={<Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />}>
+      hero={hero}>
       {banner && (
         <Text
           style={[styles.banner, { color: banner.tone === 'success' ? palette.ash : palette.danger }]}

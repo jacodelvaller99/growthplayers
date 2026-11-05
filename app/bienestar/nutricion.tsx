@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -82,7 +81,6 @@ interface NutritionAnswers {
 }
 
 export default function NutricionScreen() {
-  const router = useRouter();
   const { userId } = useLifeFlow();
 
   // 0 = pantalla principal; 1..5 = paso de las preguntas.
@@ -196,16 +194,6 @@ export default function NutricionScreen() {
     else await saveProfile();
   };
 
-  const backBtn = (
-    <Pressable
-      onPress={step > 0 ? () => setStep(step - 1) : () => router.back()}
-      style={styles.backBtn}
-      accessibilityRole="button"
-      accessibilityLabel={step > 1 ? 'Paso anterior' : 'Volver'}>
-      <MaterialIcons name="arrow-back" size={20} color={palette.ivory} />
-      <Text style={styles.backText}>{step > 1 ? 'ANTERIOR' : 'VOLVER'}</Text>
-    </Pressable>
-  );
 
   // ── Preguntas: una por pantalla, un solo botón amarillo «Seguir». ──
   if (step > 0) {
@@ -219,7 +207,7 @@ export default function NutricionScreen() {
         metaRight={`${step} DE ${TOTAL_STEPS}`}
         title={cfg.q}
         sub={cfg.sub}
-        footer={backBtn}>
+        onBack={() => setStep(step - 1)}>
         {cfg.options.map((o, i) => {
           const sel = isSelected(o.id);
           return (
@@ -252,7 +240,7 @@ export default function NutricionScreen() {
           accessibilityLabel={step === TOTAL_STEPS ? 'Guardar' : 'Seguir'}
           accessibilityState={{ disabled: !ok }}
           style={[styles.seguir, !ok && styles.seguirOff]}>
-          <Text style={styles.seguirText}>{step === TOTAL_STEPS ? 'GUARDAR' : 'SEGUIR'}</Text>
+          <Text style={[styles.seguirText, !ok && styles.seguirTextOff]}>{step === TOTAL_STEPS ? 'GUARDAR' : 'SEGUIR'}</Text>
         </Pressable>
         {!ok && <Text style={styles.hint}>Elige una opción para seguir.</Text>}
       </Pantalla>
@@ -270,7 +258,7 @@ export default function NutricionScreen() {
       <Pantalla
         meta="BIENESTAR · CUERPO"
         title="Nutrición"
-        sub="Tu plan de comidas, en un solo lugar."
+        sub="Cuéntanos cómo comes y guarda el plan de tu nutriólogo."
         hero={savedPlanUrl ? (
           <TarjetaOro
             meta="TU PLAN"
@@ -285,9 +273,9 @@ export default function NutricionScreen() {
             detail="Cinco preguntas cortas. Menos de un minuto."
             onPress={() => setStep(1)}
           />
-        )}
-        footer={backBtn}>
-        <Fila label="CÓMO COMES" value={profileValue} onPress={() => setStep(1)} />
+        )}>
+        {/* Sin plan, la tarjeta ya es «cómo comes»: la fila no la repite. */}
+        {!!savedPlanUrl && <Fila label="CÓMO COMES" value={profileValue} onPress={() => setStep(1)} />}
         <Fila
           label="TU PLAN DEL NUTRIÓLOGO"
           value={savedPlanUrl ? (savedNutritionist ? `Guardado · ${savedNutritionist}` : 'Guardado') : 'Pega el enlace de tu plan'}
@@ -325,7 +313,7 @@ export default function NutricionScreen() {
               accessibilityRole="button"
               accessibilityLabel={savedPlanUrl ? 'Actualizar enlace del plan' : 'Guardar enlace del plan'}
               accessibilityState={{ disabled: planSaving || !planUrl.trim() }}
-              style={[styles.secondary, (planSaving || !planUrl.trim()) && styles.seguirOff]}>
+              style={[styles.secondary, (planSaving || !planUrl.trim()) && styles.secondaryOff]}>
               <Text style={styles.secondaryText}>
                 {planSaving ? 'GUARDANDO…' : savedPlanUrl ? 'ACTUALIZAR ENLACE' : 'GUARDAR ENLACE'}
               </Text>
@@ -347,7 +335,10 @@ const styles = StyleSheet.create({
   optionDesc:    { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash },
 
   seguir:        { marginTop: spacing.xl, minHeight: 52, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
-  seguirOff:     { opacity: 0.4 },
+  // Deshabilitado: contorno gris + texto apagado (no amarillo lavado).
+  seguirOff:     { backgroundColor: 'transparent', borderWidth: 1, borderColor: palette.lineHard },
+  seguirTextOff: { color: palette.smoke },
+  secondaryOff:  { opacity: 0.5 },
   seguirText:    { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 2, color: palette.ink },
   hint:          { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash, marginTop: spacing.sm },
 
@@ -357,6 +348,4 @@ const styles = StyleSheet.create({
   secondary:     { marginTop: spacing.sm, minHeight: 44, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineHard, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, letterSpacing: 1, color: palette.ivory },
 
-  backBtn:       { minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText:      { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ivory },
 });

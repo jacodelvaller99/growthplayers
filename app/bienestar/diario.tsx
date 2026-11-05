@@ -16,7 +16,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withS
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { JornadaCierre } from '@/components/jornada';
-import { Fila, Pantalla } from '@/components/pantalla';
+import { Pantalla } from '@/components/pantalla';
 import { useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, EASING_HOUSE, DURATION_HOUSE } from '@/constants/theme';
 import { logJornadaStep, useJornada } from '@/hooks/use-jornada';
@@ -172,8 +172,7 @@ export default function DiarioScreen() {
       <Pantalla
         meta="BIENESTAR · MENTE"
         title="Diario"
-        sub="¿Qué te dejó el día? Es privado y solo tuyo."
-        footer={<Fila label="VOLVER" value="Bienestar" onPress={() => router.back()} last />}>
+        sub="¿Qué te dejó el día? Es privado y solo tuyo.">
         <View style={styles.typeRow}>
           {ENTRY_TYPES.map((t) => (
             <EntryTypeChip key={t.id} t={t} active={type === t.id} onPress={() => setType(t.id)} />
@@ -193,7 +192,7 @@ export default function DiarioScreen() {
 
         <Animated.View style={saveBtnAnimStyle}>
           <Pressable
-            style={[styles.saveBtn, (empty || saving) && { opacity: 0.4 }]}
+            style={[styles.saveBtn, (empty || saving) && styles.saveBtnOff]}
             onPress={save}
             onPressIn={() => { saveBtnScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
             onPressOut={() => { saveBtnScale.value = withSpring(1, { damping: 12, stiffness: 250 }); }}
@@ -205,7 +204,7 @@ export default function DiarioScreen() {
             {saving ? (
               <ActivityIndicator size="small" color={palette.ink} />
             ) : (
-              <Text style={styles.saveBtnText}>{saved ? 'GUARDADO' : 'GUARDAR'}</Text>
+              <Text style={[styles.saveBtnText, empty && styles.saveBtnTextOff]}>{saved ? 'GUARDADO' : 'GUARDAR'}</Text>
             )}
           </Pressable>
         </Animated.View>
@@ -259,6 +258,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     minHeight: 52,
   },
+  // Deshabilitado: contorno gris + texto apagado; el amarillo solo cuando se puede guardar.
+  saveBtnOff: { backgroundColor: 'transparent', borderWidth: 1, borderColor: palette.lineHard },
+  saveBtnTextOff: { color: palette.smoke },
   saveBtnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 13, letterSpacing: 1, color: palette.ink },
   helper: { fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke, marginTop: spacing.sm },
   errorText: { fontFamily: Fonts.sans, fontSize: 14, color: palette.danger, marginTop: spacing.sm },

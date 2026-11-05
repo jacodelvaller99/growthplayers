@@ -215,11 +215,13 @@ export default function MentoriaScreen() {
         onBack={volver}
         meta="MENTORÍA"
         metaRight={`SEMANA ${weekNum} DE ${TOTAL_WEEKS}`}
-        title={'Tu sesión de\nesta semana.'}
+        // Dos líneas cortas: «Tu sesión de / esta semana.» se partía palabra a
+        // palabra en la columna estrecha del héroe de escritorio.
+        title={'Tu sesión\nsemanal.'}
         sub={week.focus}
         hero={busy || writing ? undefined : (
           <TarjetaOro
-            meta={week.phase === 'Onboarding' ? 'EMPEZAR' : week.phase.toUpperCase()}
+            meta={`SEMANA ${weekNum}`}
             metaRight={weekRangeLabel(weekNum)}
             title="Escribir notas de la sesión"
             onPress={() => { setNoteWeek(weekNum); setWriting(true); }}
@@ -261,9 +263,9 @@ export default function MentoriaScreen() {
             disabled={!canGenerate}
             accessibilityRole="button"
             accessibilityState={{ disabled: !canGenerate }}
-            style={s.link}>
+            style={({ pressed }) => [s.btnGhost, !canGenerate && s.btnGhostOff, pressed && canGenerate && s.pressed]}>
             {m.generating && <ActivityIndicator size="small" color={palette.ash} />}
-            <Text style={[s.linkText, !canGenerate && s.linkOff]}>
+            <Text style={[s.btnGhostText, !canGenerate && s.btnGhostTextOff]}>
               {m.generating ? 'Norman está armando tu plan…' : 'Que Norman arme el plan con tus notas'}
             </Text>
           </Pressable>
@@ -466,14 +468,22 @@ const s = StyleSheet.create({
   btn: {
     minHeight: 52, borderRadius: 10, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center',
   },
-  btnOff: { backgroundColor: palette.charcoal },
+  btnOff: { backgroundColor: palette.charcoal, borderWidth: 1, borderColor: palette.lineHard },
   btnText: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 14, letterSpacing: 1, color: palette.ink },
   btnTextOff: { color: palette.smoke },
   pressed: { opacity: 0.85 },
+  // Secundario (contorno): «Que Norman arme el plan» era texto suelto que no
+  // parecía ni tocable ni apagado.
+  btnGhost: {
+    minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: palette.lineHard,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg,
+  },
+  btnGhostOff: { borderStyle: 'dashed' },
+  btnGhostText: { fontFamily: Fonts.sans, fontWeight: '600', fontSize: 15, color: palette.ivory },
+  btnGhostTextOff: { color: palette.smoke },
 
   link: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   linkText: { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory, textDecorationLine: 'underline' },
-  linkOff: { color: palette.smoke, textDecorationLine: 'none' },
 
   recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: palette.danger },
 
