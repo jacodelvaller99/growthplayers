@@ -8,6 +8,7 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { TrackingCalendar } from '@/components/admin/TrackingCalendar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -861,6 +862,8 @@ export function MentorSpace({
       {/* La misma tarjeta que PREPARAR del dossier: qué confrontar y qué
           preguntar, sin agenda de números ni píldoras de riesgo. */}
       <ForSessionCard briefing={memory.briefing} generating={genBrief} error={briefError} onGenerate={handleGenerateBriefing} />
+      {/* El mes del cliente de un vistazo: qué hizo cada día. */}
+      <TrackingCalendar userId={userId} />
       <View>
         <Pressable
           onPress={() => setSynopsisOpen((v) => !v)}

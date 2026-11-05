@@ -7,6 +7,7 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { TrackingCalendar } from '@/components/admin/TrackingCalendar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -1443,6 +1444,10 @@ export default function UserDetailScreen() {
         </View>)}
 
         {tab === 'client' && (<View style={s.tabBody}>
+        {/* SEGUIMIENTO: el mes del cliente de un vistazo (estilo Traineeks) */}
+        <GoldDivider label="SEGUIMIENTO DEL MES" />
+        <TrackingCalendar userId={userId} />
+
         {/* ─────────────────────────────────────────────────── */}
         {/* K. BIOMÉTRICOS */}
         {/* ─────────────────────────────────────────────────── */}
