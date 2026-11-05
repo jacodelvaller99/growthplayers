@@ -9,6 +9,7 @@ import { PrimaryButton } from '@/components/polaris';
 import { Fonts, palette, spacing, typography } from '@/constants/theme';
 import { useStaffRole } from '@/hooks/useIsAdmin';
 import { MyMentorCard } from '@/components/MyMentorCard';
+import { ModeSwitch } from '@/components/ModeSwitch';
 import { Fila, Pantalla } from '@/components/pantalla';
 import { AccessField } from '@/components/auth/AccessFrame';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -385,6 +386,9 @@ export default function YoScreen() {
       title={`${(state.profile.name || 'Tú').split(' ')[0]}.`}
       sub={state.profile.role || undefined}
       footer={<Text style={styles.versionText}>Polaris OS v{appVersion}</Text>}>
+      {/* Staff: el cambio de modo va arriba, a la vista. Antes vivía al final
+          de Hoy y dentro de Ajustes — nadie lo encontraba. */}
+      {isStaff && <ModeSwitch current="client" style={styles.modeSwitch} />}
       <Fila
         label="TU PLAN"
         value={subscription.tierInfo.name}
@@ -410,6 +414,7 @@ export default function YoScreen() {
 const SWITCH_WEB = { activeThumbColor: palette.ink, activeTrackColor: palette.gold } as object;
 
 const styles = StyleSheet.create({
+  modeSwitch: { marginBottom: 24 },
   cuenta: { gap: spacing.lg },
   cuentaLabel: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
   cuentaGap: { marginTop: spacing.lg },
