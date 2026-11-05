@@ -217,7 +217,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 12,
   },
-  exitLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  exitLink: {
+    paddingHorizontal: 16, minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   exitLinkText: { color: palette.smoke, fontFamily: Fonts.sans, fontSize: 14 },
   btnPressed: {
     backgroundColor: palette.goldDim,
