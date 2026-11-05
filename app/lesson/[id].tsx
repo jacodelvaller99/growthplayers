@@ -857,7 +857,7 @@ export default function LessonScreen() {
                  ahora se dice dónde está el contenido de verdad.
               3. Ni una ni otra → próximamente (hoy inalcanzable). */}
           {lesson.vimeoId || lesson.skoolUrl ? (
-            <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} height={232} />
+            <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} lessonId={lesson.id} height={232} />
           ) : mod.skoolUrl ? (
             <View style={styles.videoComingSoon}>
               <MaterialIcons name="school" size={24} color={palette.goldText} />

@@ -132,6 +132,7 @@ Deno.serve(async (req: Request) => {
       adminSupabase.from('wearable_daily').delete().eq('user_id', userId),
       adminSupabase.from('wearable_timeseries').delete().eq('user_id', userId),
       adminSupabase.from('wearable_webhook_events').delete().eq('user_id', userId),
+      adminSupabase.from('video_progress').delete().eq('user_id', userId),
       adminSupabase.from('biometric_insights').delete().eq('user_id', userId),
       // Internista educativo — PHI (exámenes, valores de lab, conversación)
       adminSupabase.from('medical_exams').delete().eq('user_id', userId),

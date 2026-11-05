@@ -17,6 +17,7 @@ export type TrackingInput = {
   practices: PracticeRow[];
   norman: EventRow[];
   sessions: EventRow[]; // sesiones de mentoría
+  videos?: EventRow[];  // videos de lección vistos (≥90 %)
 };
 
 export type TrackingDay = {
@@ -31,6 +32,7 @@ export type TrackingDay = {
   practices: number;
   norman: number;
   session: boolean;
+  videos: number;
   trophy: boolean;    // racha de 7 días de check-in que se completa este día
 };
 
@@ -61,7 +63,7 @@ export function buildTracking(i: TrackingInput): { days: TrackingDay[]; kpis: Tr
     for (const r of rows) { const k = keyOf(r.at); if (k) m.set(k, (m.get(k) ?? 0) + 1); }
     return m;
   };
-  const lessons = count(i.lessons), practices = count(i.practices), norman = count(i.norman), sessions = count(i.sessions);
+  const lessons = count(i.lessons), practices = count(i.practices), norman = count(i.norman), sessions = count(i.sessions), videos = count(i.videos ?? []);
 
   // Racha: el día N lleva trofeo si es el 7.º, 14.º… día seguido con check-in.
   const streakAt = (k: string) => {
@@ -94,6 +96,7 @@ export function buildTracking(i: TrackingInput): { days: TrackingDay[]; kpis: Tr
       practices: practices.get(k) ?? 0,
       norman: norman.get(k) ?? 0,
       session: (sessions.get(k) ?? 0) > 0,
+      videos: videos.get(k) ?? 0,
       trophy: s > 0 && s % 7 === 0,
     };
   });

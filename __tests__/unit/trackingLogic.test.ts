@@ -11,6 +11,7 @@ test('mes con lunes al inicio, KPIs en escala 1–5 y trofeo a los 7 días segui
     practices: [{ at: '2026-10-03T08:00:00', seconds: 600 }, { at: '2026-10-04T08:00:00', seconds: 1200 }],
     norman: [{ at: '2026-10-05T20:00:00' }, { at: '2026-10-05T20:05:00' }],
     sessions: [],
+    videos: [{ at: '2026-10-06T10:00:00' }],
   });
   // Octubre 2026 empieza en jueves: la grilla arranca el lunes 28 sep.
   expect(days[0]!.key).toBe('2026-09-28');
@@ -20,6 +21,7 @@ test('mes con lunes al inicio, KPIs en escala 1–5 y trofeo a los 7 días segui
   expect(d('2026-10-01').energy).toBe(4);
   expect(d('2026-10-02').lessons).toBe(1);
   expect(d('2026-10-05').norman).toBe(2);
+  expect(d('2026-10-06').videos).toBe(1);
   expect(d('2026-10-07').trophy).toBe(true);
   expect(d('2026-10-06').trophy).toBe(false);
   expect(d('2026-10-10').isToday).toBe(true);

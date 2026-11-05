@@ -19,7 +19,7 @@ const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'O
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIAS_CORTO = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-type Data = { checkins: CheckinRow[]; lessons: EventRow[]; practices: PracticeRow[]; norman: EventRow[]; sessions: EventRow[] };
+type Data = { checkins: CheckinRow[]; lessons: EventRow[]; practices: PracticeRow[]; norman: EventRow[]; sessions: EventRow[]; videos: EventRow[] };
 
 async function q<T>(p: Promise<{ data: T[] | null }>): Promise<T[]> {
   try { return (await p).data ?? []; } catch { return []; }
@@ -30,12 +30,13 @@ async function fetchMonth(userId: string, year: number, month: number): Promise<
   const from = new Date(year, month, 1 - 14), to = new Date(year, month + 1, 8);
   const f = from.toISOString(), t = to.toISOString();
   const fd = f.slice(0, 10), td = t.slice(0, 10);
-  const [checkins, lessons, practices, norman, sessions] = await Promise.all([
+  const [checkins, lessons, practices, norman, sessions, videos] = await Promise.all([
     q<CheckinRow>(supa.from('daily_checkins').select('date, energy, clarity, stress, sleep').eq('user_id', userId).gte('date', fd).lte('date', td)),
     q<{ completed_at: string | null }>(supa.from('completed_lessons').select('completed_at').eq('user_id', userId).gte('completed_at', f).lte('completed_at', t)),
     q<{ completed_at: string | null; duration_seconds: number | null }>(supa.from('wellness_sessions').select('completed_at, duration_seconds').eq('user_id', userId).gte('completed_at', f).lte('completed_at', t)),
     q<{ created_at: string | null }>(supa.from('mentor_messages').select('created_at').eq('user_id', userId).eq('role', 'user').gte('created_at', f).lte('created_at', t)),
     q<{ session_date: string | null; created_at: string | null }>(supa.from('mentorship_sessions').select('session_date, created_at').eq('user_id', userId).gte('created_at', f).lte('created_at', t)),
+    q<{ completed_at: string | null }>(supa.from('video_progress').select('completed_at').eq('user_id', userId).eq('completed', true).gte('completed_at', f).lte('completed_at', t)),
   ]);
   return {
     checkins,
@@ -43,6 +44,7 @@ async function fetchMonth(userId: string, year: number, month: number): Promise<
     practices: practices.map((r) => ({ at: r.completed_at, seconds: r.duration_seconds })),
     norman: norman.map((r) => ({ at: r.created_at })),
     sessions: sessions.map((r) => ({ at: r.session_date ?? r.created_at })),
+    videos: videos.map((r) => ({ at: r.completed_at })),
   };
 }
 
@@ -106,6 +108,7 @@ export function TrackingCalendar({ userId }: { userId: string }) {
 
       <View style={s.legend}>
         <Leyenda swatch={<View style={[s.chip, s.chipGold]}><Text style={s.chipGoldText}>4</Text></View>} text="Check-in (energía de 1 a 5)" />
+        <Leyenda swatch={<Text style={s.mark}>V</Text>} text="Vio un video completo" />
         <Leyenda swatch={<Text style={s.mark}>L</Text>} text="Lección" />
         <Leyenda swatch={<Text style={s.mark}>P</Text>} text="Práctica" />
         <Leyenda swatch={<Text style={s.mark}>N</Text>} text="Habló con Norman" />
@@ -129,7 +132,7 @@ function Kpi({ icon, big, label, on }: { icon: React.ComponentProps<typeof Mater
 }
 
 function Dia({ d, desk }: { d: TrackingDay; desk: boolean }) {
-  const marks = [d.lessons && 'L', d.practices && 'P', d.norman && 'N', d.session && 'S'].filter(Boolean) as string[];
+  const marks = [d.videos && 'V', d.lessons && 'L', d.practices && 'P', d.norman && 'N', d.session && 'S'].filter(Boolean) as string[];
   const vacio = d.inMonth && d.past && d.energy == null && marks.length === 0;
   const label = `${d.day}: ${d.energy != null ? `energía ${d.energy} de 5` : 'sin check-in'}${marks.length ? `, ${marks.length} actividades` : ''}${d.trophy ? ', 7 días seguidos' : ''}`;
   return (

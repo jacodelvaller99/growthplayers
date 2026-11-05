@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
+import { EMPTY_PROGRESS, nextProgress, saveVideoProgress } from '@/lib/videoProgress';
 
 // Importación condicional — react-native-webview solo en nativo
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,12 +15,63 @@ interface SkoolVideoProps {
   url?: string;
   vimeoId?: string;
   height?: number;
+  /** Para guardar el progreso del video (tabla video_progress). */
+  lessonId?: string;
+}
+
+const VIMEO_ORIGIN = 'https://player.vimeo.com';
+const SAVE_EVERY_MS = 15000;
+
+/**
+ * API del reproductor de Vimeo por postMessage (la misma que usa player.js,
+ * sin cargar la librería): al estar listo se suscribe a timeupdate/pause/ended
+ * y guarda cuánto vio la persona. Solo web; en nativo queda pendiente.
+ */
+function useVimeoProgress(iframe: React.RefObject<HTMLIFrameElement | null>, vimeoId?: string, lessonId?: string) {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !vimeoId || typeof window === 'undefined') return;
+    let p = EMPTY_PROGRESS;
+    let dirty = false;
+    let savedCompleted = false;
+    const flush = () => {
+      if (!dirty) return;
+      dirty = false;
+      void saveVideoProgress(vimeoId, lessonId, p, savedCompleted);
+      savedCompleted = savedCompleted || p.completed;
+    };
+    const post = (method: string, value?: string) =>
+      iframe.current?.contentWindow?.postMessage(JSON.stringify({ method, value }), VIMEO_ORIGIN);
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== VIMEO_ORIGIN || e.source !== iframe.current?.contentWindow) return;
+      let msg: { event?: string; data?: { seconds?: number; percent?: number; duration?: number } };
+      try { msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
+      if (msg.event === 'ready') {
+        ['timeupdate', 'pause', 'ended'].forEach((ev) => post('addEventListener', ev));
+      } else if (msg.event === 'timeupdate' && msg.data) {
+        const before = p.completed;
+        p = nextProgress(p, { seconds: msg.data.seconds ?? 0, percent: msg.data.percent ?? 0, duration: msg.data.duration ?? 0 });
+        dirty = true;
+        if (p.completed && !before) flush();
+      } else if (msg.event === 'pause' || msg.event === 'ended') {
+        flush();
+      }
+    };
+    window.addEventListener('message', onMessage);
+    const timer = setInterval(flush, SAVE_EVERY_MS);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      clearInterval(timer);
+      flush();
+    };
+  }, [iframe, vimeoId, lessonId]);
 }
 
 /** Si el embed no cargó en este tiempo, se quita el «Cargando» y el enlace lo dice. */
 const WEB_LOAD_TIMEOUT_MS = 15000;
 
-export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
+export function SkoolVideo({ url, vimeoId, height = 220, lessonId }: SkoolVideoProps) {
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  useVimeoProgress(iframeRef, vimeoId, lessonId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -50,6 +102,7 @@ export function SkoolVideo({ url, vimeoId, height = 220 }: SkoolVideoProps) {
       <View>
         <View style={[styles.container, { height }]}>
           <iframe
+            ref={iframeRef}
             src={vimeoEmbedUrl!}
             onLoad={() => setLoading(false)}
             style={{
