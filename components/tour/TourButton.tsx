@@ -26,6 +26,8 @@ const TAB_BAR_BASE = 60;
 const GAP = 16;
 /** Botón montado sobre la barra de pestañas (móvil). */
 const DOCK = 36;
+/** `Pantalla` en móvil: la flecha Volver (44) empieza en insets.top + 24; 40 px centrado en ella. */
+const TOP_OFFSET = 26;
 
 export function TourButton() {
   const segments = useSegments() as string[];
@@ -59,7 +61,11 @@ export function TourButton() {
 
   const root = segments[0] ?? '';
   const inTabs = root === '(tabs)';
+  // Hoy / Clientes del equipo llevan el botón en su propia cabecera en el
+  // teléfono (TourHeaderButton): flotando tapaba «Necesitan atención primero».
+  const boardRoute = root === 'admin' && (segments.length === 1 || ['index', 'clientes'].includes(segments[1] ?? ''));
   const hidden =
+    (boardRoute && !isDesktop) ||
     HIDDEN_ROOTS.has(root) ||
     HIDDEN_ROUTES.has(root) ||
     HIDDEN_PREFIXES.includes(root) ||
@@ -73,9 +79,16 @@ export function TourButton() {
   // Con barra abajo: montado sobre el borde superior de la barra, en el centro
   // (el hueco entre la 2ª y la 3ª pestaña). Quieto ya no tapa la flecha de
   // las filas, que viven en el borde derecho; solo pisa 18 px del centro.
-  const bottom = withBottomBar
-    ? TAB_BAR_BASE + insets.bottom - DOCK / 2
-    : insets.bottom + GAP;
+  // Sin barra, en el teléfono: arriba a la derecha, en la línea de la flecha
+  // «Volver» de `Pantalla`, que es zona de cabecera vacía. Abajo a la derecha
+  // tapaba la primera fila visible («Empieza con el registro d…», «Conect…»).
+  // ponytail: asume la cabecera de `Pantalla`; una pantalla propia con acción
+  // arriba a la derecha tendría que ocultarlo en HIDDEN_ROUTES.
+  const place = withBottomBar
+    ? { bottom: TAB_BAR_BASE + insets.bottom - DOCK / 2 }
+    : isDesktop
+      ? { bottom: insets.bottom + GAP }
+      : { top: insets.top + TOP_OFFSET };
 
   return (
     <>
@@ -85,13 +98,30 @@ export function TourButton() {
           onPress={start}
           accessibilityRole="button"
           accessibilityLabel="Norman te explica esta pantalla"
-          // 36 + 4·2 = 44 px de objetivo táctil.
-          hitSlop={withBottomBar ? 4 : undefined}
-          style={[s.btn, !isDesktop && s.btnMobile, withBottomBar && s.btnDock, { bottom }]}>
+          // 36 + 4·2 = 44 px (barra) · 40 + 2·2 = 44 px (cabecera).
+          hitSlop={withBottomBar ? 4 : isDesktop ? undefined : 2}
+          style={[s.btn, !isDesktop && s.btnMobile, withBottomBar && s.btnDock, place]}>
           <MaterialIcons name="auto-awesome" size={isDesktop ? 20 : 18} color={palette.ash} />
         </Pressable>
       )}
     </>
+  );
+}
+
+/**
+ * El mismo botón, en línea, para cabeceras que lo llevan dentro (Hoy del
+ * equipo en el teléfono). No flota: nunca tapa una fila.
+ */
+export function TourHeaderButton() {
+  const start = useTourStore((st) => st.start);
+  return (
+    <Pressable
+      onPress={start}
+      accessibilityRole="button"
+      accessibilityLabel="Norman te explica esta pantalla"
+      style={s.inline}>
+      <MaterialIcons name="auto-awesome" size={18} color={palette.ash} />
+    </Pressable>
   );
 }
 
@@ -118,6 +148,10 @@ const s = StyleSheet.create({
   },
   // Móvil: más chico y pegado al gutter de 16 px, para tapar lo mínimo.
   btnMobile: { width: 40, height: 40, borderRadius: 20, right: 16 },
+  inline: {
+    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: palette.line,
+  },
   btnDock: {
     width: DOCK, height: DOCK, borderRadius: DOCK / 2,
     right: undefined, left: '50%', marginLeft: -DOCK / 2,

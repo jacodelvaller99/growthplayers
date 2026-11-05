@@ -535,7 +535,8 @@ export default function WearablesScreen() {
               const e = estado(p);
               return (
                 <View key={p.id}>
-                  <Fila label={p.name.toUpperCase()} value={e.text} tone={e.warn ? 'warn' : undefined} />
+                  {/* N-22: el estado va neutro; el amarillo es de «Sincronizar ahora». */}
+                  <Fila label={p.name.toUpperCase()} value={e.text} />
                   <Pressable
                     onPress={() => handleDisconnect(p.id)}
                     style={styles.quiet}
@@ -553,7 +554,6 @@ export default function WearablesScreen() {
                 key={p.id}
                 label={p.name.toUpperCase()}
                 value={connecting === p.id ? 'Conectando…' : stale ? 'Conexión caducada · volver a conectar' : 'Conectar'}
-                tone={stale ? 'warn' : undefined}
                 onPress={connecting ? undefined : () => handleConnect(p.id)}
                 last={last}
               />

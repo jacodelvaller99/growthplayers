@@ -51,6 +51,7 @@ jest.mock('@/components/pantalla', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const R = require('react');
   return {
+    Fila: ({ value }: { value: string }) => R.createElement(RN.Text, null, value),
     Pantalla: ({ title, sub, children }: { title: string; sub?: string; children?: React.ReactNode }) =>
       R.createElement(RN.View, null, R.createElement(RN.Text, null, title), sub ? R.createElement(RN.Text, null, sub) : null, children),
   };

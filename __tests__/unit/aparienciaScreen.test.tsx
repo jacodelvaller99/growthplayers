@@ -22,7 +22,7 @@ jest.mock('@/hooks/use-app-mode', () => ({
   useAppMode: () => ({ mode: 'especifico', setMode: jest.fn() }),
 }));
 
-import AparienciaScreen from '@/app/perfil/apariencia';
+import AparienciaScreen, { shownToMode } from '@/app/perfil/apariencia';
 
 describe('Apariencia — pocas decisiones a la vista', () => {
   it('web: solo los dos fondos del manual (Tinta y Luz), sin paletas extra', () => {
@@ -40,5 +40,16 @@ describe('Apariencia — pocas decisiones a la vista', () => {
     expect(screen.queryByLabelText('Claro')).toBeNull();
     expect(screen.queryByText('Más paletas')).toBeNull();
     expect(screen.getByText(/el color es fijo/)).toBeTruthy();
+  });
+});
+
+describe('Apariencia — H-17: el check sigue al tema que se ve', () => {
+  it('el atributo data-theme manda sobre el estado del contexto', () => {
+    expect(shownToMode('light', 'tinta')).toBe('light');
+    expect(shownToMode('tinta', 'light')).toBe('tinta');
+  });
+  it('sin atributo reconocible (nativo, fondo viejo) cae al contexto', () => {
+    expect(shownToMode(undefined, 'light')).toBe('light');
+    expect(shownToMode('carbon', 'tinta')).toBe('tinta');
   });
 });

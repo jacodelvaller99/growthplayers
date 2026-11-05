@@ -24,8 +24,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Pantalla } from '@/components/pantalla';
-import { MarkdownText, PremiumCard, useScreen } from '@/components/polaris';
+import { Fila, Pantalla } from '@/components/pantalla';
+import { MarkdownText, useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import {
@@ -156,22 +156,25 @@ function InternistaScreenInner() {
     scrollDown();
   }, [input, streaming, userId, turns, patient, scrollDown]);
 
-  // ── Header común ─────────────────────────────────────────────────────────────
+  // ── Cabecera con la gramática de `Pantalla` (meta → titular → sub), compacta:
+  //    el chat necesita su propio scroll y el campo anclado abajo, así que no
+  //    puede vivir dentro del ScrollView de `Pantalla`.
   const header = useMemo(() => (
-    <View style={[s.topRow, { paddingTop: insets.top + 12 }]}>
+    <View style={[s.head, { paddingTop: insets.top + 12 }]}>
       <Pressable
         onPress={() => router.back()}
         style={s.backBtn}
         accessibilityRole="button"
         accessibilityLabel="Volver"
         hitSlop={8}>
-        <MaterialIcons name="arrow-back" size={22} color={palette.ash} />
+        <MaterialIcons name="arrow-back" size={22} color={palette.ivory} />
       </Pressable>
-      <View>
-        <Text style={s.title}>INTERNISTA</Text>
-        <Text style={s.subtitle}>Asistente con IA · no es un médico</Text>
-      </View>
-      <View style={{ width: 36 }} />
+      <Text style={s.meta}>INTERNISTA</Text>
+      <Text accessibilityRole="header" style={s.title}>Pregunta con calma.</Text>
+      <Text style={s.subtitle}>Asistente con IA · no es un médico.</Text>
+      <Text style={s.disclaimerText}>
+        Educación general — no reemplaza a tu médico tratante.
+      </Text>
     </View>
   ), [insets.top, router]);
 
@@ -241,27 +244,18 @@ function InternistaScreenInner() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {header}
 
-      <View style={s.disclaimerBar}>
-        <MaterialIcons name="info-outline" size={14} color={palette.goldText} />
-        <Text style={s.disclaimerText} numberOfLines={2}>
-          Educación general — no reemplaza a tu médico tratante.
-        </Text>
-      </View>
-
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={s.thread}
         showsVerticalScrollIndicator={false}>
         {turns.length === 0 && !streaming && (
-          <PremiumCard style={s.intro}>
-            <Text style={s.introText}>
-              Hola{patient.name ? `, ${patient.name}` : ''}. Soy el internista educativo
-              de Polaris. Puedes preguntarme qué significan tus marcadores, qué dice la
-              evidencia sobre un hábito o suplemento, o cómo entender tus métricas de
-              wearable. Cito mis fuentes — y cuando algo necesita un médico, te lo digo.
-            </Text>
-          </PremiumCard>
+          <Text style={s.introText}>
+            Hola{patient.name ? `, ${patient.name}` : ''}. Soy el internista educativo
+            de Polaris. Puedes preguntarme qué significan tus marcadores, qué dice la
+            evidencia sobre un hábito o suplemento, o cómo entender tus métricas de
+            wearable. Cito mis fuentes — y cuando algo necesita un médico, te lo digo.
+          </Text>
         )}
         {turns.map((t, i) => (
           <View key={i} style={[s.bubble, t.role === 'user' ? s.bubbleUser : s.bubbleAI]}>
@@ -288,15 +282,12 @@ function InternistaScreenInner() {
       )}
 
       <View style={s.examsLink}>
-        <Pressable
+        <Fila
+          label="EXÁMENES"
+          value="Tus exámenes médicos"
           onPress={() => router.push('/bienestar/examenes' as never)}
-          style={s.examsLinkBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Subir o ver tus exámenes médicos">
-          <MaterialIcons name="folder" size={16} color={palette.goldText} />
-          <Text style={s.examsLinkText}>Tus exámenes médicos</Text>
-          <MaterialIcons name="chevron-right" size={16} color={palette.smoke} />
-        </Pressable>
+          last
+        />
       </View>
 
       <View style={[s.inputRow, { paddingBottom: insets.bottom + spacing.sm }]}>
@@ -327,27 +318,21 @@ function InternistaScreenInner() {
 }
 
 const s = StyleSheet.create({
-  topRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm,
+  head: {
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
+    width: '100%', maxWidth: 720, alignSelf: 'center',
   },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.title, color: palette.ivory, fontSize: 18, textAlign: 'center' },
-  subtitle: { ...typography.caption, color: palette.ash, fontSize: 12, textAlign: 'center' },
+  backBtn: { width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' },
+  meta: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
+  title: {
+    marginTop: spacing.sm, fontFamily: Fonts.displayRegular, fontWeight: '400',
+    fontSize: 28, lineHeight: 31, letterSpacing: -0.3, color: palette.ivory,
+  },
+  subtitle: { marginTop: spacing.sm, fontFamily: Fonts.sans, fontSize: 15, lineHeight: 21, color: palette.ash },
+  // Aviso en una línea, sin banda: el amarillo es del botón de enviar.
+  disclaimerText: { marginTop: 2, fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ash },
 
-  disclaimerBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.xs,
-    backgroundColor: palette.goldGlow,
-    borderTopWidth: 1, borderBottomWidth: 1, borderColor: palette.lineGoldSubtle,
-  },
-  disclaimerText: {
-    flex: 1, ...typography.caption, color: palette.goldText,
-    fontSize: 12, letterSpacing: 0.4,
-  },
-
-  intro: { marginBottom: spacing.md },
-  introText: { ...typography.body, color: palette.ash, fontSize: 13, lineHeight: 20 },
+  introText: { fontFamily: Fonts.sans, color: palette.ash, fontSize: 15, lineHeight: 23, marginBottom: spacing.md },
 
   // Medida de lectura: ~68ch. En escritorio el hilo se centra en vez de
   // estirarse a líneas de 150 caracteres.
@@ -364,7 +349,7 @@ const s = StyleSheet.create({
     alignSelf: 'flex-start', width: '100%', maxWidth: 680, backgroundColor: palette.graphite,
     borderWidth: 1, borderColor: palette.line,
   },
-  bubbleUserText: { ...typography.body, color: palette.ivory, fontSize: 13.5 },
+  bubbleUserText: { ...typography.body, color: palette.ivory, fontSize: 15, lineHeight: 22 },
   bubbleAIText: { ...typography.body, color: palette.ivory, fontSize: 15, lineHeight: 23 },
 
   quickRow: {
@@ -378,26 +363,18 @@ const s = StyleSheet.create({
   quickText: { fontFamily: Fonts.sans, color: palette.ivory, fontSize: 15 },
 
   examsLink: {
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.xs,
-  },
-  examsLinkBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    backgroundColor: palette.graphite, borderRadius: radii.sm,
-    borderWidth: 1, borderColor: palette.line,
-  },
-  examsLinkText: {
-    flex: 1, ...typography.label,
-    color: palette.ivory, fontSize: 11, letterSpacing: 0.8,
+    paddingHorizontal: spacing.lg,
+    width: '100%', maxWidth: 720, alignSelf: 'center',
   },
 
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingTop: spacing.sm,
-    borderTopWidth: 1, borderTopColor: palette.line,
+    width: '100%', maxWidth: 720, alignSelf: 'center',
   },
+  // 16 px: por debajo, Safari en iOS hace zoom al enfocar el campo.
   input: {
-    flex: 1, ...typography.body, color: palette.ivory, fontSize: 14,
+    flex: 1, ...typography.body, color: palette.ivory, fontSize: 16, lineHeight: 22,
     backgroundColor: palette.graphite, borderRadius: radii.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderWidth: 1, borderColor: palette.line, maxHeight: 100, minHeight: 44,

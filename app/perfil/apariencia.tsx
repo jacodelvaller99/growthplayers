@@ -11,13 +11,25 @@
  */
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Pantalla } from '@/components/pantalla';
 import { Fonts, palette, spacing } from '@/constants/theme';
-import { useAppTheme } from '@/hooks/use-app-theme';
+import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
 import { APP_MODES, useAppMode, type AppMode } from '@/hooks/use-app-mode';
+
+/** El fondo que de verdad se ve: `data-theme` en <html> (solo web). */
+export function readShownTheme(): string | undefined {
+  return Platform.OS === 'web' && typeof document !== 'undefined'
+    ? document.documentElement.dataset.theme
+    : undefined;
+}
+
+/** Qué opción marcar: el atributo manda si es uno de los dos fondos; si no, el contexto. */
+export function shownToMode(shown: string | undefined, mode: ThemeMode): ThemeMode {
+  return shown === 'light' || shown === 'tinta' ? shown : mode;
+}
 
 /** Fila de elección (radio): misma línea que `Fila`, con check en vez de flecha. */
 function Opcion({
@@ -52,13 +64,21 @@ export default function AparienciaScreen() {
   // El tema que de verdad se ve es el atributo `data-theme` del documento. Si
   // alguien lo cambió por fuera (otra pestaña, extensión, el tour), el estado
   // del contexto quedaba diciendo "Oscuro" con la pantalla en claro.
-  const shown = Platform.OS === 'web' && typeof document !== 'undefined'
-    ? document.documentElement.dataset.theme
-    : undefined;
-  const effective = shown === 'light' || shown === 'tinta' ? shown : mode;
+  // Se lee al montar y se vigila: leerlo solo en el render dejaba el check
+  // viejo si el atributo cambiaba sin re-render de esta pantalla.
+  const [shown, setShown] = useState(readShownTheme);
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
+    const obs = new MutationObserver(() => setShown(readShownTheme()));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  const effective = shownToMode(shown, mode);
   useEffect(() => {
     if (effective !== mode) setMode(effective);
   }, [effective, mode, setMode]);
+  // Al elegir, el check se mueve en el mismo render (sin esperar al observer).
+  const pick = (m: ThemeMode) => { setShown(m); setMode(m); };
 
   return (
     <Pantalla
@@ -71,8 +91,8 @@ export default function AparienciaScreen() {
       {canToggle && (
         <View accessibilityRole="radiogroup" style={s.group}>
           <Text style={s.groupLabel}>CLARO U OSCURO</Text>
-          <Opcion name="Oscuro" active={effective === 'tinta'} onPress={() => setMode('tinta')} />
-          <Opcion name="Claro" active={effective === 'light'} onPress={() => setMode('light')} last />
+          <Opcion name="Oscuro" active={effective === 'tinta'} onPress={() => pick('tinta')} />
+          <Opcion name="Claro" active={effective === 'light'} onPress={() => pick('light')} last />
         </View>
       )}
 

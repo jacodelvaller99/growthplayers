@@ -23,6 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fila } from '@/components/pantalla';
+import { TourHeaderButton } from '@/components/tour/TourButton';
 import { useScreen } from '@/components/polaris';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -98,6 +99,12 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
         : `${silentFirst.name} lleva ${silentFirst.daysSilent} días sin registrarse.`
       : board.clients.length > 0 ? 'Nadie te espera ahora.' : 'Aún no tienes clientes.';
 
+  // Quien ya nombra el titular (en silencio) no se repite en la lista: titular
+  // + botón ya son dos menciones. Si era el único, la sección no se pinta.
+  const shownList = !isClients && !stage && silentFirst
+    ? list.filter((c) => c.user_id !== silentFirst.user_id)
+    : list;
+
   const split = sc.isDesktop && !!selected;
 
   const open = (id: string) => {
@@ -121,10 +128,14 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
 
   const header = (
     <View style={s.header}>
-      <Text style={s.title}>{isClients ? 'Clientes' : 'Hoy'}</Text>
-      <Text style={s.muted}>
-        {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, (ch) => ch.toUpperCase())}
-      </Text>
+      <View style={s.headerText}>
+        <Text style={s.title}>{isClients ? 'Clientes' : 'Hoy'}</Text>
+        <Text style={s.muted}>
+          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^./, (ch) => ch.toUpperCase())}
+        </Text>
+      </View>
+      {/* En el teléfono el botón del tour vive aquí, no flotando sobre la lista. */}
+      {!sc.isDesktop && <TourHeaderButton />}
     </View>
   );
 
@@ -183,7 +194,6 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
     <View style={[s.columns, !sc.isDesktop && s.columnsWrap]}>
       {STAGE_ORDER.filter((st) => board.counts[st] > 0 || stage === st).map((st) => {
         const on = stage === st;
-        const preview = board.clients.find((c) => c.stage === st);
         return (
           <Pressable
             key={st}
@@ -195,31 +205,25 @@ export function MentorBoard({ footer, view = 'today' }: { footer?: React.ReactNo
             <Text style={s.columnCount}>{board.counts[st]}</Text>
             <Text style={s.columnTitle}>{STAGE_COPY[st].title}</Text>
             <Text style={s.columnHint}>{STAGE_COPY[st].hint}</Text>
-            {sc.isDesktop && preview && (
-              <View style={s.columnPreview}>
-                <Text style={s.previewName} numberOfLines={1}>{preview.name}</Text>
-                <Text style={s.previewSub} numberOfLines={2}>{preview.reason}</Text>
-              </View>
-            )}
           </Pressable>
         );
       })}
     </View>
   );
 
-  const rows = (
+  const rows = silentFirst && shownList.length === 0 && !isClients && !stage ? null : (
     <View style={{ gap: spacing.xs }}>
       <Text style={s.listTitle}>
         {isClients ? 'Todos tus clientes' : stage ? STAGE_COPY[stage].title : 'Necesitan atención primero'}
-        <Text style={s.muted}>  ·  {list.length}</Text>
+        <Text style={s.muted}>  ·  {shownList.length}</Text>
       </Text>
-      {list.length === 0 ? (
+      {shownList.length === 0 ? (
         <Text style={s.empty}>
           {isClients && q ? 'Nadie con ese nombre.' : stage ? 'Nadie en esta etapa.' : isAdmin && effectiveScope === 'mine'
             ? 'No tienes clientes asignados. Mira "Todos".'
             : 'Cuando te asignen clientes, aparecen aquí.'}
         </Text>
-      ) : list.map((c) => (
+      ) : shownList.map((c) => (
         <ClientRow key={c.user_id} client={c} active={selected === c.user_id} onPress={() => open(c.user_id)} />
       ))}
     </View>
@@ -329,7 +333,8 @@ const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   muted: { ...typography.caption, color: palette.ash },
 
-  header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  headerText: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: spacing.md },
   title: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 28, letterSpacing: 0.4, color: palette.ivory },
 
   banner: {
@@ -393,14 +398,6 @@ const s = StyleSheet.create({
   columnCount: { fontFamily: Fonts.display, fontWeight: '300', fontSize: 34, lineHeight: 40, color: palette.ivory },
   columnTitle: { ...typography.body, fontWeight: '600', color: palette.ivory, marginTop: spacing.xs },
   columnHint: { ...typography.caption, color: palette.ash },
-  columnPreview: {
-    marginTop: spacing.md,
-    padding: spacing.sm,
-    borderRadius: radii.sm,
-    backgroundColor: palette.black,
-  },
-  previewName: { ...typography.caption, color: palette.ivory, fontWeight: '600' },
-  previewSub: { ...typography.caption, color: palette.smoke, fontSize: 11 },
 
   listTitle: { ...typography.body, fontWeight: '600', color: palette.ivory, marginBottom: spacing.xs },
   empty: { ...typography.caption, color: palette.smoke, paddingVertical: spacing.md },
