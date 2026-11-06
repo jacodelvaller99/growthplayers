@@ -22,6 +22,7 @@ import {
 import { ACTIVE_MODULE } from '@/data/modules';
 import { currentWeek, currentWeekNumber, TOTAL_WEEKS } from '@/data/mentorship';
 import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
+import { HistoriaDelDia } from '@/components/HistoriaDelDia';
 import { spacing } from '@/constants/theme';
 import { protocolSnapshot } from '@/lib/protocolSnapshot';
 import { selectTurno, type TurnoKind } from '@/lib/turnoLogic';
@@ -404,10 +405,11 @@ export default function DashboardScreen() {
       {!!anomalyLine && (
         <Fila label="NORMAN NOTÓ" value={anomalyLine} tone="warn" onPress={() => router.push('/(tabs)/mentor' as never)} />
       )}
-      <Fila
-        label={nextLesson.isDayZero ? 'EMPIEZA AQUÍ' : 'TU LECCIÓN'}
-        value={nextLesson.lesson?.title ?? ACTIVE_MODULE.title}
-        onPress={() => router.push((nextLessonRoute ?? `/module/${ACTIVE_MODULE.id}`) as never)}
+      <HistoriaDelDia
+        jornada={jornada}
+        lesson={nextLesson.lesson}
+        lessonRoute={nextLessonRoute ?? `/module/${ACTIVE_MODULE.id}`}
+        onGo={(route) => router.push(route as never)}
       />
       <Fila
         label="MENTORÍA"
@@ -416,7 +418,7 @@ export default function DashboardScreen() {
       />
       <Fila
         label="BIENESTAR"
-        value="Respirar, meditar, escribir"
+        value="Todas las prácticas"
         onPress={() => router.push('/bienestar' as never)}
         last
       />
