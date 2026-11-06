@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -23,6 +23,7 @@ import { CommentSheet } from '@/components/circle';
 import { db2, supabase } from '@/lib/supabase';
 import { pickPhoto, uploadPhoto, type PickedPhoto } from '@/lib/communityMedia';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
 import {
   COMMUNITY_EULA,
@@ -88,7 +89,9 @@ function PostPhoto({ uri }: { uri: string }) {
 export default function ComunidadScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userId } = useLifeFlow();
+  const { userId, state } = useLifeFlow();
+  const myName = state.profile.name || '';
+  const { isDesktop } = useBreakpoint();
 
   const [posts, setPosts]         = useState<Post[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -260,6 +263,35 @@ export default function ComunidadScreen() {
   }, [eulaState, loadPosts]);
 
   const handleRefresh = () => { setRefreshing(true); loadPosts(); };
+
+  // Miembros que participan (el más reciente primero) — fila tipo «historias».
+  const members = useMemo(() => {
+    const seen = new Map<string, { id: string; name: string; avatar: string | null; today: boolean }>();
+    for (const p of posts) {
+      if (seen.has(p.user_id)) continue;
+      seen.set(p.user_id, { id: p.user_id, name: p.author_name, avatar: p.author_avatar, today: Date.now() - new Date(p.created_at).getTime() < 86_400_000 });
+    }
+    return [...seen.values()].slice(0, 20);
+  }, [posts]);
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const weekPosts = posts.filter((p) => new Date(p.created_at).getTime() >= weekAgo).length;
+  const weekPhotos = posts.filter((p) => p.image_url && new Date(p.created_at).getTime() >= weekAgo).length;
+
+  const openProfile = (id: string) => {
+    if (id === userId) return;
+    router.push({ pathname: '/comunidad/perfil/[id]', params: { id } } as never);
+  };
+
+  const lastTapRef = useRef<{ id: string; at: number } | null>(null);
+  const onPhotoTap = (post: Post) => {
+    const now = Date.now();
+    if (lastTapRef.current?.id === post.id && now - lastTapRef.current.at < 350) {
+      if (!post.liked) toggleLike(post);
+      lastTapRef.current = null;
+    } else {
+      lastTapRef.current = { id: post.id, at: now };
+    }
+  };
 
   const toggleLike = async (post: Post) => {
     if (!userId) return;
@@ -474,151 +506,206 @@ export default function ComunidadScreen() {
           </Pressable>
         )}
 
-        <View style={styles.column}>
-        <Text accessibilityRole="header" style={styles.headline}>La comunidad.</Text>
-        <Text style={styles.whoReads}>Lo ven solo los miembros de Polaris.</Text>
-
-        {/* Nueva publicación: texto + foto */}
-        <View style={styles.composeCard}>
-          <TextInput
-            ref={inputRef}
-            style={styles.composeInput}
-            value={newPost}
-            onChangeText={(t) => { setNewPost(t); if (postError) setPostError(null); }}
-            placeholder="¿Qué quieres compartir hoy?"
-            placeholderTextColor={palette.smoke}
-            multiline
-            maxLength={500}
-            accessibilityLabel="Escribe tu publicación"
-          />
-          {photo && (
-            <View style={styles.previewWrap}>
-              <Image source={{ uri: photo.previewUrl }} style={styles.preview} resizeMode="cover" accessibilityLabel="Foto elegida" />
-              <Pressable onPress={() => setPhoto(null)} style={styles.previewRemove} accessibilityRole="button" accessibilityLabel="Quitar la foto">
-                <MaterialIcons name="close" size={18} color={palette.ink} />
-              </Pressable>
-            </View>
-          )}
-          <View style={styles.composeBar}>
-            <Pressable onPress={choosePhoto} style={styles.photoBtn} accessibilityRole="button" accessibilityLabel="Agregar una foto">
-              <MaterialIcons name="photo-camera" size={20} color={palette.goldText} />
-              <Text style={styles.photoBtnText}>Foto</Text>
-            </Pressable>
-            <Pressable
-              onPress={submitPost}
-              disabled={submitting || (!newPost.trim() && !photo)}
-              style={[styles.publishBtn, (submitting || (!newPost.trim() && !photo)) && styles.publishBtnOff]}
-              accessibilityRole="button"
-              accessibilityLabel="Publicar"
-              accessibilityState={{ disabled: submitting || (!newPost.trim() && !photo) }}>
-              {submitting
-                ? <ActivityIndicator color={palette.ink} />
-                : <Text style={styles.publishText}>PUBLICAR</Text>}
-            </Pressable>
-          </View>
-        </View>
-        {postError && (
-          <Text style={styles.postError}>{postError}</Text>
-        )}
-
-        {/* Feed */}
         <ScrollView
-          contentContainerStyle={styles.feed}
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.page}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={palette.gold}
-              colors={[palette.gold]}
-            />
-          }
-        >
-          {loading && (
-            <View style={styles.loadingState}>
-              <Text style={styles.loadingText}>Cargando publicaciones…</Text>
-            </View>
-          )}
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={palette.gold} colors={[palette.gold]} />
+          }>
+          <View style={[styles.layout, isDesktop && styles.layoutDesk]}>
+            <View style={styles.feedCol}>
+              <Text accessibilityRole="header" style={[styles.headline, isDesktop && styles.headlineDesk]}>Comunidad</Text>
+              <Text style={styles.whoReads}>
+                {members.length > 0 ? `${members.length} ${members.length === 1 ? 'miembro activo' : 'miembros activos'} · ` : ''}Solo la ven los miembros de Polaris.
+              </Text>
 
-          {!loading && posts.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Todavía nadie ha escrito.</Text>
-              <Text style={styles.emptySubtext}>Sé el primero en compartir algo.</Text>
-            </View>
-          )}
+              {/* Quién está participando — como las historias de una red social */}
+              {members.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.membersRow}>
+                  {members.map((m) => (
+                    <Pressable
+                      key={m.id}
+                      onPress={() => openProfile(m.id)}
+                      style={styles.member}
+                      accessibilityRole="link"
+                      accessibilityLabel={`Ver el perfil de ${m.name}${m.today ? ', publicó hoy' : ''}`}>
+                      <View style={[styles.memberRing, m.today && styles.memberRingOn]}>
+                        <Avatar id={m.id} name={m.name} uri={m.avatar} size={56} />
+                      </View>
+                      <Text style={styles.memberName} numberOfLines={1}>{m.name.split(' ')[0]}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
 
-          {posts.map(post => (
-            <View key={post.id} style={[styles.postCard, post.is_pinned && styles.postCardPinned]}>
-              {post.is_pinned && (
-                <View style={styles.pinnedBadge}>
-                  <MaterialIcons name="push-pin" size={12} color={palette.smoke} />
-                  <Text style={styles.pinnedText}>Fijado</Text>
+              {/* Nueva publicación: texto + foto */}
+              <View style={styles.composeCard}>
+                <View style={styles.composeTop}>
+                  <Avatar id={userId ?? 'me'} name={myName} uri={null} size={44} />
+                  <TextInput
+                    ref={inputRef}
+                    style={styles.composeInput}
+                    value={newPost}
+                    onChangeText={(t) => { setNewPost(t); if (postError) setPostError(null); }}
+                    placeholder={`¿Qué quieres compartir hoy, ${myName.split(' ')[0] || 'tú'}?`}
+                    placeholderTextColor={palette.smoke}
+                    multiline
+                    maxLength={500}
+                    accessibilityLabel="Escribe tu publicación"
+                  />
+                </View>
+                {photo && (
+                  <View style={styles.previewWrap}>
+                    <Image source={{ uri: photo.previewUrl }} style={styles.preview} resizeMode="cover" accessibilityLabel="Foto elegida" />
+                    <Pressable onPress={() => setPhoto(null)} style={styles.previewRemove} accessibilityRole="button" accessibilityLabel="Quitar la foto">
+                      <MaterialIcons name="close" size={18} color={palette.ink} />
+                    </Pressable>
+                  </View>
+                )}
+                <View style={styles.composeBar}>
+                  <Pressable onPress={choosePhoto} style={styles.photoBtn} accessibilityRole="button" accessibilityLabel="Agregar una foto">
+                    <MaterialIcons name="add-photo-alternate" size={22} color={palette.goldText} />
+                    <Text style={styles.photoBtnText}>Foto</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={submitPost}
+                    disabled={submitting || (!newPost.trim() && !photo)}
+                    style={[styles.publishBtn, (submitting || (!newPost.trim() && !photo)) && styles.publishBtnOff]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Publicar"
+                    accessibilityState={{ disabled: submitting || (!newPost.trim() && !photo) }}>
+                    {submitting
+                      ? <ActivityIndicator color={palette.ink} />
+                      : <Text style={styles.publishText}>PUBLICAR</Text>}
+                  </Pressable>
+                </View>
+              </View>
+              {postError && <Text style={styles.postError}>{postError}</Text>}
+
+              {loading && (
+                <View style={styles.loadingState}>
+                  <ActivityIndicator color={palette.goldText} />
                 </View>
               )}
-              <View style={styles.postHeader}>
-                {/* Sin insignia de equipo: decidirla por el nombre dejaba que cualquiera
-                    llamado "Norman" publicara como "Equipo Polaris" (suplantación).
-                    Vuelve cuando el select traiga un rol del servidor. */}
-                <Avatar id={post.user_id} name={post.author_name} uri={post.author_avatar} size={36} />
-                <View style={styles.postMeta}>
-                  <Text style={styles.postAuthor} numberOfLines={1}>{post.author_name}</Text>
-                  <Text style={styles.postTime}>{timeAgo(post.created_at)}</Text>
+
+              {!loading && posts.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>Todavía nadie ha publicado.</Text>
+                  <Text style={styles.emptySubtext}>Comparte la primera foto o la primera idea.</Text>
                 </View>
-                {/* Menú de moderación / DM por post (no en tus propios posts) */}
-                {post.user_id !== userId && (
-                  <Pressable
-                    onPress={() => setActionPost(post)}
-                    style={styles.moreBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel="Opciones de la publicación">
-                    <MaterialIcons name="more-horiz" size={20} color={palette.smoke} />
-                  </Pressable>
-                )}
-              </View>
-              {!!post.content.trim() && <Text style={styles.postContent}>{post.content}</Text>}
-              {!!post.image_url && <PostPhoto uri={post.image_url} />}
-              <View style={styles.postActions}>
-                <Pressable
-                  onPress={() => toggleLike(post)}
-                  style={styles.likeBtn}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: post.liked }}
-                  accessibilityLabel={post.liked ? `Quitar me gusta, ${post.likes_count} me gusta` : `Me gusta, ${post.likes_count} me gusta`}>
-                  <MaterialIcons
-                    name={post.liked ? 'favorite' : 'favorite-border'}
-                    size={22}
-                    color={post.liked ? palette.goldText : palette.ash}
-                  />
-                  <Text style={[styles.likeCount, post.liked && { color: palette.goldText }]}>
-                    {post.likes_count > 0 ? post.likes_count : ''}
-                  </Text>
+              )}
+
+              {posts.map((post) => (
+                <View key={post.id} style={styles.card}>
+                  {post.is_pinned && (
+                    <View style={styles.pinnedBadge}>
+                      <MaterialIcons name="push-pin" size={14} color={palette.goldText} />
+                      <Text style={styles.pinnedText}>Fijado</Text>
+                    </View>
+                  )}
+                  <View style={styles.postHeader}>
+                    {/* Sin insignia de equipo: decidirla por el nombre dejaba que cualquiera
+                        llamado "Norman" publicara como "Equipo Polaris" (suplantación).
+                        Vuelve cuando el select traiga un rol del servidor. */}
+                    <Pressable
+                      onPress={() => openProfile(post.user_id)}
+                      style={styles.authorLink}
+                      accessibilityRole="link"
+                      accessibilityLabel={`Ver el perfil de ${post.author_name}`}>
+                      <Avatar id={post.user_id} name={post.author_name} uri={post.author_avatar} size={44} />
+                      <View style={styles.postMeta}>
+                        <Text style={styles.postAuthor} numberOfLines={1}>{post.author_name}</Text>
+                        <Text style={styles.postTime}>{timeAgo(post.created_at)}</Text>
+                      </View>
+                    </Pressable>
+                    {post.user_id !== userId && (
+                      <Pressable
+                        onPress={() => setActionPost(post)}
+                        style={styles.moreBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel="Opciones de la publicación">
+                        <MaterialIcons name="more-horiz" size={22} color={palette.smoke} />
+                      </Pressable>
+                    )}
+                  </View>
+                  {!!post.content.trim() && <Text style={styles.postContent}>{post.content}</Text>}
+                  {!!post.image_url && (
+                    // Doble toque en la foto = me gusta (como en cualquier red social).
+                    <Pressable onPress={() => onPhotoTap(post)} accessibilityRole="image" accessibilityLabel="Foto de la publicación. Doble toque para dar me gusta">
+                      <PostPhoto uri={post.image_url} />
+                    </Pressable>
+                  )}
+                  <View style={styles.postActions}>
+                    <Pressable
+                      onPress={() => toggleLike(post)}
+                      style={styles.likeBtn}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: post.liked }}
+                      accessibilityLabel={post.liked ? `Quitar me gusta, ${post.likes_count} me gusta` : `Me gusta, ${post.likes_count} me gusta`}>
+                      <MaterialIcons name={post.liked ? 'favorite' : 'favorite-border'} size={24} color={post.liked ? palette.goldText : palette.ivory} />
+                      <Text style={[styles.likeCount, post.liked && { color: palette.goldText }]}>{post.likes_count > 0 ? post.likes_count : ''}</Text>
+                    </Pressable>
+                    {ENV.socialSpacesEnabled && (
+                      <Pressable
+                        onPress={() => setCommentsFor(post.id)}
+                        style={styles.likeBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Comentarios, ${post.comments_count}`}>
+                        <MaterialIcons name="chat-bubble-outline" size={22} color={palette.ivory} />
+                        <Text style={styles.likeCount}>{post.comments_count > 0 ? post.comments_count : ''}</Text>
+                      </Pressable>
+                    )}
+                    {post.user_id !== userId && (
+                      <Pressable
+                        onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: post.user_id, name: post.author_name } } as never)}
+                        style={styles.likeBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Escribir un mensaje privado a ${post.author_name}`}>
+                        <MaterialIcons name="send" size={21} color={palette.ivory} />
+                      </Pressable>
+                    )}
+                  </View>
+                  {ENV.socialSpacesEnabled && (
+                    <Pressable onPress={() => setCommentsFor(post.id)} accessibilityRole="button" style={styles.commentsLink}>
+                      <Text style={styles.commentsLinkText}>
+                        {post.comments_count > 0
+                          ? `Ver ${post.comments_count === 1 ? 'el comentario' : `los ${post.comments_count} comentarios`}`
+                          : 'Escribe el primer comentario'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {isDesktop && (
+              <View style={styles.side}>
+                <View style={styles.sideCard}>
+                  <Text style={styles.sideMeta}>ESTA SEMANA</Text>
+                  <View style={styles.sideStats}>
+                    <View><Text style={styles.sideNum}>{weekPosts}</Text><Text style={styles.sideLabel}>publicaciones</Text></View>
+                    <View><Text style={styles.sideNum}>{weekPhotos}</Text><Text style={styles.sideLabel}>fotos</Text></View>
+                    <View><Text style={styles.sideNum}>{members.length}</Text><Text style={styles.sideLabel}>miembros</Text></View>
+                  </View>
+                </View>
+                <Pressable onPress={() => router.push('/comunidad/mensajes' as never)} style={styles.sideRow} accessibilityRole="link">
+                  <MaterialIcons name="chat-bubble-outline" size={20} color={palette.goldText} />
+                  <Text style={styles.sideRowText}>Mensajes</Text>
+                  <MaterialIcons name="arrow-forward" size={18} color={palette.smoke} />
                 </Pressable>
                 {ENV.socialSpacesEnabled && (
-                  <Pressable
-                    onPress={() => setCommentsFor(post.id)}
-                    style={styles.likeBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Comentarios, ${post.comments_count}`}>
-                    <MaterialIcons name="chat-bubble-outline" size={20} color={palette.ash} />
-                    <Text style={styles.likeCount}>{post.comments_count > 0 ? post.comments_count : ''}</Text>
-                  </Pressable>
-                )}
-                {post.user_id !== userId && (
-                  <Pressable
-                    onPress={() => router.push({ pathname: '/comunidad/chat/[id]', params: { id: post.user_id, name: post.author_name } } as never)}
-                    style={styles.likeBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Escribir un mensaje privado a ${post.author_name}`}>
-                    <MaterialIcons name="send" size={19} color={palette.ash} />
+                  <Pressable onPress={() => router.push('/comunidad' as never)} style={styles.sideRow} accessibilityRole="link">
+                    <MaterialIcons name="event" size={20} color={palette.goldText} />
+                    <Text style={styles.sideRowText}>Eventos y espacios</Text>
+                    <MaterialIcons name="arrow-forward" size={18} color={palette.smoke} />
                   </Pressable>
                 )}
               </View>
-            </View>
-          ))}
-
-          <View style={{ height: 20 }} />
+            )}
+          </View>
         </ScrollView>
-        </View>
 
         {/* ── El Círculo: comentarios (solo con flag activo) ── */}
         {ENV.socialSpacesEnabled && (
@@ -716,13 +803,35 @@ const styles = StyleSheet.create({
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   meta:            { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ash },
-  column:          { flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center' },
-  headline:        { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 36, color: palette.ivory, letterSpacing: -0.3, marginHorizontal: spacing.md, marginTop: spacing.md },
+  page:            { paddingBottom: 96 },
+  layout:          { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: spacing.md },
+  layoutDesk:      { maxWidth: 1040, flexDirection: 'row', gap: 40, alignItems: 'flex-start', paddingHorizontal: spacing.lg },
+  feedCol:         { flex: 1, minWidth: 0 },
+  headline:        { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 44, lineHeight: 48, color: palette.ivory, letterSpacing: -1, marginTop: spacing.md },
+  headlineDesk:    { fontSize: 64, lineHeight: 68 },
+  membersRow:      { gap: 14, paddingVertical: spacing.md },
+  member:          { width: 68, alignItems: 'center', gap: 6 },
+  memberRing:      { padding: 3, borderRadius: 40, borderWidth: 2, borderColor: palette.line },
+  memberRingOn:    { borderColor: palette.gold },
+  memberName:      { fontFamily: Fonts.sans, fontSize: 13, color: palette.ash, maxWidth: 68 },
+  composeTop:      { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  card:            { backgroundColor: palette.graphite, borderRadius: 12, borderWidth: 1, borderColor: palette.line, padding: spacing.md, marginBottom: spacing.md, overflow: 'hidden' },
+  authorLink:      { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 },
+  commentsLink:    { minHeight: 32, justifyContent: 'center' },
+  commentsLinkText:{ fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke },
+  side:            { width: 300, gap: spacing.sm, marginTop: 120 },
+  sideCard:        { backgroundColor: palette.gold, borderRadius: 12, padding: spacing.lg, gap: spacing.md, marginBottom: spacing.sm },
+  sideMeta:        { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.ink },
+  sideStats:       { flexDirection: 'row', justifyContent: 'space-between' },
+  sideNum:         { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 40, lineHeight: 44, color: palette.ink, fontVariant: ['tabular-nums'] },
+  sideLabel:       { fontFamily: Fonts.sans, fontSize: 13, color: palette.ink },
+  sideRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.md, borderRadius: 12, borderWidth: 1, borderColor: palette.line },
+  sideRowText:     { flex: 1, fontFamily: Fonts.sans, fontSize: 16, color: palette.ivory },
   headerLink:      { minHeight: 44, paddingHorizontal: spacing.sm, alignItems: 'center', justifyContent: 'center' },
   headerLinkText:  { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory },
-  whoReads:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, marginHorizontal: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
+  whoReads:        { fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke, marginTop: spacing.sm },
 
-  composeCard:     { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, gap: spacing.sm, borderWidth: 1, borderColor: palette.line },
+  composeCard:     { marginBottom: spacing.lg, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, gap: spacing.sm, borderWidth: 1, borderColor: palette.line },
   composeBar:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   photoBtn:        { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: spacing.sm, borderRadius: 999, borderWidth: 1, borderColor: palette.lineGold },
   photoBtnText:    { fontFamily: Fonts.sans, fontSize: 15, color: palette.goldText },
@@ -732,14 +841,13 @@ const styles = StyleSheet.create({
   previewWrap:     { position: 'relative', alignSelf: 'flex-start' },
   preview:         { width: 120, height: 120, borderRadius: radii.sm },
   previewRemove:   { position: 'absolute', top: 6, right: 6, width: 32, height: 32, borderRadius: 16, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
-  postPhoto:       { width: '100%', borderRadius: radii.sm, marginBottom: spacing.md, backgroundColor: palette.graphite },
-  composeInput:    { color: palette.ivory, fontFamily: Fonts.sans, fontSize: 17, minHeight: 56, maxHeight: 140, lineHeight: 24 },
-  postError:       { color: palette.danger, fontFamily: Fonts.sans, fontSize: 12, lineHeight: 17, marginHorizontal: spacing.md, marginBottom: spacing.sm },
+  postPhoto:       { marginHorizontal: -spacing.md, marginBottom: spacing.sm, backgroundColor: palette.black },
+  composeInput:    { flex: 1, paddingTop: 10, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 17, minHeight: 56, maxHeight: 140, lineHeight: 24 },
+  postError:       { color: palette.danger, fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, marginTop: -spacing.sm, marginBottom: spacing.md },
 
   notice:          { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, borderRadius: radii.sm },
   noticeText:      { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 12.5, lineHeight: 17 },
 
-  feed:            { paddingHorizontal: spacing.md },
 
   soonWrap:        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.md },
   soonIcon:        { width: 96, height: 96, borderRadius: 48, backgroundColor: palette.goldLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.lineGold, marginBottom: spacing.sm },
@@ -766,8 +874,6 @@ const styles = StyleSheet.create({
   emptyTitle:      { fontFamily: Fonts.sans, fontSize: 17, color: palette.ivory },
   emptySubtext:    { ...typography.caption, color: palette.smoke },
 
-  postCard:        { paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: palette.line },
-  postCardPinned:  {},
 
   pinnedBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
   pinnedText:      { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },
