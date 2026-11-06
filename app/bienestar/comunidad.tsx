@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -20,6 +21,7 @@ import { ENV } from '@/app/config/env';
 import { Avatar } from '@/components/Avatar';
 import { CommentSheet } from '@/components/circle';
 import { db2, supabase } from '@/lib/supabase';
+import { pickPhoto, uploadPhoto, type PickedPhoto } from '@/lib/communityMedia';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
 import {
@@ -54,6 +56,8 @@ interface Post {
   author_name:   string;
   author_avatar: string | null;
   liked:         boolean;
+  image_url:     string | null;
+  comments_count: number;
 }
 
 function timeAgo(iso: string): string {
@@ -62,6 +66,23 @@ function timeAgo(iso: string): string {
   if (diff < 3600) return `${Math.floor(diff / 60)}m`;
   if (diff < 86400)return `${Math.floor(diff / 3600)}h`;
   return `${Math.floor(diff / 86400)}d`;
+}
+
+/** Foto de la publicación a su proporción real (sin recortar caras ni textos). */
+function PostPhoto({ uri }: { uri: string }) {
+  const [ratio, setRatio] = useState(4 / 3);
+  return (
+    <Image
+      source={{ uri }}
+      onLoad={(e: any) => {
+        const w = e?.nativeEvent?.source?.width; const h = e?.nativeEvent?.source?.height;
+        if (w && h) setRatio(Math.max(0.6, Math.min(2, w / h)));
+      }}
+      style={[styles.postPhoto, { aspectRatio: ratio }]}
+      resizeMode="cover"
+      accessibilityLabel="Foto de la publicación"
+    />
+  );
 }
 
 export default function ComunidadScreen() {
@@ -75,6 +96,7 @@ export default function ComunidadScreen() {
   const [newPost, setNewPost]     = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   // Moderación — EULA de tolerancia cero (gate de primer acceso)
@@ -158,18 +180,19 @@ export default function ComunidadScreen() {
       // La plaza general = posts SIN espacio (space_id IS NULL, El Círculo).
       // Fallback degradable: si la columna space_id aún no existe (migración
       // 20260702 pendiente), reintenta sin el filtro — el feed clásico no cambia.
-      let res = await (db2.communityPosts() as any)
-        .select('id, user_id, content, likes_count, is_pinned, created_at')
-        .is('space_id', null)
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(80);
-      if (res.error) {
-        res = await db2.communityPosts()
-          .select('id, user_id, content, likes_count, is_pinned, created_at')
-          .order('is_pinned', { ascending: false })
-          .order('created_at', { ascending: false })
-          .limit(80);
+      // Del esquema más nuevo al más viejo: si falta una columna (migración
+      // pendiente), se cae al siguiente sin romper el feed.
+      const variants: [string, boolean][] = [
+        ['id, user_id, content, likes_count, is_pinned, created_at, image_url, comments_count', true],
+        ['id, user_id, content, likes_count, is_pinned, created_at, comments_count', true],
+        ['id, user_id, content, likes_count, is_pinned, created_at', false],
+      ];
+      let res: any = { data: null, error: true };
+      for (const [cols, plaza] of variants) {
+        let q = (db2.communityPosts() as any).select(cols);
+        if (plaza) q = q.is('space_id', null);
+        res = await q.order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(80);
+        if (!res.error) break;
       }
       const { data, error } = res;
 
@@ -220,6 +243,8 @@ export default function ComunidadScreen() {
         author_name:   nameMap[p.user_id] ?? 'Miembro',
         author_avatar: avatarMap[p.user_id] ?? null,
         liked:         userLikes.has(p.id),
+        image_url:     p.image_url ?? null,
+        comments_count: p.comments_count ?? 0,
       }));
 
       setPosts(mapped);
@@ -260,27 +285,44 @@ export default function ComunidadScreen() {
     } catch { /* revertir si falla */ loadPosts(); }
   };
 
+  const choosePhoto = async () => {
+    try {
+      const picked = await pickPhoto();
+      if (picked) { setPhoto(picked); setPostError(null); }
+    } catch {
+      setPostError('No pudimos abrir tus fotos. Inténtalo de nuevo.');
+    }
+  };
+
   const submitPost = async () => {
-    if (!userId || !newPost.trim()) return;
     const text = newPost.trim();
+    if (!userId || (!text && !photo)) return;
 
     // Filtro de contenido (App Store 1.2) — rechazo determinista antes de enviar.
-    if (containsBannedContent(text)) {
+    if (text && containsBannedContent(text)) {
       setPostError('Tu mensaje contiene lenguaje que no respeta las normas de la comunidad. Edítalo para continuar.');
       return;
     }
     setPostError(null);
     setSubmitting(true);
     try {
-      await db2.communityPosts().insert({
+      const image_url = photo ? await uploadPhoto(userId, photo.blob) : null;
+      const { error } = await (db2.communityPosts() as any).insert({
         user_id:   userId,
         content:   text,
         is_pinned: false,
+        ...(image_url ? { image_url } : {}),
       });
+      if (error) throw error;
       setNewPost('');
+      setPhoto(null);
       inputRef.current?.blur();
       loadPosts();
-    } catch { /* silencioso */ }
+    } catch {
+      setPostError(photo
+        ? 'No se pudo publicar la foto. Usa JPG o PNG de menos de 5 MB e inténtalo de nuevo.'
+        : 'No se pudo publicar. Inténtalo de nuevo.');
+    }
     setSubmitting(false);
   };
 
@@ -433,37 +475,47 @@ export default function ComunidadScreen() {
         )}
 
         <View style={styles.column}>
-        <Text accessibilityRole="header" style={styles.headline}>Lo que comparten los clientes.</Text>
+        <Text accessibilityRole="header" style={styles.headline}>La comunidad.</Text>
         <Text style={styles.whoReads}>Lo ven solo los miembros de Polaris.</Text>
 
-        {/* Input nuevo post */}
-        <View style={styles.composeBox}>
+        {/* Nueva publicación: texto + foto */}
+        <View style={styles.composeCard}>
           <TextInput
             ref={inputRef}
             style={styles.composeInput}
             value={newPost}
             onChangeText={(t) => { setNewPost(t); if (postError) setPostError(null); }}
-            placeholder="Escribe algo para los demás…"
+            placeholder="¿Qué quieres compartir hoy?"
             placeholderTextColor={palette.smoke}
             multiline
             maxLength={500}
+            accessibilityLabel="Escribe tu publicación"
           />
-          <Pressable
-            onPress={submitPost}
-            disabled={submitting || !newPost.trim()}
-            style={[styles.sendBtn, (!newPost.trim() || submitting) && styles.sendBtnDisabled]}
-            accessibilityRole="button"
-            accessibilityLabel="Publicar"
-            accessibilityState={{ disabled: submitting || !newPost.trim() }}
-          >
-            {/* palette.ink (constante) sobre el fondo gold: palette.black es cv('--c-bg')
-                y en tema claro se vuelve claro -> icono claro sobre gold = invisible. */}
-            <MaterialIcons
-              name="send"
-              size={20}
-              color={!newPost.trim() || submitting ? palette.ash : palette.ink}
-            />
-          </Pressable>
+          {photo && (
+            <View style={styles.previewWrap}>
+              <Image source={{ uri: photo.previewUrl }} style={styles.preview} resizeMode="cover" accessibilityLabel="Foto elegida" />
+              <Pressable onPress={() => setPhoto(null)} style={styles.previewRemove} accessibilityRole="button" accessibilityLabel="Quitar la foto">
+                <MaterialIcons name="close" size={18} color={palette.ink} />
+              </Pressable>
+            </View>
+          )}
+          <View style={styles.composeBar}>
+            <Pressable onPress={choosePhoto} style={styles.photoBtn} accessibilityRole="button" accessibilityLabel="Agregar una foto">
+              <MaterialIcons name="photo-camera" size={20} color={palette.goldText} />
+              <Text style={styles.photoBtnText}>Foto</Text>
+            </Pressable>
+            <Pressable
+              onPress={submitPost}
+              disabled={submitting || (!newPost.trim() && !photo)}
+              style={[styles.publishBtn, (submitting || (!newPost.trim() && !photo)) && styles.publishBtnOff]}
+              accessibilityRole="button"
+              accessibilityLabel="Publicar"
+              accessibilityState={{ disabled: submitting || (!newPost.trim() && !photo) }}>
+              {submitting
+                ? <ActivityIndicator color={palette.ink} />
+                : <Text style={styles.publishText}>PUBLICAR</Text>}
+            </Pressable>
+          </View>
         </View>
         {postError && (
           <Text style={styles.postError}>{postError}</Text>
@@ -523,7 +575,8 @@ export default function ComunidadScreen() {
                   </Pressable>
                 )}
               </View>
-              <Text style={styles.postContent}>{post.content}</Text>
+              {!!post.content.trim() && <Text style={styles.postContent}>{post.content}</Text>}
+              {!!post.image_url && <PostPhoto uri={post.image_url} />}
               <View style={styles.postActions}>
                 <Pressable
                   onPress={() => toggleLike(post)}
@@ -533,10 +586,10 @@ export default function ComunidadScreen() {
                   accessibilityLabel={post.liked ? `Quitar me gusta, ${post.likes_count} me gusta` : `Me gusta, ${post.likes_count} me gusta`}>
                   <MaterialIcons
                     name={post.liked ? 'favorite' : 'favorite-border'}
-                    size={18}
-                    color={post.liked ? palette.danger : palette.ash}
+                    size={22}
+                    color={post.liked ? palette.goldText : palette.ash}
                   />
-                  <Text style={[styles.likeCount, post.liked && { color: palette.dangerText }]}>
+                  <Text style={[styles.likeCount, post.liked && { color: palette.goldText }]}>
                     {post.likes_count > 0 ? post.likes_count : ''}
                   </Text>
                 </Pressable>
@@ -545,8 +598,9 @@ export default function ComunidadScreen() {
                     onPress={() => setCommentsFor(post.id)}
                     style={styles.likeBtn}
                     accessibilityRole="button"
-                    accessibilityLabel="Ver y escribir comentarios">
-                    <Text style={styles.actionText}>Comentar</Text>
+                    accessibilityLabel={`Comentarios, ${post.comments_count}`}>
+                    <MaterialIcons name="chat-bubble-outline" size={20} color={palette.ash} />
+                    <Text style={styles.likeCount}>{post.comments_count > 0 ? post.comments_count : ''}</Text>
                   </Pressable>
                 )}
                 {post.user_id !== userId && (
@@ -555,7 +609,7 @@ export default function ComunidadScreen() {
                     style={styles.likeBtn}
                     accessibilityRole="button"
                     accessibilityLabel={`Escribir un mensaje privado a ${post.author_name}`}>
-                    <Text style={styles.actionText}>Escribir</Text>
+                    <MaterialIcons name="send" size={19} color={palette.ash} />
                   </Pressable>
                 )}
               </View>
@@ -573,6 +627,7 @@ export default function ComunidadScreen() {
             userId={userId ?? null}
             visible={!!commentsFor}
             onClose={() => setCommentsFor(null)}
+            onCountChange={(id, delta) => setPosts((prev) => prev.map((x) => (x.id === id ? { ...x, comments_count: Math.max(0, x.comments_count + delta) } : x)))}
           />
         )}
 
@@ -666,12 +721,19 @@ const styles = StyleSheet.create({
   headerLink:      { minHeight: 44, paddingHorizontal: spacing.sm, alignItems: 'center', justifyContent: 'center' },
   headerLinkText:  { fontFamily: Fonts.sans, fontSize: 15, color: palette.ivory },
   whoReads:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, marginHorizontal: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
-  actionText:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ash },
 
-  composeBox:      { flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.sm, gap: 8, borderWidth: 1, borderColor: palette.line },
-  composeInput:    { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, minHeight: 44, maxHeight: 100, lineHeight: 20 },
-  sendBtn:         { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
-  sendBtnDisabled: { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line },
+  composeCard:     { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: palette.graphite, borderRadius: radii.sm, padding: spacing.md, gap: spacing.sm, borderWidth: 1, borderColor: palette.line },
+  composeBar:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  photoBtn:        { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: spacing.sm, borderRadius: 999, borderWidth: 1, borderColor: palette.lineGold },
+  photoBtnText:    { fontFamily: Fonts.sans, fontSize: 15, color: palette.goldText },
+  publishBtn:      { minHeight: 44, minWidth: 120, paddingHorizontal: spacing.lg, borderRadius: 999, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  publishBtnOff:   { opacity: 0.35 },
+  publishText:     { fontFamily: Fonts.display, fontWeight: '700', fontSize: 12, letterSpacing: 1.2, color: palette.ink },
+  previewWrap:     { position: 'relative', alignSelf: 'flex-start' },
+  preview:         { width: 120, height: 120, borderRadius: radii.sm },
+  previewRemove:   { position: 'absolute', top: 6, right: 6, width: 32, height: 32, borderRadius: 16, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  postPhoto:       { width: '100%', borderRadius: radii.sm, marginBottom: spacing.md, backgroundColor: palette.graphite },
+  composeInput:    { color: palette.ivory, fontFamily: Fonts.sans, fontSize: 17, minHeight: 56, maxHeight: 140, lineHeight: 24 },
   postError:       { color: palette.danger, fontFamily: Fonts.sans, fontSize: 12, lineHeight: 17, marginHorizontal: spacing.md, marginBottom: spacing.sm },
 
   notice:          { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: palette.goldLight, borderWidth: 1, borderColor: palette.lineGold, borderRadius: radii.sm },
@@ -712,11 +774,11 @@ const styles = StyleSheet.create({
 
   postHeader:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   postMeta:        { flex: 1, gap: 2 },
-  postAuthor:      { fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, fontWeight: '600', letterSpacing: 0.2 },
+  postAuthor:      { fontFamily: Fonts.sans, fontSize: 16, color: palette.ivory, fontWeight: '600', letterSpacing: 0.2 },
   postTime:        { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke },
   moreBtn:         { padding: 6, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 
-  postContent:     { fontFamily: Fonts.sans, fontSize: 14.5, color: palette.ivory, lineHeight: 23, marginBottom: spacing.md },
+  postContent:     { fontFamily: Fonts.sans, fontSize: 17, color: palette.ivory, lineHeight: 26, marginBottom: spacing.md },
 
   postActions:     { flexDirection: 'row', gap: spacing.lg, alignItems: 'center' },
   // Reaccionar/comentar: el numero puede ser una sola cifra ("3"), asi que

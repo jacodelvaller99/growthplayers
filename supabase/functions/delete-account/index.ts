@@ -191,16 +191,19 @@ Deno.serve(async (req: Request) => {
     // ── Step 1.bis: Purga de Storage PHI (exámenes médicos) ──────────────────
     // Storage NO cascadea desde auth.users — borramos a mano los objetos del
     // bucket privado medical-exams bajo la carpeta <user_id>/.
-    try {
-      const { data: files } = await adminSupabase.storage
-        .from('medical-exams')
-        .list(userId, { limit: 1000 });
-      if (files && files.length > 0) {
-        const paths = files.map((f: { name: string }) => `${userId}/${f.name}`);
-        await adminSupabase.storage.from('medical-exams').remove(paths);
+    // Igual con las fotos de la comunidad (bucket community-media, carpeta <user_id>/).
+    for (const bucket of ['medical-exams', 'community-media']) {
+      try {
+        const { data: files } = await adminSupabase.storage
+          .from(bucket)
+          .list(userId, { limit: 1000 });
+        if (files && files.length > 0) {
+          const paths = files.map((f: { name: string }) => `${userId}/${f.name}`);
+          await adminSupabase.storage.from(bucket).remove(paths);
+        }
+      } catch (e) {
+        console.error(`[delete-account] ${bucket} storage purge:`, e);
       }
-    } catch (e) {
-      console.error('[delete-account] medical-exams storage purge:', e);
     }
 
     // ── Step 2: Delete auth.users entry ──────────────────────────────────────

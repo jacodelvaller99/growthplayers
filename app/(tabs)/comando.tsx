@@ -417,6 +417,11 @@ export default function DashboardScreen() {
         onPress={() => router.push('/mentoria' as never)}
       />
       <Fila
+        label="COMUNIDAD"
+        value="Lo que comparten los demás"
+        onPress={() => router.push('/bienestar/comunidad' as never)}
+      />
+      <Fila
         label="BIENESTAR"
         value="Todas las prácticas"
         onPress={() => router.push('/bienestar' as never)}
