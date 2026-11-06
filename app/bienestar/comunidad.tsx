@@ -90,7 +90,7 @@ export default function ComunidadScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId, state } = useLifeFlow();
-  const myName = state.profile.name || '';
+  const myName = state?.profile?.name || '';
   const { isDesktop } = useBreakpoint();
 
   const [posts, setPosts]         = useState<Post[]>([]);
