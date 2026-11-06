@@ -116,7 +116,7 @@ const s = StyleSheet.create({
   hint: { fontFamily: Fonts.sans, fontSize: 15, color: palette.smoke },
   hintNow: { color: palette.goldText },
   video: {
-    marginTop: 12, aspectRatio: 16 / 9, borderRadius: 8, overflow: 'hidden',
+    marginTop: 12, width: '100%', maxWidth: 560, aspectRatio: 16 / 9, borderRadius: 8, overflow: 'hidden',
     backgroundColor: palette.ink, justifyContent: 'flex-end', padding: 16,
   },
   videoShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
