@@ -122,15 +122,16 @@ export const POLARIS_MODULES: PolarisModule[] = [
     skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/bde6664a?md=74caeed013094614a12f51428fb125b1',
     lessons: [
       { id: 'm5-1', order: 1, title: 'Los 7 niveles de consciencia', status: 'locked' },
-      { id: 'm5-2', order: 2, title: 'Llave 1 — La intención correcta', status: 'locked' },
+      { id: 'm5-2', order: 2, title: 'Llave 1 — La intención correcta', status: 'available', vimeoId: '1187396797' },
       // En Skool esta guía vive en "5.2. Llave del Pasado | Presente | Futuro"
       // (la lección de Skool abarca las llaves 2-4; ver evaluación del curso).
-      { id: 'm5-3', order: 3, title: 'Llave 2 — Libera tu pasado con el dinero', status: 'locked', resources: [{ title: 'Doc. Guía', url: 'https://docs.google.com/document/d/1M_WvWu0Udii8Vz2MRJLfOtPwcBTcF38bnmBMCoQ2uQ8/copy' }, { title: 'Test de Prosperidad', url: 'https://las-7-llaves-polaris.vercel.app/' }] },
-      { id: 'm5-4', order: 4, title: 'Llave 3 — El presente: saber vivir con lo que tienes', status: 'locked' },
-      { id: 'm5-5', order: 5, title: 'Llave 4 — El futuro: sueña sin límites', status: 'locked' },
-      { id: 'm5-6', order: 6, title: 'Llave 5 — El Camino: RECREO y CLASES', status: 'locked' },
-      { id: 'm5-7', order: 7, title: 'Llave 6 — El servicio incondicional', status: 'locked' },
-      { id: 'm5-8', order: 8, title: 'Llave 7 — La administración', status: 'locked' },
+      { id: 'm5-3', order: 3, title: 'Llave 2 — Libera tu pasado con el dinero', status: 'available', vimeoId: '1187436927', resources: [{ title: 'Doc. Guía', url: 'https://docs.google.com/document/d/1M_WvWu0Udii8Vz2MRJLfOtPwcBTcF38bnmBMCoQ2uQ8/copy' }, { title: 'Test de Prosperidad', url: 'https://las-7-llaves-polaris.vercel.app/' }] },
+      { id: 'm5-4', order: 4, title: 'Llave 3 — El presente: saber vivir con lo que tienes', status: 'available', vimeoId: '1187436927' },
+      { id: 'm5-5', order: 5, title: 'Llave 4 — El futuro: sueña sin límites', status: 'available', vimeoId: '1187436927' },
+      { id: 'm5-6', order: 6, title: 'Llave 5 — El Camino: RECREO y CLASES', status: 'available', vimeoId: '1193672135' },
+      { id: 'm5-7', order: 7, title: 'Llave 6 — El servicio incondicional', status: 'available', vimeoId: '1193672134' },
+      { id: 'm5-8', order: 8, title: 'Llave 7 — La administración', status: 'available', vimeoId: '1193683885' },
+      { id: 'm5-9', order: 9, title: 'Resumen de las 7 llaves', status: 'available', vimeoId: '1193672137' },
     ],
   },
   {
@@ -144,7 +145,7 @@ export const POLARIS_MODULES: PolarisModule[] = [
     progress: 0,
     skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/08c3550a?md=3c89b47dd9bb4deeb4391ead90d3c73e',
     lessons: [
-      { id: 'm6-1', order: 1, title: 'Planeación semanal Polaris', status: 'locked' },
+      { id: 'm6-1', order: 1, title: 'Planeación semanal Polaris', status: 'available', vimeoId: '1198244099' },
       { id: 'm6-2', order: 2, title: 'Planeación diaria: las 6 preguntas', status: 'locked' },
       { id: 'm6-3', order: 3, title: 'Cierre del día: las 4 preguntas', status: 'locked' },
     ],
@@ -190,8 +191,8 @@ export const POLARIS_MODULES: PolarisModule[] = [
     progress: 0,
     skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/13e4d406?md=b99ef2eb74164ad79251231abeb2e322',
     lessons: [
-      { id: 'm9-1', order: 1, title: 'Logrología', status: 'available', vimeoId: '1198248856' },
-      { id: 'm9-2', order: 2, title: 'Logrología — parte 2', status: 'available', vimeoId: '1198248855' },
+      { id: 'm9-1', order: 1, title: '¿Cómo consigo el resultado?', status: 'available', vimeoId: '1198248856' },
+      { id: 'm9-2', order: 2, title: 'Leyes del éxito', status: 'available', vimeoId: '1198248855' },
     ],
   },
 
@@ -227,8 +228,8 @@ export const POLARIS_MODULES: PolarisModule[] = [
   },
 
   // ── LIFEFLOW (sesiones grabadas — en desarrollo activo en Skool) ─────────────
-  // Espejo del módulo b72aa806 de Skool (14 sesiones al 2026-08-21). Los videos
-  // viven en Skool (sin vimeoId propio): cada lección abre su página de Skool.
+  // Espejo del módulo b72aa806 de Skool (30 sesiones al 2026-11-05), en orden de
+  // fecha. Cada una con su vimeoId: se ve y se mide dentro de la app.
   {
     id: 'lifeflow-sesiones',
     order: 11,
@@ -240,22 +241,22 @@ export const POLARIS_MODULES: PolarisModule[] = [
     progress: 0,
     skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806',
     lessons: [
-      { id: 'lf-1',  order: 1,  title: 'Sesión Lifeflow — 19 may', status: 'available', vimeoId: '1199485358', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=f072ec9c48204997bc9d18019beb0640' },
-      { id: 'lf-2',  order: 2,  title: 'Sesión Lifeflow — 4 jun',  status: 'available', vimeoId: '1199485357', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=e817e70ac6554748a260ff53f0a6cb41' },
-      { id: 'lf-3',  order: 3,  title: 'Sesión Lifeflow — 6 jun',  status: 'available', vimeoId: '1199486340', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=6be9d6d14f734e98962cee73152cac36' },
-      { id: 'lf-4',  order: 4,  title: 'Sesión Lifeflow — 9 jun',  status: 'available', vimeoId: '1200504559', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=bb65634f77e6422482ff24bc0bb842fb' },
-      { id: 'lf-5',  order: 5,  title: 'Sesión Lifeflow — 11 jun', status: 'available', vimeoId: '1200505031', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=880704157e1348bd9f400d7b6c86c033' },
-      { id: 'lf-6',  order: 6,  title: 'Sesión Lifeflow — 28 jul', status: 'available', vimeoId: '1218431036', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=8a40e4e9926d48e08b2b9bef3e6d66b6' },
-      { id: 'lf-7',  order: 7,  title: 'Sesión Lifeflow — 30 jul', status: 'available', vimeoId: '1218429636', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=d892554bc8844b85b4442561775204c4' },
-      { id: 'lf-8',  order: 8,  title: 'Sesión Lifeflow — 1 ago',  status: 'available', vimeoId: '1218428889', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=eaa94c521eab4d4a80dbb6c01dcd9ee3' },
-      { id: 'lf-9',  order: 9,  title: 'Sesión Lifeflow — 4 ago',  status: 'available', vimeoId: '1218428036', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=ce9e48045d09469c84a467f666e6d65d' },
-      { id: 'lf-10', order: 10, title: 'Sesión Lifeflow — 6 ago',  status: 'available', vimeoId: '1218427247', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=4827fd3a0bf040249c075ba9a8afec0e' },
-      { id: 'lf-11', order: 11, title: 'Sesión Lifeflow — 8 ago',  status: 'available', vimeoId: '1218426329', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=1d1c9906fc3c4ded812637a37bfc2a06' },
-      { id: 'lf-12', order: 12, title: 'Sesión Lifeflow — 11 ago', status: 'available', vimeoId: '1218425295', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=84a2fc4a09474084b574712966e1a5b2' },
-      { id: 'lf-13', order: 13, title: 'Sesión Lifeflow — 13 ago', status: 'available', vimeoId: '1218424678', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=7e597ec0d1fe47c5b05bb022bc682d4f' },
-      { id: 'lf-14', order: 14, title: 'Sesión Lifeflow — 15 ago', status: 'available', vimeoId: '1218990504', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=d634e98bc30141b996e3527c7e245a96' },
-      { id: 'lf-15', order: 15, title: 'Sesión Lifeflow — 21 jul', status: 'available', vimeoId: '1221181173' },
-      { id: 'lf-16', order: 16, title: 'Sesión Lifeflow — 25 jul', status: 'available', vimeoId: '1218431605' },
+      { id: 'lf-1', order: 1,  title: 'Sesión Lifeflow — 19 may', status: 'available', vimeoId: '1199485358', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=f072ec9c48204997bc9d18019beb0640' },
+      { id: 'lf-2', order: 2,  title: 'Sesión Lifeflow — 4 jun',  status: 'available', vimeoId: '1199485357', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=e817e70ac6554748a260ff53f0a6cb41' },
+      { id: 'lf-3', order: 3,  title: 'Sesión Lifeflow — 6 jun',  status: 'available', vimeoId: '1199486340', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=6be9d6d14f734e98962cee73152cac36' },
+      { id: 'lf-4', order: 4,  title: 'Sesión Lifeflow — 9 jun',  status: 'available', vimeoId: '1200504559', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=bb65634f77e6422482ff24bc0bb842fb' },
+      { id: 'lf-5', order: 5,  title: 'Sesión Lifeflow — 11 jun', status: 'available', vimeoId: '1200505031', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=880704157e1348bd9f400d7b6c86c033' },
+      { id: 'lf-15', order: 6, title: 'Sesión Lifeflow — 21 jul', status: 'available', vimeoId: '1221181173' },
+      { id: 'lf-16', order: 7, title: 'Sesión Lifeflow — 25 jul', status: 'available', vimeoId: '1218431605' },
+      { id: 'lf-6', order: 8,  title: 'Sesión Lifeflow — 28 jul', status: 'available', vimeoId: '1218431036', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=8a40e4e9926d48e08b2b9bef3e6d66b6' },
+      { id: 'lf-7', order: 9,  title: 'Sesión Lifeflow — 30 jul', status: 'available', vimeoId: '1218429636', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=d892554bc8844b85b4442561775204c4' },
+      { id: 'lf-8', order: 10,  title: 'Sesión Lifeflow — 1 ago',  status: 'available', vimeoId: '1218428889', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=eaa94c521eab4d4a80dbb6c01dcd9ee3' },
+      { id: 'lf-9', order: 11,  title: 'Sesión Lifeflow — 4 ago',  status: 'available', vimeoId: '1218428036', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=ce9e48045d09469c84a467f666e6d65d' },
+      { id: 'lf-10', order: 12, title: 'Sesión Lifeflow — 6 ago',  status: 'available', vimeoId: '1218427247', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=4827fd3a0bf040249c075ba9a8afec0e' },
+      { id: 'lf-11', order: 13, title: 'Sesión Lifeflow — 8 ago',  status: 'available', vimeoId: '1218426329', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=1d1c9906fc3c4ded812637a37bfc2a06' },
+      { id: 'lf-12', order: 14, title: 'Sesión Lifeflow — 11 ago', status: 'available', vimeoId: '1218425295', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=84a2fc4a09474084b574712966e1a5b2' },
+      { id: 'lf-13', order: 15, title: 'Sesión Lifeflow — 13 ago', status: 'available', vimeoId: '1218424678', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=7e597ec0d1fe47c5b05bb022bc682d4f' },
+      { id: 'lf-14', order: 16, title: 'Sesión Lifeflow — 15 ago', status: 'available', vimeoId: '1218990504', skoolUrl: 'https://www.skool.com/polaris-growth-institute-9573/classroom/b72aa806?md=d634e98bc30141b996e3527c7e245a96' },
       { id: 'lf-17', order: 17, title: 'Sesión Lifeflow — 18 ago', status: 'available', vimeoId: '1228996644' },
       { id: 'lf-18', order: 18, title: 'Sesión Lifeflow — 25 ago', status: 'available', vimeoId: '1221167375' },
       { id: 'lf-19', order: 19, title: 'Sesión Lifeflow — 27 ago', status: 'available', vimeoId: '1228997228' },
