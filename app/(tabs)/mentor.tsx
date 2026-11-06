@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { sanitizeMentorText } from '@/lib/mentorSanitize';
 import { AiConsentGate } from '@/components/AiConsentGate';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -225,7 +226,7 @@ function TypingBubble({ text }: { text: string }) {
       accessibilityLabel="Norman está escribiendo"
       accessibilityLiveRegion="polite">
       {text ? (
-        <MarkdownText text={text} style={styles.typingText} />
+        <MarkdownText text={sanitizeMentorText(text)} style={styles.typingText} />
       ) : (
         <View style={styles.dotsRow}>
           <TypingDot delay={0} reducedMotion={reducedMotion} />
@@ -797,7 +798,7 @@ function MentorScreenInner() {
               {displayMessages.map((message, i) => {
                 const bubble = (
                   <ChatBubble key={message.id} role={message.role}>
-                    {message.text === LEGACY_GREETING ? GREETING : message.text}
+                    {message.text === LEGACY_GREETING ? GREETING : message.role === 'mentor' ? sanitizeMentorText(message.text) : message.text}
                   </ChatBubble>
                 );
                 // Ancla del salto: primer mensaje del día elegido en el historial.

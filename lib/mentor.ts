@@ -2,6 +2,7 @@
 // Orquesta: Claude Sonnet 4.6 vía ai-proxy (único proveedor) → simulación local si falla
 // (dev simulation cuando no hay ningún proveedor configurado)
 
+import { sanitizeMentorText } from '@/lib/mentorSanitize';
 import { ENV } from '@/app/config/env';
 import { streamAnthropic } from './anthropic';
 import type { CheckIn } from '@/types/lifeflow';
@@ -812,7 +813,7 @@ export async function streamMentorResponse(
     { role: 'system', content: systemPrompt },
     ...history.slice(-10).map((m) => ({
       role: m.role === 'mentor' ? ('assistant' as const) : ('user' as const),
-      content: m.text,
+      content: m.role === 'mentor' ? sanitizeMentorText(m.text) : m.text,
     })),
     { role: 'user' as const, content: userMessage },
   ];
@@ -830,7 +831,8 @@ export async function streamMentorResponse(
 
   for (const [name, stream] of chain) {
     try {
-      return await stream(messages, onChunk, signal);
+      // Lo que se guarda pasa por el filtro de proveedores (lib/mentorSanitize).
+      return sanitizeMentorText(await stream(messages, onChunk, signal));
     } catch (err) {
       if (isAbort(err)) throw err;
       // Sin permiso de IA no sirve probar los otros tres: es el mismo cerrojo.

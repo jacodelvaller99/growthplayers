@@ -51,9 +51,9 @@ beforeEach(() => {
 
 describe('streamMentorResponse — Claude primario con ai-proxy', () => {
   it('usa Claude cuando responde; no toca NVIDIA/Groq/OpenAI', async () => {
-    anthropicMock.mockResolvedValue('respuesta-claude');
+    anthropicMock.mockResolvedValue('respuesta-del-mentor');
     const out = await streamMentorResponse(ctx, 'hola', [], () => {});
-    expect(out).toBe('respuesta-claude');
+    expect(out).toBe('respuesta-del-mentor');
     expect(anthropicMock).toHaveBeenCalledTimes(1);
     expect(nvidiaMock).not.toHaveBeenCalled();
     expect(groqMock).not.toHaveBeenCalled();
