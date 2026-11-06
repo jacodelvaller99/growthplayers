@@ -27,6 +27,7 @@ import { HeroPanel } from '@/components/focus-deck';
 import { GoldDivider, useScreen } from '@/components/polaris';
 import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
+import { usePracticeClock } from '@/hooks/use-practice-clock';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
@@ -173,11 +174,11 @@ export default function GritoScreen() {
 
   const [phase, setPhase] = useState<Phase>(0);
   const [modality, setModality] = useState<Modality | null>(null);
-  const [activationSecs, setActivationSecs] = useState(ACTIVATION_SECS);
-  const [running, setRunning] = useState(false);
+  // Reloj por hora real (lib/practiceClock): la cuenta no se atrasa con la pantalla bloqueada.
+  const { elapsed, running, start: clockStart, stop: clockStop } = usePracticeClock();
+  const activationSecs = Math.max(0, Math.ceil(ACTIVATION_SECS - elapsed));
   const [startedAt, setStartedAt] = useState<number>(0);
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const reducedMotion = useReducedMotion();
 
@@ -198,38 +199,27 @@ export default function GritoScreen() {
     return undefined;
   }, [phase, running, reducedMotion, pulseAnim]);
 
-  // Activation countdown
+  // Activation countdown: al llegar a cero pasa sola a la ejecución.
   useEffect(() => {
-    if (phase === 1 && running) {
-      timerRef.current = setInterval(() => {
-        setActivationSecs((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            haptic('success');
-            setRunning(false);
-            setPhase(2);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (phase === 1 && running && elapsed >= ACTIVATION_SECS) {
+      clockStop();
+      haptic('success');
+      setPhase(2);
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [phase, running]);
+  }, [phase, running, elapsed, clockStop]);
 
   const startActivation = useCallback(() => {
     setStartedAt(Date.now());
-    setRunning(true);
+    clockStart();
     setPhase(1);
     haptic('light');
-  }, []);
+  }, [clockStart]);
 
   const skipToExecution = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setRunning(false);
+    clockStop();
     setPhase(2);
     haptic('light');
-  }, []);
+  }, [clockStop]);
 
   const chooseModality = useCallback((m: Modality) => {
     setModality(m);
@@ -238,7 +228,7 @@ export default function GritoScreen() {
 
   const finish = useCallback(async () => {
     const secs = Math.round((Date.now() - (startedAt || Date.now())) / 1000);
-    await saveWellnessSession({ type: 'breathing', sessionName: 'Grito de Liberación', durationSeconds: Math.max(secs, 60), completedAt: new Date().toISOString() });
+    await saveWellnessSession({ type: 'breathing', sessionName: 'Grito de Liberación', durationSeconds: Math.max(secs, 1), completedAt: new Date().toISOString() });
     haptic('success');
     setPhase(4);
   }, [saveWellnessSession, startedAt]);

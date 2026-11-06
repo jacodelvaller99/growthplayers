@@ -10,6 +10,8 @@ import SafetyWarning from '@/components/SafetyWarning';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { MOVEMENT_PRACTICES, type MovementPractice } from '@/data/movement';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { usePracticeClock } from '@/hooks/use-practice-clock';
+import { phaseAt } from '@/lib/practiceClock';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
 import { BodyContextCard, PracticeClose } from './body-context';
@@ -41,68 +43,46 @@ function MovementPlayer({
 }) {
   const { startSession: storeStart, stopSession: storeStop, setElapsed: storeElapsed } = useWellnessStore();
   const totalSeconds = practice.phases.reduce((acc, p) => acc + p.duration, 0);
-  const [running, setRunning] = useState(false);
+  // Reloj por hora real (lib/practiceClock): no se atrasa con la pantalla bloqueada.
+  const { elapsed, running, start: clockStart, stop: clockStop } = usePracticeClock();
   const [done, setDone] = useState(false);
-  const [phaseIdx, setPhaseIdx] = useState(0);
-  const [phaseRemaining, setPhaseRemaining] = useState(practice.phases[0]?.duration ?? 0);
-  const startTimeRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const durations = practice.phases.map((p) => p.duration);
+  const ph = phaseAt(durations, elapsed);
+  const phaseIdx = ph.index;
+  const phaseRemaining = ph.left;
 
   const finish = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setRunning(false);
+    const secs = clockStop();
     setDone(true);
     haptic('success');
     storeStop();
-    onComplete(Math.round((Date.now() - startTimeRef.current) / 1000));
-  }, [onComplete, storeStop]);
+    onComplete(secs);
+  }, [onComplete, storeStop, clockStop]);
 
   const start = useCallback(() => {
-    setRunning(true);
     setDone(false);
-    setPhaseIdx(0);
-    setPhaseRemaining(practice.phases[0]?.duration ?? 0);
-    startTimeRef.current = Date.now();
+    clockStart();
     haptic('medium');
     storeStart({ type: 'movement', sessionName: practice.title, targetSeconds: totalSeconds });
-  }, [practice, totalSeconds, storeStart]);
+  }, [practice, totalSeconds, storeStart, clockStart]);
 
   useEffect(() => {
     if (!running) return;
-    let idx = 0;
-    let elapsedInPhase = 0;
-    let elapsedTotal = 0;
-    timerRef.current = setInterval(() => {
-      elapsedInPhase += 1;
-      elapsedTotal += 1;
-      storeElapsed(elapsedTotal);
-      const dur = practice.phases[idx].duration;
-      if (elapsedInPhase >= dur) {
-        if (idx === practice.phases.length - 1) {
-          finish();
-          return;
-        }
-        idx += 1;
-        elapsedInPhase = 0;
-        setPhaseIdx(idx);
-        setPhaseRemaining(practice.phases[idx].duration);
-        haptic('light');
-      } else {
-        setPhaseRemaining(dur - elapsedInPhase);
-      }
-    }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running]);
+    storeElapsed(Math.floor(elapsed));
+    if (ph.done) finish();
+  }, [running, elapsed, ph.done, finish, storeElapsed]);
+
+  const lastPhaseRef = useRef(0);
+  useEffect(() => {
+    if (running && phaseIdx !== lastPhaseRef.current) haptic('light');
+    lastPhaseRef.current = phaseIdx;
+  }, [phaseIdx, running]);
 
   const handleStop = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
     storeStop();
-    setRunning(false);
+    clockStop();
     setDone(false);
-    setPhaseIdx(0);
-    setPhaseRemaining(practice.phases[0]?.duration ?? 0);
-  }, [practice, storeStop]);
+  }, [storeStop, clockStop]);
 
   const progress = (phaseIdx + (practice.phases[phaseIdx] ? 1 - phaseRemaining / practice.phases[phaseIdx].duration : 0)) / practice.phases.length;
 

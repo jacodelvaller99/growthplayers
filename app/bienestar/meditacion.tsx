@@ -19,6 +19,8 @@ import { EVIDENCE, EVIDENCE_GRADE_LABEL } from '@/data/wellnessEvidence';
 import { createMeditationAudio } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { usePracticeClock } from '@/hooks/use-practice-clock';
+import { mmss, phaseAt } from '@/lib/practiceClock';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
 import { energyFocusById, parseEnergyFocusId } from '@/lib/energyFocusLogic';
@@ -93,18 +95,19 @@ function MeditationPlayer({
     setElapsed: storeElapsed,
   } = useWellnessStore();
   const totalSeconds = session.durationMinutes * 60;
-  const [remaining, setRemaining] = useState(totalSeconds);
-  const [running, setRunning] = useState(false);
-  const [paused, setPaused]   = useState(false);
+  // Reloj por hora real (lib/practiceClock): no se atrasa con la pantalla bloqueada
+  // y las pausas no cuentan como tiempo practicado.
+  const { elapsed, running, paused, start: clockStart, pause: clockPause, resume: clockResume, stop: clockStop } = usePracticeClock();
+  const remaining = Math.max(0, totalSeconds - elapsed);
   const [done, setDone] = useState(false);
   const [doneSecs, setDoneSecs] = useState(0);
-  const [currentPhaseText, setCurrentPhaseText] = useState(session.phases[0]?.text ?? '');
-  const [phaseIdx, setPhaseIdx] = useState(0);
+  // Narradas: la fase la dicta el audio. Sin narración: sale del mismo reloj.
+  const [narratedIdx, setNarratedIdx] = useState(0);
+  const clockPhase = phaseAt(session.phases.map((p) => p.duration), elapsed, true).index;
+  const phaseIdx = session.narrated ? narratedIdx : clockPhase;
+  const currentPhaseText = session.phases[phaseIdx]?.text ?? '';
   const audioRef = useRef<ReturnType<typeof createMeditationAudio>>(null);
   const narrationRef = useRef<NarrationHandle | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const phaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Una sesión narrada puede terminar su guion antes de que el reloj visual
   // llegue a cero — sin este guard, `finishSession` correría dos veces.
   const finishedRef = useRef(false);
@@ -116,28 +119,22 @@ function MeditationPlayer({
   const finishSession = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    if (timerRef.current) clearInterval(timerRef.current);
-    setRunning(false);
+    const secs = clockStop();
     setDone(true);
     haptic('success');
     storeStop();
-     
     (audioRef as any).current?.bell();
     narrationRef.current?.stop();
     setTimeout(() => {
-       
       (audioRef as any).current?.stop();
     }, 3500);
-    const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
     setDoneSecs(secs);
     onComplete(secs);
-  }, [onComplete, storeStop]);
+  }, [onComplete, storeStop, clockStop]);
 
   const startSession = useCallback(() => {
-    setRunning(true);
-    setPaused(false);
-    setRemaining(totalSeconds);
-    startTimeRef.current = Date.now();
+    clockStart();
+    setNarratedIdx(0);
     finishedRef.current = false;
     haptic('medium');
 
@@ -148,10 +145,7 @@ function MeditationPlayer({
         musicUrl: MEDITATION_CATEGORY_MUSIC[session.category],
         binaural: session.binaural,
         phases: meditationPhasesToNarration(session),
-        onPhaseChange: (i) => {
-          setPhaseIdx(i);
-          setCurrentPhaseText(session.phases[i].text);
-        },
+        onPhaseChange: setNarratedIdx,
         onComplete: finishSession,
       });
       narrationRef.current = narration;
@@ -159,7 +153,6 @@ function MeditationPlayer({
     } else {
       // Cama musical por categoría si existe; si no, ruido procedural.
       const audio = createMeditationAudio(session.ambientType, MEDITATION_CATEGORY_MUSIC[session.category]);
-       
       (audioRef as any).current = audio;
       audio?.start();
       audio?.bell();
@@ -167,79 +160,44 @@ function MeditationPlayer({
 
     // Wire to global wellness store so mini player appears
     storeStart({ type: 'meditation', sessionName: session.title, targetSeconds: totalSeconds });
-  }, [totalSeconds, session, storeStart, finishSession]);
+  }, [totalSeconds, session, storeStart, finishSession, clockStart]);
 
-  // Countdown timer
+  // El reloj llega a cero → cierra. Mini player al segundo entero.
   useEffect(() => {
     if (!running) return;
-    timerRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          finishSession();
-          return 0;
-        }
-        const elapsed = totalSeconds - (prev - 1);
-        storeElapsed(elapsed);
-        return prev - 1;
-      });
-    }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [running, finishSession, storeElapsed, totalSeconds]);
+    storeElapsed(Math.floor(elapsed));
+    if (elapsed >= totalSeconds) finishSession();
+  }, [running, elapsed, totalSeconds, finishSession, storeElapsed]);
 
-  // Phase rotation (solo sesiones no narradas: en las narradas manda la voz)
+  // Un toque suave al cambiar de fase (solo sin narración: ahí avisa la voz).
+  const lastPhaseRef = useRef(0);
   useEffect(() => {
-    if (!running || !session.phases.length || session.narrated) return;
-    let idx = phaseIdx;
-    let elapsed = 0;
-    const phaseDurations = session.phases.map((p) => p.duration);
-
-    phaseTimerRef.current = setInterval(() => {
-      elapsed += 1;
-      const dur = phaseDurations[idx];
-      if (elapsed >= dur) {
-        elapsed = 0;
-        idx = (idx + 1) % session.phases.length;
-        setPhaseIdx(idx);
-        setCurrentPhaseText(session.phases[idx].text);
-        haptic('light');
-      }
-    }, 1000);
-    return () => { if (phaseTimerRef.current) clearInterval(phaseTimerRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running]);
+    if (running && !session.narrated && clockPhase !== lastPhaseRef.current) haptic('light');
+    lastPhaseRef.current = clockPhase;
+  }, [clockPhase, running, session.narrated]);
 
   const handleStop = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
-     
     (audioRef as any).current?.stop();
     narrationRef.current?.stop();
     narrationRef.current = null;
     storeStop();
-    setRunning(false);
-    setPaused(false);
-    setRemaining(totalSeconds);
-    setPhaseIdx(0);
-    setCurrentPhaseText(session.phases[0]?.text ?? '');
-  }, [totalSeconds, session.phases, storeStop]);
+    clockStop();
+    setNarratedIdx(0);
+  }, [storeStop, clockStop]);
 
   const handlePause = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (phaseTimerRef.current) clearInterval(phaseTimerRef.current);
     narrationRef.current?.pause();
-    setRunning(false);
-    setPaused(true);
+    clockPause();
     storePause();
     haptic('light');
-  }, [storePause]);
+  }, [storePause, clockPause]);
 
   const handleResume = useCallback(() => {
     narrationRef.current?.resume();
-    setRunning(true);
-    setPaused(false);
+    clockResume();
     storeResume();
     haptic('light');
-  }, [storeResume]);
+  }, [storeResume, clockResume]);
 
   // Final limpio: "Hecho. N min." + Volver. Sin confeti ni puntos.
   if (done) {
@@ -254,9 +212,7 @@ function MeditationPlayer({
     );
   }
 
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-  const timeLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  const timeLabel = mmss(remaining);
   const started = running || paused;
   const evidence = session.evidence ? EVIDENCE[session.evidence] : null;
 

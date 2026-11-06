@@ -9,6 +9,8 @@ import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import { BREATHING_TECHNIQUES, type BreathingTechnique } from '@/data/wellness';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
+import { usePracticeClock } from '@/hooks/use-practice-clock';
+import { phaseAt } from '@/lib/practiceClock';
 import { analytics } from '@/lib/analytics';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { BodyContextCard, PracticeClose } from './body-context';
@@ -81,108 +83,84 @@ export default function RespiracionScreen() {
   const [suggested] = useState(suggestedTech);
   const [tech, setTech] = useState<BreathingTechnique>(suggested);
   const [mode, setMode] = useState<Mode>('idle');
-  const [phaseIdx, setPhaseIdx] = useState(0);
-  const [phaseLeft, setPhaseLeft] = useState(suggested.phases[0].duration);
-  const [cycles, setCycles] = useState(0);
   const [doneMinutes, setDoneMinutes] = useState(0);
+  // Reloj por hora real (lib/practiceClock): fase, cuenta y ciclos se derivan
+  // del tiempo activo — no se atrasan con la pantalla bloqueada.
+  const { elapsed, start: clockStart, pause: clockPause, resume: clockResume, stop: clockStop, read } = usePracticeClock();
 
   const running = mode === 'running';
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const phaseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const totalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Tiempo activo: acumulado de los tramos corridos (las pausas no cuentan).
-  const activeMsRef = useRef(0);
-  const resumedAtRef = useRef(0);
 
   const phases = tech.phases;
+  const durations = phases.map((p) => p.duration);
+  const ph = phaseAt(durations, elapsed, true);
+  const phaseIdx = ph.index;
+  const phaseLeft = ph.left;
+  const cycles = ph.round;
   const currentPhase = phases[phaseIdx];
-
-  const elapsedSecs = () =>
-    Math.round((activeMsRef.current + (resumedAtRef.current ? Date.now() - resumedAtRef.current : 0)) / 1000);
 
   // Lleva el círculo al tamaño de la fase. El movimiento ES el ejercicio guiado:
   // no se apaga con reduced-motion (igual que antes).
   const animateTo = useCallback((scale: number, secs: number) => {
-    Animated.timing(scaleAnim, { toValue: scale, duration: secs * 1000, useNativeDriver: true }).start();
+    Animated.timing(scaleAnim, { toValue: scale, duration: Math.max(0, secs) * 1000, useNativeDriver: true }).start();
   }, [scaleAnim]);
 
-  // Phase countdown + advance (1s tick)
+  // Cada cambio de fase: el círculo va a su tamaño en lo que queda de la fase.
   useEffect(() => {
     if (!running) return;
-    phaseTickRef.current = setInterval(() => {
-      setPhaseLeft((left) => {
-        if (left > 1) return left - 1;
-        const nextIdx = (phaseIdx + 1) % phases.length;
-        if (nextIdx === 0) setCycles((c) => c + 1);
-        setPhaseIdx(nextIdx);
-        animateTo(phases[nextIdx].scale, phases[nextIdx].duration);
-        haptic('light');
-        return phases[nextIdx].duration;
-      });
-    }, 1000);
-    return () => {
-      if (phaseTickRef.current) clearInterval(phaseTickRef.current);
-    };
+    animateTo(phases[phaseIdx].scale, phaseLeft);
+    if (elapsed > 0.5) haptic('light');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, phaseIdx, tech.id]);
+  }, [running, phaseIdx, cycles, tech.id]);
 
-  // Total elapsed → wellness store (mini player)
+  // Mini player al segundo entero.
   useEffect(() => {
-    if (!running) return;
-    totalTimerRef.current = setInterval(() => storeElapsed(elapsedSecs()), 1000);
-    return () => { if (totalTimerRef.current) clearInterval(totalTimerRef.current); };
-  }, [running, storeElapsed]);
+    if (running) storeElapsed(Math.floor(elapsed));
+  }, [running, elapsed, storeElapsed]);
 
   const start = useCallback((t: BreathingTechnique) => {
     setTech(t);
-    setPhaseIdx(0);
-    setPhaseLeft(t.phases[0].duration);
-    setCycles(0);
-    activeMsRef.current = 0;
-    resumedAtRef.current = Date.now();
+    clockStart();
     setMode('running');
     haptic('medium');
     scaleAnim.setValue(1);
-    animateTo(t.phases[0].scale, t.phases[0].duration);
     storeStart({ type: 'breathing', sessionName: t.title, targetSeconds: minutesOf(t) * 60 });
-  }, [animateTo, scaleAnim, storeStart]);
+  }, [clockStart, scaleAnim, storeStart]);
 
   const pause = useCallback(() => {
-    activeMsRef.current += Date.now() - resumedAtRef.current;
-    resumedAtRef.current = 0;
+    clockPause();
     scaleAnim.stopAnimation();
     setMode('paused');
-  }, [scaleAnim]);
+  }, [clockPause, scaleAnim]);
 
   const resume = useCallback(() => {
-    resumedAtRef.current = Date.now();
-    animateTo(currentPhase.scale, phaseLeft);
+    clockResume();
     setMode('running');
-  }, [animateTo, currentPhase.scale, phaseLeft]);
+  }, [clockResume]);
 
   const finish = useCallback(async () => {
-    const elapsed = elapsedSecs();
-    activeMsRef.current = 0;
-    resumedAtRef.current = 0;
+    const doneCycles = phaseAt(durations, read(), true).round;
+    const secs = clockStop();
     scaleAnim.stopAnimation();
     scaleAnim.setValue(1);
     storeStop();
-    if (cycles > 0 && elapsed > 5) {
-      setDoneMinutes(Math.max(1, Math.round(elapsed / 60)));
+    if (doneCycles > 0 && secs > 5) {
+      setDoneMinutes(Math.max(1, Math.round(secs / 60)));
       setMode('done');
       await saveWellnessSession({
         type: 'breathing',
         sessionName: tech.title,
-        durationSeconds: elapsed,
+        durationSeconds: secs,
         completedAt: new Date().toISOString(),
-        metadata: { techniqueId: tech.id, cycles },
+        metadata: { techniqueId: tech.id, cycles: Math.min(doneCycles, tech.cycles) },
       });
-      analytics.breathingComplete(tech.title, cycles, elapsed * 1000);
+      analytics.breathingComplete(tech.title, Math.min(doneCycles, tech.cycles), secs * 1000);
       haptic('success');
     } else {
       setMode('idle');
     }
-  }, [cycles, saveWellnessSession, scaleAnim, storeStop, tech.id, tech.title]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [read, clockStop, saveWellnessSession, scaleAnim, storeStop, tech]);
 
   // Al completar los ciclos de la técnica, termina sola.
   useEffect(() => {
