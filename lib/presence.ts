@@ -9,27 +9,39 @@ import { supabase } from '@/lib/supabase';
 
 /** Realtime presence on a single community channel. Returns the set of user ids
  *  currently connected. Each client tracks itself under its own user id. */
+// Un solo canal compartido: supabase.channel() devuelve el MISMO canal para el
+// mismo topic, y añadirle .on() tras subscribe() lanza — con dos pantallas
+// abiertas a la vez (Mensajes + Nuevo mensaje) la segunda rompía la app.
+let shared: { channel: any; userId: string; online: Set<string>; subs: Set<(s: Set<string>) => void> } | null = null;
+
 export function usePresence(userId?: string): Set<string> {
-  const [online, setOnline] = useState<Set<string>>(() => new Set());
+  const [online, setOnline] = useState<Set<string>>(() => shared?.online ?? new Set());
 
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase.channel('presence:community', {
-      config: { presence: { key: userId } },
-    });
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        setOnline(new Set(Object.keys(state)));
-      })
-      .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          // online_at is informational; presence key (user id) is what matters.
-          channel.track({ online_at: Date.now() }).catch(() => {});
-        }
+    if (shared && shared.userId !== userId) { supabase.removeChannel(shared.channel); shared = null; }
+    if (!shared) {
+      const channel = supabase.channel('presence:community', {
+        config: { presence: { key: userId } },
       });
+      const s = { channel, userId, online: new Set<string>(), subs: new Set<(s: Set<string>) => void>() };
+      shared = s;
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          s.online = new Set(Object.keys(channel.presenceState()));
+          s.subs.forEach((fn) => fn(s.online));
+        })
+        .subscribe((status: string) => {
+          // online_at is informational; presence key (user id) is what matters.
+          if (status === 'SUBSCRIBED') channel.track({ online_at: Date.now() }).catch(() => {});
+        });
+    }
+    const s = shared;
+    s.subs.add(setOnline);
+    setOnline(s.online);
     return () => {
-      supabase.removeChannel(channel);
+      s.subs.delete(setOnline);
+      if (!s.subs.size && shared === s) { supabase.removeChannel(s.channel); shared = null; }
     };
   }, [userId]);
 
