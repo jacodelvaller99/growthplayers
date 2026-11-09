@@ -268,7 +268,7 @@ export default function ChatThreadScreen() {
             ref={listRef}
             data={rows}
             keyExtractor={(r) => r.id}
-            contentContainerStyle={rows.length === 0 ? styles.emptyWrap : { padding: spacing.md, gap: spacing.xs }}
+            contentContainerStyle={rows.length === 0 ? styles.emptyWrap : { padding: spacing.md, gap: spacing.xs, width: '100%', maxWidth: 760, alignSelf: 'center' }}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <CircleEmpty icon="chat-bubble-outline" text={`Inicia la conversación con ${peerName}.`} />
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   bubble:        { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radii.md },
   bubbleMine:    { backgroundColor: palette.gold, borderBottomRightRadius: radii.xs },
   bubbleTheirs:  { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line, borderBottomLeftRadius: radii.xs },
-  bubbleText:    { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, color: palette.ivory },
+  bubbleText:    { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 23, color: palette.ivory },
   bubbleTextMine:{ color: palette.ink },
   metaRow:       { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3, paddingHorizontal: 2 },
   metaTime:      { ...typography.mono, color: palette.smoke },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   reactionChipMine: { borderColor: palette.lineGold, backgroundColor: palette.goldLight },
   reactionChipText: { fontSize: 12 },
 
-  composer:    { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: palette.lineSoft, backgroundColor: palette.black },
+  composer:    { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: palette.lineSoft, backgroundColor: palette.black, width: '100%', maxWidth: 760, alignSelf: 'center' },
   input:       { flex: 1, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20, maxHeight: 110, minHeight: 40, backgroundColor: palette.graphite, borderRadius: radii.md, borderWidth: 1, borderColor: palette.line, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 10 },
   sendBtn:     { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { backgroundColor: palette.graphite, borderWidth: 1, borderColor: palette.line },

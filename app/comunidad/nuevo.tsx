@@ -123,7 +123,7 @@ const s = StyleSheet.create({
   column: { flex: 1, width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: spacing.md },
   title: { fontFamily: Fonts.displayRegular, fontWeight: '400', fontSize: 34, lineHeight: 38, letterSpacing: -0.5, color: palette.ivory, marginTop: spacing.md, marginBottom: spacing.lg },
   search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.md, borderRadius: 999, borderWidth: 1, borderColor: palette.line, marginBottom: spacing.md },
-  searchInput: { flex: 1, fontFamily: Fonts.sans, fontSize: 17, color: palette.ivory, minHeight: 44 },
+  searchInput: { flex: 1, fontFamily: Fonts.sans, fontSize: 17, color: palette.ivory, minHeight: 44, outlineStyle: 'none' } as any,
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 68, borderBottomWidth: 1, borderBottomColor: palette.line },
   name: { fontFamily: Fonts.sans, fontSize: 17, color: palette.ivory },
   online: { fontFamily: Fonts.sans, fontSize: 13, color: palette.goldText, marginTop: 2 },
