@@ -31,8 +31,6 @@ import { analytics } from '@/lib/analytics';
 import { AI_PROVIDERS_LABEL, aiConsentEntry, markAiConsentLocal } from '@/lib/aiConsent';
 import { ACTS } from '@/lib/narrativeLogic';
 import { logSilentError } from '@/lib/observability';
-import { purchasesAvailable } from '@/lib/subscription';
-import { ENV } from '@/app/config/env';
 import { intel, supabase } from '@/lib/supabase';
 import type { NorthStar } from '@/types/lifeflow';
 
@@ -46,8 +44,7 @@ const TOTAL_STEPS = 7;
 
 // iOS v1 sin compras (regla 3.1.1): la pantalla de canje se llama "Tu acceso"
 // y se abre desde Progreso, no desde "Planes".
-const CODE_LATER_WHERE =
-  Platform.OS === 'ios' && !purchasesAvailable(Platform.OS, ENV) ? 'desde Progreso' : 'en Planes';
+const CODE_LATER_WHERE = 'desde Yo, en «Tu acceso»';
 
 // La bienvenida cuenta la historia antes de pedir nada: los tres actos (los
 // mismos de `ACTS`, que luego pinta el mapa de Comando) y el día a día.

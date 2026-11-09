@@ -1,16 +1,11 @@
 import { purchasesAvailable, resolveEntitlement } from '@/lib/subscription';
 
 describe('purchasesAvailable', () => {
-  it('web → nunca, con o sin flag', () => {
-    expect(purchasesAvailable('web', { iosPurchasesEnabled: false })).toBe(false);
-    expect(purchasesAvailable('web', { iosPurchasesEnabled: true })).toBe(false);
-  });
-  it('ios → solo con el flag activo (regla 3.1.1)', () => {
-    expect(purchasesAvailable('ios', { iosPurchasesEnabled: false })).toBe(false);
-    expect(purchasesAvailable('ios', { iosPurchasesEnabled: true })).toBe(true);
-  });
-  it('android → como siempre, el flag de iOS no lo toca', () => {
-    expect(purchasesAvailable('android', { iosPurchasesEnabled: false })).toBe(true);
+  it('la app no vende en ninguna plataforma, con o sin flag', () => {
+    for (const p of ['web', 'ios', 'android']) {
+      expect(purchasesAvailable(p, { iosPurchasesEnabled: false })).toBe(false);
+      expect(purchasesAvailable(p, { iosPurchasesEnabled: true })).toBe(false);
+    }
   });
 });
 

@@ -412,8 +412,8 @@ export default function YoScreen() {
           de Hoy y dentro de Ajustes — nadie lo encontraba. */}
       {isStaff && <ModeSwitch current="client" style={styles.modeSwitch} />}
       <Fila
-        label="TU PLAN"
-        value={subscription.tierInfo.name}
+        label="TU ACCESO"
+        value={subscription.tier === 'free' ? 'Canjear código' : 'Activo'}
         onPress={subscription.tier === 'free' ? () => router.push('/pricing' as never) : undefined}
       />
       <Fila label="TU PROGRAMA" value="Módulos y lecciones" onPress={() => router.push('/(tabs)/programas' as never)} />

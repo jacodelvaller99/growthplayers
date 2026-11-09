@@ -46,14 +46,11 @@ export function resolveEntitlement(input: EntitlementInput): Entitlement {
 /**
  * ¿Se puede comprar dentro de la app en esta plataforma? Punto ÚNICO de verdad
  * para paywall, pricing, CTAs de upgrade e init de RevenueCat.
- * - web: nunca (RevenueCat no opera en web).
- * - ios: solo con `iosPurchasesEnabled` — en v1 no hay productos en App Store
- *   Connect; ofrecer compra sin ellos viola la regla 3.1.1. El acceso lo da el
- *   código del Navegador.
- * - android (y demás): como siempre.
+ * NUNCA (decisión del dueño, 2026-11-09): el coaching se contrata por fuera,
+ * con contrato; la app no vende nada en ninguna plataforma y RevenueCat no se
+ * inicializa. El acceso lo da el alta del equipo o el código del Navegador.
+ * Para volver a vender dentro de la app, este es el único punto a cambiar.
  */
-export function purchasesAvailable(platform: string, flags: { iosPurchasesEnabled: boolean }): boolean {
-  if (platform === 'web') return false;
-  if (platform === 'ios') return flags.iosPurchasesEnabled;
-  return true;
+export function purchasesAvailable(_platform: string, _flags: { iosPurchasesEnabled: boolean }): boolean {
+  return false;
 }

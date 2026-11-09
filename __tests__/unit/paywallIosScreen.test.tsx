@@ -9,8 +9,11 @@ import { Platform, Text } from 'react-native';
 
 (Platform as { OS: string }).OS = 'ios';
 
-const mockPush = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: mockPush }) }));
+const mockRedirect = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  Redirect: ({ href }: { href: string }) => { mockRedirect(href); return null; },
+}));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(), notificationAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: 'l', Medium: 'm' }, NotificationFeedbackType: { Success: 's', Error: 'e' },
@@ -61,14 +64,11 @@ function allText(tree: ReturnType<typeof render>): string {
 const FORBIDDEN = [/SUSCRIB/i, /Restaurar/i, /PRECIO/i, /\$\d/, /Apple ID/, /App Store/, /A medida/, /ASESOR/];
 
 describe('iOS sin compras (regla 3.1.1)', () => {
-  it('paywall: sin compra, sin restaurar, sin precios; ofrece el código', () => {
+  it('paywall: no existe como pantalla — redirige a Tu acceso', () => {
     const tree = render(<PaywallScreen />);
-    const text = allText(tree);
-    for (const re of FORBIDDEN) expect(text).not.toMatch(re);
-    expect(text).toContain('INGRESAR MI CÓDIGO');
+    expect(tree.toJSON()).toBeNull();
+    expect(mockRedirect).toHaveBeenCalledWith('/pricing');
     expect(mockGetOfferings).not.toHaveBeenCalled();
-    tree.getByText('INGRESAR MI CÓDIGO').props.onPress();
-    expect(mockPush).toHaveBeenCalledWith('/pricing');
   });
 
   it('pricing: sin planes con precio ni CTA comercial; queda el canje', () => {
