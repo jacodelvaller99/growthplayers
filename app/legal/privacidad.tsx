@@ -31,7 +31,7 @@ const SECTIONS: Section[] = [
       'Datos de salud y biométricos: peso, estatura e IMC, perfil nutricional (incluidas restricciones y alergias), suplementación, ayuno intermitente y hábitos, además de los datos sincronizados desde wearables (sueño, recuperación, HRV, frecuencia cardíaca en reposo, SpO₂, temperatura, actividad).',
       'Datos de uso y analítica: eventos de comportamiento (vistas de pantalla, uso de herramientas, envíos de chat, check-ins, impactos de paywall), sesiones de bienestar y lecciones completadas.',
       'Datos inferidos por IA (perfilado): puntuación de engagement, riesgo de abandono, "ADN de comportamiento", afinidades de contenido, detección de anomalías, asignación a cohortes y memoria episódica del mentor con embeddings vectoriales.',
-      'Datos de suscripción: nivel de suscripción, fecha de expiración y códigos de acceso usados. Los pagos y datos de tarjeta NO se procesan ni se almacenan en nuestros servidores.',
+      'Datos de acceso: nivel de acceso, fecha de vencimiento y códigos de acceso usados. La App no procesa pagos: no recibimos ni almacenamos datos de tarjeta a través de ella.',
     ],
   },
   {
@@ -54,7 +54,7 @@ const SECTIONS: Section[] = [
   {
     heading: '5. Con quién compartimos sus datos',
     body: [
-      'No vendemos sus datos personales. Los compartimos con proveedores que actúan como encargados del tratamiento estrictamente para operar la App: Supabase (base de datos y backend), Vercel (hosting web), Anthropic, NVIDIA, Groq y OpenAI (modelos de IA del mentor, transcripción y embeddings), Oura / WHOOP (origen de datos de wearable), RevenueCat (gestión de suscripciones), Apple App Store / Google Play (pagos y distribución) y Expo (notificaciones push).',
+      'No vendemos sus datos personales. Los compartimos con proveedores que actúan como encargados del tratamiento estrictamente para operar la App: Supabase (base de datos y backend), Vercel (hosting web), Anthropic, NVIDIA, Groq y OpenAI (modelos de IA del mentor, transcripción y embeddings), Oura / WHOOP (origen de datos de wearable), Apple App Store / Google Play (distribución de la App) y Expo (notificaciones push).',
       'Para personalizar las respuestas, el sistema envía a los proveedores de IA un "prompt" que incluye su Norte, sus check-ins recientes, sus tareas reflexivas, inferencias de ML y una versión humanizada de sus señales biométricas, con el fin de generar la respuesta del mentor. Este envío a terceros solo ocurre con su permiso expreso, que se le pide al registrarse (o la primera vez que usa una función de IA). Puede retirarlo en cualquier momento escribiendo a ncapuozzo@polarisgrowthinstitute.com; sin ese permiso, las funciones de IA no se activan.',
       'También podremos divulgar datos cuando lo exija la ley, una autoridad competente, o para proteger derechos, seguridad o integridad de las personas o del servicio.',
     ],

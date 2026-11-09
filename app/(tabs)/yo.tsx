@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 
 import { PrimaryButton } from '@/components/polaris';
@@ -235,13 +235,9 @@ export default function YoScreen() {
   };
 
   // GDPR: Delete account — 2-step confirmation
-  // Borrar la cuenta NO cancela la suscripción de la tienda: Apple/Google la
-  // siguen cobrando. Se avisa y se ofrece el enlace — y exportar antes —, sin
-  // bloquear el borrado.
-  const SUBS_URL = Platform.OS === 'ios'
-    ? 'https://apps.apple.com/account/subscriptions'
-    : 'https://play.google.com/store/account/subscriptions';
-  const SUBS_AVISO = 'Tu suscripción de Apple o Google NO se cancela sola al borrar la cuenta: gestiónala en la tienda.';
+  // La app no vende nada: el coaching se contrata por fuera. Borrar la cuenta
+  // no termina ese contrato — se avisa, sin bloquear el borrado.
+  const SUBS_AVISO = 'Borrar la cuenta no termina tu contrato de servicio con Polaris: para eso, escribe a tu asesor.';
 
   const handleDeleteAccount = () => {
     const runDelete = async () => {
@@ -274,11 +270,6 @@ export default function YoScreen() {
       `¿Estás seguro? Esta acción eliminará tu cuenta y TODOS tus datos de Polaris de forma permanente e irreversible.\n\n${SUBS_AVISO}`,
       [
         { text: 'Exportar mis datos', onPress: () => { void handleExport(); } },
-        // Android admite 3 botones: ahí el enlace a la tienda va en el aviso
-        // de la confirmación final.
-        ...(Platform.OS === 'ios'
-          ? [{ text: 'Gestionar suscripción', onPress: () => { void Linking.openURL(SUBS_URL); } }]
-          : []),
         { text: 'Cancelar', style: 'cancel' as const },
         {
           text: 'Continuar',
@@ -288,9 +279,6 @@ export default function YoScreen() {
               'CONFIRMACIÓN FINAL',
               `Se eliminarán: historial de check-ins, conversaciones con Norman IA, progreso de lecciones y todos los datos biométricos. Esta acción NO SE PUEDE DESHACER.\n\n${SUBS_AVISO}`,
               [
-                ...(Platform.OS === 'android'
-                  ? [{ text: 'Gestionar suscripción', onPress: () => { void Linking.openURL(SUBS_URL); } }]
-                  : []),
                 { text: 'Cancelar', style: 'cancel' as const },
                 { text: 'ELIMINAR MI CUENTA', style: 'destructive' as const, onPress: () => { void runDelete(); } },
               ],

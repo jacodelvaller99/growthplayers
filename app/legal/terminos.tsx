@@ -34,7 +34,7 @@ const SECTIONS: Section[] = [
     heading: '3. Licencia de uso',
     body: [
       'Le concedemos una licencia limitada, personal, no exclusiva, intransferible y revocable para usar la App para fines personales y no comerciales, conforme a estos Términos.',
-      'No podrá: copiar, modificar o realizar ingeniería inversa de la App; revender, sublicenciar o explotar comercialmente el contenido o el método; extraer datos masivamente (scraping); eludir medidas de seguridad, límites de uso o muros de pago; ni usar la App para fines ilícitos o que infrinjan derechos de terceros.',
+      'No podrá: copiar, modificar o realizar ingeniería inversa de la App; revender, sublicenciar o explotar comercialmente el contenido o el método; extraer datos masivamente (scraping); eludir medidas de seguridad, límites de uso o restricciones de acceso; ni usar la App para fines ilícitos o que infrinjan derechos de terceros.',
     ],
   },
   {
@@ -62,14 +62,14 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    heading: '7. Suscripciones, pagos y cancelación',
+    heading: '7. Acceso, contrato de servicio y terminación',
     body: [
-      'La App ofrece un nivel gratuito con funciones limitadas y uno o más niveles de pago con funciones ampliadas.',
-      'Procesamiento de pagos: las suscripciones se contratan y cobran a través de las tiendas de aplicaciones (Apple App Store / Google Play) y se gestionan mediante RevenueCat. No recibimos ni almacenamos los datos de su tarjeta. El cargo, la moneda y los impuestos se rigen por su tienda.',
-      'Renovación automática: salvo indicación en contrario, las suscripciones se renuevan automáticamente al final de cada periodo, al precio vigente, salvo que las cancele al menos 24 horas antes de la renovación.',
-      'Cancelación: puede cancelar la renovación en cualquier momento desde la configuración de suscripciones de su cuenta de la tienda (Apple / Google). La cancelación surte efecto al final del periodo ya pagado; conservará el acceso hasta esa fecha.',
-      'Reembolsos: las solicitudes de reembolso se rigen por las políticas de la tienda correspondiente (Apple / Google).',
-      'Cambios de precio: podremos modificar precios y planes; los cambios se comunicarán y aplicarán a periodos de renovación posteriores.',
+      'La App no vende productos, suscripciones ni contenido: dentro de ella no se realiza ninguna compra ni se procesa ningún pago.',
+      'La App es una herramienta complementaria del servicio de acompañamiento y mentoría personalizada de Polaris Growth Institute. Ese servicio se contrata directamente con nosotros, fuera de la App, mediante un contrato de servicio firmado por usted.',
+      'Acceso: su cuenta la activa nuestro equipo al firmarse el contrato, o usted mismo con el código de acceso que le entregamos. Sin contrato vigente, la App puede ofrecer un acceso limitado.',
+      'Precio, forma de pago, duración, renovación, terminación y reembolsos: se rigen exclusivamente por su contrato de servicio, no por estos Términos ni por las tiendas de aplicaciones. No recibimos ni almacenamos datos de pago a través de la App.',
+      'Fin del acceso: al terminar o vencer su contrato, el acceso ampliado a la App puede finalizar. Eliminar su cuenta de la App no termina su contrato de servicio; para ello, contacte a su asesor.',
+      'En caso de discrepancia entre estos Términos y su contrato de servicio respecto de las condiciones comerciales, prevalece el contrato.',
     ],
   },
   {
