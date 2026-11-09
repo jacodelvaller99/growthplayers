@@ -13,7 +13,7 @@ export function WearableCompat() {
   return (
     <Text style={s.text}>
       Apple Watch, Garmin, Polar, Coros, Suunto, Withings, Fitbit, Samsung y otros relojes se
-      conectan desde la app del teléfono, a través de Apple Salud o Health Connect. Oura y WHOOP
+      conectan desde la app del teléfono, a través de Apple Health o Health Connect. Oura y WHOOP
       también se conectan directo desde aquí.
     </Text>
   );

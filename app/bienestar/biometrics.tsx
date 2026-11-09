@@ -24,7 +24,7 @@ import {
 
 const PROVIDER_NAME: Record<WearableProvider, string> = {
   oura: 'Oura', whoop: 'WHOOP', polar: 'Polar', strava: 'Strava',
-  apple_health: 'Apple Salud', health_connect: 'Health Connect', aggregator: 'Tu reloj',
+  apple_health: 'Apple Health', health_connect: 'Health Connect', aggregator: 'Tu reloj',
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,7 +52,11 @@ function BiometricsBody({ onSynced }: { onSynced: () => void }) {
 
   const conn = connections[0] ?? null;
   const name = conn ? PROVIDER_NAME[conn.provider] ?? 'Tu reloj' : 'Tu reloj';
-  const footer = <Text style={s.footer}>{syncMsg ? `${syncMsg}\n\n${DISCLAIMER}` : DISCLAIMER}</Text>;
+  // App Review 2.5.1: donde se muestran datos de HealthKit, se dice de dónde vienen.
+  const disclaimer = conn?.provider === 'apple_health'
+    ? `Datos leídos de Apple Health (HealthKit) con tu permiso. ${DISCLAIMER}`
+    : DISCLAIMER;
+  const footer = <Text style={s.footer}>{syncMsg ? `${syncMsg}\n\n${disclaimer}` : disclaimer}</Text>;
 
   const sync = async () => {
     if (syncing || !conn || !userId) return;

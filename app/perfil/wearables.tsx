@@ -51,7 +51,7 @@ const PROVIDER_NAME: Record<WearableProvider, string> = {
   oura:           'Oura Ring',
   polar:          'Polar',
   strava:         'Strava',
-  apple_health:   'Apple Salud',
+  apple_health:   'Apple Health',
   health_connect: 'Google Health Connect',
   aggregator:     'Cualquier reloj',
 };
@@ -107,7 +107,7 @@ type ProviderMeta = {
 
 const ALL_PROVIDERS: ProviderMeta[] = [
   { id: 'aggregator',     name: 'Cualquier reloj' },
-  { id: 'apple_health',   name: 'Apple Salud', platform: 'ios' },
+  { id: 'apple_health',   name: 'Apple Health', platform: 'ios' },
   { id: 'health_connect', name: 'Google Health Connect', platform: 'android' },
   { id: 'whoop',          name: 'WHOOP' },
   { id: 'oura',           name: 'Oura Ring' },
@@ -478,7 +478,9 @@ export default function WearablesScreen() {
     <TarjetaOro
       meta="EN ESTE TELÉFONO"
       title={connecting === nativeFirst.id ? 'Conectando…' : `Conectar ${nativeFirst.name}`}
-      detail="Lee tu reloj desde la app de salud del teléfono."
+      detail={nativeFirst.id === 'apple_health'
+        ? 'Usa HealthKit para leer tu sueño, pulso y actividad desde la app Salud.'
+        : 'Lee tu reloj desde la app de salud del teléfono.'}
       onPress={() => { if (!connecting) void handleConnect(nativeFirst.id); }}
     />
   ) : undefined;
@@ -504,6 +506,20 @@ export default function WearablesScreen() {
               <Text style={styles.note}>
                 Apple Watch y los relojes de Google Health Connect se conectan desde la app móvil de Polaris (iOS o Android).
               </Text>
+            )}
+            {/* App Review 2.5.1: el uso de HealthKit se identifica en la interfaz. */}
+            {Platform.OS === 'ios' && (
+              <View style={styles.health}>
+                <Text style={styles.healthTitle}>APPLE HEALTH · HEALTHKIT</Text>
+                <Text style={styles.healthText}>
+                  Polaris usa HealthKit para leer, desde la app Salud de Apple y solo con tu permiso:
+                  sueño, frecuencia cardíaca, variabilidad cardíaca (HRV), pulso en reposo, pasos,
+                  energía activa, oxígeno en sangre, frecuencia respiratoria y temperatura corporal.
+                  Con eso calculamos tu recuperación y Norman adapta su acompañamiento. Polaris no
+                  escribe en Salud, y tus datos de salud no se usan para publicidad ni se comparten
+                  con terceros. Cambia los permisos en Ajustes › Salud › Acceso a datos y dispositivos.
+                </Text>
+              </View>
             )}
             <WearableCompat />
             {/* Antes decía "se almacenan cifrados" — no era cierto a nivel de columna
@@ -570,6 +586,9 @@ export default function WearablesScreen() {
 const styles = StyleSheet.create({
   footer: { gap: spacing.lg },
   note: { fontFamily: Fonts.sans, fontSize: 13, lineHeight: 19, color: palette.smoke },
+  health: { gap: spacing.xs, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: palette.line },
+  healthTitle: { fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText },
+  healthText: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 22, color: palette.ivory },
   banner: { minHeight: 44, justifyContent: 'center', marginBottom: spacing.sm },
   bannerText: { fontFamily: Fonts.sans, fontSize: 15, lineHeight: 21 },
   quiet: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
