@@ -68,6 +68,7 @@ const SECTIONS: Section[] = [
       'La App es una herramienta complementaria del servicio de acompañamiento y mentoría personalizada de Polaris Growth Institute. Ese servicio se contrata directamente con nosotros, fuera de la App, mediante un contrato de servicio firmado por usted.',
       'Acceso: su cuenta la activa nuestro equipo al firmarse el contrato, o usted mismo con el código de acceso que le entregamos. Sin contrato vigente, la App puede ofrecer un acceso limitado.',
       'Precio, forma de pago, duración, renovación, terminación y reembolsos: se rigen exclusivamente por su contrato de servicio, no por estos Términos ni por las tiendas de aplicaciones. No recibimos ni almacenamos datos de pago a través de la App.',
+      'Suspensión por falta de pago: si incumple los pagos pactados en su contrato de servicio y no los regulariza en el plazo que este establece, el servicio y el acceso ampliado a la App pueden suspenderse hasta que se pongan al día.',
       'Fin del acceso: al terminar o vencer su contrato, el acceso ampliado a la App puede finalizar. Eliminar su cuenta de la App no termina su contrato de servicio; para ello, contacte a su asesor.',
       'En caso de discrepancia entre estos Términos y su contrato de servicio respecto de las condiciones comerciales, prevalece el contrato.',
     ],
