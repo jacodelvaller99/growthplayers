@@ -49,7 +49,7 @@ const SECTIONS: Section[] = [
   {
     heading: '5. Inteligencia artificial — exactitud no garantizada',
     body: [
-      'Las respuestas del mentor se generan mediante modelos de IA de terceros (NVIDIA, Groq, OpenAI). La IA puede producir información incorrecta, incompleta, desactualizada o inapropiada ("alucinaciones").',
+      'Las respuestas del mentor se generan mediante modelos de IA de terceros (Anthropic); la transcripción de sesiones de voz usa OpenAI. La IA puede producir información incorrecta, incompleta, desactualizada o inapropiada ("alucinaciones").',
       'Usted es el único responsable de evaluar y verificar la idoneidad de cualquier sugerencia antes de actuar. No garantizamos la exactitud, fiabilidad ni resultados derivados del uso del mentor IA ni del programa.',
       'La App genera perfiles e inferencias automatizadas (engagement, riesgo de abandono, anomalías, cohortes). Son estimaciones estadísticas, no juicios definitivos sobre usted. Puede oponerse conforme a la Política de Privacidad.',
     ],
