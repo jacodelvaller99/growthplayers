@@ -134,6 +134,7 @@ function MainStack() {
         <Stack.Screen name="bienestar/suplementacion" options={{ headerShown: false }} />
         <Stack.Screen name="bienestar/comunidad" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/mensajes" options={{ headerShown: false }} />
+        <Stack.Screen name="comunidad/nuevo" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/chat/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/index" options={{ headerShown: false }} />
         <Stack.Screen name="comunidad/conexiones" options={{ headerShown: false }} />

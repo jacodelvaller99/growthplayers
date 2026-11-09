@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ENV } from '@/app/config/env';
 import { Avatar } from '@/components/Avatar';
 import { CircleEmpty } from '@/components/circle';
 import { usePresence } from '@/lib/presence';
@@ -45,9 +44,8 @@ export default function MensajesScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useLifeFlow();
   const onlineSet = usePresence(userId ?? undefined);
-  // No hay buscador de personas: se escribe a alguien de tu red (El Círculo) o
-  // desde un post de la comunidad ("Escribir"). El botón lleva a ese lugar.
-  const nuevo = () => router.push((ENV.socialSpacesEnabled ? '/comunidad/conexiones' : '/bienestar/comunidad') as never);
+  // «Nuevo mensaje» abre el buscador de miembros de la comunidad (app/comunidad/nuevo).
+  const nuevo = () => router.push('/comunidad/nuevo' as never);
 
   const [convos, setConvos]       = useState<Conversation[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -171,7 +169,7 @@ export default function MensajesScreen() {
         onPress={nuevo}
         style={styles.newBtn}
         accessibilityRole="button"
-        accessibilityLabel={ENV.socialSpacesEnabled ? 'Nuevo mensaje: elige a alguien de tu red' : 'Nuevo mensaje: elige a alguien desde la comunidad'}>
+        accessibilityLabel="Nuevo mensaje: elige a un miembro">
         <Text style={styles.newBtnText}>Nuevo mensaje</Text>
       </Pressable>
 
