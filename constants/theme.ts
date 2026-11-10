@@ -5,7 +5,7 @@ import { alpha, cv } from './themeColors';
 export const BRAND = {
   name:        'Polaris Growth Institute',
   shortName:   'Polaris',
-  tagline:     'Persigue el estado. No el resultado.',
+  tagline:     'Persigue el estado, no el resultado.',
   mentor:      'Norman',
   accentColor: '#EDBA01',
 } as const;

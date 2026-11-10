@@ -118,7 +118,7 @@ export function AccessFrame({
           <View style={styles.brandStar}>
             <PolarisLogo size={420} color={palette.ink} />
           </View>
-          <Text style={styles.brandLine}>Busca el estado,{'\n'}no el resultado.</Text>
+          <Text style={styles.brandLine}>Persigue el estado,{'\n'}no el resultado.</Text>
         </View>
       )}
 

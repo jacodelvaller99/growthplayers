@@ -315,7 +315,7 @@ export default function OnboardingScreen() {
           </View>
           <Text style={styles.welcomeTitle}>90 DÍAS.{'\n'}TRES ACTOS.</Text>
           <Text style={styles.welcomeBody}>
-            Busca el estado, no el resultado. Cada día: una lectura de cómo entras y un paso.
+            Persigue el estado, no el resultado. Cada día: una lectura de cómo entras y un paso.
           </Text>
 
           <View style={styles.introList}>

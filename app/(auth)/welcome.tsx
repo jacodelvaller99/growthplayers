@@ -32,7 +32,7 @@ export default function WelcomeScreen() {
       backdropStar
       title={'Encuentra\ntu Norte.'}
       titleSize={titleSize}
-      sub="Busca el estado, no el resultado."
+      sub="Persigue el estado, no el resultado."
       bottom={
         <>
           <PrimaryButton label="EMPEZAR" icon="arrow-forward" onPress={goRegister} />
