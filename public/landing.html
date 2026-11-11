@@ -2,6 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>
+// Si Supabase devuelve aquí un enlace de correo (recuperar contraseña,
+// confirmar cuenta, o el aviso de enlace vencido), se pasa a la app. Antes la
+// clienta quedaba en esta página, tocaba «Crear cuenta» y nunca veía el
+// formulario de contraseña nueva.
+(function () {
+  var h = location.hash, q = location.search;
+  if (!/access_token|error_code|error_description/.test(h + q)) return;
+  var dest = /type=recovery/.test(h + q) || /otp_expired|error/.test(h + q) ? '/reset-password' : '/welcome';
+  location.replace(dest + q + h);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Polaris Growth Institute — Protocolo Soberano</title>
 <meta name="description" content="Un protocolo de 90 días para decidir desde un estado de presencia, no desde el ruido. Check-in, Norman IA y mentoría 1 a 1.">

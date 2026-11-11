@@ -147,11 +147,22 @@ export default function AuthScreen() {
       // Código válido (sin consumir) — crear cuenta. El código viaja en el
       // metadata para que el onboarding no obligue a reescribirlo: lo pedía
       // dos veces con el mismo copy, y el segundo era el que contaba.
-      const { error: err } = await supabase.auth.signUp({
+      const { data: signUpData, error: err } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: code ? { data: { access_code: code } } : undefined,
       });
+      // Correo que ya tiene cuenta: Supabase no da error, devuelve un usuario
+      // sin identidades. Antes la pantalla decía «Cuenta creada» y la clienta
+      // esperaba un correo que nunca llegaba.
+      const exists = (err && /already|registered|exists/i.test(err.message))
+        || (!err && signUpData?.user && (signUpData.user.identities ?? []).length === 0);
+      if (exists) {
+        setMode('forgot');
+        setSuccess(null);
+        setError('Ese correo ya tiene cuenta. No crees otra: te mandamos un enlace para poner una contraseña nueva — pulsa «Enviar enlace».');
+        return;
+      }
       if (err) {
         setError(err.message);
         return;
@@ -231,7 +242,7 @@ export default function AuthScreen() {
     register: { meta: 'CREAR CUENTA', right: '1 MIN', title: 'Empieza\nhoy.', sub: undefined, cta: 'CREAR CUENTA' },
     forgot: {
       meta: 'RECUPERAR ACCESO', right: undefined, title: 'Recupera\ntu acceso.',
-      sub: 'Te enviamos un enlace al correo.',
+      sub: 'Escribe el correo con el que entras. Te llega un enlace: ábrelo y ahí mismo eliges tu contraseña nueva. No hace falta crear otra cuenta.',
       cta: cooldown > 0 ? `REENVIAR EN ${cooldown} S` : 'ENVIAR ENLACE',
     },
   }[mode];
@@ -298,6 +309,9 @@ export default function AuthScreen() {
           returnKeyType="done"
           onSubmitEditing={submit}
         />
+      )}
+      {mode === 'register' && (
+        <AccessLink label="¿Ya tenías cuenta y olvidaste la contraseña?" align="end" onPress={() => reset('forgot')} />
       )}
       {!!error && <AccessNotice tone="error">{error}</AccessNotice>}
       {!!success && <AccessNotice tone="ok">{success}</AccessNotice>}

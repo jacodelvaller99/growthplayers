@@ -29,6 +29,11 @@ export default function ResetPasswordScreen() {
   // establecida (detectSessionInUrl ya parseó el token al cargar).
   useEffect(() => {
     let active = true;
+    // Enlace vencido o ya usado: Supabase lo dice en la URL (otp_expired…).
+    if (Platform.OS === 'web' && typeof window !== 'undefined'
+      && /error_code|error_description/.test(window.location.hash + window.location.search)) {
+      setError('Este enlace ya venció o ya se usó. Cada enlace sirve una sola vez y dura 1 hora: pide uno nuevo.');
+    }
     supabase.auth.getSession().then(({ data }) => {
       if (active && data.session) setReady(true);
     });

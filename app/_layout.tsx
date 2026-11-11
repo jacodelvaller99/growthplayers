@@ -26,6 +26,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { HeroMoments } from '@/components/hero-moments';
 import { TourButton } from '@/components/tour/TourButton';
 import { initCrashCapture } from '@/lib/crash';
+import { supabase } from '@/lib/supabase';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -270,6 +271,16 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [ready]);
+
+  // Enlace de recuperación: aterrice donde aterrice (raíz, bienvenida, Hoy),
+  // la sesión de recuperación lleva SIEMPRE a «Elige una contraseña nueva».
+  // Antes, si el enlace caía en otra ruta, la clienta acababa en «Crear cuenta».
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') router.replace('/reset-password' as never);
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router]);
 
   // Captura global de crashes (no-render): web error/unhandledrejection,
   // nativo ErrorUtils. Complementa al ErrorBoundary (que solo ve crashes de render).
