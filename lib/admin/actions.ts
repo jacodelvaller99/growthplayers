@@ -366,6 +366,17 @@ export async function setUserPassword(params: {
   }
 }
 
+/** La contraseña que puso el equipo, mientras el cliente no haya puesto la suya. */
+export async function getTeamPassword(userId: string): Promise<{ password: string | null; setAt: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('admin-set-password', { body: { action: 'get', userId } });
+    if (error) return { password: null, setAt: null };
+    return data as { password: string | null; setAt: string | null };
+  } catch {
+    return { password: null, setAt: null };
+  }
+}
+
 // ─── ENVIAR ENLACE DE RECUPERACIÓN DE CONTRASEÑA ─────────────────────────────
 // Para el caso real: el cliente escribe por WhatsApp diciendo que no puede
 // entrar. Antes no había nada que hacer desde el panel salvo crearle otra

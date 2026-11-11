@@ -206,6 +206,9 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Contraseña que dejó el equipo (Vault) — no debe sobrevivir a la cuenta.
+    await adminSupabase.rpc('temp_pw_clear', { p_user: userId }).then(() => {}, () => {});
+
     // ── Step 2: Delete auth.users entry ──────────────────────────────────────
     const { error: deleteError } = await adminSupabase.auth.admin.deleteUser(userId);
     if (deleteError) throw new Error(deleteError.message);

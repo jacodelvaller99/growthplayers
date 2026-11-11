@@ -99,6 +99,7 @@ import {
   setUserRole,
   sendPasswordRecovery,
   setUserPassword,
+  getTeamPassword,
   deleteUserProfile,
   updateUserProfile,
   APP_ROLE_LABEL,
@@ -313,6 +314,7 @@ export default function UserDetailScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [settingPassword, setSettingPassword] = useState(false);
+  const [teamPw, setTeamPw] = useState<{ password: string | null; setAt: string | null } | null>(null);
 
   // Weekly session state
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
@@ -555,6 +557,8 @@ export default function UserDetailScreen() {
     // Vacío para quien se registró solo (user_profiles.email sin backfill):
     // el campo queda editable para que el admin lo escriba y el envío funcione.
     setEEmail(user?.email ?? '');
+    setTeamPw(null);
+    if (userId) void getTeamPassword(userId).then(setTeamPw);
     setEditOpen(true);
   };
 
@@ -587,7 +591,10 @@ export default function UserDetailScreen() {
           ? 'Ya puede entrar con la contraseña nueva. Compártesela por un canal privado.'
           : res.error ?? 'Intenta de nuevo en un momento.',
       );
-      if (res.success) { setNewPassword(''); setShowNewPassword(false); }
+      if (res.success) {
+        setTeamPw({ password: newPassword, setAt: new Date().toISOString() });
+        setNewPassword(''); setShowNewPassword(false);
+      }
     } finally {
       setSettingPassword(false);
     }
@@ -1643,7 +1650,20 @@ export default function UserDetailScreen() {
             </Text>
 
             {/* ── Acceso: contraseña nueva puesta por el admin ───────────────── */}
-            <Text style={[mo.edLabel, { marginTop: spacing.lg }]}>CONTRASEÑA NUEVA</Text>
+            <Text style={[mo.edLabel, { marginTop: spacing.lg }]}>CONTRASEÑA ACTUAL</Text>
+            {teamPw?.password ? (
+              <>
+                <Text selectable style={[mo.edInput, { fontFamily: Fonts.mono }]}>{teamPw.password}</Text>
+                <Text style={mo.edHint}>
+                  La puso el equipo{teamPw.setAt ? ` el ${new Date(teamPw.setAt).toLocaleDateString('es')}` : ''}. Deja de verse cuando el cliente ponga la suya.
+                </Text>
+              </>
+            ) : (
+              <Text style={mo.edHint}>
+                {teamPw ? 'El cliente eligió su propia contraseña: no se puede ver.' : 'Cargando…'}
+              </Text>
+            )}
+            <Text style={[mo.edLabel, { marginTop: spacing.md }]}>CONTRASEÑA NUEVA</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <TextInput
                 style={[mo.edInput, { flex: 1 }]}

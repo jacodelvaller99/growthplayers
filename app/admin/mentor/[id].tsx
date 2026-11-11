@@ -34,7 +34,7 @@ import { nextInDeskQueue } from '@/lib/admin/deskLogic';
 import { mergeAutoPlan } from '@/lib/mentorDeskLogic';
 import { fetchSessionDigests, type SessionDigestRow } from '@/lib/memory';
 import { streamClientDesk, type ClientDeskContext, type CopilotTurn } from '@/lib/adminCopilot';
-import { adminUpdateActionPlan, adminUpsertSessionNote, deleteUserProfile, setUserPassword } from '@/lib/admin/actions';
+import { adminUpdateActionPlan, adminUpsertSessionNote, deleteUserProfile, getTeamPassword, setUserPassword } from '@/lib/admin/actions';
 import { showAlert } from '@/lib/confirm';
 import {
   fetchUserDetail, fetchUserMentorship, fetchUserMemory,
@@ -142,6 +142,8 @@ export function MentorSpace({
   const [pwOpen, setPwOpen] = useState(false);
   const [pw, setPw] = useState('');
   const [pwBusy, setPwBusy] = useState(false);
+  // La que puso el equipo (visible hasta que el cliente ponga la suya). undefined = cargando.
+  const [teamPw, setTeamPw] = useState<{ password: string | null; setAt: string | null } | undefined>(undefined);
   const [sessions, setSessions] = useState<AdminMentorshipSession[]>([]);
   const [execution, setExecution] = useState<ExecutionBundle>({ tasks: [], scores: null, reviews: [], prep: null });
   const [memory, setMemory] = useState<UserMemoryBundle>({ profile: null, summaries: [], briefing: null, notes: [] });
@@ -1003,7 +1005,11 @@ export function MentorSpace({
         )}
         {role === 'admin' && (
           <Pressable
-            onPress={() => { setPwOpen((o) => !o); setPw(''); }}
+            onPress={() => {
+              const opening = !pwOpen;
+              setPwOpen(opening); setPw('');
+              if (opening) { setTeamPw(undefined); void getTeamPassword(userId).then(setTeamPw); }
+            }}
             style={s.dossierLink} accessibilityRole="button" accessibilityLabel="Poner contraseña nueva al cliente">
             <MaterialIcons name="lock-reset" size={20} color={palette.ash} />
           </Pressable>
@@ -1045,9 +1051,23 @@ export function MentorSpace({
 
       {pwOpen && role === 'admin' && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.line }}>
-          <Text style={{ fontFamily: Fonts.sans, fontSize: 14, color: palette.ash, width: '100%' }}>
-            Contraseña nueva para {client.name}. La actual no se puede ver: se reemplaza.
-          </Text>
+          <View style={{ width: '100%', gap: 4 }}>
+            <Text style={{ fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1, color: palette.goldText }}>CONTRASEÑA</Text>
+            {teamPw === undefined ? (
+              <Text style={{ fontFamily: Fonts.sans, fontSize: 14, color: palette.smoke }}>Cargando…</Text>
+            ) : teamPw.password ? (
+              <>
+                <Text selectable style={{ fontFamily: Fonts.mono, fontSize: 18, color: palette.ivory }}>{teamPw.password}</Text>
+                <Text style={{ fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke }}>
+                  La puso el equipo{teamPw.setAt ? ` el ${new Date(teamPw.setAt).toLocaleDateString('es')}` : ''}. Deja de verse cuando {client.name} ponga la suya.
+                </Text>
+              </>
+            ) : (
+              <Text style={{ fontFamily: Fonts.sans, fontSize: 14, color: palette.ash }}>
+                {client.name} eligió su propia contraseña: no se puede ver. Si no puede entrar, ponle una nueva aquí.
+              </Text>
+            )}
+          </View>
           <TextInput
             value={pw}
             onChangeText={setPw}
@@ -1066,7 +1086,7 @@ export function MentorSpace({
               const res = await setUserPassword({ adminId, userId, password: pw });
               setPwBusy(false);
               if (!res.success) { showAlert('No se pudo cambiar', res.error ?? 'Intenta de nuevo.'); return; }
-              setPwOpen(false); setPw('');
+              setTeamPw({ password: pw, setAt: new Date().toISOString() }); setPw('');
               showAlert('Contraseña cambiada', `${client.name} ya puede entrar con la contraseña nueva. Compártela por un canal privado.`);
             }}
             style={{ minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center', opacity: pwBusy || pw.length < 8 ? 0.4 : 1 }}

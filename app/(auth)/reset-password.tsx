@@ -75,6 +75,9 @@ export default function ResetPasswordScreen() {
     try {
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) { setError(err.message); return; }
+      // Ya eligió la suya: la que había dejado el equipo deja de mostrarse en el admin.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).rpc('temp_pw_clear_self').then(() => {}, () => {});
       setDone(true);
       setTimeout(() => router.replace('/(auth)'), 1800);
     } catch {
