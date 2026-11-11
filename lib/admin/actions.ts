@@ -341,6 +341,31 @@ export async function updateUserProfile(params: {
   }
 }
 
+// ─── PONER CONTRASEÑA NUEVA A UN CLIENTE ────────────────────────────────────
+// Las contraseñas no se pueden ver (Supabase guarda solo el hash); el admin sí
+// puede reemplazarla. Edge function `admin-set-password` (service-role, is_admin).
+export async function setUserPassword(params: {
+  adminId: string;
+  userId: string;
+  password: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { adminId, userId, password } = params;
+  try {
+    const { data, error } = await supabase.functions.invoke('admin-set-password', { body: { userId, password } });
+    if (error) {
+      const ctx = (error as { context?: Response }).context;
+      const msg = ctx ? (await ctx.json().catch(() => null))?.error : null;
+      return { success: false, error: msg ?? error.message };
+    }
+    if ((data as { error?: string })?.error) return { success: false, error: (data as { error: string }).error };
+    // La contraseña NUNCA va a la auditoría.
+    await auditLog(adminId, 'set_password', 'user', userId, {});
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Error desconocido' };
+  }
+}
+
 // ─── ENVIAR ENLACE DE RECUPERACIÓN DE CONTRASEÑA ─────────────────────────────
 // Para el caso real: el cliente escribe por WhatsApp diciendo que no puede
 // entrar. Antes no había nada que hacer desde el panel salvo crearle otra

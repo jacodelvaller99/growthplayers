@@ -98,6 +98,7 @@ import {
   sendMessageAsNorman,
   setUserRole,
   sendPasswordRecovery,
+  setUserPassword,
   deleteUserProfile,
   updateUserProfile,
   APP_ROLE_LABEL,
@@ -309,6 +310,9 @@ export default function UserDetailScreen() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [eEmail, setEEmail] = useState('');
   const [sendingRecovery, setSendingRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [settingPassword, setSettingPassword] = useState(false);
 
   // Weekly session state
   const [weeklySession, setWeeklySession] = useState<{ ai_message: string; week_number: number } | null>(null);
@@ -570,6 +574,24 @@ export default function UserDetailScreen() {
       setSendingRecovery(false);
     }
   }, [userId, adminId, eEmail]);
+
+  // Contraseña nueva: no se puede VER la actual (Supabase guarda solo el hash).
+  const handleSetPassword = useCallback(async () => {
+    if (!userId || !adminId) return;
+    setSettingPassword(true);
+    try {
+      const res = await setUserPassword({ adminId, userId, password: newPassword });
+      showAlert(
+        res.success ? 'Contraseña cambiada' : 'No se pudo cambiar',
+        res.success
+          ? 'Ya puede entrar con la contraseña nueva. Compártesela por un canal privado.'
+          : res.error ?? 'Intenta de nuevo en un momento.',
+      );
+      if (res.success) { setNewPassword(''); setShowNewPassword(false); }
+    } finally {
+      setSettingPassword(false);
+    }
+  }, [userId, adminId, newPassword]);
 
   const handleSaveIdentity = useCallback(async () => {
     if (!userId || !adminId) return;
@@ -1618,6 +1640,46 @@ export default function UserDetailScreen() {
             <Text style={mo.edHint}>
               Le llega un correo para crear una contraseña nueva. No cambia su clave actual
               hasta que él la defina.
+            </Text>
+
+            {/* ── Acceso: contraseña nueva puesta por el admin ───────────────── */}
+            <Text style={[mo.edLabel, { marginTop: spacing.lg }]}>CONTRASEÑA NUEVA</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <TextInput
+                style={[mo.edInput, { flex: 1 }]}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Mínimo 8 caracteres"
+                placeholderTextColor={palette.smoke}
+                secureTextEntry={!showNewPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel="Contraseña nueva para el cliente"
+              />
+              <Pressable
+                onPress={() => setShowNewPassword((v) => !v)}
+                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                accessibilityRole="button"
+                accessibilityLabel={showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                <MaterialIcons name={showNewPassword ? 'visibility-off' : 'visibility'} size={20} color={palette.ash} />
+              </Pressable>
+            </View>
+            <Pressable
+              style={[mo.edCancel, { marginTop: spacing.sm }, (settingPassword || newPassword.length < 8) && { opacity: 0.5 }]}
+              onPress={handleSetPassword}
+              disabled={settingPassword || newPassword.length < 8}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: settingPassword || newPassword.length < 8 }}
+              accessibilityLabel="Poner esta contraseña al cliente">
+              {settingPassword ? (
+                <ActivityIndicator color={palette.goldText} size="small" />
+              ) : (
+                <Text style={mo.edCancelText}>PONER ESTA CONTRASEÑA</Text>
+              )}
+            </Pressable>
+            <Text style={mo.edHint}>
+              La contraseña actual no se puede ver: se guarda cifrada. Aquí la reemplazas por una
+              nueva y se la compartes al cliente.
             </Text>
 
             {viewerSuper && !user?.is_admin && !user?.is_superadmin && (
