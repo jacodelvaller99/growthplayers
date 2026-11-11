@@ -34,7 +34,7 @@ import { nextInDeskQueue } from '@/lib/admin/deskLogic';
 import { mergeAutoPlan } from '@/lib/mentorDeskLogic';
 import { fetchSessionDigests, type SessionDigestRow } from '@/lib/memory';
 import { streamClientDesk, type ClientDeskContext, type CopilotTurn } from '@/lib/adminCopilot';
-import { adminUpdateActionPlan, adminUpsertSessionNote, deleteUserProfile } from '@/lib/admin/actions';
+import { adminUpdateActionPlan, adminUpsertSessionNote, deleteUserProfile, setUserPassword } from '@/lib/admin/actions';
 import { showAlert } from '@/lib/confirm';
 import {
   fetchUserDetail, fetchUserMentorship, fetchUserMemory,
@@ -138,6 +138,10 @@ export function MentorSpace({
   const role = useAdminRole();
 
   const [client, setClient] = useState<AdminUserDetail | null>(null);
+  // Contraseña nueva (solo admin): la actual no se puede ver, solo reemplazar.
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pw, setPw] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
   const [sessions, setSessions] = useState<AdminMentorshipSession[]>([]);
   const [execution, setExecution] = useState<ExecutionBundle>({ tasks: [], scores: null, reviews: [], prep: null });
   const [memory, setMemory] = useState<UserMemoryBundle>({ profile: null, summaries: [], briefing: null, notes: [] });
@@ -997,6 +1001,13 @@ export function MentorSpace({
             <Text style={s.dossierLinkText}>DOSSIER →</Text>
           </Pressable>
         )}
+        {role === 'admin' && (
+          <Pressable
+            onPress={() => { setPwOpen((o) => !o); setPw(''); }}
+            style={s.dossierLink} accessibilityRole="button" accessibilityLabel="Poner contraseña nueva al cliente">
+            <MaterialIcons name="lock-reset" size={20} color={palette.ash} />
+          </Pressable>
+        )}
         {/* Eliminar: el servidor solo deja a un SuperAdmin o al mentor asignado. */}
         <Pressable
           onPress={() => showAlert(
@@ -1031,6 +1042,41 @@ export function MentorSpace({
           </Pressable>
         )}
       </View>
+
+      {pwOpen && role === 'admin' && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.line }}>
+          <Text style={{ fontFamily: Fonts.sans, fontSize: 14, color: palette.ash, width: '100%' }}>
+            Contraseña nueva para {client.name}. La actual no se puede ver: se reemplaza.
+          </Text>
+          <TextInput
+            value={pw}
+            onChangeText={setPw}
+            placeholder="Mínimo 8 caracteres"
+            placeholderTextColor={palette.smoke}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={{ flex: 1, minWidth: 200, height: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 15 }}
+            accessibilityLabel="Contraseña nueva para el cliente"
+          />
+          <Pressable
+            disabled={pwBusy || pw.length < 8}
+            onPress={async () => {
+              if (!adminId) return;
+              setPwBusy(true);
+              const res = await setUserPassword({ adminId, userId, password: pw });
+              setPwBusy(false);
+              if (!res.success) { showAlert('No se pudo cambiar', res.error ?? 'Intenta de nuevo.'); return; }
+              setPwOpen(false); setPw('');
+              showAlert('Contraseña cambiada', `${client.name} ya puede entrar con la contraseña nueva. Compártela por un canal privado.`);
+            }}
+            style={{ minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center', opacity: pwBusy || pw.length < 8 ? 0.4 : 1 }}
+            accessibilityRole="button" accessibilityLabel="Poner esta contraseña">
+            <Text style={{ fontFamily: Fonts.display, fontWeight: '700', fontSize: 11, letterSpacing: 1.2, color: palette.ink }}>
+              {pwBusy ? 'GUARDANDO…' : 'PONER ESTA CONTRASEÑA'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       {wide ? (
         <ScrollView

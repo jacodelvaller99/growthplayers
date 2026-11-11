@@ -281,18 +281,24 @@ function AdminGateState({
 /** Barra superior liviana: el mentor restringido (sin sidebar — solo tiene
  * 2 destinos reales, Hoy y el Espacio de cada cliente) y el admin en el
  * teléfono. Lleva el mismo interruptor CLIENTE | MENTOR que la app cliente. */
-function StaffTopBar({ topInset, simple = false }: { topInset: number; simple?: boolean }) {
+function StaffTopBar({ topInset, simple = false, showKeys = false }: { topInset: number; simple?: boolean; showKeys?: boolean }) {
   const { mode } = useAppTheme();
   const router = useRouter();
   const pathname = usePathname();
   const onClients = pathname === '/admin/clientes';
+  const onKeys = pathname === '/admin/claves';
+  // Vista simple: Mentorías y Clientes; un admin (no un mentor) ve también Claves.
+  const tabs: (readonly [string, string, boolean])[] = [
+    ['/admin', 'Mentorías', !onClients && !onKeys],
+    ['/admin/clientes', 'Clientes', onClients],
+    ...(showKeys ? [['/admin/claves', 'Claves', onKeys] as const] : []),
+  ];
   return (
     <View style={[s.mentorBar, { paddingTop: topInset + spacing.sm }]}>
       {!IS_WEB && <BlurView intensity={80} tint={mode === 'light' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />}
       {simple ? (
-        // Vista simple: solo dos destinos, Mentorías y Clientes. Nada más.
         <View style={s.simpleNav}>
-          {([['/admin', 'Mentorías', !onClients], ['/admin/clientes', 'Clientes', onClients]] as const).map(([route, label, on]) => (
+          {tabs.map(([route, label, on]) => (
             <Pressable
               key={route}
               onPress={() => router.replace(route as never)}
@@ -386,7 +392,8 @@ export default function AdminLayout() {
   useEffect(() => {
     if (gate !== 'mentor' && gate !== 'simple') return;
     // Vista simple (mentores y admins sin panel completo): Mentorías y Clientes.
-    const allowed = pathname === '/admin' || pathname === '/admin/clientes' || pathname.startsWith('/admin/mentor/');
+    const allowed = pathname === '/admin' || pathname === '/admin/clientes' || pathname.startsWith('/admin/mentor/')
+      || (gate === 'simple' && pathname === '/admin/claves'); // Claves: admins, nunca mentores
     if (!allowed) router.replace('/admin' as never);
   }, [gate, pathname, router]);
 
@@ -414,7 +421,7 @@ export default function AdminLayout() {
     return (
       <AdminRoleProvider role={gate === 'simple' ? 'admin' : 'mentor'}>
         <View style={s.mobileRoot}>
-          <StaffTopBar topInset={insets.top} simple />
+          <StaffTopBar topInset={insets.top} simple showKeys={gate === 'simple'} />
           <View style={s.mobileContent}>
             <AiConsentBanner />
             <Slot />

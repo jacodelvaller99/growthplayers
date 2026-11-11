@@ -43,13 +43,21 @@ async function testKey(name: string, key: string): Promise<{ ok: boolean; detail
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
     }),
     OPENAI_API_KEY: () => fetch('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${key}` } }),
-    RESEND_API_KEY: () => fetch('https://api.resend.com/domains', { headers: { Authorization: `Bearer ${key}` } }),
+    // Las claves de Resend suelen ser «solo envío» y no pueden listar dominios:
+    // se prueba un envío vacío. Clave buena → 422 (faltan campos), mala → 401.
+    RESEND_API_KEY: () => fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    }),
   };
   const run = probe[name];
   if (!run) return { ok: true, detail: 'Esta clave no se puede probar sola; se valida al conectar el reloj.' };
   try {
     const res = await run();
-    if (res.ok) return { ok: true, detail: 'Funciona.' };
+    if (res.ok || (name === 'RESEND_API_KEY' && (res.status === 422 || res.status === 400))) {
+      return { ok: true, detail: 'Funciona.' };
+    }
     if (res.status === 401 || res.status === 403) return { ok: false, detail: 'El proveedor rechazó la clave (no es válida o no tiene permisos).' };
     return { ok: false, detail: `El proveedor respondió ${res.status}.` };
   } catch (e) {
