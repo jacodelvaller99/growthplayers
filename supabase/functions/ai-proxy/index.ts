@@ -19,6 +19,7 @@
  */
 
 import { corsHeaders, adminSupabase, json } from '../_shared/supabase.ts';
+import { applyAppKeys } from '../_shared/appKeys.ts';
 
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -193,6 +194,9 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'Unauthorized' }, 401, origin);
     }
   }
+
+  // Claves cambiadas desde Admin → Claves (Vault) tienen prioridad.
+  await applyAppKeys(['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'NVIDIA_API_KEY', 'GROQ_API_KEY']);
 
   const route = new URL(req.url).pathname.split('/').filter(Boolean).pop();
 

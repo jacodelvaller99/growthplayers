@@ -12,10 +12,11 @@
  */
 
 import { corsHeaders, adminSupabase, json } from '../_shared/supabase.ts';
+import { applyAppKeys } from '../_shared/appKeys.ts';
 
 // ─── OpenAI Embeddings ────────────────────────────────────────────────────────
 
-const OPENAI_API_KEY    = Deno.env.get('OPENAI_API_KEY')!;
+let OPENAI_API_KEY      = Deno.env.get('OPENAI_API_KEY')!;
 const SERVICE_ROLE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIMS  = 1536;
@@ -57,6 +58,10 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders(origin) });
   }
+
+  // Clave cambiada en Admin → Claves (Vault) tiene prioridad.
+  await applyAppKeys(['OPENAI_API_KEY']);
+  OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 
   if (req.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405, origin);

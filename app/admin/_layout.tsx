@@ -84,6 +84,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
   { route: '/admin/membresias', label: 'Dinero', icon: 'payments' },
   { route: '/admin/auditoria',  label: 'Historial', icon: 'history' },
+  { route: '/admin/claves',     label: 'Claves', icon: 'vpn-key' },
 ];
 
 /** Todas las pantallas del panel, en orden de menú (para la hoja "Más"). */

@@ -14,16 +14,33 @@
 // deno-lint-ignore-file no-explicit-any
 import { adminSupabase, json, corsHeaders } from '../_shared/supabase.ts';
 import { classifySyncFailure, nextBreakerState } from '../_shared/connectionHealth.ts';
+import { applyAppKeys } from '../_shared/appKeys.ts';
 
 // ─── Environment ──────────────────────────────────────────────────────────────
-const OURA_CLIENT_ID     = Deno.env.get('OURA_CLIENT_ID')!;
-const OURA_CLIENT_SECRET = Deno.env.get('OURA_CLIENT_SECRET')!;
-const WHOOP_CLIENT_ID    = Deno.env.get('WHOOP_CLIENT_ID')!;
-const WHOOP_CLIENT_SECRET = Deno.env.get('WHOOP_CLIENT_SECRET')!;
-const POLAR_CLIENT_ID    = Deno.env.get('POLAR_CLIENT_ID')!;
-const POLAR_CLIENT_SECRET = Deno.env.get('POLAR_CLIENT_SECRET')!;
-const STRAVA_CLIENT_ID    = Deno.env.get('STRAVA_CLIENT_ID')!;
-const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET')!;
+// `let`: se recargan en cada request por si cambiaron en Admin → Claves (Vault).
+const OAUTH_KEYS = [
+  'OURA_CLIENT_ID', 'OURA_CLIENT_SECRET', 'WHOOP_CLIENT_ID', 'WHOOP_CLIENT_SECRET',
+  'POLAR_CLIENT_ID', 'POLAR_CLIENT_SECRET', 'STRAVA_CLIENT_ID', 'STRAVA_CLIENT_SECRET',
+];
+let OURA_CLIENT_ID     = Deno.env.get('OURA_CLIENT_ID')!;
+let OURA_CLIENT_SECRET = Deno.env.get('OURA_CLIENT_SECRET')!;
+let WHOOP_CLIENT_ID    = Deno.env.get('WHOOP_CLIENT_ID')!;
+let WHOOP_CLIENT_SECRET = Deno.env.get('WHOOP_CLIENT_SECRET')!;
+let POLAR_CLIENT_ID    = Deno.env.get('POLAR_CLIENT_ID')!;
+let POLAR_CLIENT_SECRET = Deno.env.get('POLAR_CLIENT_SECRET')!;
+let STRAVA_CLIENT_ID    = Deno.env.get('STRAVA_CLIENT_ID')!;
+let STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET')!;
+async function reloadOAuthKeys() {
+  await applyAppKeys(OAUTH_KEYS);
+  OURA_CLIENT_ID      = Deno.env.get('OURA_CLIENT_ID')!;
+  OURA_CLIENT_SECRET  = Deno.env.get('OURA_CLIENT_SECRET')!;
+  WHOOP_CLIENT_ID     = Deno.env.get('WHOOP_CLIENT_ID')!;
+  WHOOP_CLIENT_SECRET = Deno.env.get('WHOOP_CLIENT_SECRET')!;
+  POLAR_CLIENT_ID     = Deno.env.get('POLAR_CLIENT_ID')!;
+  POLAR_CLIENT_SECRET = Deno.env.get('POLAR_CLIENT_SECRET')!;
+  STRAVA_CLIENT_ID    = Deno.env.get('STRAVA_CLIENT_ID')!;
+  STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET')!;
+}
 const SUPABASE_URL       = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -1000,6 +1017,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    await reloadOAuthKeys();
     const body = await req.json().catch(() => ({}));
     const { user_id: bodyUserId, provider, batch, action, code } = body;
 

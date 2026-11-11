@@ -65,7 +65,14 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
+let RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
+// Clave cambiada en Admin → Claves (Vault) tiene prioridad. Inline (sin
+// _shared) para que esta función siga siendo autocontenida.
+async function reloadResendKey() {
+  const { data } = await adminSupabase.rpc('app_keys_read', { p_names: ['RESEND_API_KEY'] });
+  const v = (data as { value: string }[] | null)?.[0]?.value;
+  if (v) RESEND_API_KEY = v;
+}
 const WEBHOOK_SECRET = Deno.env.get('SEVEN_KEYS_WEBHOOK_SECRET') ?? '';
 const NOTIFY_TO = Deno.env.get('SEVEN_KEYS_NOTIFY_TO') ?? 'ncapuozzo@polarisgrowthinstitute.com';
 const FROM = 'Las 7 Llaves <onboarding@resend.dev>'; // hasta verificar dominio propio en Resend
@@ -347,6 +354,9 @@ Deno.serve(async (req: Request) => {
   const secret = req.headers.get('x-webhook-secret') ?? '';
   if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
     return json({ error: 'Unauthorized' }, 401);
+  }
+  try { await reloadResendKey(); } catch {
+    // Vault no disponible → se sigue con el secret de Supabase.
   }
 
   // body.to: override manual, solo para pruebas puntuales (curl) — el webhook real
