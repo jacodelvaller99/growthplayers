@@ -15,6 +15,7 @@ import { Pantalla, TarjetaOro } from '@/components/pantalla';
 import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, Fonts, radii } from '@/constants/theme';
+import { Fuentes } from '@/components/Fuentes';
 
 // Etapas en palabras llanas. Solo lo establecido; nada de "autofagia",
 // "Nobel" ni "recambio inmune" presentados como beneficio.
@@ -261,6 +262,7 @@ export default function AyunoScreen() {
           ))}
         </Plegable>
         <View style={styles.lastLine} />
+        <Fuentes topics={['ayuno', 'nutricion']} />
       </Pantalla>
 
       {/* Aviso médico — no omitible, antes de CUALQUIER ayuno */}

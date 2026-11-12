@@ -106,6 +106,7 @@ function MainStack() {
       <Stack.Screen name="legal/privacidad" options={{ headerShown: false }} />
       <Stack.Screen name="legal/terminos" options={{ headerShown: false }} />
       <Stack.Screen name="legal/salud" options={{ headerShown: false }} />
+      <Stack.Screen name="legal/fuentes" options={{ headerShown: false }} />
       <Stack.Screen name="pricing" options={{ headerShown: false }} />
       <Stack.Screen name="oauth/whoop/callback" options={{ headerShown: false }} />
       <Stack.Screen name="oauth/oura/callback"  options={{ headerShown: false }} />

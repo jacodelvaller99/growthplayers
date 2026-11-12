@@ -27,6 +27,7 @@ const PUBLICAS: Record<string, string> = {
   'legal/privacidad': 'exigible por tienda sin estar registrado',
   'legal/terminos': 'exigible por tienda sin estar registrado',
   'legal/salud': 'exigible por tienda sin estar registrado',
+  'legal/fuentes': 'citas médicas (App Review 1.4.1), visibles sin sesión',
   'pricing': 'página de venta',
   'oauth/whoop/callback': 'vuelta del proveedor OAuth',
   'oauth/oura/callback': 'vuelta del proveedor OAuth',

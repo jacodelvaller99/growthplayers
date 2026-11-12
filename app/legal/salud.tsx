@@ -124,6 +124,11 @@ export default function SaludScreen() {
         <Text style={styles.metaLine}>Última actualización: 22 de julio de 2026</Text>
       </View>
 
+      <Pressable onPress={() => router.push('/legal/fuentes' as never)} style={styles.sourcesLink} accessibilityRole="link" accessibilityLabel="Ver las fuentes médicas de la información de salud">
+        <MaterialIcons name="menu-book" size={18} color={palette.goldText} />
+        <Text style={styles.sourcesText}>Fuentes médicas: de dónde viene la información de salud de la app →</Text>
+      </Pressable>
+
       {SECTIONS.map((section) => (
         <View key={section.heading} style={styles.section}>
           <GoldDivider />
@@ -175,6 +180,8 @@ const styles = StyleSheet.create({
   },
   metaLine: { ...typography.mono, color: palette.smoke, fontSize: 11, lineHeight: 17 },
 
+  sourcesLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 },
+  sourcesText: { ...typography.body, color: palette.goldText, flex: 1 },
   section: { gap: spacing.sm },
   heading: {
     color: palette.ivory,

@@ -11,6 +11,7 @@ import { SLEEP_MUSIC } from '@/data/wellness';
 import { getSleepScript, sleepSegmentsToPhases } from '@/data/sleep';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useBinauralEngine } from '@/hooks/useBinauralEngine';
+import { Fuentes } from '@/components/Fuentes';
 
 // ─── Catálogo ────────────────────────────────────────────────────────────────
 // Rediseño: cada sesión se nombra por para qué sirve (label) y luego por su
@@ -123,6 +124,7 @@ export default function SuenoScreen() {
           body="Estas prácticas favorecen el descanso, pero no tratan el insomnio crónico, la apnea del sueño ni otros trastornos. Si tienes problemas de sueño persistentes, consulta a un profesional de la salud. No las uses mientras conduces u operas maquinaria."
         />
       </AntesDeEmpezar>
+      <Fuentes topics={['sueno']} />
     </Pantalla>
   );
 }

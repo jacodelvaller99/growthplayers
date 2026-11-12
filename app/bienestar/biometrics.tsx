@@ -8,8 +8,9 @@
  */
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Fuentes } from '@/components/Fuentes';
 import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { Fonts, palette } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -56,7 +57,12 @@ function BiometricsBody({ onSynced }: { onSynced: () => void }) {
   const disclaimer = conn?.provider === 'apple_health'
     ? `Datos leídos de Apple Health (HealthKit) con tu permiso. ${DISCLAIMER}`
     : DISCLAIMER;
-  const footer = <Text style={s.footer}>{syncMsg ? `${syncMsg}\n\n${disclaimer}` : disclaimer}</Text>;
+  const footer = (
+    <View>
+      <Text style={s.footer}>{syncMsg ? `${syncMsg}\n\n${disclaimer}` : disclaimer}</Text>
+      <Fuentes topics={['biometria', 'sueno']} />
+    </View>
+  );
 
   const sync = async () => {
     if (syncing || !conn || !userId) return;

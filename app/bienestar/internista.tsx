@@ -36,6 +36,7 @@ import {
   type InternistTurn,
   type PatientContext,
 } from '@/lib/internist';
+import { Fuentes } from '@/components/Fuentes';
 
 const QUICK_PROMPTS = [
   '¿Qué significa mi HDL bajo?',
@@ -269,6 +270,7 @@ function InternistaScreenInner() {
             <MarkdownText text={streamText || '…'} style={s.bubbleAIText} />
           </View>
         )}
+        <Fuentes topics={['laboratorio', 'nutricion', 'sueno', 'movimiento', 'suplementos', 'crisis']} />
       </ScrollView>
 
       {turns.length === 0 && (

@@ -15,6 +15,7 @@ import { db2 } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { Fila, Pantalla, TarjetaOro } from '@/components/pantalla';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
+import { Fuentes } from '@/components/Fuentes';
 
 type Option = { id: string; label: string; desc?: string };
 
@@ -320,6 +321,7 @@ export default function NutricionScreen() {
             </Pressable>
           </View>
         )}
+        <Fuentes topics={['nutricion']} />
       </Pantalla>
     </KeyboardAvoidingView>
   );

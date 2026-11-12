@@ -30,6 +30,7 @@ import SafetyWarning from '@/components/SafetyWarning';
 import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { Fuentes } from '@/components/Fuentes';
 
 // ─── Haptic ───────────────────────────────────────────────────────────────────
 function haptic(type: 'light' | 'success') {
@@ -280,6 +281,7 @@ export default function TappingScreen() {
             <MaterialIcons name="touch-app" size={20} color={palette.ink} />
             <Text style={styles.primaryBtnText}>INICIAR SECUENCIA</Text>
           </Pressable>
+          <Fuentes topics={['tapping']} />
         </ScrollView>
       </KeyboardAvoidingView>
     );

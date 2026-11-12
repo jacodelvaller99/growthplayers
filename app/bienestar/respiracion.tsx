@@ -14,6 +14,7 @@ import { phaseAt } from '@/lib/practiceClock';
 import { analytics } from '@/lib/analytics';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { BodyContextCard, PracticeClose } from './body-context';
+import { Fuentes } from '@/components/Fuentes';
 
 // ─── Haptic helper (web-safe) ─────────────────────────────────────────────────
 function haptic(type: 'light' | 'medium' | 'success') {
@@ -252,6 +253,7 @@ export default function RespiracionScreen() {
         />
       </AntesDeEmpezar>
       <BodyContextCard />
+      <Fuentes topics={['respiracion']} />
     </Pantalla>
   );
 }

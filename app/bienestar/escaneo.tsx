@@ -19,6 +19,7 @@ import {
   type BodyPoint,
 } from '@/lib/bodyPointLogic';
 import { energyFocusForBodyPoint, needsChestSafety } from '@/lib/energyFocusLogic';
+import { Fuentes } from '@/components/Fuentes';
 
 export default function EscaneoScreen() {
   const sc = useScreen();
@@ -100,6 +101,7 @@ export default function EscaneoScreen() {
           representa como coordenada proporcional sobre la misma figura. La reflexión posterior es simbólica:
           no determina la causa del dolor, no diagnostica y no reemplaza atención médica.
         </Text>
+        <Fuentes topics={['meditacion']} />
       </ScrollView>
     </View>
   );

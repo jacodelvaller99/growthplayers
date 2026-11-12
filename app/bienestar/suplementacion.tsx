@@ -15,6 +15,7 @@ import { logSilentError } from '@/lib/observability';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { Pantalla } from '@/components/pantalla';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
+import { Fuentes } from '@/components/Fuentes';
 
 // Los ids se quedan como están: son la columna `goal` de supplement_stacks.
 type Tab = 'energia' | 'sueno' | 'cognitivo';
@@ -260,6 +261,7 @@ export default function SuplementacionScreen() {
         <Text style={styles.footnote}>
           Fuente: Oficina de Suplementos Dietéticos de los NIH (ods.od.nih.gov) y estudios en humanos publicados en PubMed.
         </Text>
+        <Fuentes topics={['suplementos']} />
       </Pantalla>
     </KeyboardAvoidingView>
   );

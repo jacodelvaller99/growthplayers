@@ -28,9 +28,10 @@ const LEGAL_LINKS: {
   meta: string;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
 }[] = [
-  { route: '/legal/terminos',   title: 'TÉRMINOS DE USO',       meta: 'Condiciones del servicio y suscripciones', icon: 'gavel' },
+  { route: '/legal/terminos',   title: 'TÉRMINOS DE USO',       meta: 'Condiciones del servicio', icon: 'gavel' },
   { route: '/legal/privacidad', title: 'POLÍTICA DE PRIVACIDAD', meta: 'Cómo tratamos y protegemos tus datos',      icon: 'privacy-tip' },
   { route: '/legal/salud',      title: 'DESCARGO DE SALUD',      meta: 'Bienestar y educación, no consejo médico',  icon: 'health-and-safety' },
+  { route: '/legal/fuentes',    title: 'FUENTES MÉDICAS',        meta: 'De dónde viene la información de salud',    icon: 'menu-book' },
 ];
 
 // ─── Streak Calendar Component (42-day heatmap) ────────────────────────────

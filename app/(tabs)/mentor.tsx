@@ -996,6 +996,14 @@ function MentorScreenInner() {
         })}
       </View>
 
+      {/* App Review 1.4.1: los consejos de bienestar de Norman llevan sus fuentes a un toque. */}
+      <Text
+        onPress={() => router.push('/legal/fuentes' as never)}
+        accessibilityRole="link"
+        style={styles.sourcesLine}>
+        Norman es una IA, no un profesional de la salud · <Text style={styles.sourcesLink}>Fuentes médicas</Text>
+      </Text>
+
       {/* ── Input Bar ── */}
       <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.md, maxWidth: sc.isDesktop ? 960 : sc.isTablet ? 720 : 430 }]}>
         <PremiumInput
@@ -1038,6 +1046,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   // N-6: el oro se gana — en esta pantalla solo la flecha de enviar lo lleva.
+  sourcesLine: { alignSelf: 'center', textAlign: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.xs, fontFamily: Fonts.sans, fontSize: 12, color: palette.smoke },
+  sourcesLink: { color: palette.goldText, textDecorationLine: 'underline' },
   metaTitle: { color: palette.goldText, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   metaRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.lg },
   metaStatus: { color: palette.smoke, fontFamily: Fonts.display, fontSize: 11, fontWeight: '700', letterSpacing: 1 },

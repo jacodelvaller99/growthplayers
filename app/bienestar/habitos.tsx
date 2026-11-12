@@ -22,6 +22,7 @@ import {
   cancelScheduledNotification,
   getScheduledRemindersByHabit,
 } from '@/services/notifications';
+import { Fuentes } from '@/components/Fuentes';
 
 interface Habit {
   id: string;
@@ -389,6 +390,7 @@ export default function HabitosScreen() {
 
       {renderTemplates('AÑADIR · MAÑANA', MORNING_HABITS)}
       {renderTemplates('AÑADIR · NOCHE', EVENING_HABITS)}
+      <Fuentes topics={['habitos', 'sueno', 'movimiento']} />
     </Pantalla>
   );
 }

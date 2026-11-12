@@ -38,6 +38,7 @@ import {
   type MedicalExamRecord,
   type UploadExamInput,
 } from '@/lib/medicalExams';
+import { Fuentes } from '@/components/Fuentes';
 
 const supa = supabase as unknown as {
   from: (table: string) => { select: (cols: string) => { eq: (col: string, v: string) => { maybeSingle: () => Promise<{ data: { consents?: Record<string, unknown> } | null }> } }; update: (patch: Record<string, unknown>) => { eq: (col: string, v: string) => Promise<unknown> } };
@@ -377,6 +378,7 @@ export default function ExamenesScreen() {
           ))}
         </PremiumCard>
       )}
+      <Fuentes topics={['laboratorio']} />
     </ScrollView>
   );
 }

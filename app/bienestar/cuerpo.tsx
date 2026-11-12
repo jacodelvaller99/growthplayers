@@ -15,6 +15,7 @@ import { logSilentError } from '@/lib/observability';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import { Fila, Pantalla } from '@/components/pantalla';
+import { Fuentes } from '@/components/Fuentes';
 
 interface Measurement {
   id?: string;
@@ -263,6 +264,7 @@ export default function CuerpoScreen() {
             })
           )}
         </View>
+        <Fuentes topics={['cuerpo', 'movimiento']} />
       </Pantalla>
     </KeyboardAvoidingView>
   );

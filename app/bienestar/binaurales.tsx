@@ -22,6 +22,7 @@ import { createBinauralAudio, type BinauralAudioHandle } from '@/lib/binaural';
 import { createNarrationPlayer, type NarrationHandle } from '@/lib/narrationPlayer';
 import { getBinauralGuide } from '@/data/binauralGuides';
 import { analytics } from '@/lib/analytics';
+import { Fuentes } from '@/components/Fuentes';
 
 // ─── Haptic helper ────────────────────────────────────────────────────────────
 function haptic(type: 'light' | 'medium' | 'success') {
@@ -488,6 +489,7 @@ export default function BinauralesScreen() {
         />
       </AntesDeEmpezar>
 
+      <Fuentes topics={['binaurales']} />
     </Pantalla>
   );
 }

@@ -15,6 +15,7 @@ import { phaseAt } from '@/lib/practiceClock';
 import { useWellnessStore } from '@/store/wellnessStore';
 import { analytics } from '@/lib/analytics';
 import { BodyContextCard, PracticeClose } from './body-context';
+import { Fuentes } from '@/components/Fuentes';
 
 function haptic(type: 'light' | 'medium' | 'success') {
   if (Platform.OS === 'web') return;
@@ -216,6 +217,7 @@ export default function MovimientoScreen() {
       ))}
 
       <View style={{ height: spacing.xxxl }} />
+      <Fuentes topics={['movimiento']} />
     </ScrollView>
   );
 }

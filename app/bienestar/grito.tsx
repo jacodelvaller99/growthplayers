@@ -30,6 +30,7 @@ import { Fonts, palette, radii, spacing, typography } from '@/constants/theme';
 import { usePracticeClock } from '@/hooks/use-practice-clock';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { Fuentes } from '@/components/Fuentes';
 
 // ─── Haptic (web-safe) ────────────────────────────────────────────────────────
 function haptic(type: 'light' | 'success') {
@@ -293,6 +294,7 @@ export default function GritoScreen() {
           <MaterialIcons name="campaign" size={20} color={palette.ink} />
           <Text style={styles.primaryBtnText}>COMENZAR</Text>
         </Pressable>
+        <Fuentes topics={['estres']} />
       </ScrollView>
     );
   }
