@@ -425,6 +425,11 @@ export default function DashboardScreen() {
         label="BIENESTAR"
         value="Todas las prácticas"
         onPress={() => router.push('/bienestar' as never)}
+      />
+      <Fila
+        label="NAVEGAR POLARIS"
+        value="Cómo usar la app, en video"
+        onPress={() => router.push('/navegar' as never)}
         last
       />
     </Pantalla>

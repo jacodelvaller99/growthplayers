@@ -409,7 +409,8 @@ export default function YoScreen() {
       <Fila label="MENTORÍA" value="Tu proceso semanal" onPress={() => router.push('/mentoria' as never)} />
       <Fila label="BIENESTAR" value="Respirar, meditar, escribir" onPress={() => router.push('/bienestar' as never)} />
       <Fila label="TU RELOJ" value="Conectar dispositivos" onPress={() => router.push('/perfil/wearables' as never)} />
-      <Fila label="APARIENCIA" value="Claro u oscuro" onPress={() => router.push('/perfil/apariencia' as never)} last />
+      <Fila label="APARIENCIA" value="Claro u oscuro" onPress={() => router.push('/perfil/apariencia' as never)} />
+      <Fila label="NAVEGAR POLARIS" value="Guías en video de la app" onPress={() => router.push('/navegar' as never)} last />
       <View style={styles.mentorWrap}>
         <MyMentorCard />
       </View>
