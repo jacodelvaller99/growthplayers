@@ -1,0 +1,90 @@
+﻿# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+expo-web.*
+lifeflow-*.png
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# generated native folders
+/ios
+/android
+
+# Claude Code
+.claude/
+
+# Supabase temp
+supabase/.temp/
+
+# env files (all variants)
+.env
+.env.local
+.env.*.local
+.design-ref/
+
+# Skill manager (find-skills) â€” tooling local de dev, no cÃ³digo de producto.
+# Algunos paths exceden el lÃ­mite de Windows; no se versionan.
+.agents/
+skills-lock.json
+
+# Impeccable â€” config.json/design.json/live/config.json SÃ se versionan (contexto
+# de marca compartido); esto es solo estado efÃ­mero de sesiÃ³n local.
+.impeccable/hook.cache.json
+.impeccable/live/sessions/
+.impeccable/config.local.json
+# Nombres de archivo con timestamp exceden el lÃ­mite de path de Windows (mismo
+# problema que .agents/ arriba) â€” snapshots de /impeccable critique, no versionar.
+.impeccable/critique/
+.vercel
+
+# mp3 de voz generados con ElevenLabs (se suben al bucket, no al repo)
+.voice-out/
+
+# Ruido del Chromium headless (Playwright / preview): lo escribe en la raÃ­z del
+# repo al arrancar, y no dice nada de este proyecto.
+debug.log
+
+# Estado local de ruflo (polÃ­tica activa, stats). Es runtime de la herramienta,
+# no configuraciÃ³n del proyecto: cambia solo y por mÃ¡quina.
+.claude-flow/
+.secrets/
+
+# EAS: solo web (Vercel sirve public/), no entra al build nativo
+public/models/
+.claude/
+docs/
+
