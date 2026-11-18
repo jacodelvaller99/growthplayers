@@ -102,9 +102,13 @@ export default function AuthScreen() {
   };
 
   const handleRegister = async () => {
-    // El código es opcional: sin él se entra en plan Free (lo que anuncia /pricing).
+    // Solo clientes: sin el código del coach no se crea cuenta (no hay plan gratis ni demo).
     if (!email.trim() || !password.trim()) {
       setError('Escribe tu correo y una contraseña.');
+      return;
+    }
+    if (!accessCode.trim()) {
+      setError('Necesitas el código que te dio tu coach. Si eres cliente y no lo tienes, escribe a info@polarisgrowthinstitute.com.');
       return;
     }
     if (password.length < 6) {
@@ -239,7 +243,7 @@ export default function AuthScreen() {
 
   const copy = {
     login: { meta: 'POLARIS', right: undefined, title: 'Bienvenido\nde vuelta.', sub: undefined, cta: 'ENTRAR' },
-    register: { meta: 'CREAR CUENTA', right: '1 MIN', title: 'Empieza\nhoy.', sub: undefined, cta: 'CREAR CUENTA' },
+    register: { meta: 'ACTIVAR ACCESO', right: '1 MIN', title: 'Activa tu\nacceso.', sub: 'Solo para clientes de Polaris: necesitas el código que te dio tu coach.', cta: 'CREAR CUENTA' },
     forgot: {
       meta: 'RECUPERAR ACCESO', right: undefined, title: 'Recupera\ntu acceso.',
       sub: 'Escribe el correo con el que entras. Te llega un enlace: ábrelo y ahí mismo eliges tu contraseña nueva. No hace falta crear otra cuenta.',
@@ -262,7 +266,7 @@ export default function AuthScreen() {
             onPress={submit}
             disabled={loading || (mode === 'forgot' && cooldown > 0)}
           />
-          {mode === 'login' && <AccessLink lead="¿No tienes cuenta?" label="Créala" onPress={() => reset('register')} />}
+          {mode === 'login' && <AccessLink lead="¿Tu coach te dio un código?" label="Actívalo" onPress={() => reset('register')} />}
           {mode === 'register' && <AccessLink lead="¿Ya tienes cuenta?" label="Entra" onPress={() => reset('login')} />}
           {mode === 'forgot' && <AccessLink label="Volver a entrar" onPress={() => reset('login')} />}
         </>
@@ -299,7 +303,7 @@ export default function AuthScreen() {
       )}
       {mode === 'register' && (
         <AccessField
-          label="CÓDIGO DE TU COACH · OPCIONAL"
+          label="CÓDIGO DE TU COACH"
           value={accessCode}
           onChangeText={(t) => setAccessCode(t.toUpperCase())}
           placeholder="POLARIS-XXXX"

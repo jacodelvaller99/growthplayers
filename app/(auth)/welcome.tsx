@@ -3,8 +3,9 @@
  *
  * Diseño "Entrar" del canvas: una frase, una acción. La estrella grande queda
  * de fondo; en escritorio la lleva el panel amarillo de AccessFrame.
- *   EMPEZAR          → crear cuenta
- *   Ya tengo cuenta  → entrar
+ * Polaris es solo para clientes: no hay registro libre ni demo.
+ *   ENTRAR                       → entrar
+ *   Tengo un código de mi coach  → crear cuenta (código obligatorio)
  */
 import { useRouter } from 'expo-router';
 import { useWindowDimensions } from 'react-native';
@@ -32,11 +33,11 @@ export default function WelcomeScreen() {
       backdropStar
       title={'Encuentra\ntu Norte.'}
       titleSize={titleSize}
-      sub="Persigue el estado, no el resultado."
+      sub={'Persigue el estado, no el resultado.\nSolo para clientes de Polaris Growth Institute.'}
       bottom={
         <>
-          <PrimaryButton label="EMPEZAR" icon="arrow-forward" onPress={goRegister} />
-          <AccessLink label="Ya tengo cuenta" onPress={goLogin} />
+          <PrimaryButton label="ENTRAR" icon="arrow-forward" onPress={goLogin} />
+          <AccessLink label="Tengo un código de mi coach" onPress={goRegister} />
         </>
       }
     />

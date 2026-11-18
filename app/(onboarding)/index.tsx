@@ -44,7 +44,6 @@ const TOTAL_STEPS = 7;
 
 // iOS v1 sin compras (regla 3.1.1): la pantalla de canje se llama "Tu acceso"
 // y se abre desde Progreso, no desde "Planes".
-const CODE_LATER_WHERE = 'desde Yo, en «Tu acceso»';
 
 // La bienvenida cuenta la historia antes de pedir nada: los tres actos (los
 // mismos de `ACTS`, que luego pinta el mapa de Comando) y el día a día.
@@ -241,8 +240,11 @@ export default function OnboardingScreen() {
     }
   };
 
+  // Acceso: lo activa el equipo al crear la cuenta (tier ≠ free) o el código del coach.
+  const hasAccess = codeStatus === 'ok' || (!!state.subscriptionTier && state.subscriptionTier !== 'free');
+
   const finish = async () => {
-    if (finishing) return;
+    if (finishing || !hasAccess) return;
     setFinishing(true);
     setFinishError(null);
     try {
@@ -540,7 +542,9 @@ export default function OnboardingScreen() {
         <PremiumCard style={styles.formCard}>
           <Text style={styles.stepTitle}>TU{'\n'}ACCESO.</Text>
           <Text style={styles.stepBody}>
-            Si tu coach te dio un código, va aquí. Si ya lo pusiste al registrarte, se aplica solo.
+            {hasAccess && codeStatus !== 'ok'
+              ? 'Tu acceso ya está activo. Puedes iniciar.'
+              : 'Escribe el código que te dio tu coach. Si ya lo pusiste al registrarte, se aplica solo.'}
           </Text>
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>CÓDIGO DE ACCESO</Text>
@@ -583,22 +587,16 @@ export default function OnboardingScreen() {
               label={finishing ? 'INICIANDO...' : 'INICIAR EL PROTOCOLO'}
               icon={finishing ? 'hourglass-empty' : 'military-tech'}
               onPress={finish}
-              disabled={finishing}
+              disabled={finishing || !hasAccess}
             />
           </View>
-          <Pressable
-            onPress={finish}
-            disabled={finishing}
-            accessibilityRole="button"
-            accessibilityLabel="Iniciar sin código"
-            accessibilityHint={`Entras con el plan Free; puedes canjear el código después ${CODE_LATER_WHERE}`}
-            style={styles.skipBtn}>
-            <Text style={styles.skipText}>Iniciar sin código →</Text>
-          </Pressable>
-          <Text style={styles.skipNote}>
-            Sin código entras con el plan Free: check-in diario, Norman IA y el Módulo 1; el resto
-            de módulos queda cerrado. Puedes canjear tu código después {CODE_LATER_WHERE}.
-          </Text>
+          {/* Polaris es solo para clientes: sin acceso activo no hay plan gratis ni demo. */}
+          {!hasAccess && (
+            <Text style={styles.skipNote}>
+              Polaris es solo para clientes del programa. Escribe el código que te dio tu coach para
+              entrar. Si eres cliente y no lo tienes, escríbenos a info@polarisgrowthinstitute.com.
+            </Text>
+          )}
           {finishError ? (
             <Text
               style={[styles.codeMsg, { color: palette.danger }]}
