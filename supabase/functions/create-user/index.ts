@@ -59,21 +59,44 @@ Deno.serve(async (req: Request) => {
       email_confirm: true,            // el admin provisiona → sin paso de verificación por email
       user_metadata: { name },
     });
-    if (createErr || !created.user) {
-      return json({ error: createErr?.message ?? 'No se pudo crear el usuario' }, 400);
+
+    let newId = created?.user?.id ?? null;
+    let existed = false;
+    if (createErr || !newId) {
+      // El correo ya tiene cuenta (p. ej. un alta anterior que quedó a medias, sin
+      // perfil): en vez de fallar, se completa esa cuenta con la contraseña nueva.
+      if (!/already|registered|exists/i.test(createErr?.message ?? '')) {
+        return json({ error: createErr?.message ?? 'No se pudo crear el usuario' }, 400);
+      }
+      for (let page = 1; page <= 20 && !newId; page++) {
+        const { data: list, error: listErr } = await adminSupabase.auth.admin.listUsers({ page, perPage: 1000 });
+        if (listErr) return json({ error: listErr.message }, 500);
+        newId = list.users.find((u) => (u.email ?? '').toLowerCase() === email)?.id ?? null;
+        if (list.users.length < 1000) break;
+      }
+      if (!newId) return json({ error: 'Ese correo ya tiene cuenta pero no se encontró.' }, 400);
+      const { data: prof } = await adminSupabase.from('profiles').select('is_admin').eq('id', newId).maybeSingle();
+      if (prof?.is_admin) return json({ error: 'Ese correo es de un administrador: no se modifica desde aquí.' }, 403);
+      const { error: updErr } = await adminSupabase.auth.admin.updateUserById(newId, {
+        password, email_confirm: true, user_metadata: { name },
+      });
+      if (updErr) return json({ error: updErr.message }, 400);
+      existed = true;
     }
 
-    const newId = created.user.id;
     const { error: profileErr2 } = await adminSupabase
       .from('user_profiles')
-      .insert({ user_id: newId, name: name || null, email });
+      .upsert({ user_id: newId, name: name || null, email }, { onConflict: 'user_id' });
     if (profileErr2) {
       console.error('[create-user] user_profiles insert falló', profileErr2.message);
       return json({ error: `Usuario creado pero falló el perfil: ${profileErr2.message}` }, 500);
     }
 
-    console.log(`[create-user] admin ${caller.user.id} creó ${newId}`);
-    return json({ ok: true, userId: newId });
+    // La contraseña que puso el admin queda visible en la ficha hasta que el cliente ponga la suya.
+    await adminSupabase.rpc('temp_pw_set', { p_user: newId, p_value: password }).then(() => {}, () => {});
+
+    console.log(`[create-user] admin ${caller.user.id} ${existed ? 'completó' : 'creó'} ${newId}`);
+    return json({ ok: true, userId: newId, existed });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[create-user]', msg);

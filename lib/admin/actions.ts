@@ -278,7 +278,13 @@ export async function createUserProfile(params: {
     if (error) {
       // Si la función NO está desplegada → caemos al fallback. Otro error real
       // (email duplicado, password corto) se propaga tal cual.
-      if (!isFunctionUndeployed(error)) return { success: false, error: error.message };
+      // El mensaje real viene en el cuerpo de la respuesta; error.message es
+      // siempre el genérico «Edge Function returned a non-2xx status code».
+      if (!isFunctionUndeployed(error)) {
+        const ctx = (error as { context?: Response }).context;
+        const body = ctx ? await ctx.json().catch(() => null) : null;
+        return { success: false, error: body?.error ?? error.message };
+      }
     } else {
       const res = data as { userId?: string; ok?: boolean; error?: string } | null;
       if (res?.userId) userId = res.userId;
