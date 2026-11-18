@@ -6,8 +6,8 @@
 export const SUBSCRIPTION_TIERS = {
   free: {
     id: 'free',
-    name: 'Gratis',
-    description: 'Lo esencial de Polaris',
+    name: 'Sin acceso activo',
+    description: 'Cuenta sin programa activo',
     color: '#888888',
     features: [
       'Registro diario de cómo estás',
@@ -30,7 +30,7 @@ export const SUBSCRIPTION_TIERS = {
     description: 'Polaris completo, a tu ritmo',
     color: '#FFC804',
     features: [
-      'Todo lo del plan Gratis',
+      'Registro diario de cómo estás',
       'Norman sin límite',
       'Todos los módulos de Polaris',
       'Todos los sonidos',
@@ -105,8 +105,8 @@ export const TIER_ORDER: SubscriptionTier[] = [
 ];
 
 export function getTierLabel(tier: SubscriptionTier | string | null | undefined): string {
-  if (!tier) return 'Gratis';
-  return (SUBSCRIPTION_TIERS as Record<string, { name: string }>)[tier]?.name ?? 'Gratis';
+  if (!tier) return 'Sin acceso activo';
+  return (SUBSCRIPTION_TIERS as Record<string, { name: string }>)[tier]?.name ?? 'Sin acceso activo';
 }
 
 export function getTierColor(tier: SubscriptionTier | string | null | undefined): string {

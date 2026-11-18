@@ -14,7 +14,7 @@ import { fetchWhoUses, type PersonUsage } from '@/lib/admin/whoUses';
 import { useRouter } from 'expo-router';
 
 const TIER: Record<string, string> = {
-  free: 'Gratis', premium: 'Premium', premium_plus: 'Premium Plus', polaris: 'Polaris', growthplayers: 'Growth Players',
+  free: 'Sin acceso', premium: 'Premium', premium_plus: 'Premium Plus', polaris: 'Polaris', growthplayers: 'Growth Players',
 };
 const hace = (iso: string | null) => {
   if (!iso) return 'Nunca';
