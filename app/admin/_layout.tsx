@@ -409,7 +409,7 @@ export default function AdminLayout() {
       ? (
         <AdminGateState
           texto="NO PUDIMOS VERIFICAR TU ACCESO"
-          detalle="Puede ser tu conexion o una sesion caducada. Vuelve a entrar."
+          detalle="Puede ser tu conexión o una sesión caducada. Vuelve a entrar."
           accion={{ label: 'IR A COMANDO', onPress: () => router.replace('/(tabs)/comando' as never) }}
         />
       )

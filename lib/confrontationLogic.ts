@@ -276,7 +276,7 @@ export function detectSleepSelfReportMismatch(b: ConfrontationBundle, nowMs: num
       did: { value: `sleep_score ~${avgScore}/100`, detail: `duración promedio ${avgHours.toFixed(1)}h` },
       gap_metric: { summary: `${matchDays} días de mismatch`, mismatch_days: matchDays },
     },
-    confrontation_prompt: `En ${matchDays} de los últimos 5 días reportaste tu sueño 7+/10. Tu wearable midió un promedio de ${avgHours.toFixed(1)}h con calidad ${avgScore}/100. No discuto lo que sentís — te pregunto: ¿qué hace que necesites contarte que dormiste bien?`,
+    confrontation_prompt: `En ${matchDays} de los últimos 5 días reportaste tu sueño 7+/10. Tu wearable midió un promedio de ${avgHours.toFixed(1)}h con calidad ${avgScore}/100. No discuto lo que sientes — te pregunto: ¿qué hace que necesites contarte que dormiste bien?`,
     skipped: false,
   };
 }
@@ -320,7 +320,7 @@ export function detectEnergyVsRecoveryStreak(b: ConfrontationBundle, nowMs: numb
       did: { value: `recovery promedio ${Math.round(avgRecovery)}`, detail: `tu baseline 30d ~${Math.round(b.bioBaselineRecovery30d)}` },
       gap_metric: { summary: `${Math.round(((b.bioBaselineRecovery30d - avgRecovery) / b.bioBaselineRecovery30d) * 100)}% bajo tu baseline` },
     },
-    confrontation_prompt: `Llevás 3 días reportando energía 8+. Tu cuerpo está en otro lugar: recuperación promedio ${Math.round(avgRecovery)}, lejos de tu propia línea base de ${Math.round(b.bioBaselineRecovery30d)}. Algo se está sosteniendo desde el empuje. ¿Qué estás cargando esta semana que no se puede sostener?`,
+    confrontation_prompt: `Llevas 3 días reportando energía 8+. Tu cuerpo está en otro lugar: recuperación promedio ${Math.round(avgRecovery)}, lejos de tu propia línea base de ${Math.round(b.bioBaselineRecovery30d)}. Algo se está sosteniendo desde el empuje. ¿Qué estás cargando esta semana que no se puede sostener?`,
     skipped: false,
   };
 }
@@ -395,7 +395,7 @@ export function detectMentorContactGap(b: ConfrontationBundle, nowMs: number): C
       did: { value: 'NO_MENTOR_CONTACT', detail: `${daysGap} días sin escribirte` },
       gap_metric: { summary: `${daysGap}d sin contacto`, days_gap: daysGap },
     },
-    confrontation_prompt: `Dijiste que querías ${focus.toLowerCase().includes('frecuente') ? 'conversaciones frecuentes' : 'soporte cercano'}. Llevás ${daysGap} días sin escribirme. O cambió tu necesidad, o cambió tu disposición a usar lo que pediste. ¿Cuál de las dos?`,
+    confrontation_prompt: `Dijiste que querías ${focus.toLowerCase().includes('frecuente') ? 'conversaciones frecuentes' : 'soporte cercano'}. Llevas ${daysGap} días sin escribirme. O cambió tu necesidad, o cambió tu disposición a usar lo que pediste. ¿Cuál de las dos?`,
     skipped: false,
   };
 }

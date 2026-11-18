@@ -552,7 +552,7 @@ export default function OnboardingScreen() {
               <PremiumInput
                 value={accessCode}
                 onChangeText={v => { setAccessCode(v); setCodeStatus('idle'); setCodeMessage(''); }}
-                placeholder="Ej: POLARIS-2026-A1"
+                placeholder="Ej.: POLARIS-2026-A1"
                 autoCapitalize="characters"
                 accessibilityLabel="Código de acceso"
                 returnKeyType="done"

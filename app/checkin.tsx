@@ -101,7 +101,7 @@ export default function CheckInScreen() {
         clarity: clarity!,
         stress: stress!,
         sleep: sleep!,
-        systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
+        systemNeed: systemNeed.trim() || 'Orden, foco y ejecución sin ruido.',
         zones: bodyZones.length ? bodyZones : undefined,
         bodyPoints: bodyPoints.length ? bodyPoints : undefined,
       });
@@ -332,7 +332,7 @@ export default function CheckInScreen() {
     if (!listo || (!bodyZones.length && !bodyPoints.length)) return;
     saveCheckIn({
       energy: energy!, clarity: clarity!, stress: stress!, sleep: sleep!,
-      systemNeed: systemNeed.trim() || 'Orden, foco y ejecucion sin ruido.',
+      systemNeed: systemNeed.trim() || 'Orden, foco y ejecución sin ruido.',
       zones: bodyZones.length ? bodyZones : undefined,
       bodyPoints: bodyPoints.length ? bodyPoints : undefined,
     }).catch((e) => logSilentError('checkin.saveBody', e));
