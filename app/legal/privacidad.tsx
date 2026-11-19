@@ -27,9 +27,9 @@ const SECTIONS: Section[] = [
     heading: '2. Datos que recolectamos',
     body: [
       'Datos de cuenta e identidad: correo electrónico, nombre, rol u ocupación declarada, foto de avatar (opcional), zona horaria, token de notificaciones push y la sesión de autenticación.',
-      'Contenido que usted genera: su Norte (propósito, identidad, no negociables, recordatorio diario), check-ins diarios (energía, claridad, estrés, sueño y texto libre), diario personal, respuestas reflexivas a las lecciones, conversaciones con el mentor "Norman" y publicaciones de comunidad.',
-      'Datos de salud y biométricos: peso, estatura e IMC, perfil nutricional (incluidas restricciones y alergias), suplementación, ayuno intermitente y hábitos, además de los datos sincronizados desde wearables (sueño, recuperación, HRV, frecuencia cardíaca en reposo, SpO₂, temperatura, actividad).',
-      'Datos de uso y analítica: eventos de comportamiento (vistas de pantalla, uso de herramientas, envíos de chat, check-ins, impactos de paywall), sesiones de bienestar y lecciones completadas.',
+      'Contenido que usted genera: su Norte (propósito, identidad, no negociables, recordatorio diario), check-ins diarios (energía, claridad, estrés, sueño y texto libre), diario personal, respuestas reflexivas a las lecciones, conversaciones con el mentor "Norman" y publicaciones de comunidad, mensajes directos entre miembros y, si decide grabarlas, las grabaciones de voz de sus sesiones de mentoría con su transcripción.',
+      'Datos de salud y biométricos: peso, estatura e IMC, perfil nutricional (incluidas restricciones y alergias), suplementación, ayuno intermitente y hábitos, además de los datos sincronizados desde Apple Salud (HealthKit), Health Connect o wearables (sueño, recuperación, HRV, frecuencia cardíaca en reposo, SpO₂, temperatura, actividad).',
+      'Datos de uso y analítica: eventos de comportamiento (vistas de pantalla, uso de herramientas, envíos de chat, check-ins), sesiones de bienestar y lecciones completadas.',
       'Datos inferidos por IA (perfilado): puntuación de engagement, riesgo de abandono, "ADN de comportamiento", afinidades de contenido, detección de anomalías, asignación a cohortes y memoria episódica del mentor con embeddings vectoriales.',
       'Datos de acceso: nivel de acceso, fecha de vencimiento y códigos de acceso usados. La App no procesa pagos: no recibimos ni almacenamos datos de tarjeta a través de ella.',
     ],
@@ -45,16 +45,18 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    heading: '4. Dispositivos wearables (Oura / WHOOP)',
+    heading: '4. Apple Salud, Health Connect y wearables',
     body: [
-      'Si conecta un dispositivo Oura Ring o WHOOP, autoriza a la App, mediante OAuth, a importar sus datos biométricos y a guardar los tokens de acceso para sincronizar periódicamente. Estos datos provienen originalmente de Oura Health Oy y/o WHOOP, Inc., y su recolección se rige adicionalmente por las políticas de privacidad de esos proveedores.',
+      'Apple Salud (HealthKit), en iOS: con su permiso, la App solo LEE de Salud sueño, frecuencia cardíaca, variabilidad cardíaca (HRV), pulso en reposo, pasos, energía activa, oxígeno en sangre y frecuencia respiratoria, para calcular su recuperación y personalizar el acompañamiento. La App no escribe datos en Salud, no usa datos de HealthKit para publicidad ni marketing, no los vende y no los guarda en iCloud. Puede cambiar o retirar el permiso en Ajustes › Salud › Acceso a datos y dispositivos. Un resumen (HRV, pulso en reposo y recuperación) puede enviarse a los proveedores de IA de la sección 5 solo si usted aceptó el uso de IA.',
+      'Health Connect, en Android: aplica lo mismo, con los permisos de lectura que usted concede en Health Connect.',
+      'Oura, WHOOP, Polar y Strava: si conecta una de estas cuentas, autoriza a la App, mediante OAuth, a importar sus datos y a guardar los tokens de acceso para sincronizar periódicamente. Estos datos provienen de esos proveedores y su recolección se rige además por sus políticas de privacidad.',
       'Puede desconectar un wearable en cualquier momento desde la App. La desconexión detiene futuras sincronizaciones; para eliminar los datos ya almacenados, ver la sección de Conservación y eliminación.',
     ],
   },
   {
     heading: '5. Con quién compartimos sus datos',
     body: [
-      'No vendemos sus datos personales. Los compartimos con proveedores que actúan como encargados del tratamiento estrictamente para operar la App: Supabase (base de datos y backend), Vercel (hosting web), Anthropic, NVIDIA, Groq y OpenAI (modelos de IA del mentor, transcripción y embeddings), Oura / WHOOP (origen de datos de wearable), Apple App Store / Google Play (distribución de la App) y Expo (notificaciones push).',
+      'No vendemos sus datos personales. Los compartimos con proveedores que actúan como encargados del tratamiento estrictamente para operar la App: Supabase (base de datos y backend), Vercel (hosting web), Anthropic, NVIDIA, Groq y OpenAI (modelos de IA del mentor, transcripción y embeddings), Oura / WHOOP / Polar / Strava (origen de datos de wearable), Apple App Store / Google Play (distribución de la App) y Expo (notificaciones push).',
       'Para personalizar las respuestas, el sistema envía a los proveedores de IA un "prompt" que incluye su Norte, sus check-ins recientes, sus tareas reflexivas, inferencias de ML y una versión humanizada de sus señales biométricas, con el fin de generar la respuesta del mentor. Este envío a terceros solo ocurre con su permiso expreso, que se le pide al registrarse (o la primera vez que usa una función de IA). Puede retirarlo en cualquier momento escribiendo a ncapuozzo@polarisgrowthinstitute.com; sin ese permiso, las funciones de IA no se activan.',
       'También podremos divulgar datos cuando lo exija la ley, una autoridad competente, o para proteger derechos, seguridad o integridad de las personas o del servicio.',
     ],
@@ -70,13 +72,13 @@ const SECTIONS: Section[] = [
     body: [
       'Según su jurisdicción (p. ej. RGPD/GDPR en la UE, Ley 1581 de 2012 en Colombia, CCPA/CPRA en California), usted puede tener derecho a: acceso, rectificación, supresión ("derecho al olvido"), portabilidad / exportación, oposición y limitación del tratamiento (incluido el perfilado, desactivando ml_consent), y a retirar el consentimiento para datos de salud y desconectar wearables en cualquier momento.',
       'Usted tiene derecho a no ser objeto de decisiones exclusivamente automatizadas con efectos jurídicos significativos. Las inferencias del mentor IA y las recomendaciones de bienestar son orientativas y no producen efectos jurídicos.',
-      'Para ejercer estos derechos, escriba a info@polarisgrowthinstitute.com o use las opciones de la App ("Perfil → Privacidad y Datos"). Responderemos en los plazos legales aplicables.',
+      'Para ejercer estos derechos, escriba a info@polarisgrowthinstitute.com o use las opciones de la App (Yo → Avisos y datos, Yo → Mis datos y Yo → Eliminar mi cuenta). Responderemos en los plazos legales aplicables.',
     ],
   },
   {
     heading: '8. Conservación y eliminación',
     body: [
-      'Los datos de cuenta y contenido se conservan mientras su cuenta esté activa. Puede solicitar la eliminación desde la App ("Eliminar cuenta") o por correo; los datos biométricos se eliminan junto con la cuenta.',
+      'Los datos de cuenta y contenido se conservan mientras su cuenta esté activa. Puede solicitar la eliminación desde la App ("Eliminar cuenta") o por correo; los datos biométricos y las grabaciones de voz se eliminan junto con la cuenta.',
       'Los datos pueden persistir en copias de seguridad cifradas durante un periodo limitado hasta 30 días hasta su rotación.',
     ],
   },
@@ -100,7 +102,7 @@ const SECTIONS: Section[] = [
       'Cuando usted otorga el consentimiento específico de "confrontación con dato" en el onboarding, Norman puede citar literalmente datos registrados por usted en el sistema (check-ins, compromisos textuales del Memory OS, hábitos, sesiones de prácticas) para confrontar brechas entre lo que declaró y lo que hizo. La confrontación se aplica únicamente sobre compromisos EXPLÍCITOS suyos (con verbos de obligación fuerte) y conducta registrada en sus propias acciones.',
       'Fuentes que NUNCA se usan para confrontar: el contenido de mensajes directos entre pares (DMs) — esos espacios son privados; las publicaciones en comunidad — esos espacios son de soporte mutuo, no de coaching; inferencias de modelos de ML sin evidencia textual del cliente. Su contenido de journal puede emplearse SOLO como salvaguarda (para no confrontar a un cliente en estado vulnerable), nunca como evidencia para inferir brechas.',
       'Datos biométricos (HRV, recuperación, sueño) solo se usan en este modo si usted otorga el consentimiento adicional "confrontación biométrica". Sin él, el motor de confrontación no accede a su wearable.',
-      'Puede retirar el consentimiento en cualquier momento desde Perfil → Privacidad y Datos; el motor de confrontación dejará de operar inmediatamente y los items pendientes se descartan.',
+      'Puede retirar el consentimiento en cualquier momento escribiendo a info@polarisgrowthinstitute.com; el motor de confrontación dejará de operar inmediatamente y los items pendientes se descartan.',
     ],
   },
   {
@@ -108,7 +110,7 @@ const SECTIONS: Section[] = [
     body: [
       'Al otorgar este consentimiento, usted autoriza que sus interacciones con la App (mensajes a Norman, check-ins, uso de prácticas) se procesen para mejorar el funcionamiento del software: depuración de errores, ajuste de los modelos de personalización descritos en la sección 7, y desarrollo de nuevas funciones.',
       'Esto NO significa que sus datos se usen para entrenar modelos de lenguaje de terceros (Anthropic, NVIDIA, Groq, OpenAI) más allá del procesamiento de su propia solicitud en el momento en que la envía — cada proveedor opera bajo sus términos de API, no de entrenamiento con datos de clientes.',
-      'Puede retirar este consentimiento en cualquier momento desde Perfil → Privacidad y Datos, sin que afecte su acceso al Protocolo, al contenido educativo ni a las prácticas de bienestar — sí puede degradar la calidad de la personalización de Norman, que depende en parte de este aprendizaje continuo.',
+      'Puede retirar este consentimiento en cualquier momento desde Yo → Avisos y datos → «Usar mis datos para mejorar», sin que afecte su acceso al Protocolo, al contenido educativo ni a las prácticas de bienestar — sí puede degradar la calidad de la personalización de Norman, que depende en parte de este aprendizaje continuo.',
     ],
   },
   {
@@ -172,7 +174,7 @@ export default function PrivacidadScreen() {
         <Text style={styles.metaLine}>Responsable del tratamiento: POLARIS GROWTH INSTITUTE CORP</Text>
         <Text style={styles.metaLine}>Domicilio: 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS</Text>
         <Text style={styles.metaLine}>Contacto de privacidad: info@polarisgrowthinstitute.com</Text>
-        <Text style={styles.metaLine}>Última actualización: 22 de julio de 2026</Text>
+        <Text style={styles.metaLine}>Última actualización: 19 de noviembre de 2026</Text>
       </View>
 
       {SECTIONS.map((section) => (

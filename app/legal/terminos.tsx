@@ -49,7 +49,7 @@ const SECTIONS: Section[] = [
   {
     heading: '5. Inteligencia artificial — exactitud no garantizada',
     body: [
-      'Las respuestas del mentor se generan mediante modelos de IA de terceros (Anthropic); la transcripción de sesiones de voz usa OpenAI. La IA puede producir información incorrecta, incompleta, desactualizada o inapropiada ("alucinaciones").',
+      'Las respuestas del mentor se generan mediante modelos de IA de terceros (Anthropic y, como respaldo, NVIDIA, Groq u OpenAI); la transcripción de sesiones de voz usa OpenAI. La IA puede producir información incorrecta, incompleta, desactualizada o inapropiada ("alucinaciones").',
       'Usted es el único responsable de evaluar y verificar la idoneidad de cualquier sugerencia antes de actuar. No garantizamos la exactitud, fiabilidad ni resultados derivados del uso del mentor IA ni del programa.',
       'La App genera perfiles e inferencias automatizadas (engagement, riesgo de abandono, anomalías, cohortes). Son estimaciones estadísticas, no juicios definitivos sobre usted. Puede oponerse conforme a la Política de Privacidad.',
     ],
@@ -57,7 +57,7 @@ const SECTIONS: Section[] = [
   {
     heading: '6. Datos de wearables y biométricos',
     body: [
-      'Si conecta un wearable (Oura Ring, WHOOP), autoriza la importación y el tratamiento de sus datos biométricos según la Política de Privacidad.',
+      'Si conecta Apple Salud (HealthKit), Health Connect o un wearable (Oura Ring, WHOOP, Polar, Strava), autoriza la importación y el tratamiento de sus datos biométricos según la Política de Privacidad.',
       'Los datos biométricos provienen de dispositivos y APIs de terceros. No garantizamos su exactitud, disponibilidad ni continuidad. Las interpretaciones que la App o el mentor hacen de ellos son orientativas y no diagnósticas.',
     ],
   },
@@ -66,10 +66,10 @@ const SECTIONS: Section[] = [
     body: [
       'La App no vende productos, suscripciones ni contenido: dentro de ella no se realiza ninguna compra ni se procesa ningún pago.',
       'La App es una herramienta complementaria del servicio de acompañamiento y mentoría personalizada de Polaris Growth Institute. Ese servicio se contrata directamente con nosotros, fuera de la App, mediante un contrato de servicio firmado por usted.',
-      'Acceso: su cuenta la activa nuestro equipo al firmarse el contrato, o usted mismo con el código de acceso que le entregamos. Sin contrato vigente, la App puede ofrecer un acceso limitado.',
+      'Acceso: su cuenta la activa nuestro equipo al firmarse el contrato, o usted mismo con el código de acceso que le entregamos. Sin contrato vigente o código de acceso válido, la App no da acceso a sus funciones.',
       'Precio, forma de pago, duración, renovación, terminación y reembolsos: se rigen exclusivamente por su contrato de servicio, no por estos Términos ni por las tiendas de aplicaciones. No recibimos ni almacenamos datos de pago a través de la App.',
-      'Suspensión por falta de pago: si incumple los pagos pactados en su contrato de servicio y no los regulariza en el plazo que este establece, el servicio y el acceso ampliado a la App pueden suspenderse hasta que se pongan al día.',
-      'Fin del acceso: al terminar o vencer su contrato, el acceso ampliado a la App puede finalizar. Eliminar su cuenta de la App no termina su contrato de servicio; para ello, contacte a su asesor.',
+      'Suspensión por falta de pago: si incumple los pagos pactados en su contrato de servicio y no los regulariza en el plazo que este establece, el servicio y el acceso a la App pueden suspenderse hasta que se pongan al día.',
+      'Fin del acceso: al terminar o vencer su contrato, el acceso a la App finaliza. Eliminar su cuenta de la App no termina su contrato de servicio; para ello, contacte a su asesor.',
       'En caso de discrepancia entre estos Términos y su contrato de servicio respecto de las condiciones comerciales, prevalece el contrato.',
     ],
   },
@@ -79,6 +79,7 @@ const SECTIONS: Section[] = [
       'Usted conserva la titularidad del contenido que crea (diario, tareas, publicaciones de comunidad, mensajes). Nos concede una licencia limitada para almacenar y procesar dicho contenido con el fin de prestar el servicio (incluida la personalización y la memoria del mentor IA), conforme a la Política de Privacidad.',
       'El contenido que publique en la comunidad puede ser visible para otras personas usuarias de la App. No publique información que no desee compartir. Es responsable del contenido que publica.',
       'No publicará contenido ilegal, difamatorio, que incite al odio o la violencia, que acose, que infrinja derechos de terceros, que contenga datos personales de otros sin permiso, ni spam. Podemos moderar, ocultar o eliminar contenido y restringir funciones de comunidad.',
+      'Tolerancia cero: no toleramos contenido objetable ni usuarios abusivos. Puede reportar cualquier publicación, comentario, evento, espacio o miembro, y bloquear a cualquier miembro para dejar de ver su contenido y sus mensajes. Revisamos los reportes en un plazo de 24 horas: eliminamos el contenido que incumpla estas normas y podemos suspender o expulsar a quien lo publicó. Contacto: info@polarisgrowthinstitute.com.',
     ],
   },
   {
@@ -181,7 +182,7 @@ export default function TerminosScreen() {
         <Text style={styles.metaLine}>Titular del servicio: POLARIS GROWTH INSTITUTE CORP</Text>
         <Text style={styles.metaLine}>Domicilio: 2900 NW 72ND AVE, MIAMI, FLORIDA, ESTADOS UNIDOS</Text>
         <Text style={styles.metaLine}>Contacto legal: info@polarisgrowthinstitute.com</Text>
-        <Text style={styles.metaLine}>Última actualización: 22 de julio de 2026</Text>
+        <Text style={styles.metaLine}>Última actualización: 19 de noviembre de 2026</Text>
       </View>
 
       {SECTIONS.map((section) => (
