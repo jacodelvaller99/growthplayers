@@ -24,7 +24,8 @@ AS $$
   );
 $$;
 
-REVOKE ALL ON FUNCTION public.is_blocked_between(uuid, uuid) FROM PUBLIC;
+-- Supabase concede EXECUTE a anon por defecto en funciones nuevas: se quita explícitamente.
+REVOKE ALL ON FUNCTION public.is_blocked_between(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_blocked_between(uuid, uuid) TO authenticated;
 
 DROP POLICY IF EXISTS "dm_send" ON public.direct_messages;

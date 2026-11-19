@@ -11,7 +11,7 @@ Las credenciales van **solo** en App Review Information → Sign-in required, nu
 - [ ] Poner email y contraseña de esa cuenta en App Store Connect → Sign-in. Aquí: `<ver App Store Connect>`.
 - [ ] Confirmar que el ai-proxy de Supabase tiene `ANTHROPIC_API_KEY` y la clave de OpenAI. Sin ellas Norman
       entra en «Modo demostración» y la build se rechaza por 2.1.
-- [ ] Desplegar `delete-account` y aplicar la migración `20261119000000_ugc_report_user_dm_block.sql`.
+- [ ] Desplegar `delete-account` (la migración `20261119000000_ugc_report_user_dm_block.sql` ya está aplicada).
 
 ---
 
