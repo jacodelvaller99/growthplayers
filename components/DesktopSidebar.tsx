@@ -3,7 +3,6 @@ import { usePathname, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { palette, Fonts } from '@/constants/theme';
-import { getTierLabel } from '@/constants/subscriptions';
 import { HoverCard } from '@/components/polaris';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { useAppTheme, type ThemeMode } from '@/hooks/use-app-theme';
@@ -34,10 +33,10 @@ const NAV_ITEMS: (NavItem & { also?: string[] })[] = [
     also: ['norte', 'programas', 'mentoria', 'bienestar', 'perfil', 'module', 'lesson'] },
 ];
 
-// subscription_tier → etiqueta de la tarjeta de usuario. Mismo nombre que
-// /pricing (constants/subscriptions.ts): antes decía "Plan Elite" aquí y
-// "Premium Plus" allá para el mismo plan.
-const tierLabel = (tier: string | null | undefined) => `Plan ${getTierLabel(tier)}`;
+// subscription_tier → etiqueta de la tarjeta de usuario. Sin nombres de plan:
+// el acceso se contrata fuera de la app y un «Plan Premium» se lee como venta (App Review 3.1).
+const tierLabel = (tier: string | null | undefined) =>
+  !tier || tier === 'free' ? 'Sin acceso activo' : 'Acceso activo';
 
 export function DesktopSidebar() {
   const router   = useRouter();

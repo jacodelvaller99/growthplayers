@@ -248,7 +248,7 @@ export default function ClienteMemoriaScreen() {
           ) : (
             activeTasks.length > 1 && (
               <PremiumCard style={s.card}>
-                <Text style={s.muted}>Tu plan completo de tareas y seguimiento está en Premium.</Text>
+                <Text style={s.muted}>Tus tareas completas y su seguimiento se abren con tu código de acceso.</Text>
               </PremiumCard>
             )
           )}
