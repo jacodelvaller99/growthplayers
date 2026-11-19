@@ -700,7 +700,7 @@ export const RED_FLAGS: RedFlagRule[] = [
     trigger: 'Ideación suicida, plan de hacerse daño o crisis emocional aguda',
     rationale: 'Requiere acompañamiento profesional especializado. No es un tema de coaching ni de educación general.',
     severity: 'urgent',
-    action: 'Línea de prevención del suicidio local (en España 024; en Latinoamérica varía por país) o acudir a urgencias. Si hay un ser querido cerca, pedirle compañía.',
+    action: 'Línea de ayuda local (en Colombia: emergencias 123 y línea de salud mental 106; en España 024; en otros países, el número de emergencias local) o acudir a urgencias. Si hay un ser querido cerca, pedirle compañía.',
     citation: 'WHO — Live Life: Implementation Guide for Suicide Prevention (2021)',
   },
   // ── Trastornos alimentarios (riesgo señalado en arquitectura Polaris) ──────

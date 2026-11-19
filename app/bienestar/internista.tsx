@@ -45,7 +45,9 @@ const QUICK_PROMPTS = [
   '¿Cómo me preparo para mi próximo análisis?',
 ];
 
-const STORAGE_KEY = 'internist:consent:v1';
+// Por usuario y sin ':' (SecureStore solo acepta letras, números, '.', '-' y '_').
+// v2: el consentimiento ahora nombra a Anthropic y los datos que se envían.
+const consentKey = (userId: string) => `internist_consent_v2_${userId}`;
 
 const CONSENT_POINTS = [
   'Te enseña en general; no dice qué tienes tú.',
@@ -72,21 +74,22 @@ function InternistaScreenInner() {
   // ── Lee el consent persistido (storage local). El consent también vive en
   //    profiles.consents.internist_educational — pero la app puede arrancar sin red.
   useEffect(() => {
+    if (!userId) return;
     let alive = true;
     (async () => {
       let granted = false;
       try {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          granted = window.localStorage.getItem(STORAGE_KEY) === 'true';
+          granted = window.localStorage.getItem(consentKey(userId)) === 'true';
         } else {
           const SecureStore = await import('expo-secure-store');
-          granted = (await SecureStore.getItemAsync(STORAGE_KEY)) === 'true';
+          granted = (await SecureStore.getItemAsync(consentKey(userId))) === 'true';
         }
       } catch {/* default false */}
       if (alive) setConsent(granted);
     })();
     return () => { alive = false; };
-  }, []);
+  }, [userId]);
 
   // ── Ensambla contexto + historial cuando hay consent + userId.
   useEffect(() => {
@@ -103,15 +106,16 @@ function InternistaScreenInner() {
 
   const acceptConsent = useCallback(async () => {
     try {
+      if (!userId) throw new Error('sin usuario');
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_KEY, 'true');
+        window.localStorage.setItem(consentKey(userId), 'true');
       } else {
         const SecureStore = await import('expo-secure-store');
-        await SecureStore.setItemAsync(STORAGE_KEY, 'true');
+        await SecureStore.setItemAsync(consentKey(userId), 'true');
       }
     } catch {/* persistencia best-effort */}
     setConsent(true);
-  }, []);
+  }, [userId]);
 
   const scrollDown = useCallback(() => {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
@@ -211,6 +215,12 @@ function InternistaScreenInner() {
             conversación</Text>. Tus exámenes médicos viven en almacenamiento privado y
             solo los compartes con el coach si lo activas explícitamente más adelante.
           </Text>
+          <Text style={s.consentBody}>
+            Para responderte, tu pregunta se envía a <Text style={s.consentEmph}>Anthropic</Text>{' '}
+            (proveedor de la IA) junto con tus últimos resultados de exámenes y, si tienes un
+            reloj conectado, tu VFC, pulso en reposo y recuperación. Solo se envía cuando
+            preguntas.
+          </Text>
         </View>
         <View style={s.consentBullets}>
           {CONSENT_POINTS.map((b, i) => (
@@ -252,8 +262,8 @@ function InternistaScreenInner() {
         showsVerticalScrollIndicator={false}>
         {turns.length === 0 && !streaming && (
           <Text style={s.introText}>
-            Hola{patient.name ? `, ${patient.name}` : ''}. Soy el internista educativo
-            de Polaris. Puedes preguntarme qué significan tus marcadores, qué dice la
+            Hola{patient.name ? `, ${patient.name}` : ''}. Soy el asistente educativo de IA
+            de Polaris (no soy médico). Puedes preguntarme qué significan tus marcadores, qué dice la
             evidencia sobre un hábito o suplemento, o cómo entender tus métricas de
             wearable. Cito mis fuentes — y cuando algo necesita un médico, te lo digo.
           </Text>
