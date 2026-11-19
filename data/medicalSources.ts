@@ -54,7 +54,7 @@ export const MEDICAL_SOURCES: Record<SourceTopic, MedicalSource[]> = {
     { title: 'How Breath-Control Can Change Your Life: A Systematic Review (2018)', org: 'Frontiers in Human Neuroscience', url: 'https://doi.org/10.3389/fnhum.2018.00353' },
   ],
   meditacion: [
-    { title: 'Meditation and Mindfulness: What You Need To Know', org: 'NIH — National Center for Complementary and Integrative Health', url: 'https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety' },
+    { title: 'Meditation and Mindfulness: Effectiveness and Safety', org: 'NIH — National Center for Complementary and Integrative Health', url: 'https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety' },
     { title: 'Meditation Programs for Psychological Stress and Well-being (2014)', org: 'JAMA Internal Medicine', url: 'https://doi.org/10.1001/jamainternmed.2013.13018' },
   ],
   binaurales: [

@@ -198,6 +198,13 @@ export default function RespiracionScreen() {
         </View>
 
         <Text style={s.pattern}>{tech.description}</Text>
+        {tech.id === 'wim-hof' && (
+          <SafetyWarning
+            tone="danger"
+            title="RESPIRACIÓN INTENSA"
+            body="Hazla sentado o acostado. Nunca en el agua, conduciendo ni de pie: respirar rápido puede causar mareo u hormigueo. Si te mareas, para y respira normal."
+          />
+        )}
         {mode === 'paused' && (
           <Text style={s.cycles}>{cycles} de {tech.cycles} ciclos</Text>
         )}

@@ -22,6 +22,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Pantalla } from '@/components/pantalla';
 import SafetyWarning from '@/components/SafetyWarning';
+import { Fuentes } from '@/components/Fuentes';
 import { Fonts, palette, radii, spacing } from '@/constants/theme';
 import { readLocal, writeLocal } from '@/storage/local';
 
@@ -184,6 +185,7 @@ export default function ConscienciaScreen() {
           body="Esta es una herramienta de autoexploración, no un diagnóstico ni tratamiento."
         />
       </AntesDeEmpezar>
+      <Fuentes topics={['estres']} />
     </Pantalla>
   );
 }
