@@ -336,7 +336,10 @@ export function buildSystemPrompt(ctx: MentorContext): string {
   // ── Biometric block (only injected when wearable data exists) ─────────────
   const biometricBlock = (() => {
     if (!ctx.biometricProvider || ctx.biometricReadiness == null) return '';
-    const providerName = ctx.biometricProvider === 'oura' ? 'Oura Ring' : 'WHOOP';
+    const providerName = ({
+      oura: 'Oura Ring', whoop: 'WHOOP', polar: 'Polar', strava: 'Strava',
+      apple_health: 'Apple Health', health_connect: 'Health Connect',
+    } as Record<string, string>)[ctx.biometricProvider] ?? 'Reloj conectado';
     const lines: string[] = [`Wearable: ${providerName}`];
 
     // Readiness

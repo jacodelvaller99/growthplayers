@@ -516,8 +516,10 @@ export default function WearablesScreen() {
                   sueño, frecuencia cardíaca, variabilidad cardíaca (HRV), pulso en reposo, pasos,
                   energía activa, oxígeno en sangre y frecuencia respiratoria.
                   Con eso calculamos tu recuperación y Norman adapta su acompañamiento. Polaris no
-                  escribe en Salud, y tus datos de salud no se usan para publicidad ni se comparten
-                  con terceros. Cambia los permisos en Ajustes › Salud › Acceso a datos y dispositivos.
+                  escribe en Salud ni usa tus datos de salud para publicidad. Si aceptaste el uso de
+                  IA, un resumen (VFC, pulso en reposo y recuperación) se envía a los proveedores de IA
+                  de Norman y del Internista para responderte; nunca se vende. Cambia los permisos en
+                  Ajustes › Salud › Acceso a datos y dispositivos.
                 </Text>
               </View>
             )}
@@ -526,7 +528,8 @@ export default function WearablesScreen() {
                 (P1-7). Se describe la protección que SÍ existe: RLS owner-only + TLS. */}
             <Text style={styles.note}>
               Los permisos de tu reloj quedan ligados a tu cuenta: solo tú puedes leerlos, viajan
-              siempre por conexión cifrada y nunca se comparten con terceros. Al desconectar,
+              siempre por conexión cifrada y solo salen de Polaris, como resumen, hacia los
+              proveedores de IA de Norman si aceptaste su uso. Al desconectar,
               revocamos el acceso ante el proveedor y borramos tu histórico de ese dispositivo.
             </Text>
           </View>

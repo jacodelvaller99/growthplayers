@@ -55,7 +55,7 @@ function BiometricsBody({ onSynced }: { onSynced: () => void }) {
   const name = conn ? PROVIDER_NAME[conn.provider] ?? 'Tu reloj' : 'Tu reloj';
   // App Review 2.5.1: donde se muestran datos de HealthKit, se dice de dónde vienen.
   const disclaimer = conn?.provider === 'apple_health'
-    ? `Datos leídos de Apple Health (HealthKit) con tu permiso. ${DISCLAIMER}`
+    ? `Datos leídos de Apple Health (HealthKit) con tu permiso. Polaris no escribe en Salud. Cambia los permisos en Ajustes › Salud › Acceso a datos y dispositivos. ${DISCLAIMER}`
     : DISCLAIMER;
   const footer = (
     <View>
