@@ -90,9 +90,10 @@ export default function MentoriaScreen() {
       // El audio se envía a OpenAI (Whisper) para transcribirse. Consentir algo
       // distinto de lo que ocurre no es consentimiento válido (RGPD).
       'Vas a grabar el audio de tu sesión de mentoría.\n\n' +
-        'El audio se envía a OpenAI para transcribirse automáticamente; no se almacena ' +
-        'en Polaris. Lo que sí guardamos es la transcripción y las notas que Norman ' +
-        'redacta a partir de ella, visibles solo para ti y tu mentor.\n\n' +
+        'El audio se guarda en tu cuenta de Polaris y se envía a OpenAI para ' +
+        'transcribirse automáticamente. También guardamos la transcripción y las notas ' +
+        'que Norman redacta a partir de ella, visibles solo para ti y tu mentor. ' +
+        'Todo se borra si eliminas tu cuenta.\n\n' +
         '¿Autorizas la grabación?',
       [
         { text: 'Cancelar', style: 'cancel' },

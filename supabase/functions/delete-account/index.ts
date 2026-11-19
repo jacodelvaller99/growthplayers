@@ -192,7 +192,7 @@ Deno.serve(async (req: Request) => {
     // Storage NO cascadea desde auth.users — borramos a mano los objetos del
     // bucket privado medical-exams bajo la carpeta <user_id>/.
     // Igual con las fotos de la comunidad (bucket community-media, carpeta <user_id>/).
-    for (const bucket of ['medical-exams', 'community-media']) {
+    for (const bucket of ['medical-exams', 'community-media', 'mentorship-audio']) {
       try {
         const { data: files } = await adminSupabase.storage
           .from(bucket)
