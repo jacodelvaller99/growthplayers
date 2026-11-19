@@ -98,7 +98,7 @@ export interface PublicProfile {
   streak: number | null;
 }
 
-export type ReportTarget = 'post' | 'comment' | 'event' | 'space';
+export type ReportTarget = 'post' | 'comment' | 'event' | 'space' | 'user';
 
 // ─── Conexiones ───────────────────────────────────────────────────────────────
 

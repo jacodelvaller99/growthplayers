@@ -43,10 +43,10 @@ const REASON_LABEL: Record<string, string> = Object.fromEntries(
   REPORT_REASONS.map((r) => [r.value, r.label]),
 );
 
-type ReportTargetType = 'post' | 'comment' | 'event' | 'space';
+type ReportTargetType = 'post' | 'comment' | 'event' | 'space' | 'user';
 
 const TARGET_LABEL: Record<ReportTargetType, string> = {
-  post: 'POST', comment: 'COMENTARIO', event: 'EVENTO', space: 'ESPACIO',
+  post: 'POST', comment: 'COMENTARIO', event: 'EVENTO', space: 'ESPACIO', user: 'MIEMBRO',
 };
 
 const TARGET_ACTION_LABEL: Record<ReportTargetType, string> = {
@@ -54,6 +54,7 @@ const TARGET_ACTION_LABEL: Record<ReportTargetType, string> = {
   comment: 'ELIMINAR COMENTARIO',
   event: 'CANCELAR EVENTO',
   space: 'ARCHIVAR ESPACIO',
+  user: 'VER MIEMBRO',
 };
 
 interface ReportItem {
@@ -156,6 +157,7 @@ export default function AdminComunidadScreen() {
       const userIds = [...new Set<string>([
         ...rows.map((r) => r.reporter_id),
         ...Object.values(postMap).map((p) => p.user_id),
+        ...idsOf('user'),
       ].filter(Boolean))];
       const nameMap: Record<string, string> = {};
       if (userIds.length > 0) {
@@ -172,7 +174,9 @@ export default function AdminComunidadScreen() {
         const post = r.target_type === 'post' && r.target_id ? postMap[r.target_id] : undefined;
         const content = r.target_type === 'post'
           ? (post?.content ?? null)
-          : (r.target_id ? contentMap[r.target_id] ?? null : null);
+          : r.target_type === 'user'
+            ? (r.target_id ? `Miembro reportado: ${nameMap[r.target_id] ?? 'Miembro'}` : null)
+            : (r.target_id ? contentMap[r.target_id] ?? null : null);
         return {
           id:           r.id,
           reporter_id:  r.reporter_id,
@@ -214,7 +218,12 @@ export default function AdminComunidadScreen() {
   // quedan para auditoría). Destructiva → confirmación obligatoria.
   const deleteTarget = (item: ReportItem) => {
     if (!item.targetId) return;
-    const messages: Record<ReportTargetType, string> = {
+    // Miembro reportado: la acción (desactivar membresía) vive en su ficha.
+    if (item.targetType === 'user') {
+      router.push(`/admin/usuarios/${item.targetId}` as never);
+      return;
+    }
+    const messages: Record<Exclude<ReportTargetType, 'user'>, string> = {
       post: 'La publicación reportada se eliminará permanentemente.',
       comment: 'El comentario reportado se eliminará permanentemente.',
       event: 'El evento reportado quedará cancelado para todos los asistentes.',

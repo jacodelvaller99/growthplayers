@@ -15,7 +15,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
-import { CircleEmpty } from '@/components/circle';
+import { CircleEmpty, ReportReasonSheet } from '@/components/circle';
+import { containsBannedContent } from '@/data/moderation';
+import { reportTarget } from '@/lib/circle';
+import { showAlert } from '@/lib/confirm';
 import { supabase } from '@/lib/supabase';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
 import { palette, spacing, typography, Fonts, radii } from '@/constants/theme';
@@ -78,6 +81,8 @@ export default function ChatThreadScreen() {
   // Reacciones por mensaje (degrada a vacío si la tabla no existe aún).
   const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
   const [reactingId, setReactingId] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // ── Estado de bloqueo (en cualquier dirección) ───────────────────────────────
   const checkBlocks = useCallback(async () => {
@@ -206,20 +211,54 @@ export default function ChatThreadScreen() {
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     let lastMineIdx = -1;
-    messages.forEach((m, i) => { if (m.sender_id === userId) lastMineIdx = i; });
+    // Si bloqueaste a este miembro, sus mensajes dejan de verse (App Store 1.2).
+    const visible = blockState === 'i-blocked' ? messages.filter((m) => m.sender_id === userId) : messages;
+    visible.forEach((m, i) => { if (m.sender_id === userId) lastMineIdx = i; });
     let lastDay = '';
-    messages.forEach((m, i) => {
+    visible.forEach((m, i) => {
       const day = dayLabel(m.created_at);
       if (day && day !== lastDay) { out.push({ kind: 'divider', id: `div-${m.id}`, label: day }); lastDay = day; }
       out.push({ kind: 'msg', id: m.id, m, mine: m.sender_id === userId, showReceipt: i === lastMineIdx });
     });
     return out;
-  }, [messages, userId]);
+  }, [messages, userId, blockState]);
+
+  const report = async (reason: string) => {
+    setReportOpen(false);
+    if (!userId || !peerId) return;
+    const res = await reportTarget(userId, 'user', peerId, reason);
+    setNotice(res.success ? 'Gracias. Revisaremos tu reporte.' : (res.error ?? 'No se pudo enviar el reporte.'));
+  };
+
+  const block = () => {
+    if (!userId || !peerId) return;
+    showAlert('Bloquear miembro', `No verás más los mensajes ni el contenido de ${peerName}. ¿Continuar?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Bloquear', style: 'destructive',
+        onPress: async () => {
+          try { await anyDb.from('user_blocks').insert({ blocker_id: userId, blocked_id: peerId }); } catch { /* degradable */ }
+          checkBlocks();
+        },
+      },
+    ]);
+  };
+
+  const unblock = async () => {
+    if (!userId || !peerId) return;
+    try { await anyDb.from('user_blocks').delete().eq('blocker_id', userId).eq('blocked_id', peerId); } catch { /* degradable */ }
+    checkBlocks();
+  };
 
   const send = async () => {
     const body = draft.trim();
     if (!userId || !peerId || !body || sending) return;
     if (blockState !== 'none') return;
+    if (containsBannedContent(body)) {
+      setNotice('Tu mensaje contiene lenguaje que no respeta las normas de la comunidad.');
+      return;
+    }
+    setNotice(null);
     setSending(true);
     // Optimista
     const optimistic: DM = { id: `tmp-${Date.now()}`, sender_id: userId, body, created_at: new Date().toISOString(), read_at: null };
@@ -256,8 +295,26 @@ export default function ChatThreadScreen() {
             <Avatar id={peerId ?? ''} name={peerName} size={32} />
             <Text style={styles.headerName} numberOfLines={1}>{peerName}</Text>
           </View>
-          <View style={{ width: 44 }} />
+          <View style={styles.headerActions}>
+            <Pressable onPress={() => setReportOpen(true)} style={styles.headerBtn} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Reportar a ${peerName}`}>
+              <MaterialIcons name="flag" size={20} color={palette.smoke} />
+            </Pressable>
+            {blockState !== 'i-blocked' && (
+              <Pressable onPress={block} style={styles.headerBtn} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Bloquear a ${peerName}`}>
+                <MaterialIcons name="block" size={20} color={palette.smoke} />
+              </Pressable>
+            )}
+          </View>
         </View>
+        <ReportReasonSheet
+          visible={reportOpen}
+          title={`¿Por qué reportas a ${peerName}?`}
+          onPick={report}
+          onClose={() => setReportOpen(false)}
+        />
+        {notice && (
+          <Text style={styles.notice} accessibilityLiveRegion="polite">{notice}</Text>
+        )}
 
         {loading ? (
           <View style={styles.center}>
@@ -350,7 +407,10 @@ export default function ChatThreadScreen() {
         ) : blockState === 'i-blocked' ? (
           <View style={styles.blockedBar}>
             <MaterialIcons name="block" size={16} color={palette.smoke} />
-            <Text style={styles.blockedText}>Bloqueaste a este usuario. Desbloquéalo para escribirle.</Text>
+            <Text style={styles.blockedText}>Bloqueaste a este usuario.</Text>
+            <Pressable onPress={unblock} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Desbloquear a ${peerName}`}>
+              <Text style={styles.unblockText}>DESBLOQUEAR</Text>
+            </Pressable>
           </View>
         ) : (
           <View style={[styles.composer, { paddingBottom: insets.bottom + spacing.sm }]}>
@@ -388,6 +448,9 @@ const styles = StyleSheet.create({
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: palette.lineSoft },
   backBtn:     { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerCenter:{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
+  headerBtn:   { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
+  notice:      { fontFamily: Fonts.sans, fontSize: 12, color: palette.goldText, textAlign: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.lg },
   headerName:  { fontFamily: Fonts.display, fontSize: 14, color: palette.ivory, letterSpacing: 1, maxWidth: 200 },
 
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -427,4 +490,5 @@ const styles = StyleSheet.create({
 
   blockedBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.lg, paddingHorizontal: spacing.lg, borderTopWidth: 1, borderTopColor: palette.lineSoft },
   blockedText: { fontFamily: Fonts.sans, fontSize: 13, color: palette.smoke, textAlign: 'center' },
+  unblockText: { ...typography.label, color: palette.goldText, letterSpacing: 1 },
 });

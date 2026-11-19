@@ -220,6 +220,7 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [reportFor, setReportFor] = useState<PostComment | null>(null);
 
   // Sheet gesto-driven (audit "Fluidez Polaris" §Fase 4 "06"+"08"): la
@@ -273,8 +274,10 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
 
   const report = async (reason: string) => {
     if (!userId || !reportFor) return;
-    await reportTarget(userId, 'comment', reportFor.id, reason);
+    const res = await reportTarget(userId, 'comment', reportFor.id, reason);
     setReportFor(null);
+    if (res.success) setNotice('Gracias. Revisaremos tu reporte.');
+    else setError(res.error ?? 'No se pudo enviar el reporte.');
   };
 
   return (
@@ -332,6 +335,9 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
             )}
           </ScrollView>
 
+          {notice && !error && (
+            <Text style={[s.csError, { color: palette.goldText }]} accessibilityLiveRegion="polite">{notice}</Text>
+          )}
           {error && (
             <Text style={s.csError} accessibilityLiveRegion="polite" role="alert">{error}</Text>
           )}
@@ -362,6 +368,33 @@ export function CommentSheet({ postId, userId, visible, onClose, onCountChange }
 }
 
 // ─── Guard de flag (deep-link con El Círculo apagado → estado honesto) ───────
+
+// ─── ReportReasonSheet (App Store 1.2: reportar miembros y mensajes) ──────────
+
+export function ReportReasonSheet({ visible, title, onPick, onClose }: {
+  visible: boolean;
+  title: string;
+  onPick: (reason: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={s.rrOverlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar">
+        <Pressable style={s.rrBox} onPress={() => {}}>
+          <Text style={s.csReportTitle}>{title}</Text>
+          {REPORT_REASONS.map((r) => (
+            <Pressable key={r.value} style={s.csReportRow} onPress={() => onPick(r.value)} accessibilityRole="button" accessibilityLabel={`Reportar por: ${r.label}`}>
+              <Text style={s.csContent}>{r.label}</Text>
+            </Pressable>
+          ))}
+          <Pressable style={s.csReportRow} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancelar">
+            <Text style={[s.csContent, { color: palette.smoke }]}>Cancelar</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
 
 export function CircleDisabled() {
   return (
@@ -429,6 +462,8 @@ const s = StyleSheet.create({
   csReportBox: { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.sm, gap: 2 },
   csReportTitle: { ...typography.label, color: palette.smoke, marginBottom: spacing.xs },
   csReportRow: { paddingVertical: spacing.sm, minHeight: 40, justifyContent: 'center' },
+  rrOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg },
+  rrBox: { backgroundColor: palette.graphite, borderRadius: radii.md, padding: spacing.lg, gap: 2, width: '100%', maxWidth: 420, alignSelf: 'center' },
   csError: { ...typography.caption, color: palette.danger, fontSize: 12, marginTop: spacing.xs },
   csComposer: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, alignItems: 'center' },
   csInput: { flex: 1, backgroundColor: palette.graphite, borderColor: palette.line, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontFamily: Fonts.sans, fontSize: 14, color: palette.ivory, minHeight: 44 },

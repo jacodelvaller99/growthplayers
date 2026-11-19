@@ -9,7 +9,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ENV } from '@/app/config/env';
 import { Avatar } from '@/components/Avatar';
-import { CircleDisabled, CircleEmpty } from '@/components/circle';
+import { CircleDisabled, CircleEmpty, ReportReasonSheet } from '@/components/circle';
 import { PremiumCard, useScreen } from '@/components/polaris';
 import { palette, radii, spacing, typography } from '@/constants/theme';
 import { useLifeFlow } from '@/hooks/use-lifeflow';
@@ -29,8 +28,10 @@ import {
   fetchConnectionWith,
   fetchPublicProfile,
   removeConnection,
+  reportTarget,
   requestConnection,
 } from '@/lib/circle';
+import { showAlert } from '@/lib/confirm';
 import { connectionStateFor, type Connection, type ConnectionStatus, type PublicProfile } from '@/lib/circleLogic';
 import { supabase } from '@/lib/supabase';
 
@@ -50,6 +51,7 @@ export default function PerfilPublicoScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const isSelf = !!userId && userId === profileId;
 
@@ -91,7 +93,7 @@ export default function PerfilPublicoScreen() {
 
   const handleBlock = () => {
     if (!userId || !profileId || !profile) return;
-    Alert.alert('Bloquear miembro', `No verás más el contenido de ${profile.name}. ¿Continuar?`, [
+    showAlert('Bloquear miembro', `No verás más el contenido de ${profile.name}. ¿Continuar?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Bloquear', style: 'destructive',
@@ -103,6 +105,13 @@ export default function PerfilPublicoScreen() {
         },
       },
     ]);
+  };
+
+  const handleReport = async (reason: string) => {
+    setReportOpen(false);
+    if (!userId || !profileId) return;
+    const res = await reportTarget(userId, 'user', profileId, reason);
+    setNotice(res.success ? 'Gracias. Revisaremos tu reporte.' : (res.error ?? 'No se pudo enviar el reporte.'));
   };
 
   const CONNECT_LABEL: Record<ConnectionStatus, string> = {
@@ -179,6 +188,19 @@ export default function PerfilPublicoScreen() {
                 accessibilityLabel={`Bloquear a ${profile.name}`}>
                 <Text style={s.dangerBtnText}>BLOQUEAR</Text>
               </Pressable>
+              <Pressable
+                style={({ pressed }) => [s.dangerBtn, pressed && { opacity: 0.75 }]}
+                onPress={() => setReportOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Reportar a ${profile.name}`}>
+                <Text style={s.dangerBtnText}>REPORTAR</Text>
+              </Pressable>
+              <ReportReasonSheet
+                visible={reportOpen}
+                title={`¿Por qué reportas a ${profile.name}?`}
+                onPick={handleReport}
+                onClose={() => setReportOpen(false)}
+              />
             </View>
           )}
 

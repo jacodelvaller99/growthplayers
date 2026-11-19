@@ -3,7 +3,7 @@
  * Burbujas + reacciones long-press + recibos + estados de bloqueo + realtime.
  * Monta la rama loading/vacío sin throw (Supabase + channel mockeados).
  */
-import { render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('expo-router', () => ({
@@ -40,11 +40,29 @@ jest.mock('@/lib/supabase', () => {
   };
 });
 
+const mockReportTarget = jest.fn(() => Promise.resolve({ success: true }));
+jest.mock('@/lib/circle', () => ({ reportTarget: (...a: unknown[]) => mockReportTarget(...(a as [])) }));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ChatThreadScreen = require('@/app/comunidad/chat/[id]').default;
 
 describe('ChatThreadScreen (DM 1-a-1) — render smoke', () => {
   it('renderiza (loading / vacío) sin throw', () => {
     expect(() => render(<ChatThreadScreen />)).not.toThrow();
+  });
+});
+
+describe('ChatThreadScreen — App Store 1.2', () => {
+  it('reporta al miembro desde el header', async () => {
+    const { getByLabelText, findByText } = render(<ChatThreadScreen />);
+    fireEvent.press(getByLabelText('Reportar a Ana'));
+    fireEvent.press(getByLabelText('Reportar por: Spam o publicidad'));
+    await waitFor(() => expect(mockReportTarget).toHaveBeenCalledWith('u-test', 'user', 'peer-1', 'spam'));
+    expect(await findByText('Gracias. Revisaremos tu reporte.')).toBeTruthy();
+  });
+
+  it('ofrece bloquear desde el header', () => {
+    const { getByLabelText } = render(<ChatThreadScreen />);
+    expect(getByLabelText('Bloquear a Ana')).toBeTruthy();
   });
 });
