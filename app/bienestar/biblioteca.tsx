@@ -21,9 +21,8 @@ interface Category {
   label: string;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   color: string;
-  /** Ruta a la práctica real. Si está, la categoría abre contenido que YA existe.
-   *  Si no, es un tema en curaduría (se muestra "próximamente", sin contar sesiones falsas). */
-  route?: string;
+  /** Ruta a la práctica real: solo se listan categorías con contenido que YA existe. */
+  route: string;
 }
 
 const CATEGORIES: Category[] = [
@@ -31,12 +30,6 @@ const CATEGORIES: Category[] = [
   { id: 'breathing',   label: 'RESPIRACIÓN',   icon: 'air',              color: palette.ash, route: '/bienestar/respiracion' },
   { id: 'meditation',  label: 'MEDITACIÓN',    icon: 'self-improvement', color: palette.ash, route: '/bienestar/meditacion'  },
   { id: 'sleep',       label: 'SUEÑO',         icon: 'bedtime',          color: palette.ash, route: '/bienestar/sueno'       },
-  { id: 'focus',       label: 'ENFOQUE',       icon: 'psychology',       color: palette.ash },
-  { id: 'energy',      label: 'ENERGÍA',       icon: 'bolt',             color: palette.ash },
-  { id: 'anxiety',     label: 'ANSIEDAD',      icon: 'spa',              color: palette.ash },
-  { id: 'morning',     label: 'MAÑANA',        icon: 'wb-sunny',         color: palette.ash },
-  { id: 'evening',     label: 'NOCHE',         icon: 'nights-stay',      color: palette.ash },
-  { id: 'performance', label: 'PERFORMANCE',   icon: 'trending-up',      color: palette.ash },
 ];
 
 // ─── Lecturas recomendadas ────────────────────────────────────────────────────
@@ -58,16 +51,11 @@ export default function BibliotecaScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery]           = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    if (!query.trim() && !activeCategory) return CATEGORIES;
-    return CATEGORIES.filter((c) => {
-      const matchQuery = !query.trim() || c.label.toLowerCase().includes(query.toLowerCase());
-      const matchCat   = !activeCategory || c.id === activeCategory;
-      return matchQuery && matchCat;
-    });
-  }, [query, activeCategory]);
+    if (!query.trim()) return CATEGORIES;
+    return CATEGORIES.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()));
+  }, [query]);
 
   return (
     <ScrollView
@@ -104,53 +92,27 @@ export default function BibliotecaScreen() {
         )}
       </View>
 
-      {/* Aviso honesto: la biblioteca está en curaduría. Las categorías con
-          práctica real abren contenido que YA existe; el resto, próximamente. */}
-      {!query && !activeCategory && (
-        <View style={styles.notice}>
-          <MaterialIcons name="auto-stories" size={16} color={palette.goldText} />
-          <Text style={styles.noticeText}>
-            Biblioteca en curaduría. Las categorías con práctica abren contenido real; el resto llega pronto.
-          </Text>
-        </View>
-      )}
-
       {/* Categories */}
-      <GoldDivider label={activeCategory ? 'CATEGORÍA' : 'EXPLORAR'} />
-      {activeCategory && (
-        <Pressable onPress={() => setActiveCategory(null)} style={styles.clearFilter} accessibilityRole="button" accessibilityLabel="Mostrar todas las categorías">
-          <MaterialIcons name="close" size={14} color={palette.goldText} />
-          <Text style={styles.clearFilterText}>Mostrar todas</Text>
-        </Pressable>
-      )}
+      <GoldDivider label="EXPLORAR" />
       <View style={styles.grid}>
         {filtered.map((cat) => (
           <Pressable
             key={cat.id}
-            onPress={() =>
-              cat.route
-                ? router.push(cat.route as never)
-                : setActiveCategory(activeCategory === cat.id ? null : cat.id)
-            }
+            onPress={() => router.push(cat.route as never)}
             accessibilityRole="button"
-            accessibilityLabel={cat.route ? `Abrir ${cat.label}` : `${cat.label} próximamente`}
-            style={({ pressed }) => [
-              styles.catCard,
-              activeCategory === cat.id && styles.catCardActive,
-              !cat.route && { opacity: 0.7 },
-              pressed && { opacity: 0.8 },
-            ]}>
+            accessibilityLabel={`Abrir ${cat.label}`}
+            style={({ pressed }) => [styles.catCard, pressed && { opacity: 0.8 }]}>
             <View style={[styles.catIcon, { backgroundColor: alpha(cat.color, '22') }]}>
               <MaterialIcons name={cat.icon} size={24} color={cat.color} />
             </View>
             <Text style={[styles.catLabel, { color: cat.color }]}>{cat.label}</Text>
-            <Text style={styles.catCount}>{cat.route ? 'ABRIR →' : 'PRÓXIMAMENTE'}</Text>
+            <Text style={styles.catCount}>ABRIR →</Text>
           </Pressable>
         ))}
       </View>
 
       {/* Lecturas recomendadas — libros reales (curaduría) */}
-      {!query && !activeCategory && (
+      {!query && (
         <>
           <GoldDivider label="LECTURAS" />
           <Text style={styles.readingsHint}>Curaduría inicial. Libros que sostienen el Método.</Text>
@@ -168,19 +130,6 @@ export default function BibliotecaScreen() {
                 <Text style={styles.readingTag}>{r.tag}</Text>
               </View>
             ))}
-          </View>
-        </>
-      )}
-
-      {/* Favoritos (placeholder) */}
-      {!query && !activeCategory && (
-        <>
-          <GoldDivider label="FAVORITOS" />
-          <View style={styles.emptyBox}>
-            <MaterialIcons name="favorite-border" size={32} color={palette.smoke} />
-            <Text style={styles.emptyText}>
-              Marca sesiones como favoritas para verlas aquí.
-            </Text>
           </View>
         </>
       )}
@@ -221,35 +170,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Aviso honesto de curaduría
-  notice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: alpha(palette.gold, '0F'),
-    borderColor: alpha(palette.gold, '33'),
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  noticeText: {
-    ...typography.caption,
-    color: palette.ash,
-    fontSize: 12,
-    flex: 1,
-    lineHeight: 17,
-  },
-
-  clearFilter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: spacing.md,
-  },
-  clearFilterText: { ...typography.label, color: palette.goldText },
-
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -266,10 +186,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
     minWidth: 130,
-  },
-  catCardActive: {
-    borderColor: palette.gold,
-    backgroundColor: palette.goldLight,
   },
   catIcon: {
     width: 44,
@@ -315,11 +231,4 @@ const styles = StyleSheet.create({
   readingAuthor: { ...typography.caption, color: palette.goldText, fontSize: 11 },
   readingWhy:    { ...typography.caption, color: palette.smoke, fontSize: 11.5, lineHeight: 16, marginTop: 2 },
   readingTag:    { ...typography.mono, color: palette.smoke, letterSpacing: 1, flexShrink: 0 },
-
-  emptyBox: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xxl,
-  },
-  emptyText: { ...typography.body, color: palette.smoke, textAlign: 'center' },
 });

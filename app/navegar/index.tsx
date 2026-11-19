@@ -48,7 +48,7 @@ function Detalle({ g, onVolver }: { g: Guia; onVolver: () => void }) {
     ? <View style={s.espera}><ActivityIndicator color={palette.gold} /><Text style={s.esperaTxt}>Cargando el video…</Text></View>
     : medios.video
       ? <Reproductor src={medios.video} titulo={g.titulo} />
-      : <Text style={s.error} accessibilityRole="alert">No se pudo abrir esta guía. Recarga la página; si sigue igual, escríbele a tu mentor.</Text>;
+      : <Text style={s.error} accessibilityRole="alert">No se pudo abrir esta guía. Sal y vuelve a entrar; si sigue igual, escríbele a tu mentor.</Text>;
 
   return (
     <Pantalla meta={`${etiqueta(g)} · ${NOMBRE_ROL_GUIA[g.rol].toUpperCase()}`} title={g.titulo}
