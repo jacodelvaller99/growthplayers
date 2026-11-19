@@ -21,7 +21,11 @@
         "NSPrivacyCollectedDataTypes": [
           {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeEmailAddress", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]},
           {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeHealth", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]},
-          {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherUserContent", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]}
+          {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherUserContent", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]},
+          {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeFitness", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]},
+          {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeAudioData", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]},
+          {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAnalytics"]},
+          {"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeName", "NSPrivacyCollectedDataTypeLinked": true, "NSPrivacyCollectedDataTypeTracking": false, "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]}
         ],
         "NSPrivacyAccessedAPITypes": [
           {"NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults", "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]},
@@ -31,9 +35,8 @@
         ]
       },
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Polaris usa el micrófono solo cuando grabas una sesión de mentoría, para transcribirla y generar tus notas. La grabación es opcional y requiere tu consentimiento.",
-        "NSHealthShareUsageDescription": "Polaris lee tus métricas de sueño, recuperación, frecuencia cardíaca y actividad desde Apple Salud (incluyendo Apple Watch y cualquier reloj compatible) para personalizar tu protocolo soberano.",
-        "NSHealthUpdateUsageDescription": "Polaris no escribe datos en Apple Salud — solo lee tus métricas para acompañar tu progreso.",
+        "NSMicrophoneUsageDescription": "Polaris usa el micrófono solo cuando grabas una sesión de mentoría. El audio se guarda en tu cuenta y se transcribe con OpenAI para generar tus notas. Grabar es opcional y requiere tu consentimiento.",
+        "NSHealthShareUsageDescription": "Polaris lee de Apple Salud (HealthKit), solo con tu permiso: sueño, frecuencia cardíaca, variabilidad cardíaca, pulso en reposo, pasos, energía activa, oxígeno en sangre y frecuencia respiratoria. Con eso calcula tu recuperación y adapta tu acompañamiento. Polaris no escribe en Salud ni usa tus datos para publicidad.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -87,7 +90,7 @@
           }
         }
       ],
-      "expo-secure-store",
+      ["expo-secure-store", { "faceIDPermission": false }],
       "expo-font",
       [
         "expo-notifications",
@@ -95,12 +98,11 @@
           "color": "#FFC804"
         }
       ],
+      "./plugins/withNoHealthUpdate",
       [
         "react-native-health",
         {
-          "isClinicalDataEnabled": false,
-          "healthSharePermission": "Polaris lee tus métricas de sueño, recuperación, FC y actividad desde Apple Salud para personalizar tu protocolo.",
-          "healthUpdatePermission": "Polaris no escribe en Apple Salud."
+          "isClinicalDataEnabled": false
         }
       ],
       "react-native-health-connect",
