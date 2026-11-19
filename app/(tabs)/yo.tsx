@@ -177,7 +177,7 @@ export default function YoScreen() {
   };
 
   const handleSignOut = () => {
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web') {
       const ok = window.confirm('¿Cerrar sesión? Puedes volver a ingresar cuando quieras.');
       if (ok) { signOut(); router.replace('/'); }
       return;
@@ -193,7 +193,7 @@ export default function YoScreen() {
   };
 
   const clear = () => {
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web') {
       const ok = window.confirm('¿Limpiar todos los datos de Polaris?');
       if (ok) clearData();
       return;
