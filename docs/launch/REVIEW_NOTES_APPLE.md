@@ -12,8 +12,6 @@ Las credenciales van **solo** en App Review Information → Sign-in required, nu
 - [ ] Confirmar que el ai-proxy de Supabase tiene `ANTHROPIC_API_KEY` y la clave de OpenAI. Sin ellas Norman
       entra en «Modo demostración» y la build se rechaza por 2.1.
 - [ ] Desplegar `delete-account` y aplicar la migración `20261119000000_ugc_report_user_dm_block.sql`.
-- [ ] Confirmar que los enlaces «ABRIR EN SKOOL» no muestran al revisor una página de pago (3.1.1); si la
-      muestran, quitar esos botones antes de enviar.
 
 ---
 
