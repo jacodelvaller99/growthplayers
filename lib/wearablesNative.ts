@@ -63,7 +63,6 @@ export async function requestNativePermissions(): Promise<NativeResult<NativePro
             'ActiveEnergyBurned',
             'OxygenSaturation',
             'RespiratoryRate',
-            'BodyTemperature',
           ],
           write: [],
         },
@@ -124,7 +123,9 @@ export async function readDay(date: Date): Promise<Partial<WearableDaily>> {
 // ─── HealthKit (iOS) ─────────────────────────────────────────────────────────
 async function readDayHealthKit(start: Date, end: Date): Promise<Partial<WearableDaily>> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const AppleHealthKit = require('react-native-health').default;
+  const hk = require('react-native-health');
+  // La librería exporta con module.exports (sin .default).
+  const AppleHealthKit = hk.default ?? hk;
   const opts = { startDate: start.toISOString(), endDate: end.toISOString() };
   const dateStr = isoDate(start);
 

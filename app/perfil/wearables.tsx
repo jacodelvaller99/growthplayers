@@ -514,7 +514,7 @@ export default function WearablesScreen() {
                 <Text style={styles.healthText}>
                   Polaris usa HealthKit para leer, desde la app Salud de Apple y solo con tu permiso:
                   sueño, frecuencia cardíaca, variabilidad cardíaca (HRV), pulso en reposo, pasos,
-                  energía activa, oxígeno en sangre, frecuencia respiratoria y temperatura corporal.
+                  energía activa, oxígeno en sangre y frecuencia respiratoria.
                   Con eso calculamos tu recuperación y Norman adapta su acompañamiento. Polaris no
                   escribe en Salud, y tus datos de salud no se usan para publicidad ni se comparten
                   con terceros. Cambia los permisos en Ajustes › Salud › Acceso a datos y dispositivos.
