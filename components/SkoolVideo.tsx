@@ -12,7 +12,6 @@ if (Platform.OS !== 'web') {
 }
 
 interface SkoolVideoProps {
-  url?: string;
   vimeoId?: string;
   height?: number;
   /** Para guardar el progreso del video (tabla video_progress). */
@@ -78,7 +77,7 @@ function useVimeoProgress(iframe: React.RefObject<HTMLIFrameElement | null>, vim
 /** Si el embed no cargó en este tiempo, se quita el «Cargando» y el enlace lo dice. */
 const WEB_LOAD_TIMEOUT_MS = 15000;
 
-export function SkoolVideo({ url, vimeoId, height = 220, lessonId }: SkoolVideoProps) {
+export function SkoolVideo({ vimeoId, height = 220, lessonId }: SkoolVideoProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   useVimeoProgress(iframeRef, vimeoId, lessonId);
   const [loading, setLoading] = useState(true);
@@ -90,7 +89,7 @@ export function SkoolVideo({ url, vimeoId, height = 220, lessonId }: SkoolVideoP
   const vimeoEmbedUrl = vimeoId
     ? `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&autopause=0&speed=1&transparent=0`
     : null;
-  const externalUrl = vimeoId ? `https://vimeo.com/${vimeoId}` : url;
+  const externalUrl = vimeoId ? `https://vimeo.com/${vimeoId}` : null;
 
   // Web: el iframe podía quedarse girando para siempre (permisos de dominio
   // del embed) sin mensaje ni salida. A los 15 s sin cargar, el enlace lo dice.
@@ -150,15 +149,8 @@ export function SkoolVideo({ url, vimeoId, height = 220, lessonId }: SkoolVideoP
           <Text style={styles.playIcon}>▶</Text>
           <Text style={styles.title}>Video del Método Polaris</Text>
           <Text style={styles.subtitle}>
-            Los videos se reproducen en la app móvil o directamente en Skool.
+            Este video no está disponible aquí.
           </Text>
-          {url && (
-            <Pressable
-              onPress={() => Linking.openURL(url)}
-              style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-              <Text style={styles.btnText}>Ver en Skool →</Text>
-            </Pressable>
-          )}
         </View>
       </View>
     );
@@ -171,11 +163,11 @@ export function SkoolVideo({ url, vimeoId, height = 220, lessonId }: SkoolVideoP
         <View style={styles.fallback}>
           <Text style={styles.playIcon}>▶</Text>
           <Text style={styles.subtitle}>No se pudo cargar el video aquí.</Text>
-          {url && (
+          {!!vimeoId && (
             <Pressable
-              onPress={() => Linking.openURL(url)}
+              onPress={() => Linking.openURL(`https://vimeo.com/${vimeoId}`)}
               style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-              <Text style={styles.btnText}>Abrir en Skool →</Text>
+              <Text style={styles.btnText}>Abrir el video →</Text>
             </Pressable>
           )}
         </View>
@@ -183,8 +175,8 @@ export function SkoolVideo({ url, vimeoId, height = 220, lessonId }: SkoolVideoP
     );
   }
 
-  // ── NATIVO WebView (usa Vimeo embed si disponible, sino Skool URL) ─────────────
-  const nativeSource = vimeoEmbedUrl ?? url;
+  // ── NATIVO WebView: solo el embed de Vimeo (nunca una página de Skool, App Review 3.1.1) ──
+  const nativeSource = vimeoEmbedUrl;
   if (!nativeSource) {
     return (
       <View style={[styles.container, { height }]}>

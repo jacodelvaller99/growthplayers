@@ -214,7 +214,7 @@ export default function ProgramasScreen() {
                   ? 'Pronto'
                   : total > 0
                     ? `${total} lecciones`
-                    : 'Se abre en Skool ↗';
+                    : 'Sin lecciones';
             return (
               <Pressable
                 key={m.id}

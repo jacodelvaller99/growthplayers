@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton, useScreen } from '@/components/polaris';
@@ -147,14 +147,7 @@ export default function ModuleDetailScreen() {
 
           {module.lessons.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>El contenido de este módulo está en Skool.</Text>
-              {module.skoolUrl ? (
-                <PrimaryButton
-                  label="ABRIR EN SKOOL"
-                  icon="open-in-new"
-                  onPress={() => Linking.openURL(module.skoolUrl!)}
-                />
-              ) : null}
+              <Text style={styles.emptyText}>Este módulo no tiene lecciones en la app.</Text>
             </View>
           ) : (
             <View style={styles.list}>

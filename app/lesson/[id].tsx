@@ -848,34 +848,14 @@ export default function LessonScreen() {
 
         {/* ── Video Section (fullwidth banner) ── */}
         <View style={styles.videoBanner}>
-          {/* Tres casos, y el del medio es el que importa:
-              1. La lección tiene SU video → se reproduce (módulos 0–4).
-              2. La lección NO lo tiene pero el módulo sí (5–7): antes se
-                 embebía el classroom del módulo bajo el título de la
-                 lección — las 8 lecciones del módulo 5 abrían el MISMO
-                 video con 8 títulos distintos. Eso es mentirle al usuario:
-                 ahora se dice dónde está el contenido de verdad.
-              3. Ni una ni otra → próximamente (hoy inalcanzable). */}
-          {lesson.vimeoId || lesson.skoolUrl ? (
-            <SkoolVideo url={lesson.skoolUrl} vimeoId={lesson.vimeoId} lessonId={lesson.id} height={232} />
-          ) : mod.skoolUrl ? (
-            <View style={styles.videoComingSoon}>
-              <MaterialIcons name="school" size={24} color={palette.goldText} />
-              <Text style={styles.videoComingSoonText}>
-                Esta lección se ve en Skool, dentro del módulo.
-              </Text>
-              <Pressable
-                onPress={() => { void Linking.openURL(mod.skoolUrl as string); }}
-                accessibilityRole="button"
-                style={styles.classroomBtn}>
-                <MaterialIcons name="open-in-new" size={16} color={palette.ink} />
-                <Text style={styles.classroomBtnText}>ABRIR EN SKOOL ↗</Text>
-              </Pressable>
-            </View>
+          {/* Solo video de Vimeo dentro de la app. Nada enlaza a Skool: un
+              revisor sin membresía vería su página de pago (App Review 3.1.1). */}
+          {lesson.vimeoId ? (
+            <SkoolVideo vimeoId={lesson.vimeoId} lessonId={lesson.id} height={232} />
           ) : (
             <View style={styles.videoComingSoon}>
-              <MaterialIcons name="schedule" size={24} color={palette.smoke} />
-              <Text style={styles.videoComingSoonText}>Video próximamente</Text>
+              <MaterialIcons name="menu-book" size={24} color={palette.goldText} />
+              <Text style={styles.videoComingSoonText}>Esta lección no tiene video en la app.</Text>
             </View>
           )}
           {/* Floating back button */}
@@ -1116,24 +1096,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     height: 232,
     justifyContent: 'center',
-  },
-  classroomBtn: {
-    alignItems: 'center',
-    backgroundColor: palette.gold,
-    borderRadius: radii.sm,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    height: 36,
-    justifyContent: 'center',
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.lg,
-  },
-  classroomBtnText: {
-    color: palette.ink,
-    fontFamily: Fonts.display,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
   },
   videoComingSoonText: {
     color: palette.smoke,
