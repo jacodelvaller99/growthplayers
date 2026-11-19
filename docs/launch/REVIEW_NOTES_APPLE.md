@@ -1,49 +1,63 @@
 # Notas de revisión para Apple — App Store Connect
 
-Pegar esto (traducido si Apple lo pide en inglés) en el campo **"Notes"** de App Store Connect, sección
-**App Review Information**, antes de enviar la build a revisión.
+Pegar la versión en inglés (abajo) en **App Review Information → Notes** antes de enviar la build.
+Las credenciales van **solo** en App Review Information → Sign-in required, nunca en este repo.
 
-## 1. Cómo entrar (registro es solo por invitación)
+## Checklist del dueño antes de enviar
 
-Polaris es una app de coaching de alto rendimiento por membresía — el registro requiere un código de
-acceso a propósito (no es un bug). Para la revisión:
+- [ ] Generar el código `APPLEREVIEW` en `/admin/codigos` con acceso completo de **cliente**.
+- [ ] Crear la cuenta demo como **cliente** (no staff: las pantallas de equipo muestran precios internos),
+      completar su onboarding y dejar datos de ejemplo (check-ins, racha, Norte) para que nada se vea vacío.
+- [ ] Poner email y contraseña de esa cuenta en App Store Connect → Sign-in. Aquí: `<ver App Store Connect>`.
+- [ ] Confirmar que el ai-proxy de Supabase tiene `ANTHROPIC_API_KEY` y la clave de OpenAI. Sin ellas Norman
+      entra en «Modo demostración» y la build se rechaza por 2.1.
+- [ ] Desplegar `delete-account` y aplicar la migración `20261119000000_ugc_report_user_dm_block.sql`.
+- [ ] Confirmar que los enlaces «ABRIR EN SKOOL» no muestran al revisor una página de pago (3.1.1); si la
+      muestran, quitar esos botones antes de enviar.
 
-- **Código de acceso**: `APPLEREVIEW` *(generarlo antes de enviar — ver "Handoff del dueño" abajo)*
-- **Cuenta demo ya creada** (evita que el revisor tenga que pasar por el flujo de registro):
-  - Email: `revisor.apple@polarisgrowthinstitute.com` *(o el que decida el dueño)*
-  - Password: *(generar y pegar aquí — no reutilizar contraseñas reales)*
-  - Esta cuenta ya completó el onboarding y tiene datos narrativos de ejemplo (racha, check-ins,
-    progreso) para que ninguna pantalla se vea vacía.
+---
 
-Si el revisor prefiere registrar su propia cuenta: pantalla de bienvenida → "Iniciar sin código" está
-deshabilitado a propósito; debe usar el código `APPLEREVIEW` en el paso de invitación.
+## Notes (English — paste this)
 
-## 2. Por qué la app pide acceso a Apple Salud (HealthKit)
+**Access model (Guideline 3.1.3 / 2.1(b)).** Polaris OS is a companion app for clients of Polaris Growth
+Institute's one-on-one coaching service. Clients sign a service contract with us outside the app; the
+price and payment are handled in that contract. The app sells nothing: there are no prices, plans, in-app
+purchases or links to buy. New accounts require the access code that the client's coach gives them, so
+the sign-up screen asking for a code is intentional, not a bug.
 
-Polaris lee (nunca escribe) sueño, frecuencia cardíaca, recuperación y actividad desde Apple Salud para
-personalizar el protocolo del usuario y las recomendaciones del mentor de IA. Es de lectura únicamente
-(`NSHealthShareUsageDescription`); no compartimos estos datos con terceros ni los usamos con fines
-publicitarios. El permiso es opcional — la app funciona completa sin conceder acceso a Salud.
+**Demo account.** A client demo account with sample data is provided in Sign-in information. To register
+a new account instead, use the access code `APPLEREVIEW`.
 
-## 3. Sobre "Norman", el mentor de inteligencia artificial
+**HealthKit (2.5.1).** With the user's permission, the app only reads from Apple Health: sleep, heart rate,
+heart rate variability, resting heart rate, steps, active energy, blood oxygen and respiratory rate. It uses
+them to compute a recovery score and to adapt the coaching. It never writes to Health, does not use Health
+data for advertising, does not sell it and does not store it in iCloud. HealthKit is optional; the app works
+without it. Where to see it: Yo → Tu reloj, and Bienestar → Tu reloj. Permissions can be changed in
+Settings › Health › Data Access & Devices.
 
-Norman es un chat de IA generativa (no un humano, no un profesional licenciado). La app lo declara
-explícitamente en el disclaimer de salud (pantalla Legal → Salud, enlazada desde el consentimiento de
-onboarding) y en un banner persistente dentro del chat. Ante mensajes de crisis o autolesión, Norman
-interrumpe la conversación normal y deriva a líneas de emergencia reales (ver esa misma pantalla).
+**AI features (5.1.2).** "Norman" (mentor) and "Internista" (health education) are AI assistants, labelled
+as AI in the app, and neither is a doctor or a person. Before any AI use, the app asks for explicit consent
+that names the providers: Anthropic (mentor and Internista; NVIDIA, Groq or OpenAI as fallback) and OpenAI
+(transcription of optional mentoring voice recordings). Both assistants route crisis messages to emergency
+lines and never diagnose or prescribe. Health advice screens cite their sources (Yo → Fuentes médicas).
 
-## 4. Suscripciones (RevenueCat / In-App Purchase)
+**Community (1.2).** Members can report posts, comments, events, spaces and other members, and block
+members (which hides their content and messages). Users accept a zero-tolerance code of conduct before
+posting. Reports are reviewed within 24 hours.
 
-Los planes se gestionan con RevenueCat. El paywall muestra: divulgación de renovación automática, botón
-de restaurar compras, y enlaces a Términos/Privacidad/Salud — todos tocables antes de comprar.
+**Account deletion (5.1.1(v)).** Yo → Eliminar mi cuenta deletes the account and all its data, including
+health data and voice recordings.
 
-## 5. Handoff del dueño antes de enviar a revisión (checklist corto)
+---
 
-- [ ] Generar el código `APPLEREVIEW` en `/admin/codigos` (tipo de acceso: el nivel que se quiera mostrar
-      al revisor, ej. Premium — así ve el producto completo, no la versión free limitada).
-- [ ] Crear la cuenta demo vía `/admin/usuarios` → "Crear perfil", o registrarla manualmente con el
-      código de arriba; completar su onboarding con datos de ejemplo reales (no vacíos).
-- [ ] Confirmar que el ai-proxy tiene los secrets de servidor activos en Supabase (`ANTHROPIC_API_KEY`,
-      etc.) — sin esto Norman falla en el primer mensaje y la build se rechaza. Ver handoff #22 en
-      `KNOWN_ISSUES_REGISTER.md`.
-- [ ] Pegar aquí arriba el password real de la cuenta demo antes de enviar.
+## Notas (español, referencia interna)
+
+- **Acceso:** la app es complemento del servicio de mentoría que el cliente contrata fuera de ella. No vende
+  nada; el registro pide el código del coach a propósito.
+- **HealthKit:** solo lectura de los 8 tipos de arriba, para recuperación y acompañamiento; no escribe, sin
+  publicidad, sin iCloud, opcional. Dónde: Yo → Tu reloj y Bienestar → Tu reloj.
+- **IA:** Norman e Internista se declaran IA; consentimiento previo que nombra a Anthropic (y respaldos) y a
+  OpenAI para transcripción; derivación de crisis; fuentes citadas.
+- **Comunidad:** reportar y bloquear en todas las superficies; código de conducta de cero tolerancia; revisión
+  en 24 h.
+- **Borrado:** Yo → Eliminar mi cuenta.

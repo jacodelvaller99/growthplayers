@@ -1,15 +1,15 @@
 # STORE_DESCRIPTION_DRAFT — App Store / Google Play (ES)
 
 **Equipo 5 — Producto / Copy / Experiencia**
-Premium pero **compliant**: sin claims médicos/terapéuticos, sin promesas de resultados, honesto sobre la IA, sin urgencia falsa. Pensado para pasar revisión de Apple (1.4.1 salud, 2.3.1 metadata, 5.1.1 IA/datos) y Google Play (Health Apps / Subscriptions).
+Premium pero **compliant**: sin claims médicos/terapéuticos, sin promesas de resultados, honesto sobre la IA, sin urgencia falsa. Pensado para pasar revisión de Apple (1.4.1 salud, 2.3.1 metadata, 3.1 pagos, 5.1.1 IA/datos) y Google Play (Health Apps).
 
-> Reglas que cumple este texto: no usa "cura/trata/diagnostica", no promete resultados garantizados, declara que Norman es IA, no afirma grado clínico, y describe la suscripción con renovación automática.
+> Reglas que cumple este texto: no usa "cura/trata/diagnostica", no promete resultados garantizados, declara que Norman es IA, no afirma grado clínico y no menciona precios, planes, suscripciones ni nada "gratis": el acceso se contrata fuera de la app.
 
 ---
 
 ## Nombre / Subtítulo
 
-**Nombre:** Polaris Growth Institute
+**Nombre:** Polaris OS *(debe coincidir con el nombre bajo el ícono, `app.json` → `name`. Si se prefiere «Polaris Growth Institute», cambiar los dos.)*
 **Subtítulo (App Store, ≤30 car.):** Alto rendimiento personal
 *(alternativas: "Mentoría y bienestar diario" · "Tu sistema interno, a diario")*
 
@@ -17,11 +17,13 @@ Premium pero **compliant**: sin claims médicos/terapéuticos, sin promesas de r
 
 ## Texto promocional (App Store, ≤170 car.)
 
-> Un programa de 90 días con mentoría por IA, check-in diario y herramientas de bienestar para operar tu vida con foco, claridad y consistencia.
+> Solo para clientes de Polaris Growth Institute. Tu programa de 90 días, tu mentor con IA y tus herramientas de bienestar, en un solo lugar.
 
 ---
 
 ## Descripción larga
+
+**Solo para clientes de Polaris Growth Institute.** Para entrar necesitas el código de acceso que te da tu coach al contratar el servicio de mentoría.
 
 **Polaris es un programa de alto rendimiento personal de 90 días.**
 No es una app de productividad más, ni una colección de frases. Es un sistema para trabajar lo que casi nadie trabaja con método: tu mundo interno, tus hábitos y tus decisiones.
@@ -41,7 +43,7 @@ En dos minutos registras energía, claridad, estrés y sueño. La app convierte 
 Meditaciones guiadas, ejercicios de respiración, audio binaural, diario y herramientas de regulación emocional. Para acompañar tu día, no para sustituir atención profesional.
 
 **· Biometría (opcional)**
-Conecta tu Oura Ring o WHOOP para ver recuperación, sueño y variabilidad cardíaca, y para que tus recomendaciones se ajusten a cómo amaneciste. Tú decides si lo conectas y puedes desconectarlo cuando quieras.
+Conecta Apple Salud, Oura, WHOOP, Polar o Strava para ver recuperación, sueño y variabilidad cardíaca, y para que tus recomendaciones se ajusten a cómo amaneciste. Polaris solo lee de Apple Salud, nunca escribe en ella. Tú decides si lo conectas y puedes desconectarlo cuando quieras.
 
 **· Tu Norte**
 Define tu propósito, tu identidad y tus no negociables. Es la brújula que ordena cada decisión del programa.
@@ -61,18 +63,15 @@ Si estás en crisis o piensas en hacerte daño, contacta de inmediato a los serv
 ---
 
 **Sobre la inteligencia artificial**
-Norman utiliza modelos de lenguaje para generar sus respuestas. Puede equivocarse o no entender el contexto completo; usa su criterio como apoyo, no como verdad absoluta. Tus conversaciones se usan para darte continuidad dentro de la app, conforme a nuestra Política de Privacidad.
+Norman utiliza modelos de lenguaje de terceros (Anthropic) para generar sus respuestas, y la transcripción de sesiones usa OpenAI; la app te pide permiso antes de usarlos. Puede equivocarse o no entender el contexto completo; usa su criterio como apoyo, no como verdad absoluta. Tus conversaciones se usan para darte continuidad dentro de la app, conforme a nuestra Política de Privacidad.
 
 ---
 
-**Suscripción**
-El acceso completo al Protocolo Soberano es una suscripción. Puedes empezar con una versión limitada y suscribirte cuando quieras.
-- El pago se realiza a través de tu cuenta de App Store / Google Play.
-- La suscripción se renueva automáticamente salvo que la canceles al menos 24 horas antes del final del periodo.
-- Gestionas y cancelas la suscripción desde los ajustes de tu cuenta.
+**Acceso**
+Polaris OS es la herramienta de los clientes del servicio de mentoría de Polaris Growth Institute. El servicio se contrata directamente con nosotros; la app no vende nada.
 
-Términos de Uso: {URL}
-Política de Privacidad: {URL}
+Términos de Uso: https://polarisgrowthinstitute.vercel.app/legal/terminos
+Política de Privacidad: https://polarisgrowthinstitute.vercel.app/legal/privacidad
 
 ---
 
