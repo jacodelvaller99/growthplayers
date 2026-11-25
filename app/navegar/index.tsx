@@ -9,22 +9,43 @@ import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, TextIn
 import { Fila, Pantalla } from '@/components/pantalla';
 import { Fonts, palette } from '@/constants/theme';
 import { cargarGuias, firmarMedios, type MediosGuia } from '@/lib/navegar';
-import { filtrarGuias, NOMBRE_ROL_GUIA, ROLES_GUIA, type Guia } from '@/lib/navegarLogic';
+import { aVtt, cueEn, filtrarGuias, NOMBRE_ROL_GUIA, ROLES_GUIA, type Cue, type Guia } from '@/lib/navegarLogic';
 
 const etiqueta = (g: Guia) => `${g.rol === 'cliente' ? 'GUÍA' : 'ADMIN'} ${g.n}`;
 
-/** Video: <video> nativo del navegador en web; expo-av en iOS/Android. */
-function Reproductor({ src, titulo }: { src: string; titulo: string }) {
+/** Pista WebVTT como blob local (misma origen: Safari la acepta y la muestra también en pantalla completa). */
+function useVttUrl(cues: Cue[]): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !cues.length) { setUrl(null); return; }
+    const u = URL.createObjectURL(new Blob([aVtt(cues)], { type: 'text/vtt' }));
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [cues]);
+  return url;
+}
+
+/** Video con subtítulos del guion real: <video> + <track> en web; expo-av + texto sincronizado en iOS/Android. */
+function Reproductor({ src, titulo, cues }: { src: string; titulo: string; cues: Cue[] }) {
+  const vtt = useVttUrl(cues);
+  const [seg, setSeg] = useState(0);
   if (Platform.OS === 'web') {
     return React.createElement('video', {
       src, controls: true, playsInline: true, preload: 'metadata', controlsList: 'nodownload',
       'aria-label': `Video: ${titulo}`,
       style: { width: '100%', aspectRatio: '16 / 9', backgroundColor: palette.ink, borderRadius: 12, display: 'block' },
-    });
+    }, vtt ? React.createElement('track', { key: vtt, kind: 'captions', srcLang: 'es', label: 'Español', src: vtt, default: true }) : null);
   }
+  const texto = cueEn(cues, seg);
   return (
-    <Video source={{ uri: src }} useNativeControls resizeMode={ResizeMode.CONTAIN} style={s.videoNativo}
-      accessibilityLabel={`Video: ${titulo}`} />
+    <View>
+      <Video source={{ uri: src }} useNativeControls resizeMode={ResizeMode.CONTAIN} style={s.videoNativo}
+        accessibilityLabel={`Video: ${titulo}`} progressUpdateIntervalMillis={250}
+        onPlaybackStatusUpdate={(st) => { if (st.isLoaded) setSeg(st.positionMillis / 1000); }} />
+      {cues.length > 0 && (
+        <Text style={s.subtitulo} accessibilityLiveRegion="polite">{texto ?? ' '}</Text>
+      )}
+    </View>
   );
 }
 
@@ -47,7 +68,7 @@ function Detalle({ g, onVolver }: { g: Guia; onVolver: () => void }) {
   const hero = !medios
     ? <View style={s.espera}><ActivityIndicator color={palette.gold} /><Text style={s.esperaTxt}>Cargando el video…</Text></View>
     : medios.video
-      ? <Reproductor src={medios.video} titulo={g.titulo} />
+      ? <Reproductor src={medios.video} titulo={g.titulo} cues={medios.subtitulos} />
       : <Text style={s.error} accessibilityRole="alert">No se pudo abrir esta guía. Sal y vuelve a entrar; si sigue igual, escríbele a tu mentor.</Text>;
 
   return (
@@ -135,6 +156,7 @@ const s = StyleSheet.create({
   error: { color: palette.ivory, fontFamily: Fonts.sans, fontSize: 15, paddingVertical: 16 },
   vacio: { color: palette.ash, fontFamily: Fonts.sans, fontSize: 15, paddingVertical: 16 },
   videoNativo: { width: '100%', aspectRatio: 16 / 9, backgroundColor: palette.ink, borderRadius: 12 },
+  subtitulo: { minHeight: 48, marginTop: 8, color: palette.ivory, fontFamily: Fonts.sans, fontSize: 16, lineHeight: 22, textAlign: 'center' },
   paso: { marginBottom: 24 },
   pasoFila: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 10 },
   pasoN: { fontFamily: Fonts.mono, fontSize: 15, color: palette.goldText, minWidth: 20 },

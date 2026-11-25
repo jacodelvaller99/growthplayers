@@ -1,4 +1,4 @@
-import { carpetaGuia, filtrarGuias, leerCatalogo } from '@/lib/navegarLogic';
+import { aVtt, carpetaGuia, cueEn, filtrarGuias, leerCatalogo, leerSubtitulos } from '@/lib/navegarLogic';
 
 const CAT = [
   { id: 'TPC01', n: '01', titulo: 'Hacer tu check-in', meta: '48 segundos', pasos: ['Toca Guardar.'], tips: ['¿Y si me equivoqué?'] },
@@ -30,5 +30,23 @@ describe('navegarLogic', () => {
     expect(carpetaGuia({ rol: 'admin', id: 'TPA01' })).toBe('admin/TPA01');
     expect(() => carpetaGuia({ rol: 'admin', id: '../TPA01' })).toThrow();
     expect(() => carpetaGuia({ rol: 'otro' as never, id: 'TPA01' })).toThrow();
+  });
+});
+
+describe('subtítulos', () => {
+  const cues = leerSubtitulos([{ d: 3, h: 5, t: 'La Jornada de abajo.' }, { d: 1.5, h: 3, t: 'Hola.' }, { d: 6, h: 6, t: 'vacía' }, { t: 'sin tiempos' }, null]);
+
+  it('descarta filas rotas y ordena por inicio', () => {
+    expect(cues.map((c) => c.t)).toEqual(['Hola.', 'La Jornada de abajo.']);
+  });
+
+  it('devuelve el texto del segundo actual o null entre frases', () => {
+    expect(cueEn(cues, 4)).toBe('La Jornada de abajo.');
+    expect(cueEn(cues, 5.5)).toBeNull();
+  });
+
+  it('genera WebVTT válido', () => {
+    expect(aVtt(cues)).toBe('WEBVTT\n\n00:00:01.500 --> 00:00:03.000\nHola.\n\n00:00:03.000 --> 00:00:05.000\nLa Jornada de abajo.\n');
+    expect(leerSubtitulos('x')).toEqual([]);
   });
 });

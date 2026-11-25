@@ -44,6 +44,34 @@ export function filtrarGuias(lista: Guia[], consulta: string): Guia[] {
   });
 }
 
+/** Subtítulo: desde/hasta en segundos + texto. Viene de <rol>/<id>/subtitulos.json. */
+export interface Cue { d: number; h: number; t: string }
+
+/** Normaliza subtitulos.json; descarta filas mal formadas y las ordena por inicio. */
+export function leerSubtitulos(json: unknown): Cue[] {
+  if (!Array.isArray(json)) return [];
+  return json
+    .filter((c: any) => c && typeof c.t === 'string' && Number.isFinite(c.d) && Number.isFinite(c.h) && c.h > c.d)
+    .map((c: any) => ({ d: c.d, h: c.h, t: c.t }))
+    .sort((a, b) => a.d - b.d);
+}
+
+/** El subtítulo que toca en el segundo `t` (o null entre frases). */
+export function cueEn(cues: Cue[], t: number): string | null {
+  return cues.find((c) => t >= c.d && t < c.h)?.t ?? null;
+}
+
+const marca = (s: number) => {
+  const ms = Math.round(s * 1000);
+  const p = (n: number, w = 2) => String(n).padStart(w, '0');
+  return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)}.${p(ms % 1000, 3)}`;
+};
+
+/** WebVTT para la pista <track> del navegador (Safari la muestra también en pantalla completa). */
+export function aVtt(cues: Cue[]): string {
+  return 'WEBVTT\n\n' + cues.map((c) => `${marca(c.d)} --> ${marca(c.h)}\n${c.t}`).join('\n\n') + '\n';
+}
+
 /** Carpeta de una guía dentro del bucket (los ids vienen del catálogo; se validan igual). */
 export function carpetaGuia(g: Pick<Guia, 'rol' | 'id'>): string {
   if (!ROLES_GUIA.includes(g.rol) || !/^[A-Z0-9]+$/.test(g.id)) throw new Error('Ruta de guía inválida');

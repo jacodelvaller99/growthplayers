@@ -7,14 +7,14 @@
  */
 import { supabase } from '@/lib/supabase';
 import { logSilentError } from '@/lib/observability';
-import { carpetaGuia, leerCatalogo, ROLES_GUIA, type Guia } from '@/lib/navegarLogic';
+import { carpetaGuia, leerCatalogo, leerSubtitulos, ROLES_GUIA, type Cue, type Guia } from '@/lib/navegarLogic';
 
 const BUCKET = 'navegar';
 /** Un video dura < 1,5 min; al volver a abrir la guía se firman de nuevo. */
 const TTL_S = 900;
 const supa: any = supabase;
 
-export interface MediosGuia { video: string | null; pasos: (string | null)[] }
+export interface MediosGuia { video: string | null; pasos: (string | null)[]; subtitulos: Cue[] }
 
 /** Catálogos que esta cuenta puede leer (cliente para todos; admin solo para admins y mentores). */
 export async function cargarGuias(): Promise<Guia[]> {
@@ -36,12 +36,27 @@ export async function firmarMedios(g: Guia): Promise<MediosGuia> {
   const base = carpetaGuia(g);
   const rutas = [`${base}/video.mp4`, ...g.pasos.map((_, i) => `${base}/paso-${i + 1}.jpg`)];
   try {
-    const { data, error } = await supa.storage.from(BUCKET).createSignedUrls(rutas, TTL_S);
+    const [{ data, error }, subtitulos] = await Promise.all([
+      supa.storage.from(BUCKET).createSignedUrls(rutas, TTL_S),
+      cargarSubtitulos(base),
+    ]);
     if (error) throw error;
     const urls = (data ?? []).map((d: { signedUrl?: string | null }) => d?.signedUrl ?? null);
-    return { video: urls[0] ?? null, pasos: urls.slice(1) };
+    return { video: urls[0] ?? null, pasos: urls.slice(1), subtitulos };
   } catch (e) {
     logSilentError('navegar.firmar', e);
-    return { video: null, pasos: g.pasos.map(() => null) };
+    return { video: null, pasos: g.pasos.map(() => null), subtitulos: [] };
+  }
+}
+
+/** Subtítulos de la guía; sin archivo, el video se ve igual (sin subtítulos). */
+async function cargarSubtitulos(base: string): Promise<Cue[]> {
+  try {
+    const { data, error } = await supa.storage.from(BUCKET).download(`${base}/subtitulos.json`);
+    if (error || !data) return [];
+    return leerSubtitulos(JSON.parse(await data.text()));
+  } catch (e) {
+    logSilentError('navegar.subtitulos', e);
+    return [];
   }
 }
