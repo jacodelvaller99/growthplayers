@@ -21,7 +21,7 @@ import { resolveEntitlement } from '@/lib/subscription';
 import { isLifeFlowOnlyAccount } from '@/lib/accountScopeLogic';
 import { loadAiConsent, resetAiConsent } from '@/lib/aiConsent';
 import { logSilentError } from '@/lib/observability';
-import { readLocal, removeLocal, writeLocal } from '@/storage/local';
+import { readLocal, readLocalSync, removeLocal, writeLocal } from '@/storage/local';
 import { initRevenueCat, checkSubscription } from '@/services/revenuecat';
 import { useWellnessStore } from '@/store/wellnessStore';
 import type { CheckIn, LessonTask, LifeFlowState, MentorMessage, NorthStar, UserProfile, WellnessSession } from '@/types/lifeflow';
@@ -497,13 +497,13 @@ const IS_PLACEHOLDER_URL = SUPABASE_URL_VALUE.includes('your-project') || !SUPAB
 // ─── Sync init from localStorage (web only, SPA mode — no SSR) ───────────────
 // With output:"spa" there is no server pre-render, so reading localStorage here
 // is safe and gives instant state on mount (no hydration mismatch possible).
+// En iPhone/Android lee el archivo local síncrono: quien ya usó la app la ve al instante
+// y los datos se refrescan detrás (antes esperaba la red en CADA apertura).
 function getInitialState(): LifeFlowState {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem('lifeflow:v2:state');
-      if (raw) return migrateState(JSON.parse(raw) as Partial<LifeFlowState>);
-    } catch { /* ignore parse errors */ }
-  }
+  try {
+    const cached = readLocalSync<Partial<LifeFlowState>>(STATE_KEY);
+    if (cached) return migrateState(cached);
+  } catch { /* ignore parse errors */ }
   return defaultState;
 }
 
